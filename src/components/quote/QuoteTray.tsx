@@ -245,7 +245,12 @@ export function QuoteTray({
         ) : null}
 
         {open ? (
-          <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-3">
+          <div
+            className="fixed inset-x-0 z-30 px-3"
+            style={{
+              bottom: "max(4.5rem, calc(env(safe-area-inset-bottom) + 3.75rem))",
+            }}
+          >
             <div className="tray-sheet flex max-h-[min(42vh,24rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
               <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
             </div>
