@@ -4,7 +4,9 @@ import {
   assemblyCentroid,
   explodeTranslation,
   explodeTravel,
+  ISOLATE_OPACITY,
   isGhosted,
+  meshIsolateState,
   viewerNeedsReset,
 } from "./assemblyView.ts";
 
@@ -44,9 +46,30 @@ describe("assembly helpers", () => {
       { x: 1, y: 2, z: 3 },
     );
     assert.ok(explodeTravel([{ x: 0, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }]) > 1);
+    assert.equal(ISOLATE_OPACITY, 0.12);
     assert.equal(isGhosted("A", "B"), true);
     assert.equal(isGhosted("A", "A"), false);
     assert.equal(isGhosted("A", null), false);
+    assert.deepEqual(meshIsolateState("A", "B", new Set()), {
+      hidden: false,
+      ghosted: true,
+      pickable: false,
+    });
+    assert.deepEqual(meshIsolateState("A", "A", new Set()), {
+      hidden: false,
+      ghosted: false,
+      pickable: true,
+    });
+    assert.deepEqual(meshIsolateState(null, "A", new Set()), {
+      hidden: false,
+      ghosted: true,
+      pickable: false,
+    });
+    assert.deepEqual(meshIsolateState("A", "B", new Set(["A"])), {
+      hidden: true,
+      ghosted: false,
+      pickable: false,
+    });
     assert.equal(viewerNeedsReset(0, [], null), false);
     assert.equal(viewerNeedsReset(0.2, [], null), true);
     assert.equal(viewerNeedsReset(0, ["A"], null), true);

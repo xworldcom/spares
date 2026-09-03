@@ -105,7 +105,7 @@ export function BugReportControl() {
         <div
           role="dialog"
           aria-labelledby={titleId}
-          className="pointer-events-auto fixed z-40 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-neutral-300 bg-white p-3 shadow-md"
+          className="pointer-events-auto fixed z-[60] w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-neutral-300 bg-white p-3 shadow-md"
           style={{
             left: "max(1rem, env(safe-area-inset-left))",
             bottom: "max(4.25rem, calc(env(safe-area-inset-bottom) + 3.5rem))",
@@ -157,7 +157,7 @@ export function BugReportControl() {
       ) : null}
 
       <div
-        className="pointer-events-auto fixed z-40 flex items-end gap-2"
+        className="pointer-events-auto fixed z-[60] flex items-end gap-2"
         style={{
           left: "max(1rem, env(safe-area-inset-left))",
           bottom: "max(1rem, env(safe-area-inset-bottom))",
