@@ -6,24 +6,22 @@ Internal staff will upload 3D models derived from SolidWorks. Customers will log
 
 This repository is **private by default**. The product is **not live**. Do not deploy this app to a public production URL, attach a public custom domain, or turn on public signup.
 
-## What this pass is (T1.0)
+## What this pass is (T1.2)
 
-This pull request is only the application scaffold:
+This pull request stacks **backend-only** auth, pack upload, and quote-request APIs on the T1.0 Next.js App Router scaffold. There is still no staff/customer UI (Fern) and no 3D viewer (Drew).
 
-- Next.js App Router (TypeScript)
-- A home page that states the app is private and not live
-- ESLint from the official Next.js starter
-- Folders so later work can land without a rewrite
+It does **not** include Stripe/checkout, public registration, a native SolidWorks parser, anti-scam checks, a cart, a public marketing site, or a production deploy.
 
-It does **not** include authentication, model upload, a 3D viewer, a cart, quotes, payments, a public marketing site, or a SolidWorks converter. Those belong in later tickets.
+## QA seeds (Quinn)
 
-## Follow-up issues (T1.1–T1.4)
+There is **no public signup**. Staff create customer accounts. These two users are seeded automatically the first time the API store is created:
 
-Continue in GitHub issues **T1.1–T1.4**:
+| Role | Email | Password |
+| --- | --- | --- |
+| staff | `staff@spares.local` | `SparesStaff1!` |
+| customer | `customer@spares.local` | `SparesCustomer1!` |
 
-- https://github.com/xworldcom/spares/issues
-
-The first product slice after this scaffold is expected to be: upload a GLB file → view it in 3D → pick a part → request a quote.
+`GET /api/auth/me` returns `{ user: { id, email, role } }` after login.
 
 ## Local development
 
@@ -39,16 +37,51 @@ npm run lint
 npm run build
 ```
 
+Optional:
+
+- `AUTH_SECRET` — signs the httpOnly session cookie. A local non-production default is used when unset.
+- `SPARES_DATA_DIR` — override the file-backed JSON + model directory (defaults to `./data` locally, `/tmp/spares-data` on Vercel).
+
+On a protected Vercel preview the 3D file URL is same-origin (`/api/machines/:id/file`) and requires the session cookie. Preview storage is ephemeral (serverless filesystem); local `data/` is gitignored. Do not attach a production project or custom domain.
+
+## API (Fern / Drew)
+
+Auth (email + password, httpOnly `spares_session` cookie):
+
+- `POST /api/auth/login` JSON `{ email, password }` → `{ user: { id, email, role } }`
+- `POST /api/auth/logout`
+- `GET /api/auth/me` → `{ user: { id, email, role } }`
+- `POST /api/staff/customers` JSON `{ email, password }` — staff only; creates a customer
+
+There is no public `/api/auth/register` route.
+
+Machines:
+
+- `POST /api/machines` — staff, multipart/form-data: `name`, `model` (`.glb` / `.gltf`), `partsList` (CSV headers `partNumber,name,meshName` or a JSON array of the same)
+- `GET /api/machines` → `{ machines: [{ id, name }] }` (any signed-in user)
+- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName }], unmatched?: [...] }`
+
+Join rule: `parts[].id` is the part number. A row is customer-pickable only when the list row and a 3D mesh can be paired (`meshName` from the list, or a mesh whose name equals `partNumber` / `name`). Unmatched list rows and unused meshes are returned in `unmatched` for **staff** and omitted for customers. Customers never receive unmatched rows as pickable parts.
+
+`fileUrl` points at `GET /api/machines/:id/file` (session required) so the model can be loaded on a protected Vercel preview.
+
+Quotes:
+
+- `POST /api/quotes` — customer JSON `{ machineId, partIds: string[], note?: string }`
+- `GET /api/quotes` — staff inbox, newest first. No email notifications.
+
+Unauthenticated calls return **401**. Wrong-role calls return **403**.
+
 ## Repository layout
 
-| Path | Later work |
+| Path | Work |
 | --- | --- |
 | `src/app` | App Router pages and layouts |
 | `src/app/api` | Backend Route Handlers |
-| `src/components/viewer` | Browser 3D viewer |
+| `src/components/viewer` | Browser 3D viewer (later) |
 | `src/lib/auth` | Authentication helpers |
 | `src/types` | Shared TypeScript types |
 
 ## Do not go live
 
-Keep this GitHub repository private. Do not publish a public site from this scaffold. Preview or local development is fine; production and a custom domain are not part of T1.0.
+Keep this GitHub repository private. Do not publish a public site from this app. Preview or local development is fine; production and a custom domain are not part of T1.2.
