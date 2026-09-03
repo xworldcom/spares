@@ -1,0 +1,37 @@
+[
+  {
+    "partNumber": "5972K325",
+    "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W",
+    "meshName": "5972K325",
+    "qty": 1
+  },
+  {
+    "partNumber": "91280A340",
+    "name": "Hex head cap screw, M6 x 25 mm, 18-8 SS",
+    "meshName": "91280A340",
+    "qty": 4
+  },
+  {
+    "partNumber": "91828A230",
+    "name": "Hex nut, M6, 18-8 SS",
+    "meshName": "91828A230",
+    "qty": 4
+  },
+  {
+    "partNumber": "6435K12",
+    "name": "Set-screw shaft collar, 8 mm bore",
+    "meshName": "6435K12",
+    "qty": 1
+  },
+  {
+    "partNumber": "6331K32",
+    "name": "Miniature DC motor",
+    "meshName": "6331K32",
+    "qty": 1
+  },
+  {
+    "partNumber": "93475A240",
+    "name": "Flat washer, M6",
+    "qty": 10
+  }
+]

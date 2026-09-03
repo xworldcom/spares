@@ -3,34 +3,75 @@
 import { useMemo, useState } from "react";
 import { PartPicker } from "@/components/viewer";
 import type { UnmatchedMesh, ViewerPart } from "@/components/viewer";
-import packRows from "../../../../public/placeholders/palletizer-parts.json";
+import hardwareRows from "../../../../public/placeholders/hardware/mcmaster-hardware-parts.json";
+import palletizerRows from "../../../../public/placeholders/palletizer-parts.json";
 
-const MODEL_SRC = "/placeholders/palletizer-placeholder.glb";
+export type DevViewerPack = "hardware" | "palletizer";
 
-const JOINED_IDS = new Set([
+const HARDWARE_JOINED = new Set([
+  "5972K325",
+  "91280A340",
+  "91828A230",
+  "6435K12",
+  "6331K32",
+]);
+
+const PALLETIZER_JOINED = new Set([
   "PN-FRAME-1000",
   "PN-ROLL-2104",
   "PN-MTR-3301",
 ]);
 
-function toViewerPart(row: (typeof packRows)[number]): ViewerPart {
+const PACKS = {
+  hardware: {
+    src: "/placeholders/hardware/mcmaster-hardware.glb",
+    rows: hardwareRows,
+    joinedIds: HARDWARE_JOINED,
+    title: "McMaster hardware pack",
+    blurb:
+      "Developer-only route. Not a login, staff, or customer screen. Loads public CAD hardware labeled with McMaster catalog numbers (bearing, hex cap screw, nut, shaft collar, DC motor) plus a list-only washer. Geometry is not McMaster’s CAD and not Kevin’s machine — see public/placeholders/hardware/SOURCES.md. Production src is Brent’s cookie file URL (GET /api/machines/:id/file); the picker always fetches with credentials included.",
+    modelOnly: null,
+  },
+  palletizer: {
+    src: "/placeholders/palletizer-placeholder.glb",
+    rows: palletizerRows,
+    joinedIds: PALLETIZER_JOINED,
+    title: "Placeholder part picker",
+    blurb:
+      "Developer-only route. Not a login, staff, or customer screen. Loads the T1.1 sample pack: a short palletizer / conveyor infeed plus a fake ETO BOM. Production src is Brent’s cookie file URL (GET /api/machines/:id/file); the picker always fetches with credentials included.",
+    modelOnly: {
+      id: "PN-GRD-5503",
+      name: "Safety guard · model-only (no BOM row)",
+    },
+  },
+} as const;
+
+function toViewerPart(row: {
+  partNumber: string;
+  name: string;
+  meshName?: string;
+  qty: number;
+}): ViewerPart {
   return {
     id: row.partNumber,
     name: row.name,
-    meshName: row.meshName,
+    meshName: row.meshName ?? row.partNumber,
     qty: row.qty,
   };
 }
 
-export function ViewerPlayground() {
+export function ViewerPlayground({ pack }: { pack: DevViewerPack }) {
+  const config = PACKS[pack];
   const joinedParts = useMemo(
     () =>
-      packRows
-        .filter((row) => JOINED_IDS.has(row.partNumber))
+      config.rows
+        .filter((row) => config.joinedIds.has(row.partNumber))
         .map(toViewerPart),
-    [],
+    [config],
   );
-  const listOnly = packRows.filter((row) => !JOINED_IDS.has(row.partNumber));
+  const listOnly = config.rows.filter(
+    (row) => !config.joinedIds.has(row.partNumber),
+  );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selected, setSelected] = useState<ViewerPart | null>(null);
@@ -45,7 +86,7 @@ export function ViewerPlayground() {
     <div className="flex min-h-screen flex-col bg-neutral-950 text-neutral-100 lg:flex-row">
       <section className="relative min-h-[55vh] flex-1 lg:min-h-screen">
         <PartPicker
-          src={MODEL_SRC}
+          src={config.src}
           parts={joinedParts}
           selectedId={selectedId}
           onSelect={handleSelect}
@@ -58,15 +99,31 @@ export function ViewerPlayground() {
         <p className="text-xs font-medium tracking-wide text-amber-400 uppercase">
           Dev check · private · not live
         </p>
+        <div className="flex gap-2">
+          <a
+            href="/dev/viewer"
+            className={`rounded px-3 py-1.5 text-xs ${
+              pack === "hardware"
+                ? "bg-sky-900/70 text-sky-100"
+                : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+            }`}
+          >
+            Hardware CAD
+          </a>
+          <a
+            href="/dev/viewer?pack=palletizer"
+            className={`rounded px-3 py-1.5 text-xs ${
+              pack === "palletizer"
+                ? "bg-sky-900/70 text-sky-100"
+                : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+            }`}
+          >
+            Palletizer placeholder
+          </a>
+        </div>
         <div>
-          <h1 className="text-xl font-semibold">Placeholder part picker</h1>
-          <p className="mt-2 text-sm text-neutral-400">
-            Developer-only route. Not a login, staff, or customer screen. Loads
-            the T1.1 sample pack: a short palletizer / conveyor infeed plus a
-            fake ETO BOM. Production `src` is Brent&apos;s cookie file URL
-            (`GET /api/machines/:id/file`); the picker always fetches with
-            credentials included.
-          </p>
+          <h1 className="text-xl font-semibold">{config.title}</h1>
+          <p className="mt-2 text-sm text-neutral-400">{config.blurb}</p>
         </div>
 
         <div>
@@ -120,14 +177,14 @@ export function ViewerPlayground() {
                 </span>
               </li>
             ))}
-            <li className="rounded bg-neutral-800 px-3 py-2">
-              <span className="font-mono text-xs text-neutral-300">
-                PN-GRD-5503
-              </span>
-              <span className="mt-0.5 block">
-                Safety guard · model-only (no BOM row)
-              </span>
-            </li>
+            {config.modelOnly ? (
+              <li className="rounded bg-neutral-800 px-3 py-2">
+                <span className="font-mono text-xs text-neutral-300">
+                  {config.modelOnly.id}
+                </span>
+                <span className="mt-0.5 block">{config.modelOnly.name}</span>
+              </li>
+            ) : null}
           </ul>
         </div>
 
@@ -148,7 +205,7 @@ export function ViewerPlayground() {
 
         <p className="text-xs text-neutral-500">
           Rotate, zoom, and pan the model. Click a named mesh or a list row.
-          Click empty space to clear. The yellow guard is not quote-pickable.
+          Click empty space to clear.
         </p>
       </aside>
     </div>

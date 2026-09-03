@@ -50,11 +50,15 @@ import { PartPicker } from "@/components/viewer";
 - Pass joined `parts` only. Customer pick is joined named parts only. Unmatched is a staff panel, not the picker.
 - Client-only (`dynamic(..., { ssr: false })`).
 
-Private developer check (not a customer/staff/login route): [http://localhost:3000/dev/viewer](http://localhost:3000/dev/viewer).
+Private developer check (not a customer/staff/login route): [http://localhost:3000/dev/viewer](http://localhost:3000/dev/viewer) (hardware CAD pack) or [http://localhost:3000/dev/viewer?pack=palletizer](http://localhost:3000/dev/viewer?pack=palletizer) (T1.1 placeholder).
 
-## Sample pack (staff upload)
+## Sample packs (staff upload)
 
-Upload these together as one pack. Catalog join key is **part number**. Fake Total ETO-shaped BOM (`qty` on every row).
+Upload a GLB plus CSV/JSON together as one pack. Catalog join key is **part number**. Total ETO-shaped BOM (`qty` on every row).
+
+### Palletizer placeholder (T1.1)
+
+Boxy primitive conveyor — do not replace this file. Fake part numbers.
 
 | File | Role |
 | --- | --- |
@@ -73,6 +77,29 @@ npm run generate:placeholder
 | `PN-MTR-3301` | Gearmotor | 1 | Joined, clickable |
 | `PN-BELT-4402` | Conveyor belt | 1 | List-only unmatched (no mesh) |
 | `PN-GRD-5503` | Safety guard | — | Model-only unmatched (mesh, no BOM row) |
+
+### Hardware CAD pack (real public geometry)
+
+Public ISO / vendor CAD labeled with **McMaster-Carr catalog numbers** as mesh names and `partNumber`. Not Kevin’s machine. McMaster native CAD was login-gated; GrabCAD was blocked — see [`public/placeholders/hardware/SOURCES.md`](public/placeholders/hardware/SOURCES.md).
+
+| File | Role |
+| --- | --- |
+| [`public/placeholders/hardware/mcmaster-hardware.glb`](public/placeholders/hardware/mcmaster-hardware.glb) | Five separate named meshes. Node and mesh names **are the catalog numbers**. |
+| [`public/placeholders/hardware/mcmaster-hardware-parts.csv`](public/placeholders/hardware/mcmaster-hardware-parts.csv) | Columns `partNumber`, `name`, `meshName`, `qty`. |
+| [`public/placeholders/hardware/mcmaster-hardware-parts.json`](public/placeholders/hardware/mcmaster-hardware-parts.json) | Same rows as JSON. |
+
+```bash
+npm run generate:hardware
+```
+
+| Part number | Name | qty | Join |
+| --- | --- | --- | --- |
+| `5972K325` | Shielded ball bearing, 8 mm ID × 22 mm OD × 7 mm W | 1 | Joined, clickable |
+| `91280A340` | Hex head cap screw, M6 × 25 mm, 18-8 SS | 4 | Joined, clickable |
+| `91828A230` | Hex nut, M6, 18-8 SS | 4 | Joined, clickable |
+| `6435K12` | Set-screw shaft collar, 8 mm bore | 1 | Joined, clickable |
+| `6331K32` | Miniature DC motor | 1 | Joined, clickable |
+| `93475A240` | Flat washer, M6 | 10 | List-only unmatched (no mesh) |
 
 ## Private-preview seeds (Quinn)
 
@@ -125,9 +152,9 @@ Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog sou
 | --- | --- |
 | `src/app` | App Router pages and layouts (Fern) |
 | `src/app/api` | Backend Route Handlers (T1.2 from #7, stacked) |
-| `src/app/dev/viewer` | Private developer check for the sample pack (Drew) |
+| `src/app/dev/viewer` | Private developer check for sample packs (Drew; `?pack=palletizer` for T1.1) |
 | `src/components/viewer` | `PartPicker` (Drew: rotate/zoom/pan/highlight + cookie loader) |
-| `public/placeholders` | Sample GLB + fake ETO parts list (Drew) |
+| `public/placeholders` | Sample packs: palletizer placeholder + hardware CAD (Drew) |
 | `src/components` | Layout, nav, BOM, quote form, staff forms (Fern) |
 | `src/lib/api` | Typed API clients (Fern) |
 | `src/lib/auth` | Authentication helpers (T1.2) |
