@@ -17,9 +17,9 @@ function normalizePart(part: Part): Part {
 }
 
 /**
- * Same-origin model file. Loaders must send the login cookie
- * (`credentials: "include"`). This is the `src` for PartPicker —
- * not a public blob URL.
+ * Same-origin path for PartPicker `src`.
+ * Pass this path through as-is. Do not pre-fetch into a blob URL;
+ * PartPicker’s loader sends the login cookie on this `src`.
  */
 export function machineFileSrc(machineId: string) {
   return `/api/machines/${machineId}/file`;

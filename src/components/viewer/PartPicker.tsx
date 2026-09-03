@@ -4,8 +4,9 @@ import type { PartPickerProps } from "@/components/viewer/types";
 
 /**
  * Mount slot for Drew’s picker. This is not a 3D engine.
- * Replace the body of this component with rotate/zoom/pan/highlight.
- * Keep these props exactly: `src`, `parts`, `onSelect`.
+ * Replace the body with rotate/zoom/pan/highlight.
+ * Keep props exactly: `src` (same-origin `/api/machines/:id/file`,
+ * not a blob URL), joined `parts`, and `onSelect`.
  */
 export function PartPicker({ src, parts }: PartPickerProps) {
   return (
