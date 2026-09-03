@@ -10,6 +10,7 @@ export type Part = {
   id: string;
   name: string;
   meshName: string;
+  qty: number;
 };
 
 export type UnmatchedPart = {
@@ -17,6 +18,7 @@ export type UnmatchedPart = {
   id?: string;
   name?: string;
   meshName?: string;
+  qty?: number;
 };
 
 export type MachineSummary = {
@@ -45,4 +47,5 @@ export type PartsListRow = {
   partNumber: string;
   name: string;
   meshName?: string;
+  qty: number;
 };

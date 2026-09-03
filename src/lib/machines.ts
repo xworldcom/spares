@@ -10,16 +10,22 @@ export function toMachineDetail(
   fileUrl: string,
   role: Role,
 ): MachineDetail {
-  const detail: MachineDetail = {
+  if (role === "staff") {
+    return {
+      id: machine.id,
+      name: machine.name,
+      fileUrl,
+      parts: machine.parts,
+      unmatched: machine.unmatched,
+    };
+  }
+
+  return {
     id: machine.id,
     name: machine.name,
     fileUrl,
     parts: machine.parts,
   };
-  if (role === "staff") {
-    detail.unmatched = machine.unmatched;
-  }
-  return detail;
 }
 
 export function modelContentType(filename: string) {

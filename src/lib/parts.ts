@@ -49,6 +49,19 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
+function parseQty(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed) && parsed >= 1) {
+      return Math.floor(parsed);
+    }
+  }
+  return 1;
+}
+
 function asRow(value: unknown): PartsListRow | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -63,7 +76,7 @@ function asRow(value: unknown): PartsListRow | null {
   if (!partNumber || !name) {
     return null;
   }
-  return { partNumber, name, meshName };
+  return { partNumber, name, meshName, qty: parseQty(record.qty) };
 }
 
 export function parsePartsList(text: string, filename: string): PartsListRow[] {
@@ -96,6 +109,7 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
     partNumber: header.findIndex((cell) => cell.toLowerCase() === "partnumber"),
     name: header.findIndex((cell) => cell.toLowerCase() === "name"),
     meshName: header.findIndex((cell) => cell.toLowerCase() === "meshname"),
+    qty: header.findIndex((cell) => cell.toLowerCase() === "qty"),
   };
   if (index.partNumber < 0 || index.name < 0) {
     throw new Error("Parts list CSV must include partNumber and name headers");
@@ -107,6 +121,7 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
       partNumber: cells[index.partNumber] ?? "",
       name: cells[index.name] ?? "",
       meshName: index.meshName >= 0 ? (cells[index.meshName] ?? "") : "",
+      qty: index.qty >= 0 ? (cells[index.qty] ?? "") : "",
     });
     if (row) {
       rows.push(row);
@@ -136,13 +151,14 @@ export function joinParts(
     const meshName = candidates.find((name) => available.has(name) && !used.has(name));
 
     if (meshName) {
-      parts.push({ id: row.partNumber, name: row.name, meshName });
+      parts.push({ id: row.partNumber, name: row.name, meshName, qty: row.qty });
       used.add(meshName);
     } else {
       unmatched.push({
         source: "list",
         id: row.partNumber,
         name: row.name,
+        qty: row.qty,
         ...(row.meshName ? { meshName: row.meshName } : {}),
       });
     }

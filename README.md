@@ -12,9 +12,9 @@ This pull request stacks **backend-only** auth, pack upload, and quote-request A
 
 It does **not** include Stripe/checkout, public registration, a native SolidWorks parser, anti-scam checks, a cart, a public marketing site, or a production deploy.
 
-## QA seeds (Quinn)
+## Private-preview seeds (Quinn)
 
-There is **no public signup**. Staff create customer accounts. These two users are seeded automatically the first time the API store is created:
+There is **no public signup**. Staff create customer accounts. These two users are **private-preview credentials only** — not production accounts. They are seeded automatically the first time the API store is created:
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -57,11 +57,11 @@ There is no public `/api/auth/register` route.
 
 Machines:
 
-- `POST /api/machines` — staff, multipart/form-data: `name`, `model` (`.glb` / `.gltf`), `partsList` (CSV headers `partNumber,name,meshName` or a JSON array of the same)
+- `POST /api/machines` — staff, multipart/form-data: `name`, `model` (`.glb` / `.gltf`), `partsList` (CSV headers `partNumber,name,meshName,qty` or a JSON array of the same). Missing `qty` defaults to `1`.
 - `GET /api/machines` → `{ machines: [{ id, name }] }` (any signed-in user)
-- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName }], unmatched?: [...] }`
+- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
 
-Join rule: `parts[].id` is the part number. A row is customer-pickable only when the list row and a 3D mesh can be paired (`meshName` from the list, or a mesh whose name equals `partNumber` / `name`). Unmatched list rows and unused meshes are returned in `unmatched` for **staff** and omitted for customers. Customers never receive unmatched rows as pickable parts.
+Join rule: `parts[].id` is the part number. Every joined part includes `qty` (ETO BOM quantity). A row is customer-pickable only when the list row and a 3D mesh can be paired (`meshName` from the list, or a mesh whose name equals `partNumber` / `name`). Unmatched list rows and unused meshes are returned in `unmatched` for **staff** (list-side rows include `qty` when present). Customer GET **omits the `unmatched` field entirely** (not `unmatched: []`). Customers never receive unmatched rows as pickable parts.
 
 `fileUrl` points at `GET /api/machines/:id/file` (session required) so the model can be loaded on a protected Vercel preview.
 

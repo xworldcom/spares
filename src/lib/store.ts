@@ -43,8 +43,6 @@ type Database = {
   quotes: StoredQuote[];
 };
 
-const EMPTY_DB: Database = { users: [], machines: [], quotes: [] };
-
 let queue: Promise<unknown> = Promise.resolve();
 let memory: Database | null = null;
 
