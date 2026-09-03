@@ -59,31 +59,31 @@ const PARTS = [
     catalog: "5972K325",
     file: "bearing_608zz.glb",
     color: 0xc5ccd3,
-    x: -0.9,
+    x: -0.55,
   },
   {
     catalog: "91280A340",
     file: "iso4017_hex_head_cap_screw_m6x25.glb",
-    color: 0x7a828c,
-    x: -0.45,
+    color: 0x9aa3ad,
+    x: -0.28,
   },
   {
     catalog: "91828A230",
     file: "iso4032_hex_nut_m6.glb",
-    color: 0xd8dde3,
+    color: 0xe4e8ed,
     x: 0,
   },
   {
     catalog: "6435K12",
     file: "shaft_collar_set_screw_8mm.glb",
-    color: 0x2b2b2b,
-    x: 0.45,
+    color: 0x3a3a3a,
+    x: 0.28,
   },
   {
     catalog: "6331K32",
     file: "adafruit_711_dc_toy_motor.glb",
     color: 0xc4a035,
-    x: 0.95,
+    x: 0.62,
   },
 ];
 
