@@ -1,0 +1,166 @@
+T1.4 RE-RUN HTTP probe
+UTC: 2026-09-03T17:41:04Z
+PREVIEW: https://spares-27bhlgi5c-yonder3.vercel.app
+
+========== / ==========
+clock_start_utc=2026-09-03T17:41:04.315109504Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2F&nonce=52d40c08bd73fc0d19945c18063bc798b931b031f88709553f8dd2c407614961
+server: Vercel
+set-cookie: _vercel_sso_nonce=fe37190f9786caf1adc16da491786d75cd562e473885ef22; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::p7gw4-1788457264351-6e7dbca69572
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.400391330Z
+
+========== /login ==========
+clock_start_utc=2026-09-03T17:41:04.401445789Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Flogin&nonce=c20b7aeb4cfc6df0dc1d7b44c6493cbf3ff3b039bd77fd14241362ef4946225e
+server: Vercel
+set-cookie: _vercel_sso_nonce=bcbc294ee04b7a19b83baf57e077386aaf1eac6621b9bada; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::hsv8n-1788457264426-4b68c90aac54
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.451029548Z
+
+========== /staff/quotes ==========
+clock_start_utc=2026-09-03T17:41:04.451903776Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fstaff%2Fquotes&nonce=0d5c9508b1526e9e391095d780c1546d0245466f6c1f47785670805d3e9f88b9
+server: Vercel
+set-cookie: _vercel_sso_nonce=5ca78a66d7d324005a01b73140648e8a374bb4ccf5dec7d3; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::n2x5g-1788457264477-c692bc278559
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.492472269Z
+
+========== /staff/customers ==========
+clock_start_utc=2026-09-03T17:41:04.493494345Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fstaff%2Fcustomers&nonce=236858f8378f18ddc0101563996ca6101bbf8adde0ae4b4af74611955db92ae1
+server: Vercel
+set-cookie: _vercel_sso_nonce=32fdafa13e262846319ad10c7781b64c68b065a622089787; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::s66pc-1788457264517-ae83f283342d
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.528375593Z
+
+========== /machines ==========
+clock_start_utc=2026-09-03T17:41:04.529329738Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fmachines&nonce=8e70ea1d5b641182efff03e52465eb08232fa637ae4b49dcf62e4e537da23c9f
+server: Vercel
+set-cookie: _vercel_sso_nonce=1ceab9982217d544b0e8a6951de91aa3d08e9f6f269f2970; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::66p7q-1788457264553-f0e593fde260
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.595605888Z
+
+========== /machines/new ==========
+clock_start_utc=2026-09-03T17:41:04.596247433Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fmachines%2Fnew&nonce=3a2146c75b01a6b583f784de355d60b426e013a626bf96441edca49b590707a3
+server: Vercel
+set-cookie: _vercel_sso_nonce=e111525e7c6bd83a41ade643520929eaa53528ef9996607b; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::brqfn-1788457264621-d9279adcc3ab
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.634557322Z
+
+========== /api/auth/me ==========
+clock_start_utc=2026-09-03T17:41:04.635297493Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fapi%2Fauth%2Fme&nonce=1e485386d9d453941725a812b87d1101c3a8735ba19223be53d5a5977c9ddb7d
+server: Vercel
+set-cookie: _vercel_sso_nonce=0c48dd7f240ebf597d070e7ad3cd765d3461315fee65c166; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::cfn6z-1788457264660-7c544238e214
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.681350136Z
+
+========== /api/machines ==========
+clock_start_utc=2026-09-03T17:41:04.682232634Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fapi%2Fmachines&nonce=cc39129e2ad0c47142aa561728df8f3485ebe10bcfac31d51d58f3f1a4c0cc7b
+server: Vercel
+set-cookie: _vercel_sso_nonce=ba2e95030ae5212214c464ff7c18a6af9004c6154b61ae01; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::d6g45-1788457264706-46db702fd164
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.716346802Z
+
+========== /api/quotes ==========
+clock_start_utc=2026-09-03T17:41:04.717204237Z
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 17:41:04 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-27bhlgi5c-yonder3.vercel.app%2Fapi%2Fquotes&nonce=69961f7366d8aec454e2037ce81470ece1c2f19ea7c6c2e303a2f61fe39e8412
+server: Vercel
+set-cookie: _vercel_sso_nonce=afd396969f7cd42975b43971dbc19f7781f1adf1d37b6194; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::2v4zr-1788457264741-cb5d2e65d211
+
+body_bytes=15
+body_snip=Redirecting... 
+clock_end_utc=2026-09-03T17:41:04.752099726Z
+

@@ -1,0 +1,13 @@
+clock_utc=2026-09-03T17:41:04Z
+vercel whoami:
+Vercel CLI 59.11.2 (Node.js 22.14.0)
+> Logged out.
+> Run `vercel deploy --temporary` to create a temporary deployment you can claim later, or `vercel login` to log in.
+
+vercel curl --yes https://spares-27bhlgi5c-yonder3.vercel.app/login :
+Vercel CLI 59.11.2 (Node.js 22.14.0) | curl is in beta — https://vercel.com/feedback
+> No existing credentials found. Starting login flow...
+> 
+  Visit https://vercel.com/oauth/device?user_code=[REDACTED]
+
+Waiting for authentication...
