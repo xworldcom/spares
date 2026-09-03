@@ -91,7 +91,9 @@ export function MachinesList() {
             <span className="text-[17px] font-medium tracking-tight text-neutral-950">
               {machine.name}
             </span>
-            <span className="text-sm font-medium text-[#0a84ff]">Open</span>
+            <span className="text-lg text-neutral-300" aria-hidden="true">
+              ›
+            </span>
           </Link>
         </li>
       ))}

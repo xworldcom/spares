@@ -240,7 +240,7 @@ export function QuoteTray({
               {count === 0 ? "" : count}
             </span>
           </span>
-          <span className="text-sm font-medium text-[#0a84ff]">Open</span>
+          <span className="text-sm font-medium text-neutral-400">Open</span>
         </button>
 
         {open ? (
