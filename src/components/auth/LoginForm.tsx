@@ -58,7 +58,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[15px] outline-none ring-1 ring-black/5"
         />
       </div>
       <div>
@@ -73,7 +73,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[15px] outline-none ring-1 ring-black/5"
         />
       </div>
       {error ? (
@@ -84,7 +84,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-neutral-950 text-[17px] font-semibold text-white disabled:opacity-40"
       >
         {submitting ? "Signing in…" : "Sign in"}
       </button>

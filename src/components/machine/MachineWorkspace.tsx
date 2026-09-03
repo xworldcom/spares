@@ -1,28 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
-import { SelectedPartPanel } from "@/components/machine/SelectedPartPanel";
+import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
 import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
-import { QuoteForm } from "@/components/quote/QuoteForm";
+import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
+import { QuoteTray, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
+import { viewerNeedsReset } from "@/components/viewer/assemblyView";
 import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 
+function ExpandIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <path
+        fill="currentColor"
+        d="M4 10V4h6v2H6v4H4zm10-6h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 4v-4h2v6h-6v-2h4z"
+      />
+    </svg>
+  );
+}
+
 export function MachineWorkspace({ machineId }: { machineId: string }) {
   const { user } = useAuth();
+  const isCustomer = user?.role === "customer";
   const [machine, setMachine] = useState<MachineDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [explode, setExplode] = useState(0);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [isolatedId, setIsolatedId] = useState<string | null>(null);
+  const [lines, setLines] = useState<TrayLine[]>([]);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [held, setHeld] = useState(false);
+  const [idle, setIdle] = useState(false);
+  const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +55,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         }
         setMachine(next);
         setSelectedPart(null);
+        setLines([]);
+        setHiddenIds([]);
+        setIsolatedId(null);
+        setExplode(0);
         setError(null);
         setNotFound(false);
         setLoading(false);
@@ -60,6 +86,58 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     };
   }, [machineId, reloadKey, user?.role]);
 
+  useEffect(() => {
+    if (!fullscreen) {
+      return;
+    }
+    let timer = window.setTimeout(() => setIdle(true), 2200);
+    function bump() {
+      setIdle(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setIdle(true), 2200);
+    }
+    const node = chromeRef.current;
+    node?.addEventListener("pointermove", bump);
+    node?.addEventListener("pointerdown", bump);
+    return () => {
+      window.clearTimeout(timer);
+      node?.removeEventListener("pointermove", bump);
+      node?.removeEventListener("pointerdown", bump);
+    };
+  }, [chromeRef, fullscreen]);
+
+  const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
+  const src = machine ? machineFileSrc(machine.id) : "";
+  const joinedParts: ViewerPart[] = machine?.parts ?? [];
+  const showUnmatched =
+    user?.role === "staff" && machine?.unmatched !== undefined;
+  const dimmed = fullscreen && idle;
+
+  const tray = useMemo(() => {
+    if (!isCustomer) {
+      return null;
+    }
+    return (
+      <QuoteTray
+        machineId={machineId}
+        lines={lines}
+        onQty={(partId, qty) => {
+          setLines((current) =>
+            current.map((line) =>
+              line.part.id === partId ? { ...line, qty } : line,
+            ),
+          );
+        }}
+        onRemove={(partId) => {
+          setLines((current) => current.filter((line) => line.part.id !== partId));
+        }}
+        onClear={() => setLines([])}
+        open={trayOpen}
+        onOpenChange={setTrayOpen}
+      />
+    );
+  }, [isCustomer, lines, machineId, trayOpen]);
+
   if (loading) {
     return <LoadingState label="Loading machine…" />;
   }
@@ -86,63 +164,208 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     );
   }
 
-  const src = machineFileSrc(machine.id);
-  const joinedParts: ViewerPart[] = machine.parts;
-  const showUnmatched =
-    user?.role === "staff" && machine.unmatched !== undefined;
-
-  function handleViewerSelect(part: ViewerPart | null) {
-    setSelectedPart(part);
+  function showAll() {
+    setExplode(0);
+    setHiddenIds([]);
+    setIsolatedId(null);
   }
 
+  function hideSelected() {
+    if (!selectedPart) {
+      return;
+    }
+    setHiddenIds((current) =>
+      current.includes(selectedPart.id) ? current : [...current, selectedPart.id],
+    );
+    if (isolatedId === selectedPart.id) {
+      setIsolatedId(null);
+    }
+  }
+
+  function isolateSelected() {
+    if (!selectedPart) {
+      return;
+    }
+    setIsolatedId(selectedPart.id);
+    setHiddenIds((current) => current.filter((id) => id !== selectedPart.id));
+  }
+
+  function addSelected() {
+    if (!selectedPart) {
+      return;
+    }
+    setLines((current) => {
+      if (current.some((line) => line.part.id === selectedPart.id)) {
+        return current;
+      }
+      return [...current, { part: selectedPart, qty: 1 }];
+    });
+  }
+
+  const viewerBlock = (
+    <div
+      ref={chromeRef}
+      className={
+        overlay
+          ? "fixed inset-0 z-50 flex flex-col bg-[#0b0d10]"
+          : fullscreen
+            ? "flex h-full min-h-0 flex-col bg-[#0b0d10]"
+            : "flex min-h-0 flex-col overflow-hidden rounded-[28px] bg-[#0b0d10]"
+      }
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <div
+        className={
+          fullscreen
+            ? "relative min-h-0 flex-1"
+            : "relative h-[58vh] shrink-0 lg:h-[64vh]"
+        }
+      >
+        {src ? (
+          <PartPicker
+            src={src}
+            parts={joinedParts}
+            selectedId={selectedPart?.id ?? null}
+            explode={explode}
+            hiddenIds={hiddenIds}
+            isolatedId={isolatedId}
+            onSelect={setSelectedPart}
+            onLongPress={(part) => {
+              setSelectedPart(part);
+              setHeld(true);
+              window.setTimeout(() => setHeld(false), 240);
+            }}
+            className="absolute inset-0"
+          />
+        ) : (
+          <EmptyState
+            title="No model"
+            message="This machine pack does not have a GLB or GLTF file to display."
+          />
+        )}
+        <SelectedPartSheet
+          part={selectedPart}
+          onHide={hideSelected}
+          onIsolate={isolateSelected}
+          onAdd={isCustomer ? addSelected : undefined}
+          showAdd={isCustomer}
+          dimmed={dimmed}
+          held={held}
+        />
+        <div
+          className={`absolute top-3 left-3 z-20 chrome-fade ${
+            dimmed || !needsReset ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          {needsReset ? (
+            <button
+              type="button"
+              onClick={showAll}
+              className="inline-flex h-11 items-center rounded-full bg-white/92 px-4 text-sm font-semibold text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+            >
+              Show all
+            </button>
+          ) : null}
+        </div>
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+          {isCustomer && fullscreen ? (
+            <div className={`chrome-fade ${dimmed ? "opacity-70" : "opacity-100"}`}>
+              <QuoteTray
+                machineId={machine.id}
+                lines={lines}
+                onQty={() => undefined}
+                onRemove={() => undefined}
+                onClear={() => undefined}
+                fullscreen
+                onExitToTray={() => {
+                  setIdle(false);
+                  exit();
+                  setTrayOpen(true);
+                }}
+              />
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={
+              fullscreen
+                ? () => {
+                    setIdle(false);
+                    exit();
+                  }
+                : () => {
+                    setIdle(false);
+                    enter();
+                  }
+            }
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+            aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+          >
+            {fullscreen ? (
+              <span className="text-2xl leading-none">×</span>
+            ) : (
+              <ExpandIcon />
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={`flex h-14 shrink-0 items-center gap-3 px-5 chrome-fade ${
+          dimmed ? "opacity-55" : "opacity-100"
+        }`}
+      >
+        <label className="flex min-w-0 flex-1 items-center gap-3 text-white">
+          <span className="shrink-0 text-[13px] font-medium tracking-wide text-white/80">
+            Explode
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(explode * 100)}
+            onChange={(event) => setExplode(Number(event.target.value) / 100)}
+            className="explode-slider"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(explode * 100)}
+            aria-label="Explode assembly"
+          />
+        </label>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
-          Machine pack
+    <div className="pb-20 lg:pb-0">
+      <div className="mb-4 min-w-0">
+        <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-400 uppercase">
+          Machine
         </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{machine.name}</h1>
+        <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">
+          {machine.name}
+        </h1>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
-        <div className="min-h-[22rem] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
-          {src ? (
-            <PartPicker
-              src={src}
-              parts={joinedParts}
-              selectedId={selectedPart?.id ?? null}
-              onSelect={handleViewerSelect}
-              className="h-full min-h-[22rem]"
-            />
-          ) : (
-            <EmptyState
-              title="No model"
-              message="This machine pack does not have a GLB or GLTF file to display."
-            />
-          )}
-        </div>
-        <div className="space-y-4">
-          <SelectedPartPanel part={selectedPart} />
-          {user?.role === "customer" ? (
-            <QuoteForm machineId={machine.id} part={selectedPart} />
-          ) : (
-            <p className="text-sm text-neutral-600">
-              Customers request quotes from this page. Staff inspect the join
-              here. Unmatched meshes stay in the staff panel, not the picker.
-            </p>
-          )}
-        </div>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:items-start">
+        {viewerBlock}
+        {isCustomer ? (
+          <div className="lg:h-[calc(64vh+3.5rem)]">{tray}</div>
+        ) : (
+          <div className="rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
+            Customers request quotes from this page. Staff inspect the join
+            here. Unmatched meshes stay in the staff panel, not the picker.
+          </div>
+        )}
       </div>
 
-      <section aria-labelledby="bom-heading" className="space-y-3">
+      <section aria-labelledby="bom-heading" className="mt-8 space-y-3">
         <div>
-          <h2 id="bom-heading" className="text-sm font-semibold text-neutral-900">
-            Parts list
+          <h2 id="bom-heading" className="text-[13px] font-semibold tracking-tight text-neutral-950">
+            Parts
           </h2>
-          <p className="text-sm text-neutral-600">
-            Joined ETO-shaped BOM. Join key is part number. Qty is on each row.
-            These are the only parts the picker can select.
-          </p>
         </div>
         <PartsBom
           parts={joinedParts}
@@ -151,7 +374,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         />
       </section>
 
-      {showUnmatched ? <UnmatchedMeshes unmatched={machine.unmatched ?? []} /> : null}
+      {showUnmatched ? (
+        <div className="mt-6">
+          <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -34,13 +34,19 @@ export type MachineDetail = {
   unmatched?: UnmatchedPart[];
 };
 
+export type QuoteItem = {
+  id: string;
+  qty: number;
+};
+
 export type Quote = {
   id: string;
   machineId: string;
-  partIds: string[];
+  items: QuoteItem[];
   note?: string;
   createdAt: string;
   customerEmail: string;
+  machineName?: string;
 };
 
 export type PartsListRow = {

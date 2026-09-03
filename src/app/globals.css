@@ -1,5 +1,124 @@
 @import "tailwindcss";
 
+:root {
+  --spares-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --spares-duration: 200ms;
+  --spares-accent: #0a84ff;
+  --spares-ink: #0b0d10;
+  --spares-paper: #f4f5f7;
+}
+
+html {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: var(--spares-paper);
+  color: var(--spares-ink);
+}
+
 body {
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: inherit;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+@keyframes tray-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tray-line {
+  animation: tray-line-in var(--spares-duration) var(--spares-ease) both;
+}
+
+.tray-sheet {
+  animation: sheet-in 220ms var(--spares-ease) both;
+}
+
+.chrome-fade {
+  transition:
+    opacity var(--spares-duration) var(--spares-ease),
+    transform var(--spares-duration) var(--spares-ease);
+}
+
+.explode-slider {
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+}
+
+.explode-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.explode-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9.5px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.explode-slider::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.explode-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
 }

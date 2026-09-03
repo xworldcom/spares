@@ -32,8 +32,12 @@ export function PartPicker(props: {
   src: string; // GLB/GLTF URL — Fern passes GET /api/machines/:id/file
   parts: ViewerPart[];
   selectedId?: string | null;
+  explode?: number; // 0 = assembled, 1 = fully exploded
+  hiddenIds?: readonly string[];
+  isolatedId?: string | null;
   onSelect?: (part: ViewerPart | null) => void;
   onUnmatchedSelect?: (mesh: { meshName: string } | null) => void;
+  onLongPress?: (part: ViewerPart) => void;
   className?: string;
 }): JSX.Element;
 ```
@@ -42,13 +46,19 @@ export function PartPicker(props: {
 | --- | --- |
 | `src` | URL of a `.glb` / `.gltf`. Loaded with `fetch(..., { credentials: "include" })` so the `spares_session` cookie is sent. A cookie-less load 401s on the protected preview. |
 | `parts` | Joined named parts only (customer-pickable). `id` is the part number. |
-| `onSelect` | Click a mesh that maps to `parts[]` → `{ id, name, meshName, qty }`. Click empty space or an unmatched mesh → `null`. |
+| `onSelect` | Pointer-down on a mesh that maps to `parts[]` → `{ id, name, meshName, qty }`. Empty space → `null`. |
 | `selectedId` | Optional controlled highlight (list → viewer). Omit to let the viewer keep last named pick. |
+| `explode` | Radial explode from the assembly centroid. `0` is assembled. Meshes translate away from the centroid; camera framing is not refit. |
+| `hiddenIds` | Named parts with `visible = false`. |
+| `isolatedId` | Other meshes go to opacity ~0.12 and are not clickable. Isolated part stays solid. |
+| `onLongPress` | Press-and-hold (~500ms) on a named part. Parent shows Hide / See only this. Not a right-click CAD menu. |
 | `onUnmatchedSelect` | Optional staff hook. A named mesh with no `parts[]` row reports `{ meshName }` and is **not** a quote-pickable part. |
 
 Unmatched meshes are never treated as named parts. Only rows in `parts` are customer-selectable. Staff unmatched QA belongs in Fern's staff panel, not in this picker.
 
-Rotate, zoom, and pan are built in (OrbitControls).
+Rotate, zoom, and pan are built in (OrbitControls). There is no CAD ribbon. Hide / isolate / explode live on the machine page chrome.
+
+WebXR / VR is a later pass — do not add XR buttons here.
 
 ## Cookie file URL
 

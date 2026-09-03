@@ -86,10 +86,12 @@ export function MachinesList() {
         <li key={machine.id}>
           <Link
             href={`/machines/${machine.id}`}
-            className="flex items-center justify-between px-4 py-3 hover:bg-neutral-50"
+            className="flex min-h-14 items-center justify-between px-4 py-3 hover:bg-neutral-50"
           >
-            <span className="font-medium text-neutral-900">{machine.name}</span>
-            <span className="font-mono text-xs text-neutral-500">{machine.id}</span>
+            <span className="text-[17px] font-medium tracking-tight text-neutral-950">
+              {machine.name}
+            </span>
+            <span className="text-sm font-medium text-[#0a84ff]">Open</span>
           </Link>
         </li>
       ))}

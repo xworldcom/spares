@@ -6,24 +6,11 @@ Internal staff upload a machine pack. Customers log in, inspect and rotate a mac
 
 This repository is **private by default**. The product is **not live**. Do not deploy this app to a public production URL, attach a public custom domain, or turn on public signup.
 
-## What this pass is (T1.3)
+## What this pass is (T2.0)
 
-This pull request is the **web UI** (PR #8). It is stacked on:
+Customer machine page: explode, hide / isolate, same-page quote tray with quantities, fullscreen viewer. Private preview only.
 
-- Draft T1.2 APIs — [PR #7](https://github.com/xworldcom/spares/pull/7) (`cursor/t1-2-auth-pack-quotes-fcd6`)
-- Draft T1.1 viewer — [PR #9](https://github.com/xworldcom/spares/pull/9) (`cursor/t1-1-placeholder-viewer-84c3`)
-
-**Neither #7 nor #9 is merged to `main`.** This PR does not merge them to `main`. Keep #8 as a draft UI PR. Private preview only.
-
-Fern owns:
-
-- Cookie-session login for staff and customers
-- Role-aware nav after `/api/auth/me`
-- Staff: create customer accounts; upload a pack (machine name + GLB/GLTF + ETO-shaped parts list with part number, name, qty); unmatched staff panel
-- Customer: open that machine; chrome around Drew’s `PartPicker`; selected-part name and part number; request a quote with an optional note
-- Empty, error, and not-signed-in states
-
-Drew owns rotate / zoom / pan / highlight in `src/components/viewer`. Fern does **not** invent a second 3D engine and does not overwrite Drew’s picker, `public/placeholders/`, or cookie loader.
+Extends Drew’s `PartPicker` in `src/components/viewer` — no second 3D engine. Seeded packs: Hardware fixture (McMaster) and Palletizer (placeholder). Login seeds are unchanged.
 
 ## What this pass is not
 
@@ -141,8 +128,8 @@ The UI calls these routes with `credentials: "include"`:
 - `GET /api/machines` → `{ machines: [{ id, name }] }`
 - `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
 - `GET /api/machines/:id/file` — session cookie required; this is the viewer `src`
-- `POST /api/quotes` — customer `{ machineId, partIds, note? }`
-- `GET /api/quotes` — staff inbox
+- `POST /api/quotes` — customer `{ machineId, items: [{ id, qty }], note? }` (`qty` ≥ 1). Cookie session.
+- `GET /api/quotes` — staff inbox; each line includes `id` and `qty`. Customer GET of a machine still omits `unmatched`.
 
 Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog source of truth is Total ETO. Join key is part number.
 
@@ -162,4 +149,4 @@ Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog sou
 
 ## Do not go live
 
-Keep this GitHub repository private. Preview or local development is fine; production and a custom domain are not part of T1.3.
+Keep this GitHub repository private. Preview or local development is fine; production and a custom domain are not part of T2.0.

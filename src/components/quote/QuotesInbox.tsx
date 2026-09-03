@@ -16,6 +16,12 @@ function formatWhen(value: string) {
   return date.toLocaleString();
 }
 
+function formatLines(quote: Quote) {
+  return quote.items
+    .map((item) => `${item.id} × ${item.qty}`)
+    .join(", ");
+}
+
 export function QuotesInbox() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +72,7 @@ export function QuotesInbox() {
     return (
       <EmptyState
         title="No quote requests"
-        message="When a customer picks a part and requests a quote, it will appear here."
+        message="When a customer picks parts and requests a quote, it will appear here."
       />
     );
   }
@@ -79,7 +85,7 @@ export function QuotesInbox() {
             <th className="px-3 py-2 font-medium">When</th>
             <th className="px-3 py-2 font-medium">Customer</th>
             <th className="px-3 py-2 font-medium">Machine</th>
-            <th className="px-3 py-2 font-medium">Part numbers</th>
+            <th className="px-3 py-2 font-medium">Lines</th>
             <th className="px-3 py-2 font-medium">Note</th>
           </tr>
         </thead>
@@ -90,10 +96,8 @@ export function QuotesInbox() {
                 {formatWhen(quote.createdAt)}
               </td>
               <td className="px-3 py-2">{quote.customerEmail}</td>
-              <td className="px-3 py-2 font-mono text-xs">{quote.machineId}</td>
-              <td className="px-3 py-2 font-mono text-xs">
-                {quote.partIds.join(", ")}
-              </td>
+              <td className="px-3 py-2">{quote.machineName ?? "Machine"}</td>
+              <td className="px-3 py-2 font-mono text-xs">{formatLines(quote)}</td>
               <td className="px-3 py-2 text-neutral-600">{quote.note ?? "—"}</td>
             </tr>
           ))}

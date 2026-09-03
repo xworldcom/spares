@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { hashPassword } from "@/lib/auth/password";
-import type { Part, Quote, Role, UnmatchedPart } from "@/types";
+import { normalizeStoredQuote } from "@/lib/quotes";
+import { missingFixtureMachines } from "@/lib/seed-fixtures";
+import type { Part, Quote, QuoteItem, Role, UnmatchedPart } from "@/types";
 
 export const SEED_STAFF = {
   email: "staff@spares.local",
@@ -95,6 +97,15 @@ async function seedDatabase(): Promise<Database> {
   return { users, machines: [], quotes: [] };
 }
 
+async function withFixtureMachines(db: Database): Promise<Database> {
+  await ensureDirs();
+  const extras = await missingFixtureMachines(db.machines, filesDir());
+  if (extras.length === 0) {
+    return db;
+  }
+  return { ...db, machines: [...db.machines, ...extras] };
+}
+
 async function readDatabase(): Promise<Database> {
   if (memory) {
     return memory;
@@ -105,18 +116,25 @@ async function readDatabase(): Promise<Database> {
     const raw = await readFile(dbPath(), "utf8");
     const parsed = JSON.parse(raw) as Database;
     if (!parsed.users?.length) {
-      memory = await seedDatabase();
+      memory = await withFixtureMachines(await seedDatabase());
       await writeFile(dbPath(), JSON.stringify(memory, null, 2));
       return memory;
     }
-    memory = {
+    const next = await withFixtureMachines({
       users: parsed.users ?? [],
       machines: parsed.machines ?? [],
-      quotes: parsed.quotes ?? [],
-    };
+      quotes: (parsed.quotes ?? []).map((quote) => ({
+        ...normalizeStoredQuote(quote),
+        customerId: quote.customerId,
+      })),
+    });
+    if (next.machines.length !== (parsed.machines ?? []).length) {
+      await writeFile(dbPath(), JSON.stringify(next, null, 2));
+    }
+    memory = next;
     return memory;
   } catch {
-    memory = await seedDatabase();
+    memory = await withFixtureMachines(await seedDatabase());
     await writeFile(dbPath(), JSON.stringify(memory, null, 2));
     return memory;
   }
@@ -204,7 +222,7 @@ export function createMachine(input: {
 
 export function createQuote(input: {
   machineId: string;
-  partIds: string[];
+  items: QuoteItem[];
   note?: string;
   customerId: string;
   customerEmail: string;
@@ -214,7 +232,7 @@ export function createQuote(input: {
     const quote: StoredQuote = {
       id: randomUUID(),
       machineId: input.machineId,
-      partIds: input.partIds,
+      items: input.items,
       note: input.note,
       createdAt: new Date().toISOString(),
       customerEmail: input.customerEmail,
@@ -228,7 +246,12 @@ export function createQuote(input: {
 export function listQuotes() {
   return withLock(async () => {
     const db = await readDatabase();
-    return [...db.quotes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return [...db.quotes]
+      .map((quote) => ({
+        ...normalizeStoredQuote(quote),
+        customerId: quote.customerId,
+      }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }
 

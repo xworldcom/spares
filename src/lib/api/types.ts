@@ -7,6 +7,7 @@ export type {
   PartsListRow,
   PublicUser,
   Quote,
+  QuoteItem,
   Role,
   UnmatchedPart,
 } from "@/types";

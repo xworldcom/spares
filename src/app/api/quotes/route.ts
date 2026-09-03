@@ -1,22 +1,24 @@
 import { requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { createQuote, getMachine, listQuotes } from "@/lib/store";
+import { parseQuoteItems } from "@/lib/quotes";
+import { createQuote, getMachine, listMachines, listQuotes } from "@/lib/store";
 import type { Quote } from "@/types";
 
 type CreateQuoteBody = {
   machineId?: unknown;
-  partIds?: unknown;
+  items?: unknown;
   note?: unknown;
 };
 
-function toPublicQuote(quote: Quote): Quote {
+function toPublicQuote(quote: Quote, machineName?: string): Quote {
   return {
     id: quote.id,
     machineId: quote.machineId,
-    partIds: quote.partIds,
+    items: quote.items,
     note: quote.note,
     createdAt: quote.createdAt,
     customerEmail: quote.customerEmail,
+    ...(machineName ? { machineName } : {}),
   };
 }
 
@@ -26,8 +28,13 @@ export async function GET() {
     return auth.error;
   }
 
-  const quotes = await listQuotes();
-  return json({ quotes: quotes.map(toPublicQuote) });
+  const [quotes, machines] = await Promise.all([listQuotes(), listMachines()]);
+  const names = new Map(machines.map((machine) => [machine.id, machine.name]));
+  return json({
+    quotes: quotes.map((quote) =>
+      toPublicQuote(quote, names.get(quote.machineId)),
+    ),
+  });
 }
 
 export async function POST(request: Request) {
@@ -46,11 +53,9 @@ export async function POST(request: Request) {
     return error("machineId is required", 400);
   }
 
-  if (!Array.isArray(body.partIds) || body.partIds.length === 0) {
-    return error("partIds must be a non-empty array", 400);
-  }
-  if (body.partIds.some((partId) => typeof partId !== "string" || !partId.trim())) {
-    return error("partIds must be an array of part numbers", 400);
+  const parsed = parseQuoteItems(body.items);
+  if (!parsed.ok) {
+    return error(parsed.error, 400);
   }
 
   const note =
@@ -62,18 +67,17 @@ export async function POST(request: Request) {
   }
 
   const pickable = new Set(machine.parts.map((part) => part.id));
-  const partIds = body.partIds.map((partId) => (partId as string).trim());
-  if (partIds.some((partId) => !pickable.has(partId))) {
+  if (parsed.items.some((item) => !pickable.has(item.id))) {
     return error("One or more part ids are not customer-pickable on this machine", 400);
   }
 
   const quote = await createQuote({
     machineId,
-    partIds,
+    items: parsed.items,
     note,
     customerId: auth.user.id,
     customerEmail: auth.user.email,
   });
 
-  return json({ quote: toPublicQuote(quote) }, 201);
+  return json({ quote: toPublicQuote(quote, machine.name) }, 201);
 }

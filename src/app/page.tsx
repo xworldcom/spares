@@ -26,14 +26,14 @@ export default function Home() {
           <>
             <Link
               href="/machines"
-              className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+              className="inline-flex h-12 items-center rounded-full bg-neutral-950 px-5 text-[15px] font-semibold text-white"
             >
               Open machines
             </Link>
             {user.role === "staff" ? (
               <Link
                 href="/machines/new"
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-white"
+                className="inline-flex h-12 items-center rounded-full px-5 text-[15px] font-medium text-neutral-700"
               >
                 Upload pack
               </Link>
@@ -42,7 +42,7 @@ export default function Home() {
         ) : (
           <Link
             href="/login"
-            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className="inline-flex h-12 items-center rounded-full bg-neutral-950 px-5 text-[15px] font-semibold text-white"
           >
             Sign in
           </Link>
