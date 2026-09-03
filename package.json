@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts",
-    "generate:placeholder": "node scripts/generate-placeholder-glb.mjs"
+    "generate:placeholder": "node scripts/generate-placeholder-glb.mjs",
+    "generate:hardware": "node scripts/generate-hardware-glb.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

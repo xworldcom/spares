@@ -129,9 +129,13 @@ export function UploadPackForm() {
           />
           <p className="mt-1 text-xs text-neutral-500">
             SolidWorks conversion is out of scope. Upload a browser-ready GLB
-            or GLTF. Sample pack:{" "}
+            or GLTF. Sample packs:{" "}
             <code className="text-neutral-700">
               public/placeholders/palletizer-placeholder.glb
+            </code>{" "}
+            or{" "}
+            <code className="text-neutral-700">
+              public/placeholders/hardware/mcmaster-hardware.glb
             </code>
             .
           </p>
@@ -142,9 +146,13 @@ export function UploadPackForm() {
           <p className="text-sm text-neutral-600">
             Catalog source of truth is Total ETO (item master + job BOM), not
             SolidWorks custom properties. Join key is part number. Include qty
-            so the list reads like a BOM. Matching sample list:{" "}
+            so the list reads like a BOM. Matching sample lists:{" "}
             <code className="text-neutral-700">
               public/placeholders/palletizer-parts.csv
+            </code>{" "}
+            or{" "}
+            <code className="text-neutral-700">
+              public/placeholders/hardware/mcmaster-hardware-parts.csv
             </code>
             .
           </p>

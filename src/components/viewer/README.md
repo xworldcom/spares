@@ -57,9 +57,11 @@ Rotate, zoom, and pan are built in (OrbitControls).
 1. `fetch(src, { credentials: "include" })` for the GLB/GLTF bytes
 2. `GLTFLoader.setWithCredentials(true)` for any follow-up buffer/texture requests
 
-Public fixture URLs such as `/placeholders/palletizer-placeholder.glb` still work.
+Public fixture URLs such as `/placeholders/palletizer-placeholder.glb` and `/placeholders/hardware/mcmaster-hardware.glb` still work.
 
-## Sample pack (staff upload)
+## Sample packs (staff upload)
+
+### Palletizer placeholder (T1.1)
 
 Ship these together. Paths are under `public/placeholders/`:
 
@@ -75,7 +77,7 @@ Regenerate the GLB (does not download third-party models):
 npm run generate:placeholder
 ```
 
-### Join / unmatched QA
+#### Join / unmatched QA
 
 | Part number | Name | qty | Join |
 | --- | --- | --- | --- |
@@ -87,6 +89,29 @@ npm run generate:placeholder
 
 `id` in the API / `ViewerPart` is the part number.
 
+### Hardware CAD pack
+
+Real public CAD (ISO fasteners, 608ZZ bearing, Adafruit DC motor) with **McMaster catalog numbers** as node / mesh / `partNumber`. Sources and licenses: [`public/placeholders/hardware/SOURCES.md`](../../../public/placeholders/hardware/SOURCES.md).
+
+| File | Role |
+| --- | --- |
+| [`/placeholders/hardware/mcmaster-hardware.glb`](../../../public/placeholders/hardware/mcmaster-hardware.glb) | Five separate named meshes. |
+| [`/placeholders/hardware/mcmaster-hardware-parts.csv`](../../../public/placeholders/hardware/mcmaster-hardware-parts.csv) | ETO-shaped BOM (`partNumber,name,meshName,qty`). |
+| [`/placeholders/hardware/mcmaster-hardware-parts.json`](../../../public/placeholders/hardware/mcmaster-hardware-parts.json) | Same rows as JSON. |
+
+```bash
+npm run generate:hardware
+```
+
+| Part number | Name | qty | Join |
+| --- | --- | --- | --- |
+| `5972K325` | Shielded ball bearing, 8 mm ID × 22 mm OD × 7 mm W | 1 | Named mesh, clickable |
+| `91280A340` | Hex head cap screw, M6 × 25 mm, 18-8 SS | 4 | Named mesh, clickable |
+| `91828A230` | Hex nut, M6, 18-8 SS | 4 | Named mesh, clickable |
+| `6435K12` | Set-screw shaft collar, 8 mm bore | 1 | Named mesh, clickable |
+| `6331K32` | Miniature DC motor | 1 | Named mesh, clickable |
+| `93475A240` | Flat washer, M6 | 10 | List-only unmatched (no mesh) |
+
 ## Dev check
 
-`/dev/viewer` loads this pack for a private, not-live developer check. It is not a customer, staff, or login route (Fern owns those).
+`/dev/viewer` loads the hardware pack for a private, not-live developer check. `?pack=palletizer` loads the T1.1 placeholder. It is not a customer, staff, or login route (Fern owns those).
