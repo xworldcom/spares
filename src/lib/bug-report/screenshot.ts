@@ -7,6 +7,14 @@ type R3FLike = {
   camera?: unknown;
 };
 
+type CanvasSnapshot = {
+  image: HTMLImageElement;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 function isBugReportNode(node: Element) {
   return node.hasAttribute("data-bug-report") || Boolean(node.closest("[data-bug-report]"));
 }
@@ -36,13 +44,7 @@ function loadImage(url: string) {
 }
 
 async function snapshotCanvases() {
-  const snapshots: {
-    image: HTMLImageElement;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }[] = [];
+  const snapshots: CanvasSnapshot[] = [];
 
   for (const canvas of document.querySelectorAll("canvas")) {
     if (!(canvas instanceof HTMLCanvasElement) || isBugReportNode(canvas)) {
@@ -110,9 +112,51 @@ export function canvasToJpegBase64(
   return stripDataUrl(url);
 }
 
-function fallbackViewportShot(
-  snapshots: Awaited<ReturnType<typeof snapshotCanvases>>,
+function paintSnapshots(
+  shot: HTMLCanvasElement,
+  snapshots: CanvasSnapshot[],
+  sourceWidth: number,
+  sourceHeight: number,
 ) {
+  const ctx = shot.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+  const scaleX = shot.width / Math.max(sourceWidth, 1);
+  const scaleY = shot.height / Math.max(sourceHeight, 1);
+  for (const snap of snapshots) {
+    ctx.drawImage(
+      snap.image,
+      snap.x * scaleX,
+      snap.y * scaleY,
+      snap.width * scaleX,
+      snap.height * scaleY,
+    );
+  }
+}
+
+function isMostlyBlank(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx || canvas.width < 2 || canvas.height < 2) {
+    return true;
+  }
+  const sampleW = Math.min(canvas.width, 96);
+  const sampleH = Math.min(canvas.height, 96);
+  const pixels = ctx.getImageData(0, 0, sampleW, sampleH).data;
+  let ink = 0;
+  for (let i = 0; i < pixels.length; i += 16) {
+    const red = pixels[i];
+    const green = pixels[i + 1];
+    const blue = pixels[i + 2];
+    const alpha = pixels[i + 3];
+    if (alpha > 12 && (red < 246 || green < 246 || blue < 246)) {
+      ink += 1;
+    }
+  }
+  return ink < 6;
+}
+
+function fallbackViewportShot(snapshots: CanvasSnapshot[]) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(window.innerWidth));
   canvas.height = Math.max(1, Math.round(window.innerHeight));
@@ -134,6 +178,48 @@ function fallbackViewportShot(
   return canvas;
 }
 
+function ignoreCloneNode(node: Node) {
+  if (!(node instanceof Element)) {
+    return true;
+  }
+  return !isBugReportNode(node) && node.tagName !== "NEXTJS-PORTAL";
+}
+
+async function captureDomWithHtmlToImage() {
+  const { toCanvas } = await import("html-to-image");
+  const width = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, 1);
+  const height = Math.max(
+    document.documentElement.scrollHeight,
+    document.body.scrollHeight,
+    1,
+  );
+  return toCanvas(document.body, {
+    backgroundColor: "#fafafa",
+    pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+    cacheBust: true,
+    width,
+    height,
+    filter: ignoreCloneNode,
+  });
+}
+
+async function captureDomWithHtml2Canvas(foreignObjectRendering: boolean) {
+  const html2canvas = (await import("html2canvas")).default;
+  return html2canvas(document.body, {
+    backgroundColor: "#fafafa",
+    useCORS: true,
+    logging: false,
+    foreignObjectRendering,
+    scale: Math.min(window.devicePixelRatio || 1, 1.5),
+    ignoreElements: (element) =>
+      element instanceof Element &&
+      (isBugReportNode(element) || element.tagName === "NEXTJS-PORTAL"),
+    onclone: (cloned) => {
+      cloned.querySelectorAll("[data-bug-report]").forEach((node) => node.remove());
+    },
+  });
+}
+
 export async function waitTwoAnimationFrames() {
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
@@ -144,37 +230,34 @@ export async function waitTwoAnimationFrames() {
 
 export async function capturePageJpegBase64() {
   const snapshots = await snapshotCanvases();
+  const sourceWidth = Math.max(
+    document.documentElement.scrollWidth,
+    document.body.scrollWidth,
+    1,
+  );
+  const sourceHeight = Math.max(
+    document.documentElement.scrollHeight,
+    document.body.scrollHeight,
+    1,
+  );
 
-  try {
-    const html2canvas = (await import("html2canvas")).default;
-    const shot = await html2canvas(document.documentElement, {
-      backgroundColor: "#fafafa",
-      useCORS: true,
-      logging: false,
-      scale: Math.min(window.devicePixelRatio || 1, 1.5),
-      ignoreElements: (element) =>
-        element instanceof Element &&
-        (isBugReportNode(element) || element.tagName === "NEXTJS-PORTAL"),
-      onclone: (cloned) => {
-        cloned.querySelectorAll("[data-bug-report]").forEach((node) => node.remove());
-      },
-    });
-    const ctx = shot.getContext("2d");
-    if (ctx) {
-      const scaleX = shot.width / Math.max(document.documentElement.scrollWidth, 1);
-      const scaleY = shot.height / Math.max(document.documentElement.scrollHeight, 1);
-      for (const snap of snapshots) {
-        ctx.drawImage(
-          snap.image,
-          snap.x * scaleX,
-          snap.y * scaleY,
-          snap.width * scaleX,
-          snap.height * scaleY,
-        );
+  const attempts = [
+    captureDomWithHtmlToImage,
+    () => captureDomWithHtml2Canvas(true),
+    () => captureDomWithHtml2Canvas(false),
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const shot = await attempt();
+      paintSnapshots(shot, snapshots, sourceWidth, sourceHeight);
+      if (!isMostlyBlank(shot) || snapshots.length > 0) {
+        return canvasToJpegBase64(shot);
       }
+    } catch {
+      // Try the next capture strategy.
     }
-    return canvasToJpegBase64(shot);
-  } catch {
-    return canvasToJpegBase64(fallbackViewportShot(snapshots));
   }
+
+  return canvasToJpegBase64(fallbackViewportShot(snapshots));
 }

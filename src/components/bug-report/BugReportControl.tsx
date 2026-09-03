@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { submitBugReport } from "@/lib/api/bugs";
@@ -53,8 +54,10 @@ export function BugReportControl() {
 
     setSending(true);
     setError(null);
-    setOpen(false);
-    setVisible(false);
+    flushSync(() => {
+      setOpen(false);
+      setVisible(false);
+    });
 
     await waitTwoAnimationFrames();
 
