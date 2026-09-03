@@ -12,9 +12,11 @@ This is a **private preview for critique only**. It is not a live product, not p
 
 | | |
 | --- | --- |
-| Preview URL | _pending first successful preview deploy — see this PR_ |
-| Vercel project | `spares` (separate from the `yonder` project) |
-| Protection | Vercel Authentication / SSO (`all_except_custom_domains`). You must be signed into the Vercel team. Password protection is unavailable on this plan (Advanced Deployment Protection is not enabled). |
+| Preview URL | https://spares-aeckfo3sn-yonder3.vercel.app |
+| Dashboard | https://vercel.com/yonder3/spares |
+| Vercel project | `spares` (`prj_vPMO2YHyvTj8FKLK3BZuguu5Anw6`) — separate from the `yonder` app. The `yonder3` hostname is the Vercel team slug only. |
+| Target | Preview only (`target` is not production). The default `spares-yonder3.vercel.app` alias is **not live** (no successful production deploy). |
+| Protection | Vercel Authentication / SSO on preview and production deployment URLs. Sign in with the Vercel team. Password protection is unavailable on this plan (Advanced Deployment Protection is not enabled). |
 
 Sign in to the app **after** the Vercel gate. Seed logins are preview-only and are **not** shown on the homepage or login screen:
 
