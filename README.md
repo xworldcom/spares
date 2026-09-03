@@ -8,20 +8,71 @@ This repository is **private by default**. The product is **not live**. Do not d
 
 ## What this pass is (T1.3)
 
-This pull request is the **web UI** (PR #8). It is stacked on the T1.2 draft APIs from [PR #7](https://github.com/xworldcom/spares/pull/7) (`cursor/t1-2-auth-pack-quotes-fcd6`) so the routes exist to call. **PR #7 is not merged to `main`.** Do not treat it as landed on `main`, and do not merge #7 from this UI PR.
+This pull request is the **web UI** (PR #8). It is stacked on:
 
-- Cookie-session login for staff and customers (`POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`)
+- Draft T1.2 APIs — [PR #7](https://github.com/xworldcom/spares/pull/7) (`cursor/t1-2-auth-pack-quotes-fcd6`)
+- Draft T1.1 viewer — [PR #9](https://github.com/xworldcom/spares/pull/9) (`cursor/t1-1-placeholder-viewer-84c3`)
+
+**Neither #7 nor #9 is merged to `main`.** This PR does not merge them to `main`. Keep #8 as a draft UI PR. Private preview only.
+
+Fern owns:
+
+- Cookie-session login for staff and customers
 - Role-aware nav after `/api/auth/me`
-- Staff: create customer accounts; upload a pack (machine name + GLB/GLTF + ETO-shaped parts list with part number, name, qty); see unmatched meshes
-- Customer: open that machine; chrome around Drew’s `PartPicker`; selected part shows name and part number; request a quote with an optional note
+- Staff: create customer accounts; upload a pack (machine name + GLB/GLTF + ETO-shaped parts list with part number, name, qty); unmatched staff panel
+- Customer: open that machine; chrome around Drew’s `PartPicker`; selected-part name and part number; request a quote with an optional note
 - Empty, error, and not-signed-in states
-- Qty on each parts-list row so it reads like an ETO BOM
 
-Drew’s picker is imported as `PartPicker` from `src/components/viewer` with props `src`, `parts`, and `onSelect`. If that implementation is not on this branch yet, a typed mount slot keeps those exact props. This PR does **not** stub a second 3D engine or invent a second item master.
+Drew owns rotate / zoom / pan / highlight in `src/components/viewer`. Fern does **not** invent a second 3D engine and does not overwrite Drew’s picker, `public/placeholders/`, or cookie loader.
 
 ## What this pass is not
 
 No buy/cart/checkout UI, public marketing, self-serve signup, payments, SolidWorks converter, or go-live.
+
+## PartPicker (Drew)
+
+Import from `src/components/viewer`. Full contract: [`src/components/viewer/README.md`](src/components/viewer/README.md).
+
+```ts
+import { PartPicker } from "@/components/viewer";
+
+<PartPicker
+  src={`/api/machines/${id}/file`}
+  parts={joinedParts}
+  selectedId={selectedId}
+  onSelect={(part) => {
+    /* { id, name, meshName, qty } or null */
+  }}
+/>
+```
+
+- Pass `src` as the same-origin path `/api/machines/:id/file`. Do **not** pre-fetch the GLB into a blob URL. PartPicker’s loader sends the login cookie on that `src`.
+- Pass joined `parts` only. Customer pick is joined named parts only. Unmatched is a staff panel, not the picker.
+- Client-only (`dynamic(..., { ssr: false })`).
+
+Private developer check (not a customer/staff/login route): [http://localhost:3000/dev/viewer](http://localhost:3000/dev/viewer).
+
+## Sample pack (staff upload)
+
+Upload these together as one pack. Catalog join key is **part number**. Fake Total ETO-shaped BOM (`qty` on every row).
+
+| File | Role |
+| --- | --- |
+| [`public/placeholders/palletizer-placeholder.glb`](public/placeholders/palletizer-placeholder.glb) | Multi-part GLB. Node and mesh names **are the part numbers**. |
+| [`public/placeholders/palletizer-parts.csv`](public/placeholders/palletizer-parts.csv) | Columns `partNumber`, `name`, `meshName`, `qty`. |
+| [`public/placeholders/palletizer-parts.json`](public/placeholders/palletizer-parts.json) | Same rows as JSON. |
+
+```bash
+npm run generate:placeholder
+```
+
+| Part number | Name | qty | Join |
+| --- | --- | --- | --- |
+| `PN-FRAME-1000` | Frame weldment | 1 | Joined, clickable |
+| `PN-ROLL-2104` | Drive roller | 2 | Joined, clickable |
+| `PN-MTR-3301` | Gearmotor | 1 | Joined, clickable |
+| `PN-BELT-4402` | Conveyor belt | 1 | List-only unmatched (no mesh) |
+| `PN-GRD-5503` | Safety guard | — | Model-only unmatched (mesh, no BOM row) |
 
 ## Private-preview seeds (Quinn)
 
@@ -31,8 +82,6 @@ There is **no public signup**. Staff create customer accounts. These two users a
 | --- | --- | --- |
 | staff | `staff@spares.local` | `SparesStaff1!` |
 | customer | `customer@spares.local` | `SparesCustomer1!` |
-
-`GET /api/auth/me` returns `{ user: { id, email, role } }` after login.
 
 ## Local development
 
@@ -53,60 +102,34 @@ Optional (from T1.2):
 - `AUTH_SECRET` — signs the httpOnly session cookie. A local non-production default is used when unset.
 - `SPARES_DATA_DIR` — override the file-backed JSON + model directory (defaults to `./data` locally, `/tmp/spares-data` on Vercel).
 
-On a protected Vercel preview the 3D file URL is same-origin (`/api/machines/:id/file`) and requires the session cookie (`credentials: "include"`). That path is the `src` passed to `PartPicker`, not a public blob URL. Preview storage is ephemeral; local `data/` is gitignored. Do not attach a production project or custom domain.
-
 ## API (T1.2, stacked from #7)
 
 The UI calls these routes with `credentials: "include"`:
 
-- `POST /api/auth/login` JSON `{ email, password }` → `{ user: { id, email, role } }`
+- `POST /api/auth/login` JSON `{ email, password }` → `{ user }`
 - `POST /api/auth/logout`
-- `GET /api/auth/me` → `{ user: { id, email, role } }`
-- `POST /api/staff/customers` JSON `{ email, password }` — staff only; creates a customer
-
-There is no public `/api/auth/register` route.
-
-Machines:
-
-- `POST /api/machines` — staff, multipart/form-data: `name`, `model` (`.glb` / `.gltf`), `partsList` (CSV headers `partNumber,name,meshName,qty` or a JSON array of the same). Missing `qty` defaults to `1`.
-- `GET /api/machines` → `{ machines: [{ id, name }] }` (any signed-in user)
+- `GET /api/auth/me` → `{ user }`
+- `POST /api/staff/customers` — staff creates customer accounts
+- `POST /api/machines` — multipart `name`, `model`, `partsList`
+- `GET /api/machines` → `{ machines: [{ id, name }] }`
 - `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
 - `GET /api/machines/:id/file` — session cookie required; this is the viewer `src`
+- `POST /api/quotes` — customer `{ machineId, partIds, note? }`
+- `GET /api/quotes` — staff inbox
 
-Join rule: `parts[].id` is the part number. Every joined part includes `qty`. A row is customer-pickable only when the list row and a 3D mesh can be paired. `PartPicker` receives **joined `parts` only**. Unmatched list rows and unused meshes are returned in `unmatched` for **staff**. Customer GET **omits the `unmatched` field entirely** (not `unmatched: []`). Customers never receive unmatched rows as pickable parts. Staff unmatched is a separate staff panel, not the picker.
-
-Quotes:
-
-- `POST /api/quotes` — customer JSON `{ machineId, partIds: string[], note?: string }`
-- `GET /api/quotes` — staff inbox, newest first. No email notifications.
-
-Unauthenticated calls return **401**. Wrong-role calls return **403**.
-
-Catalog source of truth is Total ETO (item master + job BOM). Join key is part number. Ticket 1 uses a fake ETO-shaped parts list.
-
-## Viewer contract (Drew)
-
-```ts
-import { PartPicker } from "@/components/viewer";
-
-<PartPicker
-  src="/api/machines/:id/file" // cookie session, credentials: "include"
-  parts={joinedParts}          // { id, name, meshName, qty }[]
-  onSelect={(part) => { /* { id, name, meshName, qty } */ }}
-/>
-```
-
-Drew owns rotate / zoom / pan / highlight. Fern owns chrome, the selected-part name, and the quote form.
+Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog source of truth is Total ETO. Join key is part number.
 
 ## Repository layout
 
 | Path | Work |
 | --- | --- |
-| `src/app` | App Router pages and layouts |
+| `src/app` | App Router pages and layouts (Fern) |
 | `src/app/api` | Backend Route Handlers (T1.2 from #7, stacked) |
-| `src/components/viewer` | `PartPicker` (Drew: rotate/zoom/pan/highlight) |
-| `src/components` | Layout, nav, BOM, quote form, staff forms |
-| `src/lib/api` | Typed API clients |
+| `src/app/dev/viewer` | Private developer check for the sample pack (Drew) |
+| `src/components/viewer` | `PartPicker` (Drew: rotate/zoom/pan/highlight + cookie loader) |
+| `public/placeholders` | Sample GLB + fake ETO parts list (Drew) |
+| `src/components` | Layout, nav, BOM, quote form, staff forms (Fern) |
+| `src/lib/api` | Typed API clients (Fern) |
 | `src/lib/auth` | Authentication helpers (T1.2) |
 | `src/types` | Shared TypeScript types |
 

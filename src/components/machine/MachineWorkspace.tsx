@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { PartPicker } from "@/components/viewer";
+import type { ViewerPart } from "@/components/viewer";
 import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
@@ -86,9 +87,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }
 
   const src = machineFileSrc(machine.id);
-  const joinedParts = machine.parts;
+  const joinedParts: ViewerPart[] = machine.parts;
   const showUnmatched =
     user?.role === "staff" && machine.unmatched !== undefined;
+
+  function handleViewerSelect(part: ViewerPart | null) {
+    setSelectedPart(part);
+  }
 
   return (
     <div className="space-y-6">
@@ -100,9 +105,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
-        <div className="space-y-3">
+        <div className="min-h-[22rem] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
           {src ? (
-            <PartPicker src={src} parts={joinedParts} onSelect={setSelectedPart} />
+            <PartPicker
+              src={src}
+              parts={joinedParts}
+              selectedId={selectedPart?.id ?? null}
+              onSelect={handleViewerSelect}
+              className="h-full min-h-[22rem]"
+            />
           ) : (
             <EmptyState
               title="No model"

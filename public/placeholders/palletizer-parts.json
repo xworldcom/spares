@@ -1,0 +1,26 @@
+[
+  {
+    "partNumber": "PN-FRAME-1000",
+    "name": "Frame weldment",
+    "meshName": "PN-FRAME-1000",
+    "qty": 1
+  },
+  {
+    "partNumber": "PN-ROLL-2104",
+    "name": "Drive roller",
+    "meshName": "PN-ROLL-2104",
+    "qty": 2
+  },
+  {
+    "partNumber": "PN-MTR-3301",
+    "name": "Gearmotor",
+    "meshName": "PN-MTR-3301",
+    "qty": 1
+  },
+  {
+    "partNumber": "PN-BELT-4402",
+    "name": "Conveyor belt",
+    "meshName": "PN-BELT-4402",
+    "qty": 1
+  }
+]

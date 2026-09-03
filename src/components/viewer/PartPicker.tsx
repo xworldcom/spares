@@ -1,43 +1,210 @@
 "use client";
 
-import type { PartPickerProps } from "@/components/viewer/types";
+import { Bounds, OrbitControls } from "@react-three/drei";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import type { Material, Mesh, Object3D } from "three";
+import { Color, MeshStandardMaterial } from "three";
+import {
+  buildPartIndex,
+  meshMatchesSelection,
+  resolvePick,
+} from "./resolvePick";
+import type { PartPickerProps, UnmatchedMesh, ViewerPart } from "./types";
+import { useCredentialedGLTF } from "./useCredentialedGLTF";
 
-/**
- * Mount slot for Drew’s picker. This is not a 3D engine.
- * Replace the body with rotate/zoom/pan/highlight.
- * Keep props exactly: `src` (same-origin `/api/machines/:id/file`,
- * not a blob URL), joined `parts`, and `onSelect`.
- */
-export function PartPicker({ src, parts }: PartPickerProps) {
+const NAMED_HIGHLIGHT = new Color("#38bdf8");
+const UNMATCHED_HIGHLIGHT = new Color("#f59e0b");
+const DRAG_THRESHOLD = 4;
+
+function isMesh(object: Object3D): object is Mesh {
+  return "isMesh" in object && Boolean((object as Mesh).isMesh);
+}
+
+function asMaterials(material: Mesh["material"]): Material[] {
+  return Array.isArray(material) ? material : [material];
+}
+
+function applyHighlight(
+  mesh: Mesh,
+  selected: ViewerPart | UnmatchedMesh | null,
+) {
+  const active = meshMatchesSelection(mesh, selected);
+  const color =
+    selected && "id" in selected ? NAMED_HIGHLIGHT : UNMATCHED_HIGHLIGHT;
+
+  for (const material of asMaterials(mesh.material)) {
+    if (!(material instanceof MeshStandardMaterial)) {
+      continue;
+    }
+    if (active) {
+      material.emissive.copy(color);
+      material.emissiveIntensity = 0.55;
+    } else {
+      material.emissive.set("#000000");
+      material.emissiveIntensity = 0;
+    }
+  }
+}
+
+function LoadedModel({
+  src,
+  parts,
+  selected,
+  onPick,
+}: {
+  src: string;
+  parts: ViewerPart[];
+  selected: ViewerPart | UnmatchedMesh | null;
+  onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
+}) {
+  const gltf = useCredentialedGLTF(src);
+  const partsByName = useMemo(() => buildPartIndex(parts), [parts]);
+  const scene = useMemo(() => {
+    const cloned = gltf.scene.clone(true);
+    cloned.traverse((object) => {
+      if (!isMesh(object)) {
+        return;
+      }
+      object.material = Array.isArray(object.material)
+        ? object.material.map((material) => material.clone())
+        : object.material.clone();
+    });
+    return cloned;
+  }, [gltf.scene]);
+
+  useLayoutEffect(() => {
+    scene.traverse((object) => {
+      if (isMesh(object)) {
+        applyHighlight(object, selected);
+      }
+    });
+  }, [scene, selected]);
+
+  useEffect(() => {
+    return () => {
+      scene.traverse((object) => {
+        if (!isMesh(object)) {
+          return;
+        }
+        for (const material of asMaterials(object.material)) {
+          material.dispose();
+        }
+      });
+    };
+  }, [scene]);
+
+  function handleClick(event: ThreeEvent<MouseEvent>) {
+    event.stopPropagation();
+    if (event.delta > DRAG_THRESHOLD) {
+      return;
+    }
+    onPick(resolvePick(event.object, partsByName));
+  }
+
+  return <primitive object={scene} onClick={handleClick} />;
+}
+
+function ViewerCanvas({
+  src,
+  parts,
+  selected,
+  onPick,
+}: {
+  src: string;
+  parts: ViewerPart[];
+  selected: ViewerPart | UnmatchedMesh | null;
+  onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
+}) {
   return (
-    <div
-      className="relative flex min-h-[22rem] flex-col overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950 text-neutral-100"
-      data-part-picker="true"
-      data-src={src}
+    <Canvas
+      camera={{ position: [2.8, 1.9, 2.5], fov: 40, near: 0.1, far: 50 }}
+      dpr={[1, 2]}
+      gl={{ antialias: true }}
+      onPointerMissed={() => onPick(null)}
+      style={{ touchAction: "none" }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:24px_24px]" />
-      <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
-        <p className="text-xs font-medium tracking-wide text-neutral-400 uppercase">
-          PartPicker · T1.1
-        </p>
-        <p className="mt-2 max-w-sm text-sm text-neutral-200">
-          Drew’s picker mounts here. Rotate, zoom, pan, and highlight live in{" "}
-          <code className="text-neutral-100">src/components/viewer</code>.
-        </p>
-        <p className="mt-3 text-xs text-neutral-500">
-          <code className="text-neutral-400">src</code> is the cookie-authenticated
-          model file. Until the picker lands, select a joined named part from
-          the BOM.
-        </p>
-        {parts.length === 0 ? (
-          <p className="mt-3 text-xs text-neutral-500">
-            No joined parts to pick.
-          </p>
-        ) : null}
-        <span className="sr-only">
-          {src} · {parts.length} joined parts
-        </span>
-      </div>
+      <color attach="background" args={["#1c2128"]} />
+      <ambientLight intensity={0.7} />
+      <directionalLight position={[4, 8, 3]} intensity={1.25} />
+      <directionalLight position={[-3, 3, -4]} intensity={0.35} />
+      <Suspense fallback={null}>
+        <Bounds fit clip observe margin={1.3}>
+          <LoadedModel
+            src={src}
+            parts={parts}
+            selected={selected}
+            onPick={onPick}
+          />
+        </Bounds>
+      </Suspense>
+      <gridHelper args={[6, 12, "#3d4a58", "#2a323c"]} position={[0, 0, 0]} />
+      <OrbitControls
+        makeDefault
+        enableDamping
+        enablePan
+        enableRotate
+        enableZoom
+      />
+    </Canvas>
+  );
+}
+
+export function PartPicker({
+  src,
+  parts,
+  selectedId,
+  onSelect,
+  onUnmatchedSelect,
+  className,
+}: PartPickerProps) {
+  const controlled = selectedId !== undefined;
+  const [internalId, setInternalId] = useState<string | null>(null);
+  const [unmatched, setUnmatched] = useState<UnmatchedMesh | null>(null);
+
+  const activeId = controlled ? (selectedId ?? null) : internalId;
+  const selectedPart = activeId
+    ? (parts.find((part) => part.id === activeId) ?? null)
+    : null;
+  const selected = selectedPart ?? unmatched;
+
+  function handlePick(hit: { part: ViewerPart } | UnmatchedMesh | null) {
+    if (!hit) {
+      if (!controlled) {
+        setInternalId(null);
+      }
+      setUnmatched(null);
+      onSelect?.(null);
+      onUnmatchedSelect?.(null);
+      return;
+    }
+
+    if ("part" in hit) {
+      if (!controlled) {
+        setInternalId(hit.part.id);
+      }
+      setUnmatched(null);
+      onSelect?.(hit.part);
+      onUnmatchedSelect?.(null);
+      return;
+    }
+
+    if (!controlled) {
+      setInternalId(null);
+    }
+    setUnmatched(hit);
+    onSelect?.(null);
+    onUnmatchedSelect?.(hit);
+  }
+
+  return (
+    <div className={className} style={{ height: "100%", minHeight: 320 }}>
+      <ViewerCanvas
+        src={src}
+        parts={parts}
+        selected={selected}
+        onPick={handlePick}
+      />
     </div>
   );
 }
