@@ -6,6 +6,29 @@ Internal staff upload a machine pack. Customers log in, inspect and rotate a mac
 
 This repository is **private by default**. The product is **not live**. Do not deploy this app to a public production URL, attach a public custom domain, or turn on public signup.
 
+## Private preview (not live)
+
+This is a **private preview for critique only**. It is not a live product, not production, and has no custom domain.
+
+| | |
+| --- | --- |
+| Preview URL | https://spares-aeckfo3sn-yonder3.vercel.app |
+| Dashboard | https://vercel.com/yonder3/spares |
+| Vercel project | `spares` (`prj_vPMO2YHyvTj8FKLK3BZuguu5Anw6`) — separate from the `yonder` app. The `yonder3` hostname is the Vercel team slug only. |
+| Target | Preview only (`target` is not production). The default `spares-yonder3.vercel.app` alias is **not live** (no successful production deploy). |
+| Protection | Vercel Authentication / SSO on preview and production deployment URLs. Sign in with the Vercel team. Password protection is unavailable on this plan (Advanced Deployment Protection is not enabled). |
+
+Sign in to the app **after** the Vercel gate. Seed logins are preview-only and are **not** shown on the homepage or login screen:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| staff | `staff@spares.local` | `SparesStaff1!` |
+| customer | `customer@spares.local` | `SparesCustomer1!` |
+
+Staff should upload the sample pack from `public/placeholders/` (GLB + CSV/JSON). Uploaded machines live on the serverless disk (`/tmp/spares-data`) and may reset when the instance recycles.
+
+`vercel.json` disables automatic Git deploys from `main` so a later Git link cannot promote production. Git auto-previews stay blocked until the Vercel GitHub App is granted access to this private repo (`repo_not_found` today).
+
 ## What this pass is (T1.3)
 
 This pull request is the **web UI** (PR #8). It is stacked on:
