@@ -1,12 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-/** False on the server and the first client render; true after hydration. */
+function subscribe() {
+  return () => undefined;
+}
+
+/** False during SSR; true on the client after hydration. */
 export function useHydrated() {
-  const [hydrated, setHydrated] = useState(false);
-  useLayoutEffect(() => {
-    setHydrated(true);
-  }, []);
-  return hydrated;
+  return useSyncExternalStore(subscribe, () => true, () => false);
 }
