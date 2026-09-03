@@ -37,10 +37,25 @@ export type StoredQuote = Quote & {
   customerId: string;
 };
 
+export type StoredBugReport = {
+  id: string;
+  description: string;
+  createdAt: string;
+  path: string;
+  userAgent: string;
+  userEmail?: string;
+  userRole?: Role;
+  logText: string;
+  screenshotFileName: string;
+  githubIssueUrl?: string;
+  delivery: "github" | "store";
+};
+
 type Database = {
   users: StoredUser[];
   machines: StoredMachine[];
   quotes: StoredQuote[];
+  bugReports: StoredBugReport[];
 };
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -92,7 +107,7 @@ async function seedDatabase(): Promise<Database> {
       role: SEED_CUSTOMER.role,
     },
   ];
-  return { users, machines: [], quotes: [] };
+  return { users, machines: [], quotes: [], bugReports: [] };
 }
 
 async function readDatabase(): Promise<Database> {
@@ -113,6 +128,7 @@ async function readDatabase(): Promise<Database> {
       users: parsed.users ?? [],
       machines: parsed.machines ?? [],
       quotes: parsed.quotes ?? [],
+      bugReports: parsed.bugReports ?? [],
     };
     return memory;
   } catch {
@@ -229,6 +245,72 @@ export function listQuotes() {
   return withLock(async () => {
     const db = await readDatabase();
     return [...db.quotes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  });
+}
+
+export function listBugReports() {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return [...db.bugReports].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  });
+}
+
+export function getBugReport(id: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return db.bugReports.find((report) => report.id === id) ?? null;
+  });
+}
+
+export function createBugReport(input: {
+  description: string;
+  path: string;
+  userAgent: string;
+  userEmail?: string;
+  userRole?: Role;
+  logText: string;
+  screenshot?: Buffer;
+  githubIssueUrl?: string;
+}) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const id = randomUUID();
+    const screenshotFileName = input.screenshot?.length ? `bug-${id}.jpg` : "";
+    if (input.screenshot?.length && screenshotFileName) {
+      await ensureDirs();
+      await writeFile(machineFilePath(screenshotFileName), input.screenshot);
+    }
+    const report: StoredBugReport = {
+      id,
+      description: input.description,
+      createdAt: new Date().toISOString(),
+      path: input.path,
+      userAgent: input.userAgent,
+      userEmail: input.userEmail,
+      userRole: input.userRole,
+      logText: input.logText,
+      screenshotFileName,
+      githubIssueUrl: input.githubIssueUrl,
+      delivery: input.githubIssueUrl ? "github" : "store",
+    };
+    await writeDatabase({
+      ...db,
+      bugReports: [report, ...(db.bugReports ?? [])],
+    });
+    return report;
+  });
+}
+
+export function attachBugReportGithubIssue(id: string, githubIssueUrl: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const reports = (db.bugReports ?? []).map((report) =>
+      report.id === id
+        ? { ...report, githubIssueUrl, delivery: "github" as const }
+        : report,
+    );
+    await writeDatabase({ ...db, bugReports: reports });
+    return reports.find((report) => report.id === id) ?? null;
   });
 }
 

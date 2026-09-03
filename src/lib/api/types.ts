@@ -1,6 +1,7 @@
-import type { MachineSummary, PublicUser, Quote } from "@/types";
+import type { BugReport, MachineSummary, PublicUser, Quote } from "@/types";
 
 export type {
+  BugReport,
   MachineDetail,
   MachineSummary,
   Part,
@@ -25,6 +26,17 @@ export type QuotesListResponse = {
 
 export type CreateQuoteResponse = {
   quote: Quote;
+};
+
+export type BugReportsListResponse = {
+  reports: BugReport[];
+};
+
+export type SubmitBugReportResponse = {
+  ok: true;
+  id: string;
+  githubIssueUrl?: string;
+  stored: boolean;
 };
 
 export type ApiErrorBody = {
