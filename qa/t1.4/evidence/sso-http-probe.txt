@@ -1,0 +1,67 @@
+=== T1.4 access probe ===
+utc: 2026-09-03T05:09:47Z
+preview: https://spares-aeckfo3sn-yonder3.vercel.app/
+
+=== curl -sI (no auth) ===
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 05:09:47 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-aeckfo3sn-yonder3.vercel.app%2F&nonce=<redacted>
+server: Vercel
+set-cookie: _vercel_sso_nonce=<redacted>; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::whdkd-1788412187607-60ef6f36833b
+
+
+=== curl -sI /login ===
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 05:09:47 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-aeckfo3sn-yonder3.vercel.app%2Flogin&nonce=<redacted>
+server: Vercel
+set-cookie: _vercel_sso_nonce=<redacted>; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::nzfmh-1788412187647-188fd03fcc27
+
+
+=== curl -sI /staff/quotes ===
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 05:09:47 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-aeckfo3sn-yonder3.vercel.app%2Fstaff%2Fquotes&nonce=<redacted>
+server: Vercel
+set-cookie: _vercel_sso_nonce=<redacted>; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::g259w-1788412187689-d6248042f11f
+
+
+=== curl -sI /api/auth/me ===
+HTTP/2 302 
+cache-control: no-store, max-age=0
+content-type: text/plain
+date: Thu, 03 Sep 2026 05:09:47 GMT
+location: https://vercel.com/sso-api?url=https%3A%2F%2Fspares-aeckfo3sn-yonder3.vercel.app%2Fapi%2Fauth%2Fme&nonce=<redacted>
+server: Vercel
+set-cookie: _vercel_sso_nonce=<redacted>; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-robots-tag: noindex
+x-vercel-id: iad1::652pr-1788412187728-84ea74820b07
+
+
+=== vercel CLI whoami ===
+Vercel CLI 59.11.2 (Node.js 22.14.0)
+> Logged out.
+> Run `vercel deploy --temporary` to create a temporary deployment you can claim later, or `vercel login` to log in.
+
+=== env vercel/oidc keys present? ===
+(none)

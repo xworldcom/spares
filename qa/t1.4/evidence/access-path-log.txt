@@ -1,0 +1,39 @@
+=== T1.4 dual-record: access path failures (UTC clocks) ===
+utc_http_probe: 2026-09-03T05:09:47Z  (see sso-http-probe.txt)
+utc_browser_screenshots: ~2026-09-03T05:10Z–05:12Z local desktop clock on captures
+preview: https://spares-aeckfo3sn-yonder3.vercel.app/
+project: prj_vPMO2YHyvTj8FKLK3BZuguu5Anw6 (spares)
+team_account_id: team_LuQNcW3AobCzMEfLetaQav1z
+hostname_team_slug: yonder3  (Vercel team slug only — Spares app, not Yonder product)
+deployment: dpl_5bjApmu5qwfRCSMK4U5L1pN715dF READY target=null
+
+Protection (get_project_deployment_protection, teamId=xworldcom):
+- ssoProtection.enabled=true deploymentType=prod_deployment_urls_and_all_previews
+- passwordProtection.enabled=false
+- trustedIps.enabled=false
+- NOT changed by this QA run
+
+Caller auth attempts:
+1) naked HTTP curl -> HTTP/2 302 Location: https://vercel.com/sso-api?... x-robots-tag: noindex
+2) naked browser -> Vercel "Log in to Vercel" wall (screenshots sso_wall_*.png). Spares UI never reached.
+3) vercel CLI whoami -> Logged out. No VERCEL_TOKEN / VERCEL_OIDC_TOKEN in env.
+4) Vercel MCP list_teams / get_git_deployment_context -> teams: []
+5) Vercel MCP list_projects teamId=xworldcom -> OK (sees spares + yonder)
+6) Vercel MCP list_projects teamId=yonder3 or team_LuQNcW3AobCzMEfLetaQav1z -> fail
+7) Vercel MCP web_fetch_vercel_url / get_access_to_vercel_url ->
+   Failed to create shareable URL: Failed to check deployment: 403 Forbidden
+8) Vercel MCP get_runtime_logs teamId=xworldcom ->
+   403 Not authorized: Trying to access resource under scope "yonder3".
+   You must re-authenticate to this scope or use a token with access to this scope.
+9) Vercel MCP get_runtime_logs teamId=yonder3 ->
+   403 You don't have permission to access this resource.
+
+Did NOT disable Deployment Protection.
+Did NOT generate or request a long-lived protection bypass secret.
+Did NOT open / treat any public URL as in scope.
+Did NOT deploy a second app.
+
+GitHub issues API:
+- GET/POST issues and issue comments -> 403 Resource not accessible by integration
+- Therefore this report lands as a test-artifact PR; intended home is issue #5.
+
