@@ -49,6 +49,20 @@ export type Quote = {
   machineName?: string;
 };
 
+export type BugReport = {
+  id: string;
+  description: string;
+  createdAt: string;
+  path: string;
+  userAgent: string;
+  userEmail?: string;
+  userRole?: Role;
+  logText: string;
+  screenshotUrl?: string;
+  githubIssueUrl?: string;
+  delivery: "github" | "store";
+};
+
 export type PartsListRow = {
   partNumber: string;
   name: string;

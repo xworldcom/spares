@@ -62,6 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <NavLink href="/machines/new">Upload</NavLink>
                     <NavLink href="/staff/customers">Customers</NavLink>
                     <NavLink href="/staff/quotes">Quotes</NavLink>
+                    <NavLink href="/staff/bugs">Bug reports</NavLink>
                   </>
                 ) : null}
               </nav>
