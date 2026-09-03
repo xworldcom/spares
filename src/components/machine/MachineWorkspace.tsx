@@ -200,6 +200,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       }
       return [...current, { part: selectedPart, qty: 1 }];
     });
+    setTrayOpen(true);
   }
 
   const viewerBlock = (
@@ -210,19 +211,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           ? "fixed inset-0 z-50 flex flex-col bg-[#0b0d10]"
           : fullscreen
             ? "flex h-full min-h-0 flex-col bg-[#0b0d10]"
-            : "flex min-h-0 flex-col overflow-hidden rounded-[28px] bg-[#0b0d10]"
+            : "machine-viewer overflow-hidden rounded-[28px] bg-[#0b0d10]"
       }
       onContextMenu={(event) => {
         event.preventDefault();
       }}
     >
-      <div
-        className={
-          fullscreen
-            ? "relative min-h-0 flex-1"
-            : "relative h-[58vh] shrink-0 lg:h-[64vh]"
-        }
-      >
+      <div className="relative min-h-0 flex-1">
         {src ? (
           <PartPicker
             src={src}
@@ -247,6 +242,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         )}
         <SelectedPartSheet
           part={selectedPart}
+          isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
           onHide={hideSelected}
           onIsolate={isolateSelected}
           onAdd={isCustomer ? addSelected : undefined}
@@ -262,6 +258,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           {needsReset ? (
             <button
               type="button"
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                showAll();
+              }}
               onClick={showAll}
               className="inline-flex h-11 items-center rounded-full bg-white/92 px-4 text-sm font-semibold text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
             >
@@ -339,8 +342,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   );
 
   return (
-    <div className="pb-20 lg:pb-0">
-      <div className="mb-4 min-w-0">
+    <div className="machine-stage">
+      <div className="mb-3 min-w-0 shrink-0">
         <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-400 uppercase">
           Machine
         </p>
@@ -349,19 +352,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         </h1>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:items-start">
+      <div className="machine-stage-grid">
         {viewerBlock}
         {isCustomer ? (
-          <div className="lg:h-[calc(64vh+3.5rem)]">{tray}</div>
+          <div className="min-h-0">{tray}</div>
         ) : (
-          <div className="rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
+          <div className="quote-tray-dock rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join
             here. Unmatched meshes stay in the staff panel, not the picker.
           </div>
         )}
       </div>
 
-      <section aria-labelledby="bom-heading" className="mt-8 space-y-3">
+      <section aria-labelledby="bom-heading" className="mt-6 shrink-0 space-y-3">
         <div>
           <h2 id="bom-heading" className="text-[13px] font-semibold tracking-tight text-neutral-950">
             Parts

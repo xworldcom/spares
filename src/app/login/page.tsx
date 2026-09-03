@@ -10,7 +10,7 @@ export default async function LoginPage({
     next && next.startsWith("/") && !next.startsWith("//") ? next : "/machines";
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="login-page mx-auto max-w-md">
       <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
       <p className="mt-2 text-sm text-neutral-600">
         Staff and customers use this screen. Cookie session. No public signup.

@@ -9,7 +9,8 @@ import {
   assemblyCentroid,
   explodeTranslation,
   explodeTravel,
-  isGhosted,
+  ISOLATE_OPACITY,
+  meshIsolateState,
 } from "./assemblyView";
 import {
   buildPartIndex,
@@ -24,7 +25,6 @@ const UNMATCHED_HIGHLIGHT = new Color("#f59e0b");
 const HOVER_HIGHLIGHT = new Color("#7dd3fc");
 const DRAG_THRESHOLD = 4;
 const HOLD_MS = 500;
-const ISOLATE_OPACITY = 0.12;
 const box = new Box3();
 const localCenter = new Vector3();
 const worldCenter = new Vector3();
@@ -83,6 +83,31 @@ function applyHighlight(
   }
 }
 
+function applyIsolateMaterial(material: Material, ghosted: boolean) {
+  if (material.userData.isolateBase == null) {
+    material.userData.isolateBase = {
+      transparent: material.transparent,
+      opacity: material.opacity,
+      depthWrite: material.depthWrite,
+    };
+  }
+  const base = material.userData.isolateBase as {
+    transparent: boolean;
+    opacity: number;
+    depthWrite: boolean;
+  };
+  if (ghosted) {
+    material.transparent = true;
+    material.opacity = ISOLATE_OPACITY;
+    material.depthWrite = false;
+  } else {
+    material.transparent = base.transparent;
+    material.opacity = base.opacity;
+    material.depthWrite = base.depthWrite;
+  }
+  material.needsUpdate = true;
+}
+
 function applyVisibility(
   mesh: Mesh,
   partsByName: Map<string, ViewerPart>,
@@ -90,24 +115,12 @@ function applyVisibility(
   isolatedId: string | null,
 ) {
   const partId = partIdForObject(mesh, partsByName);
-  const hidden = partId != null && hiddenIds.has(partId);
-  const ghosted = isGhosted(partId, isolatedId);
+  const { hidden, ghosted } = meshIsolateState(partId, isolatedId, hiddenIds);
   mesh.visible = !hidden;
   mesh.raycast = hidden || ghosted ? emptyRaycast : Mesh.prototype.raycast;
 
   for (const material of asMaterials(mesh.material)) {
-    if (!(material instanceof MeshStandardMaterial)) {
-      continue;
-    }
-    if (ghosted) {
-      material.transparent = true;
-      material.opacity = ISOLATE_OPACITY;
-      material.depthWrite = false;
-    } else {
-      material.transparent = false;
-      material.opacity = 1;
-      material.depthWrite = true;
-    }
+    applyIsolateMaterial(material, ghosted);
   }
 }
 

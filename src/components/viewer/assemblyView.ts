@@ -52,11 +52,23 @@ export function explodeTranslation(
   return { x: dx * scale, y: dy * scale, z: dz * scale };
 }
 
+export const ISOLATE_OPACITY = 0.12;
+
 export function isGhosted(
   partId: string | null,
   isolatedId: string | null,
 ): boolean {
   return isolatedId != null && partId !== isolatedId;
+}
+
+export function meshIsolateState(
+  partId: string | null,
+  isolatedId: string | null,
+  hiddenIds: ReadonlySet<string>,
+): { hidden: boolean; ghosted: boolean; pickable: boolean } {
+  const hidden = partId != null && hiddenIds.has(partId);
+  const ghosted = !hidden && isGhosted(partId, isolatedId);
+  return { hidden, ghosted, pickable: !hidden && !ghosted };
 }
 
 export function viewerNeedsReset(

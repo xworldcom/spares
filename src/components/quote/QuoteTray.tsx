@@ -224,28 +224,34 @@ export function QuoteTray({
 
   return (
     <>
-      <aside className="hidden h-full min-h-0 flex-col rounded-[28px] bg-white p-5 shadow-[0_16px_40px_rgba(15,18,22,0.06)] lg:flex">
+      <aside className="quote-tray-dock h-full min-h-0 flex-col rounded-[28px] bg-white p-5 shadow-[0_16px_40px_rgba(15,18,22,0.06)]">
         <QuoteTrayForm {...formProps} />
       </aside>
 
-      <div className="lg:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex h-16 w-full items-center justify-between rounded-[22px] bg-white px-5 shadow-[0_10px_30px_rgba(15,18,22,0.08)]"
-        >
-          <span className="text-[17px] font-semibold tracking-tight text-neutral-950">
+      <div className="quote-tray-overlay-root">
+        {!open ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-neutral-950 shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
+            style={{ bottom: "max(4.75rem, calc(env(safe-area-inset-bottom) + 3.75rem))" }}
+            aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
+          >
             Quote
-            <span className="ml-2 text-sm font-medium text-neutral-400">
-              {count === 0 ? "" : count}
+            <span className="inline-flex min-w-6 justify-center rounded-full bg-[#0a84ff] px-2 py-0.5 text-xs text-white tabular-nums">
+              {count}
             </span>
-          </span>
-          <span className="text-sm font-medium text-neutral-400">Open</span>
-        </button>
+          </button>
+        ) : null}
 
         {open ? (
-          <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3">
-            <div className="tray-sheet flex max-h-[min(48vh,28rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
+          <div
+            className="fixed inset-x-0 z-30 px-3"
+            style={{
+              bottom: "max(4.5rem, calc(env(safe-area-inset-bottom) + 3.75rem))",
+            }}
+          >
+            <div className="tray-sheet flex max-h-[min(42vh,24rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
               <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
             </div>
           </div>

@@ -47,8 +47,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f5f7] text-[#0b0d10]">
-      <header className="bg-[#f4f5f7]/90 backdrop-blur-md">
+    <div
+      className={
+        machineStage
+          ? "spares-app flex min-h-dvh flex-col bg-[#f4f5f7] text-[#0b0d10]"
+          : "spares-app min-h-dvh bg-[#f4f5f7] text-[#0b0d10]"
+      }
+    >
+      <header className="shrink-0 bg-[#f4f5f7]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex items-center gap-2">
             <Link href="/" className="px-1 text-[15px] font-semibold tracking-tight">
@@ -62,6 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <NavLink href="/machines/new">Upload</NavLink>
                     <NavLink href="/staff/customers">Customers</NavLink>
                     <NavLink href="/staff/quotes">Quotes</NavLink>
+                    <NavLink href="/staff/bugs">Bug reports</NavLink>
                   </>
                 ) : null}
               </nav>
@@ -105,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={
           machineStage
-            ? "mx-auto max-w-7xl px-4 pb-6 pt-2"
+            ? "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-4 pb-3 pt-2"
             : "mx-auto max-w-6xl px-4 py-8"
         }
       >

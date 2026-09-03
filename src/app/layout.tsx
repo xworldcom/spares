@@ -11,9 +11,25 @@ export const metadata: Metadata = {
   },
 };
 
+const CRITICAL_CSS = `
+html,body{margin:0;min-height:100%;background:#f4f5f7;color:#0b0d10;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+button,input,textarea,select{font:inherit;color:inherit;}
+button{cursor:pointer;border:0;background:transparent;}
+.spares-app{min-height:100dvh;background:#f4f5f7;color:#0b0d10;}
+.spares-app header{background:#f4f5f7;}
+.spares-app a[href="/login"]{display:inline-flex;height:2.75rem;align-items:center;border-radius:999px;background:#0b0d10;color:#fff;padding:0 1rem;font-size:14px;font-weight:600;}
+.login-input{display:block;box-sizing:border-box;height:3rem;width:100%;border:0;border-radius:1rem;background:#fff;padding:0 1rem;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}
+.login-submit{display:inline-flex;height:3rem;width:100%;align-items:center;justify-content:center;border:0;border-radius:999px;background:#0b0d10;color:#fff;font-size:17px;font-weight:600;}
+.login-submit:disabled{opacity:0.4;}
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
+      </head>
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>
