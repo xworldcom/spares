@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword } from "./auth/password.ts";
+import { ensureSeededMachines } from "./seed-machines.ts";
 import type { Part, Quote, Role, UnmatchedPart } from "@/types";
 
 export const SEED_STAFF = {
@@ -77,8 +78,8 @@ async function ensureDirs() {
   await mkdir(filesDir(), { recursive: true });
 }
 
-async function seedDatabase(): Promise<Database> {
-  const users: StoredUser[] = [
+async function seedUsers(): Promise<StoredUser[]> {
+  return [
     {
       id: randomUUID(),
       email: SEED_STAFF.email,
@@ -92,7 +93,26 @@ async function seedDatabase(): Promise<Database> {
       role: SEED_CUSTOMER.role,
     },
   ];
-  return { users, machines: [], quotes: [] };
+}
+
+async function seedDatabase(): Promise<Database> {
+  const users = await seedUsers();
+  const machines = await ensureSeededMachines([], filesDir());
+  return { users, machines, quotes: [] };
+}
+
+async function withSeededMachines(db: Database): Promise<Database> {
+  const machines = await ensureSeededMachines(db.machines, filesDir());
+  if (machines === db.machines) {
+    return db;
+  }
+  return { ...db, machines };
+}
+
+async function writeDatabase(next: Database) {
+  memory = next;
+  await ensureDirs();
+  await writeFile(dbPath(), JSON.stringify(next, null, 2));
 }
 
 async function readDatabase(): Promise<Database> {
@@ -106,26 +126,30 @@ async function readDatabase(): Promise<Database> {
     const parsed = JSON.parse(raw) as Database;
     if (!parsed.users?.length) {
       memory = await seedDatabase();
-      await writeFile(dbPath(), JSON.stringify(memory, null, 2));
+      await writeDatabase(memory);
       return memory;
     }
-    memory = {
+    const existing = {
       users: parsed.users ?? [],
       machines: parsed.machines ?? [],
       quotes: parsed.quotes ?? [],
     };
+    const seeded = await withSeededMachines(existing);
+    memory = seeded;
+    if (seeded !== existing) {
+      await writeDatabase(seeded);
+    }
     return memory;
   } catch {
     memory = await seedDatabase();
-    await writeFile(dbPath(), JSON.stringify(memory, null, 2));
+    await writeDatabase(memory);
     return memory;
   }
 }
 
-async function writeDatabase(next: Database) {
-  memory = next;
-  await ensureDirs();
-  await writeFile(dbPath(), JSON.stringify(next, null, 2));
+export function resetStoreForTests() {
+  memory = null;
+  queue = Promise.resolve();
 }
 
 function normalizeEmail(email: string) {
