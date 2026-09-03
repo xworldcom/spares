@@ -1,4 +1,4 @@
-import { copyFile, readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "path";
 import { extractMeshNames } from "@/lib/gltf";
 import { joinParts, parsePartsList } from "@/lib/parts";
@@ -27,45 +27,38 @@ type FixtureSpec = {
   originalFileName: string;
 };
 
+const PLACEHOLDERS = path.join(process.cwd(), "public", "placeholders");
+
 const FIXTURES: FixtureSpec[] = [
   {
     id: FIXTURE_MACHINE_IDS.hardware,
     name: "Hardware fixture",
-    modelRel: "placeholders/hardware/mcmaster-hardware.glb",
-    listRel: "placeholders/hardware/mcmaster-hardware-parts.json",
+    modelRel: "hardware/mcmaster-hardware.glb",
+    listRel: "hardware/mcmaster-hardware-parts.json",
     originalFileName: "mcmaster-hardware.glb",
   },
   {
     id: FIXTURE_MACHINE_IDS.palletizer,
     name: "Palletizer",
-    modelRel: "placeholders/palletizer-placeholder.glb",
-    listRel: "placeholders/palletizer-parts.json",
+    modelRel: "palletizer-placeholder.glb",
+    listRel: "palletizer-parts.json",
     originalFileName: "palletizer-placeholder.glb",
   },
 ];
 
 async function readPublicBytes(rel: string): Promise<Buffer> {
-  const candidates = [
-    path.join(process.cwd(), "public", rel),
-    path.join(process.cwd(), ".next", "standalone", "public", rel),
-  ];
-  for (const candidate of candidates) {
-    try {
-      return await readFile(candidate);
-    } catch {
-      // try the next location or a same-origin fetch on Vercel
+  try {
+    return await readFile(path.join(PLACEHOLDERS, rel));
+  } catch {
+    const host = process.env.VERCEL_URL;
+    if (host) {
+      const response = await fetch(`https://${host}/placeholders/${rel}`);
+      if (response.ok) {
+        return Buffer.from(await response.arrayBuffer());
+      }
     }
+    throw new Error(`Could not read fixture ${rel}`);
   }
-
-  const host = process.env.VERCEL_URL;
-  if (host) {
-    const response = await fetch(`https://${host}/${rel}`);
-    if (response.ok) {
-      return Buffer.from(await response.arrayBuffer());
-    }
-  }
-
-  throw new Error(`Could not read fixture ${rel}`);
 }
 
 export async function buildFixtureMachine(
@@ -77,13 +70,7 @@ export async function buildFixtureMachine(
   const rows = parsePartsList(listText, spec.listRel);
   const meshNames = extractMeshNames(modelBytes, spec.originalFileName);
   const { parts, unmatched } = joinParts(rows, meshNames);
-  await copyFile(
-    path.join(process.cwd(), "public", spec.modelRel),
-    destPath,
-  ).catch(async () => {
-    const { writeFile } = await import("node:fs/promises");
-    await writeFile(destPath, modelBytes);
-  });
+  await writeFile(destPath, modelBytes);
 
   return {
     id: spec.id,
