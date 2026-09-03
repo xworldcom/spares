@@ -1,0 +1,3511 @@
+[
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 401,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/login",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Invalid email or password"
+    }
+  },
+  {
+    "status": 401,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/login",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Invalid email or password"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Lm-TxlJS9KcU_k62",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=oo1dY5T_SeoRiYlv",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?next=%2Fstaff%2Fquotes&_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Op4BxweDV77NNzNi",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=AZgW2HMrbw7q0DeV",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?next=%2Fmachines%2Fnew&_rsc=AZgW2HMrbw7q0DeV",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/login",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FuW4_ePwJkP6q8CZ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=jtGpfXMgWarKKsoh",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=PgSdXbLwFm_Qh9dA",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=9D2xlz3yewb7zL0b",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": []
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=qXNCoGVpAxTGMrqN",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=y-LZ8EEYLxwsKX5l",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/quotes",
+    "resourceType": "fetch",
+    "body": {
+      "quotes": []
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=KP7QXlLkCJD797sN",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=Uxroqk4MEiKGkTK9",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Lm-TxlJS9KcU_k62",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Op4BxweDV77NNzNi",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=06wV2c4-CLLZTPSE",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=HE4r-436kePfuf-n",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=1uvz_exL03kzWA41",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=KZd25t7_HdeUBYEf",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 201,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+      "name": "T14 Hardware Pack",
+      "fileUrl": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+      "parts": [
+        {
+          "id": "5972K325",
+          "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W",
+          "meshName": "5972K325",
+          "qty": 1
+        },
+        {
+          "id": "91280A340",
+          "name": "Hex head cap screw, M6 x 25 mm, 18-8 SS",
+          "meshName": "91280A340",
+          "qty": 4
+        },
+        {
+          "id": "91828A230",
+          "name": "Hex nut, M6, 18-8 SS",
+          "meshName": "91828A230",
+          "qty": 4
+        },
+        {
+          "id": "6435K12",
+          "name": "Set-screw shaft collar, 8 mm bore",
+          "meshName": "6435K12",
+          "qty": 1
+        },
+        {
+          "id": "6331K32",
+          "name": "Miniature DC motor",
+          "meshName": "6331K32",
+          "qty": 1
+        }
+      ],
+      "unmatched": [
+        {
+          "source": "list",
+          "id": "93475A240",
+          "name": "Flat washer, M6",
+          "qty": 10
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=mS9FYkbYKGeJFUCZ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2ttavf8oxjvb8.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+    "resourceType": "fetch",
+    "body": {
+      "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+      "name": "T14 Hardware Pack",
+      "fileUrl": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+      "parts": [
+        {
+          "id": "5972K325",
+          "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W",
+          "meshName": "5972K325",
+          "qty": 1
+        },
+        {
+          "id": "91280A340",
+          "name": "Hex head cap screw, M6 x 25 mm, 18-8 SS",
+          "meshName": "91280A340",
+          "qty": 4
+        },
+        {
+          "id": "91828A230",
+          "name": "Hex nut, M6, 18-8 SS",
+          "meshName": "91828A230",
+          "qty": 4
+        },
+        {
+          "id": "6435K12",
+          "name": "Set-screw shaft collar, 8 mm bore",
+          "meshName": "6435K12",
+          "qty": 1
+        },
+        {
+          "id": "6331K32",
+          "name": "Miniature DC motor",
+          "meshName": "6331K32",
+          "qty": 1
+        }
+      ],
+      "unmatched": [
+        {
+          "source": "list",
+          "id": "93475A240",
+          "name": "Flat washer, M6",
+          "qty": 10
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1aq_mbyyrctg7.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2ttavf8oxjvb8.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=DJk4VYDba_M5gSNn",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=N59Mz5Hdof2cO0k6",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=Fo2H8BTnlPlIg4ve",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=xXyOi2GjSzgDp_ay",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=4p0SUi7rpKgqMrMt",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1aq_mbyyrctg7.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+    "resourceType": "fetch",
+    "body": {
+      "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+      "name": "T14 Hardware Pack",
+      "fileUrl": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+      "parts": [
+        {
+          "id": "5972K325",
+          "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W",
+          "meshName": "5972K325",
+          "qty": 1
+        },
+        {
+          "id": "91280A340",
+          "name": "Hex head cap screw, M6 x 25 mm, 18-8 SS",
+          "meshName": "91280A340",
+          "qty": 4
+        },
+        {
+          "id": "91828A230",
+          "name": "Hex nut, M6, 18-8 SS",
+          "meshName": "91828A230",
+          "qty": 4
+        },
+        {
+          "id": "6435K12",
+          "name": "Set-screw shaft collar, 8 mm bore",
+          "meshName": "6435K12",
+          "qty": 1
+        },
+        {
+          "id": "6331K32",
+          "name": "Miniature DC motor",
+          "meshName": "6331K32",
+          "qty": 1
+        }
+      ],
+      "unmatched": [
+        {
+          "source": "list",
+          "id": "93475A240",
+          "name": "Flat washer, M6",
+          "qty": 10
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=iGeDS7shZRJgkBNr",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/logout",
+    "resourceType": "fetch",
+    "body": {
+      "ok": true
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=nXV_OHrfXdayybev",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/login",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FuW4_ePwJkP6q8CZ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": [
+        {
+          "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "name": "T14 Hardware Pack"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Lm-TxlJS9KcU_k62",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=qXNCoGVpAxTGMrqN",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=1bCErA1nIRAv-Vt6",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=1bCErA1nIRAv-Vt6",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=1bCErA1nIRAv-Vt6",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=jFwh_ufrd563Gm5t",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=z5SqOkgwBov6u1Qp",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_10NOpm86T1mQT48",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Op4BxweDV77NNzNi",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=KZd25t7_HdeUBYEf",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=cGJyCwTtrqnJWLn0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2ttavf8oxjvb8.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=DJk4VYDba_M5gSNn",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=AUkyFqC7_VcQELNQ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1aq_mbyyrctg7.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+    "resourceType": "fetch",
+    "body": {
+      "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+      "name": "T14 Hardware Pack",
+      "fileUrl": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+      "parts": [
+        {
+          "id": "5972K325",
+          "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W",
+          "meshName": "5972K325",
+          "qty": 1
+        },
+        {
+          "id": "91280A340",
+          "name": "Hex head cap screw, M6 x 25 mm, 18-8 SS",
+          "meshName": "91280A340",
+          "qty": 4
+        },
+        {
+          "id": "91828A230",
+          "name": "Hex nut, M6, 18-8 SS",
+          "meshName": "91828A230",
+          "qty": 4
+        },
+        {
+          "id": "6435K12",
+          "name": "Set-screw shaft collar, 8 mm bore",
+          "meshName": "6435K12",
+          "qty": 1
+        },
+        {
+          "id": "6331K32",
+          "name": "Miniature DC motor",
+          "meshName": "6331K32",
+          "qty": 1
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=N59Mz5Hdof2cO0k6",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea/file",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 201,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/quotes",
+    "resourceType": "fetch",
+    "body": {
+      "quote": {
+        "id": "697da3d4-27dd-4311-a9bd-f63a50c20c5d",
+        "machineId": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+        "partIds": [
+          "5972K325"
+        ],
+        "note": "T1.4 QA note 1788458619456",
+        "createdAt": "2026-09-03T18:05:15.527Z",
+        "customerEmail": "customer@spares.local"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/logout",
+    "resourceType": "fetch",
+    "body": {
+      "ok": true
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=nXV_OHrfXdayybev",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?next=%2Fmachines%2F62c7b89c-2b2b-44bb-bd13-4b280097e0ea&_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "other"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/login",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=jtGpfXMgWarKKsoh",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=PgSdXbLwFm_Qh9dA",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": [
+        {
+          "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "name": "T14 Hardware Pack"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=LIW7VItWwHMmZTk5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=xPK82ryT0m4DzUTG",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=Lm-TxlJS9KcU_k62",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=buU7cw0-6vH_P0I5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/quotes",
+    "resourceType": "fetch",
+    "body": {
+      "quotes": [
+        {
+          "id": "697da3d4-27dd-4311-a9bd-f63a50c20c5d",
+          "machineId": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "partIds": [
+            "5972K325"
+          ],
+          "note": "T1.4 QA note 1788458619456",
+          "createdAt": "2026-09-03T18:05:15.527Z",
+          "customerEmail": "customer@spares.local"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=qXNCoGVpAxTGMrqN",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=y-LZ8EEYLxwsKX5l",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=KP7QXlLkCJD797sN",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=Uxroqk4MEiKGkTK9",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=o3lCdNA9cW3ROtKa",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "faceb24a-8cd7-4f07-b4c9-86093ead4715",
+        "email": "staff@spares.local",
+        "role": "staff"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=LIW7VItWwHMmZTk5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new?_rsc=iKN8pvJuAaC3-iz0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": [
+        {
+          "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "name": "T14 Hardware Pack"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0vwcz2qp90r9e.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/customers?_rsc=xPK82ryT0m4DzUTG",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/24hq_remtxc83.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes?_rsc=0bnFgdmpmswSr4TF",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ot5r76p2umju.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/logout",
+    "resourceType": "fetch",
+    "body": {
+      "ok": true
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=r4kQa2pLQtWhCdZ0",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 401,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "POST",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/login",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FuW4_ePwJkP6q8CZ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/does-not-exist",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2ttavf8oxjvb8.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=nYzWmAQzSVRPjVG2",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=LKYw0VY4NjBCOmDu",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=nYzWmAQzSVRPjVG2",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=nYzWmAQzSVRPjVG2",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 404,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines/does-not-exist",
+    "resourceType": "fetch",
+    "body": {
+      "error": "Machine not found"
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=aWN8bez_c2ZeZHJm",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3104e7oqdkcpn.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=EaZrM5HagweKL-6T",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=_H_fFy2_Q06N8BA7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FuW4_ePwJkP6q8CZ",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": [
+        {
+          "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "name": "T14 Hardware Pack"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=o3lCdNA9cW3ROtKa",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": [
+        {
+          "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "name": "T14 Hardware Pack"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=LIW7VItWwHMmZTk5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines",
+    "resourceType": "document"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/27cihxld3e2-f.css",
+    "resourceType": "stylesheet"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1mlftcslf095m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2u5v7xdlfh11m.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3mtpzx6912f-p.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/2e5v3vseouhnh.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/turbopack-1cdts0pkq58uf.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/1rk19h85xt_14.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/0x6zklfmlbdrp.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3z354brnou9w-.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 204,
+    "method": "GET",
+    "url": "https://vercel.live/_next-live/feedback/feedback.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/auth/me",
+    "resourceType": "fetch",
+    "body": {
+      "user": {
+        "id": "52f41e3e-27f0-4f26-96a8-82724dfc119f",
+        "email": "customer@spares.local",
+        "role": "customer"
+      }
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/?_rsc=o3lCdNA9cW3ROtKa",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/_next/static/immutable/chunks/3ydii9luafuxl.js",
+    "resourceType": "script"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines?_rsc=LIW7VItWwHMmZTk5",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/api/machines",
+    "resourceType": "fetch",
+    "body": {
+      "machines": [
+        {
+          "id": "62c7b89c-2b2b-44bb-bd13-4b280097e0ea",
+          "name": "T14 Hardware Pack"
+        }
+      ]
+    }
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=FYULMev5O-sEhXiM",
+    "resourceType": "fetch"
+  },
+  {
+    "status": 200,
+    "method": "GET",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea?_rsc=EDAR0EQWBceSwtxK",
+    "resourceType": "fetch"
+  }
+]

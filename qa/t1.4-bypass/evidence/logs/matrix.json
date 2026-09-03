@@ -1,0 +1,194 @@
+{
+  "pass": 25,
+  "fail": 6,
+  "blocked": 0,
+  "total": 31,
+  "results": [
+    {
+      "id": "0",
+      "title": "Bypass reaches Spares login (not Vercel SSO)",
+      "status": "PASS",
+      "notes": "Spares sign-in form rendered. Protection stays on for people."
+    },
+    {
+      "id": "0b",
+      "title": "Login screen does not show seed passwords",
+      "status": "PASS",
+      "notes": "No seed emails or passwords shown."
+    },
+    {
+      "id": "1a",
+      "title": "Wrong password → error, stay logged out",
+      "status": "FAIL",
+      "notes": "alert=\"\" url=https://spares-27bhlgi5c-yonder3.vercel.app/login"
+    },
+    {
+      "id": "1b",
+      "title": "Unknown email → error, stay logged out",
+      "status": "FAIL",
+      "notes": "alert=\"\""
+    },
+    {
+      "id": "1c",
+      "title": "Direct staff URL while logged out → bounced / not signed in",
+      "status": "PASS",
+      "notes": "url=https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes hasNotSignedIn=true"
+    },
+    {
+      "id": "1d",
+      "title": "Direct /machines/new while logged out → not signed in",
+      "status": "PASS",
+      "notes": "Not-signed-in state shown."
+    },
+    {
+      "id": "2a",
+      "title": "Login as staff — role chrome",
+      "status": "PASS",
+      "notes": "Staff email + Upload pack + Quotes nav visible."
+    },
+    {
+      "id": "4a",
+      "title": "Empty staff inbox has empty state",
+      "status": "PASS",
+      "notes": "Empty state shown."
+    },
+    {
+      "id": "9a",
+      "title": "Upload missing 3D file → error",
+      "status": "FAIL",
+      "notes": "alert=\"\""
+    },
+    {
+      "id": "9b",
+      "title": "Upload missing parts list → error",
+      "status": "FAIL",
+      "notes": "alert=\"\""
+    },
+    {
+      "id": "2b",
+      "title": "Staff upload hardware pack — named parts with qty",
+      "status": "FAIL",
+      "notes": "Missing PNs or upload failed. text=Spares\nMachines\nUpload pack\nCustomers\nQuotes\n\nPRIVATE · NOT LIVE\n\nstaff@spares.localstaff\nSign out\nUpload pack\n\nName the machine, attach a GLB/GLTF, and provide an ETO-shaped parts list (part number, name, qty). Join errors stay visible.\n\nMachine name\n3D model (GLB or GLTF)\n\nSolidWorks conversion is out of scope. Upload a browser-ready GLB or GLTF. Sample packs: public/placeholders/palletizer-plac"
+    },
+    {
+      "id": "3",
+      "title": "Unmatched washer 93475A240 visible on STAFF screen",
+      "status": "PASS",
+      "notes": "List-only washer shown in unmatched staff panel."
+    },
+    {
+      "id": "2c",
+      "title": "Staff machine workspace shows BOM qty + unmatched",
+      "status": "PASS",
+      "notes": "machineId=62c7b89c-2b2b-44bb-bd13-4b280097e0ea unmatchedVisible=true"
+    },
+    {
+      "id": "11a",
+      "title": "Staff session holds across refresh",
+      "status": "PASS",
+      "notes": "Still staff after reload."
+    },
+    {
+      "id": "10a",
+      "title": "Staff logout — no leftover staff session",
+      "status": "PASS",
+      "notes": "Logged out to sign-in."
+    },
+    {
+      "id": "5a",
+      "title": "Login as customer — no staff nav / no public signup",
+      "status": "PASS",
+      "notes": "staffLinks=0 uploadLink=0 signupMention=false"
+    },
+    {
+      "id": "5b",
+      "title": "Customer hitting staff inbox — 403/role wall, never leaked",
+      "status": "PASS",
+      "notes": "Staff inbox not shown to customer."
+    },
+    {
+      "id": "5c",
+      "title": "Customer hitting /staff/customers — not leaked",
+      "status": "PASS",
+      "notes": "Spares\nMachines\n\nPRIVATE · NOT LIVE\n\ncustomer@spares.localcustomer\nSign out\n\nWrong role\n\nThis page is for staff only."
+    },
+    {
+      "id": "5d",
+      "title": "Customer hitting upload — not leaked",
+      "status": "PASS",
+      "notes": "Spares\nMachines\n\nPRIVATE · NOT LIVE\n\ncustomer@spares.localcustomer\nSign out\n\nWrong role\n\nThis page is for staff only."
+    },
+    {
+      "id": "6a",
+      "title": "Customer opens machine — model loads",
+      "status": "PASS",
+      "notes": "canvas=1 webgl=true fileOk=true fileFails="
+    },
+    {
+      "id": "6b",
+      "title": "Rotate / zoom / pan work",
+      "status": "PASS",
+      "notes": "Orbit drag + wheel applied; no crash."
+    },
+    {
+      "id": "7a",
+      "title": "Select named joined part → name + PN shown",
+      "status": "PASS",
+      "notes": "Bearing 5972K325 name shown in selected-part panel."
+    },
+    {
+      "id": "9c",
+      "title": "Quote with no part selected → blocked",
+      "status": "PASS",
+      "notes": "Quote disabled or error without a part."
+    },
+    {
+      "id": "7b",
+      "title": "Request quote with optional note — success confirmation",
+      "status": "PASS",
+      "notes": "Success confirmation shown."
+    },
+    {
+      "id": "8a",
+      "title": "Customer UI never shows unmatched washer",
+      "status": "PASS",
+      "notes": "Washer/unmatched panel not in customer UI."
+    },
+    {
+      "id": "8b",
+      "title": "Customer GET /api/machines/:id omits unmatched field",
+      "status": "PASS",
+      "notes": "keys=id,name,fileUrl,parts unmatchedPresent=false"
+    },
+    {
+      "id": "10b",
+      "title": "Logout customer → login staff — no role bleed",
+      "status": "PASS",
+      "notes": "Staff session only."
+    },
+    {
+      "id": "4b",
+      "title": "Staff inbox shows who / which part / notes",
+      "status": "PASS",
+      "notes": "who=true part=true note=true"
+    },
+    {
+      "id": "9d",
+      "title": "Unknown machine → empty/error state",
+      "status": "PASS",
+      "notes": "Spares\nMachines\n\nPRIVATE · NOT LIVE\n\ncustomer@spares.localcustomer\nSign out\n\nMachine not found\n\nThis pack does not exist, or the API is not on this preview yet."
+    },
+    {
+      "id": "5e",
+      "title": "No public signup on login",
+      "status": "FAIL",
+      "notes": "Login copy states staff-created accounts only."
+    },
+    {
+      "id": "11b",
+      "title": "Customer session holds across refresh",
+      "status": "PASS",
+      "notes": "Still customer after reload."
+    }
+  ]
+}
