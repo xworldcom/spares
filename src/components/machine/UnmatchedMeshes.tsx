@@ -32,6 +32,9 @@ export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
               <span className="ml-2 font-mono text-xs">{row.id}</span>
             ) : null}
             {row.name ? <span className="ml-2">{row.name}</span> : null}
+            {typeof row.qty === "number" ? (
+              <span className="ml-2 tabular-nums">qty {row.qty}</span>
+            ) : null}
             {row.meshName ? (
               <span className="ml-2 font-mono text-xs text-amber-800">
                 mesh: {row.meshName}

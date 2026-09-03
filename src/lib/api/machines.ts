@@ -4,6 +4,7 @@ import type {
   MachinesListResponse,
   MachineSummary,
   Part,
+  Role,
 } from "./types";
 
 function normalizePart(part: Part): Part {
@@ -11,16 +12,46 @@ function normalizePart(part: Part): Part {
     id: part.id,
     name: part.name,
     meshName: part.meshName,
-    qty: typeof part.qty === "number" ? part.qty : undefined,
+    qty: typeof part.qty === "number" && Number.isFinite(part.qty) ? part.qty : 1,
   };
 }
 
-function normalizeMachine(machine: MachineDetail): MachineDetail {
-  return {
-    ...machine,
-    parts: Array.isArray(machine.parts) ? machine.parts.map(normalizePart) : [],
-    unmatched: Array.isArray(machine.unmatched) ? machine.unmatched : undefined,
+/**
+ * Same-origin model file. Loaders must send the login cookie
+ * (`credentials: "include"`). This is the `src` for PartPicker —
+ * not a public blob URL.
+ */
+export function machineFileSrc(machineId: string) {
+  return `/api/machines/${machineId}/file`;
+}
+
+export function normalizeMachine(
+  machine: MachineDetail,
+  role?: Role,
+): MachineDetail {
+  const parts = Array.isArray(machine.parts)
+    ? machine.parts.map(normalizePart)
+    : [];
+
+  if (role === "customer") {
+    return {
+      id: machine.id,
+      name: machine.name,
+      fileUrl: machineFileSrc(machine.id),
+      parts,
+    };
+  }
+
+  const detail: MachineDetail = {
+    id: machine.id,
+    name: machine.name,
+    fileUrl: machineFileSrc(machine.id),
+    parts,
   };
+  if (Array.isArray(machine.unmatched)) {
+    detail.unmatched = machine.unmatched;
+  }
+  return detail;
 }
 
 export async function listMachines(): Promise<MachineSummary[]> {
@@ -28,13 +59,12 @@ export async function listMachines(): Promise<MachineSummary[]> {
   return data.machines ?? [];
 }
 
-export async function getMachine(id: string): Promise<MachineDetail> {
+export async function getMachine(
+  id: string,
+  role?: Role,
+): Promise<MachineDetail> {
   const data = await apiFetch<MachineDetail>(`/api/machines/${id}`);
-  return normalizeMachine(data);
-}
-
-export function machineFilePath(machineId: string) {
-  return `/api/machines/${machineId}/file`;
+  return normalizeMachine(data, role);
 }
 
 export async function uploadMachinePack(input: {
@@ -51,5 +81,5 @@ export async function uploadMachinePack(input: {
     method: "POST",
     body: form,
   });
-  return normalizeMachine(data);
+  return normalizeMachine(data, "staff");
 }

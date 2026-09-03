@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartPanel } from "@/components/machine/SelectedPartPanel";
@@ -9,8 +9,8 @@ import { QuoteForm } from "@/components/quote/QuoteForm";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
-import { ViewerSlot } from "@/components/viewer/ViewerSlot";
-import { getMachine, machineFilePath } from "@/lib/api/machines";
+import { PartPicker } from "@/components/viewer";
+import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 
@@ -20,21 +20,20 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
-  const [modelError, setModelError] = useState<string | null>(null);
+  const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    getMachine(machineId)
+    getMachine(machineId, user?.role)
       .then((next) => {
         if (cancelled) {
           return;
         }
         setMachine(next);
+        setSelectedPart(null);
         setError(null);
         setNotFound(false);
-        setModelError(null);
         setLoading(false);
       })
       .catch((cause: unknown) => {
@@ -42,7 +41,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           return;
         }
         setMachine(null);
-        setModelError(null);
+        setSelectedPart(null);
         if (isUnauthorized(cause)) {
           setError("You are not signed in.");
           setNotFound(false);
@@ -58,11 +57,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [machineId, reloadKey]);
-
-  const handlePick = useCallback((partId: string | null) => {
-    setSelectedPartId(partId);
-  }, []);
+  }, [machineId, reloadKey, user?.role]);
 
   if (loading) {
     return <LoadingState label="Loading machine…" />;
@@ -90,10 +85,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     );
   }
 
-  const selected: Part | null =
-    machine.parts.find((part) => part.id === selectedPartId) ?? null;
-  const fileUrl = machine.fileUrl || machineFilePath(machine.id);
-  const showUnmatched = user?.role === "staff";
+  const src = machineFileSrc(machine.id);
+  const joinedParts = machine.parts;
+  const showUnmatched =
+    user?.role === "staff" && machine.unmatched !== undefined;
 
   return (
     <div className="space-y-6">
@@ -106,23 +101,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
         <div className="space-y-3">
-          <ViewerSlot
-            fileUrl={fileUrl || null}
-            parts={machine.parts}
-            selectedPartId={selectedPartId}
-            onPick={handlePick}
-            onLoadError={setModelError}
-            loadError={modelError}
-          />
+          {src ? (
+            <PartPicker src={src} parts={joinedParts} onSelect={setSelectedPart} />
+          ) : (
+            <EmptyState
+              title="No model"
+              message="This machine pack does not have a GLB or GLTF file to display."
+            />
+          )}
         </div>
         <div className="space-y-4">
-          <SelectedPartPanel part={selected} />
+          <SelectedPartPanel part={selectedPart} />
           {user?.role === "customer" ? (
-            <QuoteForm machineId={machine.id} part={selected} />
+            <QuoteForm machineId={machine.id} part={selectedPart} />
           ) : (
             <p className="text-sm text-neutral-600">
-              Customers request quotes from this page. Staff can inspect the
-              join and unmatched meshes.
+              Customers request quotes from this page. Staff inspect the join
+              here. Unmatched meshes stay in the staff panel, not the picker.
             </p>
           )}
         </div>
@@ -134,20 +129,18 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             Parts list
           </h2>
           <p className="text-sm text-neutral-600">
-            Fake ETO-shaped BOM for Ticket 1. Join key is part number. Qty is
-            shown on each row.
+            Joined ETO-shaped BOM. Join key is part number. Qty is on each row.
+            These are the only parts the picker can select.
           </p>
         </div>
         <PartsBom
-          parts={machine.parts}
-          selectedPartId={selectedPartId}
-          onSelect={handlePick}
+          parts={joinedParts}
+          selectedPartId={selectedPart?.id ?? null}
+          onSelect={setSelectedPart}
         />
       </section>
 
-      {showUnmatched ? (
-        <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
-      ) : null}
+      {showUnmatched ? <UnmatchedMeshes unmatched={machine.unmatched ?? []} /> : null}
     </div>
   );
 }

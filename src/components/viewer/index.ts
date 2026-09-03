@@ -1,2 +1,2 @@
-export { ViewerSlot } from "./ViewerSlot";
-export type { ViewerPickerProps } from "./types";
+export { PartPicker } from "./PartPicker";
+export type { PartPickerProps } from "./types";

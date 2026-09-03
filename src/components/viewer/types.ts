@@ -1,17 +1,20 @@
-import type { Part } from "@/lib/api/types";
+import type { Part } from "@/types";
 
 /**
- * Contract for Drew’s T1.1 picker (rotate / zoom / pick).
+ * Drew’s locked T1.1 picker contract.
  *
- * Mount a component that implements these props from this folder.
- * Fern owns chrome around the slot: part name, BOM, and the quote form.
+ * - `src` is `GET /api/machines/:id/file` (cookie session). Loaders must
+ *   send the login cookie (`credentials: "include"`). Not a public blob URL.
+ * - `parts` is the joined list only (`id` is the part number).
+ * - `onSelect` receives `{ id, name, meshName, qty }`.
+ *
+ * Drew owns rotate / zoom / pan / highlight.
+ * Fern owns chrome, selected-part name, and the quote form.
  */
-export type ViewerPickerProps = {
-  /** Session-authenticated model URL, typically `/api/machines/:id/file`. */
-  fileUrl: string;
+export type PartPickerProps = {
+  src: string;
   parts: Part[];
-  selectedPartId: string | null;
-  onPick: (partId: string | null) => void;
-  onLoadError?: (message: string) => void;
-  className?: string;
+  onSelect: (part: Part) => void;
 };
+
+export type { Part };

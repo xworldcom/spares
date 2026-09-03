@@ -25,9 +25,7 @@ export function SelectedPartPanel({ part }: { part: Part | null }) {
         </div>
         <div>
           <dt className="text-neutral-500">Qty</dt>
-          <dd className="tabular-nums text-neutral-900">
-            {typeof part.qty === "number" ? part.qty : "—"}
-          </dd>
+          <dd className="tabular-nums text-neutral-900">{part.qty}</dd>
         </div>
         <div className="col-span-2">
           <dt className="text-neutral-500">Mesh</dt>

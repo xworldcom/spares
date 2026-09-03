@@ -9,7 +9,7 @@ export function PartsBom({
 }: {
   parts: Part[];
   selectedPartId: string | null;
-  onSelect: (partId: string) => void;
+  onSelect: (part: Part) => void;
 }) {
   if (parts.length === 0) {
     return (
@@ -46,7 +46,7 @@ export function PartsBom({
                 <td className="px-3 py-2 font-mono text-xs">
                   <button
                     type="button"
-                    onClick={() => onSelect(part.id)}
+                    onClick={() => onSelect(part)}
                     className="w-full text-left"
                   >
                     {part.id}
@@ -55,15 +55,13 @@ export function PartsBom({
                 <td className="px-3 py-2">
                   <button
                     type="button"
-                    onClick={() => onSelect(part.id)}
+                    onClick={() => onSelect(part)}
                     className="w-full text-left"
                   >
                     {part.name}
                   </button>
                 </td>
-                <td className="px-3 py-2 tabular-nums">
-                  {typeof part.qty === "number" ? part.qty : "—"}
-                </td>
+                <td className="px-3 py-2 tabular-nums">{part.qty}</td>
                 <td
                   className={
                     selected
