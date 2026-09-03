@@ -6,11 +6,63 @@ Internal staff will upload 3D models derived from SolidWorks. Customers will log
 
 This repository is **private by default**. The product is **not live**. Do not deploy this app to a public production URL, attach a public custom domain, or turn on public signup.
 
-## What this pass is (T1.2)
+## What this pass is (T1.1)
 
-This pull request stacks **backend-only** auth, pack upload, and quote-request APIs on the T1.0 Next.js App Router scaffold. There is still no staff/customer UI (Fern) and no 3D viewer (Drew).
+This pull request stacks Drew's **placeholder machine pack** and **browser part picker** on the **draft** T1.2 APIs ([PR #7](https://github.com/xworldcom/spares/pull/7), `cursor/t1-2-auth-pack-quotes-fcd6`). PR #7 is **not merged** to `main`. This PR does not merge it.
+
+There is still no login / staff / customer chrome (Fern, T1.3). This PR does not duplicate Brent's auth, pack-upload, or quote API.
 
 It does **not** include Stripe/checkout, public registration, a native SolidWorks parser, anti-scam checks, a cart, a public marketing site, or a production deploy.
+
+The placeholder GLB *is* the product for this slice: a short palletizer / conveyor infeed with named industrial parts, not a three-cube demo.
+
+## PartPicker (Fern)
+
+Import from `src/components/viewer`. Full contract: [`src/components/viewer/README.md`](src/components/viewer/README.md).
+
+```ts
+import { PartPicker } from "@/components/viewer";
+import type { ViewerPart } from "@/components/viewer";
+
+<PartPicker
+  src={machine.fileUrl}
+  parts={machine.parts}
+  selectedId={selectedId}
+  onSelect={(part) => {
+    /* { id, name, meshName, qty } or null */
+  }}
+/>
+```
+
+- `src` is Brent's `GET /api/machines/:id/file` (same-origin, session cookie). The viewer loads it with `credentials: "include"`. A cookie-less load 401s on the protected preview.
+- `parts` is the joined named list only. `id` is the part number. Unmatched meshes are not quote-pickable.
+- Rotate, zoom, and pan a loaded GLB/GLTF. Click a joined mesh → highlight + `onSelect`. Click empty space → `onSelect(null)`.
+- Optional controlled `selectedId` lets a parts list highlight the mesh.
+- Client-only (Next.js 16 App Router). The export is already `dynamic(..., { ssr: false })`.
+
+Private developer check (not a customer/staff/login route): [http://localhost:3000/dev/viewer](http://localhost:3000/dev/viewer).
+
+## Sample pack (staff upload)
+
+Upload these together as one pack. Catalog join key is **part number**. This is a fake Total ETO-shaped BOM (`qty` on every row).
+
+| File | Role |
+| --- | --- |
+| [`public/placeholders/palletizer-placeholder.glb`](public/placeholders/palletizer-placeholder.glb) | Multi-part GLB. Node and mesh names **are the part numbers**. |
+| [`public/placeholders/palletizer-parts.csv`](public/placeholders/palletizer-parts.csv) | Columns `partNumber`, `name`, `meshName`, `qty`. |
+| [`public/placeholders/palletizer-parts.json`](public/placeholders/palletizer-parts.json) | Same rows as JSON. |
+
+```bash
+npm run generate:placeholder
+```
+
+| Part number | Name | qty | Join |
+| --- | --- | --- | --- |
+| `PN-FRAME-1000` | Frame weldment | 1 | Joined, clickable |
+| `PN-ROLL-2104` | Drive roller | 2 | Joined, clickable |
+| `PN-MTR-3301` | Gearmotor | 1 | Joined, clickable |
+| `PN-BELT-4402` | Conveyor belt | 1 | List-only unmatched (no mesh) |
+| `PN-GRD-5503` | Safety guard | — | Model-only unmatched (mesh, no BOM row) |
 
 ## Private-preview seeds (Quinn)
 
@@ -78,10 +130,12 @@ Unauthenticated calls return **401**. Wrong-role calls return **403**.
 | --- | --- |
 | `src/app` | App Router pages and layouts |
 | `src/app/api` | Backend Route Handlers |
-| `src/components/viewer` | Browser 3D viewer (later) |
+| `src/app/dev/viewer` | Private developer check for the sample pack |
+| `src/components/viewer` | Browser 3D viewer (`PartPicker`) |
+| `public/placeholders` | Sample GLB + fake ETO parts list |
 | `src/lib/auth` | Authentication helpers |
 | `src/types` | Shared TypeScript types |
 
 ## Do not go live
 
-Keep this GitHub repository private. Do not publish a public site from this app. Preview or local development is fine; production and a custom domain are not part of T1.2.
+Keep this GitHub repository private. Do not publish a public site from this app. Preview or local development is fine; production and a custom domain are not part of T1.1.
