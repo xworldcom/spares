@@ -120,7 +120,10 @@ export async function PATCH(
     }
     shipments = parsed.shipments.map((row) => ({
       ...row,
-      id: row.id.startsWith("ship-") ? randomUUID() : row.id,
+      id:
+        row.id.startsWith("ship-") || row.id.startsWith("draft-")
+          ? randomUUID()
+          : row.id,
     }));
     shipmentsChanged = JSON.stringify(shipments) !== JSON.stringify(access.quote.shipments);
   }
