@@ -1,8 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import path from "path";
-import { extractMeshNames } from "@/lib/gltf";
-import { joinParts, parsePartsList } from "@/lib/parts";
-import type { Part, UnmatchedPart } from "@/types";
+import { extractMeshNames } from "./gltf.ts";
+import { joinParts, parsePartsList } from "./parts.ts";
+import type { Part, UnmatchedPart } from "../types/index.ts";
 
 type FixtureMachine = {
   id: string;
@@ -27,7 +28,23 @@ type FixtureSpec = {
   originalFileName: string;
 };
 
-const PLACEHOLDERS = path.join(process.cwd(), "public", "placeholders");
+function placeholderRoots(): string[] {
+  const roots = [path.join(process.cwd(), "public", "placeholders")];
+  try {
+    roots.push(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "public",
+        "placeholders",
+      ),
+    );
+  } catch {
+    // Bundled CJS has no import.meta.url.
+  }
+  return [...new Set(roots)];
+}
 
 const FIXTURES: FixtureSpec[] = [
   {
@@ -47,18 +64,21 @@ const FIXTURES: FixtureSpec[] = [
 ];
 
 async function readPublicBytes(rel: string): Promise<Buffer> {
-  try {
-    return await readFile(path.join(PLACEHOLDERS, rel));
-  } catch {
-    const host = process.env.VERCEL_URL;
-    if (host) {
-      const response = await fetch(`https://${host}/placeholders/${rel}`);
-      if (response.ok) {
-        return Buffer.from(await response.arrayBuffer());
-      }
+  for (const root of placeholderRoots()) {
+    try {
+      return await readFile(path.join(root, rel));
+    } catch {
+      // Try the next root (cwd vs bundled path vs Vercel fetch).
     }
-    throw new Error(`Could not read fixture ${rel}`);
   }
+  const host = process.env.VERCEL_URL;
+  if (host) {
+    const response = await fetch(`https://${host}/placeholders/${rel}`);
+    if (response.ok) {
+      return Buffer.from(await response.arrayBuffer());
+    }
+  }
+  throw new Error(`Could not read fixture ${rel}`);
 }
 
 export async function buildFixtureMachine(
@@ -96,9 +116,15 @@ export async function missingFixtureMachines(
       continue;
     }
     const storedFileName = `${spec.id}.glb`;
-    created.push(
-      await buildFixtureMachine(spec, path.join(filesDirPath, storedFileName)),
-    );
+    try {
+      created.push(
+        await buildFixtureMachine(spec, path.join(filesDirPath, storedFileName)),
+      );
+      have.add(spec.id);
+      alsoByName.add(spec.name);
+    } catch (cause) {
+      console.error(`[spares] fixture ${spec.id} failed`, cause);
+    }
   }
 
   return created;

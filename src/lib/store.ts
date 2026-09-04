@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword } from "./auth/password.ts";
 import {
   assignMissingQuoteNumbers,
   findQuoteInList,
   nextQuoteNumber,
   normalizeStoredQuote,
   statusActivityText,
-} from "@/lib/quotes";
-import { missingFixtureMachines } from "@/lib/seed-fixtures";
+} from "./quotes.ts";
+import { missingFixtureMachines } from "./seed-fixtures.ts";
 import type {
   Part,
   QuoteActivity,
@@ -17,7 +17,7 @@ import type {
   QuoteRecord,
   Role,
   UnmatchedPart,
-} from "@/types";
+} from "../types/index.ts";
 
 export const SEED_STAFF = {
   id: "user-staff",
@@ -197,6 +197,31 @@ async function withFixtureMachines(db: Database): Promise<Database> {
   return { ...db, machines: [...db.machines, ...extras] };
 }
 
+function catalogChanged(before: Database, after: Database) {
+  return (
+    after.machines.length !== before.machines.length ||
+    after.users.length !== before.users.length ||
+    after.users.some((user, index) => user.id !== before.users[index]?.id)
+  );
+}
+
+/**
+ * Always re-run fixture + seed-user heal. Vercel `/tmp` is per-instance, and
+ * an in-memory db with users but empty machines must not stick around.
+ */
+async function ensureCatalog(): Promise<Database> {
+  const db = await readDatabase();
+  const next = await withFixtureMachines(
+    await ensureExtraCustomers(stabilizeSeedUsers(db)),
+  );
+  if (catalogChanged(db, next)) {
+    await writeDatabase(next);
+    return next;
+  }
+  memory = next;
+  return next;
+}
+
 async function readDatabase(): Promise<Database> {
   if (memory) {
     return memory;
@@ -258,7 +283,7 @@ function normalizeEmail(email: string) {
 
 export function findUserById(id: string) {
   return withLock(async () => {
-    const db = await readDatabase();
+    const db = await ensureCatalog();
     return db.users.find((user) => user.id === id) ?? null;
   });
 }
@@ -266,14 +291,14 @@ export function findUserById(id: string) {
 export function findUserByEmail(email: string) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
-    const db = await readDatabase();
+    const db = await ensureCatalog();
     return db.users.find((user) => user.email === normalized) ?? null;
   });
 }
 
 export function listCustomers() {
   return withLock(async () => {
-    const db = await readDatabase();
+    const db = await ensureCatalog();
     return db.users
       .filter((user) => user.role === "customer")
       .map((user) => ({ id: user.id, email: user.email, role: user.role as Role }))
@@ -299,18 +324,31 @@ export function createCustomer(email: string, passwordHash: string) {
   });
 }
 
-export function listMachines() {
+export function listMachines(options?: { heal?: boolean }) {
   return withLock(async () => {
-    const db = await readDatabase();
+    if (options?.heal) {
+      memory = null;
+    }
+    const db = await ensureCatalog();
     return db.machines.map((machine) => ({ id: machine.id, name: machine.name }));
   });
 }
 
 export function getMachine(id: string) {
   return withLock(async () => {
-    const db = await readDatabase();
+    const db = await ensureCatalog();
     return db.machines.find((machine) => machine.id === id) ?? null;
   });
+}
+
+/** Test helper: drop the in-process cache so the next read hits disk. */
+export function resetStoreMemoryForTests() {
+  memory = null;
+}
+
+/** Test helper: simulate a warm instance that has users but no machines. */
+export function seedEmptyMachineCatalogForTests(users: StoredUser[]) {
+  memory = { users, machines: [], quotes: [], bugReports: [] };
 }
 
 export function createMachine(input: {

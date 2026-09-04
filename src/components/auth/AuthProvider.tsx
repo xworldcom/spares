@@ -44,11 +44,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      applyUser(await getMe());
+      const next = await getMe();
+      if (next) {
+        applyUser(next);
+        return;
+      }
+      applyUser(null);
     } catch (cause) {
+      if (status === "signed-in") {
+        return;
+      }
       applyUnavailable(cause);
     }
-  }, [applyUnavailable, applyUser]);
+  }, [applyUnavailable, applyUser, status]);
 
   useEffect(() => {
     let cancelled = false;

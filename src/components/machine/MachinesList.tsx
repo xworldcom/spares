@@ -7,19 +7,28 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { listMachines } from "@/lib/api/machines";
-import { errorMessage } from "@/lib/api/errors";
+import { errorMessage, isUnauthorized } from "@/lib/api/errors";
 import type { MachineSummary } from "@/lib/api/types";
+
+const RETRY_ATTEMPTS = 3;
+
+async function loadMachines(heal: boolean): Promise<MachineSummary[]> {
+  const next = await listMachines(heal ? { heal: true } : undefined);
+  if (next.length > 0 || heal) {
+    return next;
+  }
+  return listMachines({ heal: true });
+}
 
 export function MachinesList() {
   const { user, refresh } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    listMachines()
+    loadMachines(false)
       .then((next) => {
         if (cancelled) {
           return;
@@ -38,13 +47,36 @@ export function MachinesList() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, []);
 
   async function retry() {
     setLoading(true);
     setError(null);
-    await refresh();
-    setReloadKey((key) => key + 1);
+    let lastCause: unknown = null;
+    for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        if (attempt > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+        }
+        const next = await listMachines({ heal: true });
+        if (next.length > 0) {
+          setMachines(next);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+        setMachines(next);
+      } catch (cause: unknown) {
+        lastCause = cause;
+        if (isUnauthorized(cause)) {
+          await refresh();
+        }
+      }
+    }
+    if (lastCause) {
+      setError(errorMessage(lastCause, "Could not load machines."));
+    }
+    setLoading(false);
   }
 
   if (loading) {

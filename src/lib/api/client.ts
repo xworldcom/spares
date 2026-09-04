@@ -32,6 +32,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
     response = await fetch(path, {
       ...init,
+      cache: "no-store",
       credentials: "include",
       headers,
     });
