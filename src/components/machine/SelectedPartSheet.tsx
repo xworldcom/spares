@@ -51,6 +51,7 @@ export function SelectedPartSheet({
           return;
         }
         event.preventDefault();
+        event.stopPropagation();
         action();
       },
       onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -73,11 +74,16 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
-      className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 px-3 pb-3 chrome-fade ${
+      className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-3 chrome-fade ${
         dimmed ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
       }`}
     >
-      <div className="pointer-events-auto flex flex-col justify-between rounded-[22px] bg-white px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/8">
+      <div
+        className="pointer-events-auto flex flex-col justify-between rounded-[22px] bg-white px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/8"
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-h-[3.25rem] min-w-0">
             <p className="truncate text-[17px] leading-tight font-semibold tracking-tight text-[#0b0d10]">
@@ -93,7 +99,7 @@ export function SelectedPartSheet({
           </div>
           <button
             type="button"
-            onClick={onDismiss}
+            {...activate(onDismiss)}
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#0b0d10] hover:bg-neutral-100"
             aria-label="Close part actions"
           >

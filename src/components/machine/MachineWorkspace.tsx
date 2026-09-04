@@ -133,8 +133,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       }
       setSelectedPart(null);
     }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [selectedPart]);
 
   const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
