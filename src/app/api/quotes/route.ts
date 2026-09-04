@@ -1,8 +1,8 @@
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireUser } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { parseQuoteItems } from "@/lib/quotes";
+import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
 import { createQuote, getMachine, listMachines, listQuotes } from "@/lib/store";
-import type { Quote } from "@/types";
+import type { QuoteItem } from "@/types";
 
 type CreateQuoteBody = {
   machineId?: unknown;
@@ -10,30 +10,26 @@ type CreateQuoteBody = {
   note?: unknown;
 };
 
-function toPublicQuote(quote: Quote, machineName?: string): Quote {
-  return {
-    id: quote.id,
-    machineId: quote.machineId,
-    items: quote.items,
-    note: quote.note,
-    createdAt: quote.createdAt,
-    customerEmail: quote.customerEmail,
-    ...(machineName ? { machineName } : {}),
-  };
-}
-
 export async function GET() {
-  const auth = await requireRole("staff");
+  const auth = await requireUser();
   if ("error" in auth) {
     return auth.error;
   }
 
   const [quotes, machines] = await Promise.all([listQuotes(), listMachines()]);
   const names = new Map(machines.map((machine) => [machine.id, machine.name]));
+  const visible =
+    auth.user.role === "staff"
+      ? quotes
+      : quotes.filter((quote) => quote.customerId === auth.user.id);
+
+  const publicQuotes = visible.map((quote) =>
+    toPublicQuote(quote, auth.user, names.get(quote.machineId)),
+  );
+
   return json({
-    quotes: quotes.map((quote) =>
-      toPublicQuote(quote, names.get(quote.machineId)),
-    ),
+    quotes: publicQuotes,
+    unreadCount: publicQuotes.filter((quote) => quote.unread).length,
   });
 }
 
@@ -66,18 +62,28 @@ export async function POST(request: Request) {
     return error("Machine not found", 404);
   }
 
-  const pickable = new Set(machine.parts.map((part) => part.id));
+  const pickable = new Map(machine.parts.map((part) => [part.id, part]));
   if (parsed.items.some((item) => !pickable.has(item.id))) {
     return error("One or more part ids are not customer-pickable on this machine", 400);
   }
 
+  const items: QuoteItem[] = parsed.items.map((item) => {
+    const part = pickable.get(item.id);
+    const next: QuoteItem = { id: item.id, qty: item.qty };
+    const name = item.name ?? part?.name;
+    if (name) {
+      next.name = name;
+    }
+    return next;
+  });
+
   const quote = await createQuote({
     machineId,
-    items: parsed.items,
+    items,
     note,
     customerId: auth.user.id,
     customerEmail: auth.user.email,
   });
 
-  return json({ quote: toPublicQuote(quote, machine.name) }, 201);
+  return json({ quote: toPublicQuote(quote, auth.user, machine.name) }, 201);
 }

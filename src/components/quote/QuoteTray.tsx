@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
+import { quoteHref } from "@/lib/quotes";
 
 export type TrayLine = {
   part: Part;
@@ -20,6 +22,7 @@ function QuoteTrayForm({
   submitting,
   error,
   sent,
+  sentHref,
   onClose,
 }: {
   lines: TrayLine[];
@@ -31,6 +34,7 @@ function QuoteTrayForm({
   submitting: boolean;
   error: string | null;
   sent: boolean;
+  sentHref?: string;
   onClose?: () => void;
 }) {
   return (
@@ -120,6 +124,14 @@ function QuoteTrayForm({
       {sent ? (
         <p className="mt-2 text-sm text-neutral-500" role="status">
           Quote sent.
+          {sentHref ? (
+            <>
+              {" "}
+              <Link href={sentHref} className="font-medium text-[#0a84ff]">
+                View quote
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
 
@@ -160,6 +172,7 @@ export function QuoteTray({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [sentHref, setSentHref] = useState<string | undefined>();
 
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
 
@@ -176,12 +189,17 @@ export function QuoteTray({
     }
     setSubmitting(true);
     try {
-      await createQuote({
+      const created = await createQuote({
         machineId,
-        items: lines.map((line) => ({ id: line.part.id, qty: line.qty })),
+        items: lines.map((line) => ({
+          id: line.part.id,
+          name: line.part.name,
+          qty: line.qty,
+        })),
         note: note.trim() || undefined,
       });
       setSent(true);
+      setSentHref(quoteHref("customer", created));
       setNote("");
       onClear();
       setOpen(false);
@@ -204,6 +222,7 @@ export function QuoteTray({
     submitting,
     error,
     sent,
+    sentHref,
   };
 
   if (fullscreen) {

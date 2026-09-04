@@ -6,15 +6,22 @@ Internal staff upload a machine pack. Customers log in, inspect and rotate a mac
 
 This repository is **private by default**. The product is **not live**. Do not deploy this app to a public production URL, attach a public custom domain, or turn on public signup.
 
-## What this pass is (T2.0)
+## What this pass is (T3.0)
 
-Customer machine page: explode, hide / isolate, same-page quote tray with quantities, fullscreen viewer. Private preview only.
+One shared quote workspace for customer and staff. Private preview only. Not live.
 
-Extends Drew’s `PartPicker` in `src/components/viewer` — no second 3D engine. Seeded packs: Hardware fixture (McMaster) and Palletizer (placeholder). Login seeds are unchanged.
+Status pipeline: `requested` → `in_review` → `pricing` → `quoted` → `po_received` → `confirmed` → `ordered` → `shipped` → `delivered` → `closed` (+ `cancelled`).
+
+- Staff prices each line (supplier cost, sell price, lead time).
+- Customer sees sell prices after `quoted`, then can add a PO number and PDF.
+- Staff enters tracking at `shipped`. Customer sees it on the quote page.
+- Chatter-like activity feed with in-app unread (email later).
+
+Machine-page **Request quote** still creates `status=requested` with tray quantities. Extends T2.0 explode / isolate / tray.
 
 ## What this pass is not
 
-No buy/cart/checkout UI, public marketing, self-serve signup, payments, SolidWorks converter, or go-live.
+No email gateway, payments, Total ETO live pull, AR, Yonder, public marketing, or go-live.
 
 ## PartPicker (Drew)
 
@@ -128,8 +135,13 @@ The UI calls these routes with `credentials: "include"`:
 - `GET /api/machines` → `{ machines: [{ id, name }] }`
 - `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
 - `GET /api/machines/:id/file` — session cookie required; this is the viewer `src`
-- `POST /api/quotes` — customer `{ machineId, items: [{ id, qty }], note? }` (`qty` ≥ 1). Cookie session.
-- `GET /api/quotes` — staff inbox; each line includes `id` and `qty`. Customer GET of a machine still omits `unmatched`.
+- `POST /api/quotes` — customer `{ machineId, items: [{ id, qty, name? }], note? }` (`qty` ≥ 1). Creates `status=requested`.
+- `GET /api/quotes` — staff sees all; customer sees own. Includes `unread` and `unreadCount`.
+- `GET /api/quotes/:id` — role-aware detail; marks the quote read for the current user. `:id` may be the sequential number.
+- `PATCH /api/quotes/:id` — staff: status, line pricing (`sellPrice`, `supplierCost`, `leadTimeDays`, `supplier`), tracking. Customer: PO number after quoted. Shipped requires a tracking number.
+- `POST /api/quotes/:id/activity` — message on the shared feed.
+- `POST /api/quotes/:id/po` — customer multipart PDF + optional `poNumber` after quoted. `GET` downloads the PDF.
+- Customer GET of a machine still omits `unmatched`.
 
 Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog source of truth is Total ETO. Join key is part number.
 
@@ -149,4 +161,4 @@ Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog sou
 
 ## Do not go live
 
-Keep this GitHub repository private. Preview or local development is fine; production and a custom domain are not part of T2.0.
+Keep this GitHub repository private. Preview or local development is fine; production and a custom domain are not part of T3.0. Keep Vercel SSO on. Do not promote this preview to production.

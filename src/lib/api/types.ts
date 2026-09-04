@@ -23,11 +23,23 @@ export type MachinesListResponse = {
 
 export type QuotesListResponse = {
   quotes: Quote[];
+  unreadCount: number;
 };
 
 export type CreateQuoteResponse = {
   quote: Quote;
 };
+
+export type QuoteResponse = {
+  quote: Quote;
+};
+
+export type {
+  QuoteActivity,
+  QuoteShipment,
+  QuoteStatus,
+  TrackingCarrier,
+} from "@/types";
 
 export type BugReportsListResponse = {
   reports: BugReport[];

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
+import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 
 function NavLink({
@@ -30,8 +31,22 @@ function NavLink({
   );
 }
 
+function QuotesNavLink({ href, unreadCount }: { href: string; unreadCount: number }) {
+  return (
+    <span className="relative inline-flex">
+      <NavLink href={href}>Quotes</NavLink>
+      {unreadCount > 0 ? (
+        <span className="absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0a84ff] px-1 text-[10px] font-semibold text-white">
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { status, user, logout } = useAuth();
+  const { unreadCount } = useQuoteAlerts();
   const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -68,10 +83,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <>
                     <NavLink href="/machines/new">Upload</NavLink>
                     <NavLink href="/staff/customers">Customers</NavLink>
-                    <NavLink href="/staff/quotes">Quotes</NavLink>
+                    <QuotesNavLink href="/staff/quotes" unreadCount={unreadCount} />
                     <NavLink href="/staff/bugs">Bug reports</NavLink>
                   </>
-                ) : null}
+                ) : (
+                  <QuotesNavLink href="/quotes" unreadCount={unreadCount} />
+                )}
               </nav>
             ) : null}
           </div>

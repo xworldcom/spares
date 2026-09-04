@@ -34,19 +34,86 @@ export type MachineDetail = {
   unmatched?: UnmatchedPart[];
 };
 
+export type QuoteStatus =
+  | "requested"
+  | "in_review"
+  | "pricing"
+  | "quoted"
+  | "po_received"
+  | "confirmed"
+  | "ordered"
+  | "shipped"
+  | "delivered"
+  | "closed"
+  | "cancelled";
+
+export type TrackingCarrier = "UPS" | "FedEx" | "Purolator" | "Other";
+
+export type QuoteShipment = {
+  id: string;
+  trackingNumber: string;
+  carrier?: TrackingCarrier;
+  trackingUrl?: string;
+};
+
 export type QuoteItem = {
   id: string;
+  name?: string;
   qty: number;
+  sellPrice?: number;
+  supplierCost?: number;
+  supplier?: string;
+  leadTimeDays?: number;
+  note?: string;
+};
+
+export type QuoteActivityKind = "message" | "status" | "pricing" | "po" | "shipment";
+
+export type QuoteActivity = {
+  id: string;
+  at: string;
+  actorRole: Role;
+  actorEmail: string;
+  kind: QuoteActivityKind;
+  text: string;
 };
 
 export type Quote = {
   id: string;
+  number: number;
   machineId: string;
   items: QuoteItem[];
   note?: string;
   createdAt: string;
   customerEmail: string;
   machineName?: string;
+  status: QuoteStatus;
+  poNumber?: string;
+  poOriginalFileName?: string;
+  poUploadedAt?: string;
+  hasPoFile?: boolean;
+  shipments: QuoteShipment[];
+  activities: QuoteActivity[];
+  unread: boolean;
+};
+
+export type QuoteRecord = {
+  id: string;
+  number: number;
+  machineId: string;
+  items: QuoteItem[];
+  note?: string;
+  createdAt: string;
+  customerEmail: string;
+  customerId: string;
+  status: QuoteStatus;
+  poNumber?: string;
+  poStoredFileName?: string;
+  poOriginalFileName?: string;
+  poUploadedAt?: string;
+  shipments: QuoteShipment[];
+  activities: QuoteActivity[];
+  lastReadAt: Record<string, string>;
 };
 
 export type BugReport = {
