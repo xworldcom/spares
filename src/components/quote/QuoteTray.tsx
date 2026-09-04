@@ -254,7 +254,7 @@ export function QuoteTray({
             onClick={() => setOpen(true)}
             className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[16px] font-semibold text-[#0b0d10] shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
             style={{
-              bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))",
+              bottom: "max(5.25rem, calc(env(safe-area-inset-bottom) + 4.5rem))",
               right: "max(0.75rem, env(safe-area-inset-right))",
             }}
             aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
@@ -271,6 +271,7 @@ export function QuoteTray({
             className="fixed inset-x-0 z-30 px-3"
             style={{
               bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))",
+              paddingBottom: 0,
             }}
           >
             <div className="tray-sheet flex max-h-[min(72dvh,34rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
