@@ -38,6 +38,11 @@ describe("nav active state", () => {
     assert.deepEqual(actives("/"), []);
   });
 
+  it("treats /machines/new as Upload, not a machine stage path", () => {
+    assert.deepEqual(actives("/machines/new"), ["/machines/new"]);
+    assert.equal(/^\/machines\/[^/]+$/.test("/machines/new"), true);
+  });
+
   it("highlights only Quotes on the customer quotes list", () => {
     const customerHrefs = ["/machines", "/quotes"] as const;
     assert.equal(isNavActive("/quotes", "/quotes", customerHrefs), true);

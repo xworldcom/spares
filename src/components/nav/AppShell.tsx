@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const machineStage = /^\/machines\/[^/]+$/.test(pathname);
+  const machineStage = /^\/machines\/[^/]+$/.test(pathname) && pathname !== "/machines/new";
   const onLogin = pathname === "/login";
   const signedIn = status === "signed-in" && user;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
