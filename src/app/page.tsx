@@ -30,6 +30,12 @@ export default function Home() {
             >
               Open machines
             </Link>
+            <Link
+              href={user.role === "staff" ? "/staff/quotes" : "/quotes"}
+              className="inline-flex h-12 items-center rounded-full px-5 text-[15px] font-medium text-neutral-800"
+            >
+              Quotes
+            </Link>
             {user.role === "staff" ? (
               <Link
                 href="/machines/new"

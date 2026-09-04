@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { normalizeStoredQuote, parseQuoteItems } from "./quotes.ts";
+import {
+  assignMissingQuoteNumbers,
+  canEditTracking,
+  canUploadPo,
+  isQuoteUnreadForUser,
+  itemsForRole,
+  mergeQuoteItems,
+  normalizeStoredQuote,
+  parseQuoteItems,
+  parseShipments,
+  pricesVisibleToCustomer,
+  shippedActivityText,
+  toPublicQuote,
+} from "./quotes.ts";
+import type { QuoteRecord } from "../types/index.ts";
 
 describe("parseQuoteItems", () => {
   it("accepts line items with qty ≥ 1", () => {
@@ -34,6 +48,37 @@ describe("parseQuoteItems", () => {
     const result = parseQuoteItems([{ id: "  PN-1  ", qty: "2" }]);
     assert.deepEqual(result, { ok: true, items: [{ id: "PN-1", qty: 2 }] });
   });
+
+  it("parses staff pricing fields", () => {
+    const result = parseQuoteItems(
+      [
+        {
+          id: "A",
+          qty: 2,
+          sellPrice: "12.5",
+          supplierCost: 8,
+          supplier: "McMaster",
+          leadTimeDays: 5,
+          note: "stock",
+        },
+      ],
+      { allowPricing: true },
+    );
+    assert.deepEqual(result, {
+      ok: true,
+      items: [
+        {
+          id: "A",
+          qty: 2,
+          sellPrice: 12.5,
+          supplierCost: 8,
+          supplier: "McMaster",
+          leadTimeDays: 5,
+          note: "stock",
+        },
+      ],
+    });
+  });
 });
 
 describe("normalizeStoredQuote", () => {
@@ -44,8 +89,11 @@ describe("normalizeStoredQuote", () => {
       items: [{ id: "A", qty: 3 }],
       createdAt: "2026-01-01T00:00:00.000Z",
       customerEmail: "c@example.test",
-    });
+    } as never);
     assert.deepEqual(modern.items, [{ id: "A", qty: 3 }]);
+    assert.equal(modern.status, "requested");
+    assert.deepEqual(modern.activities, []);
+    assert.deepEqual(modern.shipments, []);
 
     const legacy = normalizeStoredQuote({
       id: "q2",
@@ -59,5 +107,189 @@ describe("normalizeStoredQuote", () => {
       { id: "A", qty: 1 },
       { id: "B", qty: 1 },
     ]);
+  });
+
+  it("maps legacy unitPrice to sellPrice", () => {
+    const quote = normalizeStoredQuote({
+      id: "q3",
+      machineId: "m1",
+      items: [{ id: "A", qty: 1, unitPrice: 9.99 }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "c@example.test",
+    } as never);
+    assert.equal(quote.items[0]?.sellPrice, 9.99);
+  });
+});
+
+describe("status and visibility", () => {
+  it("allows PO upload from quoted onward, not before or when cancelled", () => {
+    assert.equal(canUploadPo("requested"), false);
+    assert.equal(canUploadPo("pricing"), false);
+    assert.equal(canUploadPo("quoted"), true);
+    assert.equal(canUploadPo("ordered"), true);
+    assert.equal(canUploadPo("shipped"), true);
+    assert.equal(canUploadPo("cancelled"), false);
+  });
+
+  it("shows customer prices after quoted", () => {
+    assert.equal(pricesVisibleToCustomer("pricing"), false);
+    assert.equal(pricesVisibleToCustomer("quoted"), true);
+    assert.equal(pricesVisibleToCustomer("delivered"), true);
+  });
+
+  it("lets staff edit tracking at ordered or shipped", () => {
+    assert.equal(canEditTracking("confirmed"), false);
+    assert.equal(canEditTracking("ordered"), true);
+    assert.equal(canEditTracking("shipped"), true);
+    assert.equal(canEditTracking("delivered"), false);
+  });
+});
+
+describe("parseShipments", () => {
+  it("requires a tracking number and fills carrier URLs", () => {
+    assert.equal(parseShipments([]).ok, false);
+    const parsed = parseShipments([{ trackingNumber: "1Z999", carrier: "UPS" }]);
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) {
+      assert.equal(parsed.shipments[0]?.trackingNumber, "1Z999");
+      assert.match(parsed.shipments[0]?.trackingUrl ?? "", /ups\.com/);
+    }
+  });
+});
+
+describe("role-aware items and unread", () => {
+  const record: QuoteRecord = {
+    id: "q1",
+    number: 1,
+    machineId: "m1",
+    items: [
+      {
+        id: "A",
+        name: "Bearing",
+        qty: 2,
+        sellPrice: 20,
+        supplierCost: 11,
+        supplier: "McMaster",
+        leadTimeDays: 4,
+      },
+    ],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    customerEmail: "c@example.test",
+    customerId: "cust-1",
+    status: "pricing",
+    shipments: [],
+    activities: [
+      {
+        id: "a1",
+        at: "2026-01-01T01:00:00.000Z",
+        actorRole: "customer",
+        actorEmail: "c@example.test",
+        kind: "status",
+        text: "Status set to Requested.",
+      },
+    ],
+    lastReadAt: { "cust-1": "2026-01-01T01:00:00.000Z" },
+  };
+
+  it("hides cost and sell price from the customer before quoted", () => {
+    const items = itemsForRole(record.items, "customer", "pricing");
+    assert.deepEqual(items, [{ id: "A", name: "Bearing", qty: 2 }]);
+  });
+
+  it("shows sell price but not supplier cost after quoted", () => {
+    const items = itemsForRole(record.items, "customer", "quoted");
+    assert.deepEqual(items, [
+      { id: "A", name: "Bearing", qty: 2, sellPrice: 20, leadTimeDays: 4 },
+    ]);
+  });
+
+  it("marks a new quote unread for staff and read for the customer", () => {
+    assert.equal(
+      isQuoteUnreadForUser(record, {
+        id: "staff-1",
+        email: "staff@spares.local",
+        role: "staff",
+      }),
+      true,
+    );
+    assert.equal(
+      isQuoteUnreadForUser(record, {
+        id: "cust-1",
+        email: "c@example.test",
+        role: "customer",
+      }),
+      false,
+    );
+  });
+
+  it("strips cost from the public customer quote", () => {
+    const quoted = { ...record, status: "quoted" as const };
+    const publicQuote = toPublicQuote(quoted, {
+      id: "cust-1",
+      email: "c@example.test",
+      role: "customer",
+    });
+    assert.equal(publicQuote.items[0]?.sellPrice, 20);
+    assert.equal(publicQuote.items[0]?.supplierCost, undefined);
+    assert.equal(publicQuote.customerEmail, "c@example.test");
+  });
+});
+
+describe("mergeQuoteItems and numbers", () => {
+  it("updates pricing on existing lines only", () => {
+    const merged = mergeQuoteItems(
+      [{ id: "A", qty: 1 }],
+      [{ id: "A", qty: 3, sellPrice: 4 }],
+    );
+    assert.deepEqual(merged, {
+      ok: true,
+      items: [{ id: "A", qty: 3, sellPrice: 4 }],
+    });
+    assert.equal(
+      mergeQuoteItems([{ id: "A", qty: 1 }], [{ id: "B", qty: 1 }]).ok,
+      false,
+    );
+  });
+
+  it("assigns sequential numbers to quotes that lack them", () => {
+    const numbered = assignMissingQuoteNumbers([
+      {
+        id: "b",
+        number: 0,
+        machineId: "m",
+        items: [],
+        createdAt: "2026-01-02T00:00:00.000Z",
+        customerEmail: "c@example.test",
+        customerId: "c",
+        status: "requested",
+        shipments: [],
+        activities: [],
+        lastReadAt: {},
+      },
+      {
+        id: "a",
+        number: 0,
+        machineId: "m",
+        items: [],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        customerEmail: "c@example.test",
+        customerId: "c",
+        status: "requested",
+        shipments: [],
+        activities: [],
+        lastReadAt: {},
+      },
+    ]);
+    assert.equal(numbered.find((row) => row.id === "a")?.number, 1);
+    assert.equal(numbered.find((row) => row.id === "b")?.number, 2);
+  });
+});
+
+describe("shipped activity copy", () => {
+  it("reads Shipped — tracking …", () => {
+    assert.equal(
+      shippedActivityText([{ id: "s1", trackingNumber: "1Z999", carrier: "UPS" }]),
+      "Shipped — tracking 1Z999 (UPS)",
+    );
   });
 });

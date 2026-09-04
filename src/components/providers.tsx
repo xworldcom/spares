@@ -2,6 +2,7 @@
 
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/nav/AppShell";
+import { QuoteAlertsProvider } from "@/components/quote/QuoteAlerts";
 import { installClientLogCapture } from "@/lib/bug-report/client-logs";
 
 installClientLogCapture();
@@ -9,7 +10,9 @@ installClientLogCapture();
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AppShell>{children}</AppShell>
+      <QuoteAlertsProvider>
+        <AppShell>{children}</AppShell>
+      </QuoteAlertsProvider>
     </AuthProvider>
   );
 }

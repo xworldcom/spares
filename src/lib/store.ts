@@ -2,9 +2,22 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { hashPassword } from "@/lib/auth/password";
-import { normalizeStoredQuote } from "@/lib/quotes";
+import {
+  assignMissingQuoteNumbers,
+  findQuoteInList,
+  nextQuoteNumber,
+  normalizeStoredQuote,
+  statusActivityText,
+} from "@/lib/quotes";
 import { missingFixtureMachines } from "@/lib/seed-fixtures";
-import type { Part, Quote, QuoteItem, Role, UnmatchedPart } from "@/types";
+import type {
+  Part,
+  QuoteActivity,
+  QuoteItem,
+  QuoteRecord,
+  Role,
+  UnmatchedPart,
+} from "@/types";
 
 export const SEED_STAFF = {
   email: "staff@spares.local",
@@ -35,9 +48,7 @@ export type StoredMachine = {
   createdAt: string;
 };
 
-export type StoredQuote = Quote & {
-  customerId: string;
-};
+export type StoredQuote = QuoteRecord;
 
 export type StoredBugReport = {
   id: string;
@@ -135,16 +146,22 @@ async function readDatabase(): Promise<Database> {
       await writeFile(dbPath(), JSON.stringify(memory, null, 2));
       return memory;
     }
+    const quotes = assignMissingQuoteNumbers(
+      (parsed.quotes ?? []).map((quote) => normalizeStoredQuote(quote)),
+    );
     const next = await withFixtureMachines({
       users: parsed.users ?? [],
       machines: parsed.machines ?? [],
-      quotes: (parsed.quotes ?? []).map((quote) => ({
-        ...normalizeStoredQuote(quote),
-        customerId: quote.customerId,
-      })),
+      quotes,
       bugReports: parsed.bugReports ?? [],
     });
-    if (next.machines.length !== (parsed.machines ?? []).length) {
+    const numbersAssigned = (parsed.quotes ?? []).some(
+      (quote) => typeof quote.number !== "number" || quote.number < 1,
+    );
+    if (
+      next.machines.length !== (parsed.machines ?? []).length ||
+      numbersAssigned
+    ) {
       await writeFile(dbPath(), JSON.stringify(next, null, 2));
     }
     memory = next;
@@ -236,6 +253,22 @@ export function createMachine(input: {
   });
 }
 
+function newActivity(
+  actor: { email: string; role: Role },
+  kind: QuoteActivity["kind"],
+  text: string,
+  at = new Date().toISOString(),
+): QuoteActivity {
+  return {
+    id: randomUUID(),
+    at,
+    actorRole: actor.role,
+    actorEmail: actor.email,
+    kind,
+    text,
+  };
+}
+
 export function createQuote(input: {
   machineId: string;
   items: QuoteItem[];
@@ -245,14 +278,26 @@ export function createQuote(input: {
 }) {
   return withLock(async () => {
     const db = await readDatabase();
-    const quote: StoredQuote = {
+    const now = new Date().toISOString();
+    const activity = newActivity(
+      { email: input.customerEmail, role: "customer" },
+      "status",
+      statusActivityText("requested"),
+      now,
+    );
+    const quote: QuoteRecord = {
       id: randomUUID(),
+      number: nextQuoteNumber(db.quotes),
       machineId: input.machineId,
       items: input.items,
       note: input.note,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       customerEmail: input.customerEmail,
       customerId: input.customerId,
+      status: "requested",
+      shipments: [],
+      activities: [activity],
+      lastReadAt: { [input.customerId]: now },
     };
     await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
     return quote;
@@ -263,13 +308,62 @@ export function listQuotes() {
   return withLock(async () => {
     const db = await readDatabase();
     return [...db.quotes]
-      .map((quote) => ({
-        ...normalizeStoredQuote(quote),
-        customerId: quote.customerId,
-      }))
+      .map((quote) => normalizeStoredQuote(quote))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }
+
+export function getQuote(idOrNumber: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return findQuoteInList(db.quotes, idOrNumber);
+  });
+}
+
+export function mutateQuote(
+  idOrNumber: string,
+  fn: (quote: QuoteRecord) => QuoteRecord,
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const current = findQuoteInList(db.quotes, idOrNumber);
+    if (!current) {
+      return null;
+    }
+    const next = fn(current);
+    await writeDatabase({
+      ...db,
+      quotes: db.quotes.map((quote) => (quote.id === current.id ? next : quote)),
+    });
+    return next;
+  });
+}
+
+export function appendQuoteActivity(
+  idOrNumber: string,
+  actor: { email: string; role: Role; id: string },
+  kind: QuoteActivity["kind"],
+  text: string,
+) {
+  return mutateQuote(idOrNumber, (quote) => {
+    const activity = newActivity(actor, kind, text);
+    return {
+      ...quote,
+      activities: [...quote.activities, activity],
+      lastReadAt: { ...quote.lastReadAt, [actor.id]: activity.at },
+    };
+  });
+}
+
+export function markQuoteRead(idOrNumber: string, userId: string) {
+  const now = new Date().toISOString();
+  return mutateQuote(idOrNumber, (quote) => ({
+    ...quote,
+    lastReadAt: { ...quote.lastReadAt, [userId]: now },
+  }));
+}
+
+export { newActivity as createQuoteActivity };
 
 export function listBugReports() {
   return withLock(async () => {
