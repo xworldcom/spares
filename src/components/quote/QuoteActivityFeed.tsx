@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatWhen } from "@/components/quote/quote-format";
+import { initialsFromEmail, isHumanComment } from "@/lib/ui/initials";
 import type { QuoteActivity, Role } from "@/types";
 
 function actorLabel(
@@ -16,6 +17,27 @@ function actorLabel(
     return "Spares";
   }
   return activity.actorEmail;
+}
+
+function InitialsAvatar({
+  email,
+  own,
+}: {
+  email: string;
+  own: boolean;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={
+        own
+          ? "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0a84ff] text-[12px] font-semibold tracking-wide text-white"
+          : "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0b0d10] text-[12px] font-semibold tracking-wide text-white"
+      }
+    >
+      {initialsFromEmail(email)}
+    </span>
+  );
 }
 
 export function QuoteActivityFeed({
@@ -40,17 +62,44 @@ export function QuoteActivityFeed({
         {activities.length === 0 ? (
           <li className="spares-muted text-sm">No activity yet.</li>
         ) : (
-          activities.map((activity) => (
-            <li key={activity.id} className="rounded-[18px] bg-[#f4f5f7] px-3 py-3">
-              <p className="text-xs font-medium text-neutral-500">
-                {actorLabel(activity, role, selfEmail)}
-                <span className="font-normal"> · {formatWhen(activity.at)}</span>
-              </p>
-              <p className="mt-1 whitespace-pre-wrap text-[15px] text-neutral-950">
-                {activity.text}
-              </p>
-            </li>
-          ))
+          activities.map((activity) => {
+            const human = isHumanComment(activity);
+            const own =
+              activity.actorEmail === selfEmail && activity.actorRole === role;
+            return (
+              <li
+                key={activity.id}
+                className={
+                  human
+                    ? "flex gap-3 rounded-[18px] bg-[#f4f5f7] px-3 py-3"
+                    : "rounded-[18px] px-1 py-2"
+                }
+              >
+                {human ? <InitialsAvatar email={activity.actorEmail} own={own} /> : null}
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={
+                      human
+                        ? "text-xs font-medium text-neutral-500"
+                        : "text-xs font-medium text-neutral-400"
+                    }
+                  >
+                    {actorLabel(activity, role, selfEmail)}
+                    <span className="font-normal"> · {formatWhen(activity.at)}</span>
+                  </p>
+                  <p
+                    className={
+                      human
+                        ? "mt-1 whitespace-pre-wrap text-[15px] text-neutral-950"
+                        : "mt-0.5 whitespace-pre-wrap text-[14px] text-neutral-500"
+                    }
+                  >
+                    {activity.text}
+                  </p>
+                </div>
+              </li>
+            );
+          })
         )}
       </ol>
       <form

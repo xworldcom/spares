@@ -1,6 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { formatMoney, lineSellTotal, quoteSellTotal } from "@/lib/quotes";
+import {
+  parseEditableQty,
+  qtyDraftIsComplete,
+  sanitizeQtyDraft,
+} from "@/lib/ui/editable-qty";
 import type { QuoteItem, Role } from "@/types";
 
 function Field({
@@ -20,6 +26,70 @@ function Field({
 
 const inputClass =
   "h-11 w-full min-w-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none";
+
+function selectQtyInput(input: HTMLInputElement) {
+  requestAnimationFrame(() => {
+    input.select();
+    try {
+      input.setSelectionRange(0, input.value.length);
+    } catch {
+      // Some browsers reject setSelectionRange on certain input types.
+    }
+  });
+}
+
+function QtyField({
+  value,
+  onCommit,
+}: {
+  value: number;
+  onCommit: (qty: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  function commit(raw: string) {
+    const next = parseEditableQty(raw);
+    onCommit(next);
+    setDraft(null);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      enterKeyHint="done"
+      value={draft ?? String(value)}
+      onFocus={(event) => {
+        setDraft(String(value));
+        selectQtyInput(event.currentTarget);
+      }}
+      onClick={(event) => {
+        selectQtyInput(event.currentTarget);
+      }}
+      onChange={(event) => {
+        const next = sanitizeQtyDraft(event.target.value);
+        setDraft(next);
+        if (qtyDraftIsComplete(next)) {
+          onCommit(parseEditableQty(next));
+        }
+      }}
+      onBlur={() => {
+        commit(draft ?? String(value));
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.currentTarget.blur();
+        }
+      }}
+      className={inputClass}
+    />
+  );
+}
 
 export function QuoteLines({
   items,
@@ -63,15 +133,9 @@ export function QuoteLines({
             {editable ? (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Field label="Qty">
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
+                  <QtyField
                     value={item.qty}
-                    onChange={(event) =>
-                      patch(index, { qty: Number(event.target.value) || 1 })
-                    }
-                    className={inputClass}
+                    onCommit={(qty) => patch(index, { qty })}
                   />
                 </Field>
                 <Field label="Supplier cost">
