@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
 import { requireRole } from "@/lib/auth";
 import { error } from "@/lib/http";
-import { getBugReport, machineFilePath } from "@/lib/store";
+import { getBugReport, readStoredFile } from "@/lib/store";
 
 export async function GET(
   _request: Request,
@@ -19,8 +18,8 @@ export async function GET(
   }
 
   try {
-    const bytes = await readFile(machineFilePath(report.screenshotFileName));
-    return new Response(bytes, {
+    const bytes = await readStoredFile(report.screenshotFileName);
+    return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": "image/jpeg",
         "Cache-Control": "private, no-store",

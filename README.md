@@ -118,10 +118,23 @@ npm run lint
 npm run build
 ```
 
-Optional (from T1.2):
+Optional (from T1.2, plus T3 durable store):
 
 - `AUTH_SECRET` — signs the httpOnly session cookie. A local non-production default is used when unset.
-- `SPARES_DATA_DIR` — override the file-backed JSON + model directory (defaults to `./data` locally, `/tmp/spares-data` on Vercel).
+- `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
+- `BLOB_READ_WRITE_TOKEN` — **required on Vercel Preview.** Quotes, activity, PO PDFs, tracking, users, machine metadata, and GLB files live in a private Vercel Blob store so they survive serverless hops. Local `npm run dev` does not need this; it keeps using `./data`.
+
+### Tess: attach Blob on Preview (required)
+
+Vercel `/tmp` is per-instance. Without Blob, a quote created on one function instance disappears on the next cold start.
+
+1. In the Vercel dashboard, open **Storage** and create a **Blob** store (private preview is fine).
+2. Connect that store to the `spares` project for the **Preview** environment (Development too if you want). Vercel injects `BLOB_READ_WRITE_TOKEN` — you should not need to paste the token by hand.
+3. Redeploy the Preview. Keep **Vercel Authentication / Deployment Protection / SSO on**. Do not promote to Production.
+4. Confirm Preview env has `BLOB_READ_WRITE_TOKEN` and does **not** have `SPARES_DATA_DIR`.
+5. `DATABASE_URL` / Upstash Redis are **not** required for this pass. JSON records are stored as a private Blob object (`spares/db.json`) alongside files (`spares/files/...`). We can move JSON to Postgres later if the preview outgrows this.
+
+Empty Blob store auto-seeds Hardware fixture, Palletizer, and the seed users the first time an API route runs.
 
 ## API (T1.2, stacked from #7)
 

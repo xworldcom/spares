@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { hashPassword } from "./auth/password.ts";
+import {
+  filesDir,
+  getPersistence,
+  safeStoredFileName,
+} from "./persistence.ts";
 import {
   assignMissingQuoteNumbers,
   findQuoteInList,
@@ -9,7 +12,10 @@ import {
   normalizeStoredQuote,
   statusActivityText,
 } from "./quotes.ts";
-import { missingFixtureMachines } from "./seed-fixtures.ts";
+import {
+  missingFixtureMachines,
+  restoreMissingFixtureFiles,
+} from "./seed-fixtures.ts";
 import type {
   Part,
   QuoteActivity,
@@ -18,6 +24,8 @@ import type {
   Role,
   UnmatchedPart,
 } from "../types/index.ts";
+
+export { filesDir, getDataDir } from "./persistence.ts";
 
 export const SEED_STAFF = {
   id: "user-staff",
@@ -90,6 +98,7 @@ type Database = {
 
 let queue: Promise<unknown> = Promise.resolve();
 let memory: Database | null = null;
+let loggedStoreKind = false;
 
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.then(fn, fn);
@@ -100,26 +109,21 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export function getDataDir() {
-  if (process.env.SPARES_DATA_DIR) {
-    return path.resolve(process.env.SPARES_DATA_DIR);
+/** Process memory is only safe for a single local Node process on disk. */
+function trustProcessMemory() {
+  return getPersistence().kind === "fs" && !process.env.VERCEL;
+}
+
+function logStoreKind() {
+  if (loggedStoreKind) {
+    return;
   }
-  if (process.env.VERCEL) {
-    return "/tmp/spares-data";
-  }
-  return path.join(process.cwd(), "data");
+  loggedStoreKind = true;
+  console.info(`[spares] store backend: ${getPersistence().kind}`);
 }
 
-function dbPath() {
-  return path.join(getDataDir(), "db.json");
-}
-
-export function filesDir() {
-  return path.join(getDataDir(), "files");
-}
-
-async function ensureDirs() {
-  await mkdir(filesDir(), { recursive: true });
+async function persistFile(storedFileName: string, bytes: Buffer) {
+  await getPersistence().writeFileBytes(safeStoredFileName(storedFileName), bytes);
 }
 
 async function seedUser(input: {
@@ -189,8 +193,7 @@ function stabilizeSeedUsers(db: Database): Database {
 }
 
 async function withFixtureMachines(db: Database): Promise<Database> {
-  await ensureDirs();
-  const extras = await missingFixtureMachines(db.machines, filesDir());
+  const extras = await missingFixtureMachines(db.machines, persistFile);
   if (extras.length === 0) {
     return db;
   }
@@ -206,14 +209,21 @@ function catalogChanged(before: Database, after: Database) {
 }
 
 /**
- * Always re-run fixture + seed-user heal. Vercel `/tmp` is per-instance, and
- * an in-memory db with users but empty machines must not stick around.
+ * Always re-run fixture + seed-user heal. A warm in-memory db with users but
+ * empty machines must not stick around. Remote backends re-read every time.
  */
-async function ensureCatalog(): Promise<Database> {
+async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Database> {
   const db = await readDatabase();
   const next = await withFixtureMachines(
     await ensureExtraCustomers(stabilizeSeedUsers(db)),
   );
+  if (options?.restoreFiles) {
+    await restoreMissingFixtureFiles(
+      next.machines,
+      async (name) => Boolean((await getPersistence().readFileBytes(name))?.length),
+      persistFile,
+    );
+  }
   if (catalogChanged(db, next)) {
     await writeDatabase(next);
     return next;
@@ -222,59 +232,67 @@ async function ensureCatalog(): Promise<Database> {
   return next;
 }
 
+function parseDatabase(
+  raw: string,
+): { db: Database; numbersAssigned: boolean } | null {
+  try {
+    const parsed = JSON.parse(raw) as Database;
+    if (!parsed.users?.length) {
+      return null;
+    }
+    const rawQuotes = parsed.quotes ?? [];
+    return {
+      db: {
+        users: parsed.users ?? [],
+        machines: parsed.machines ?? [],
+        quotes: rawQuotes.map((quote) => normalizeStoredQuote(quote)),
+        bugReports: parsed.bugReports ?? [],
+      },
+      numbersAssigned: rawQuotes.some(
+        (quote) => typeof quote.number !== "number" || quote.number < 1,
+      ),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function readDatabase(): Promise<Database> {
-  if (memory) {
+  logStoreKind();
+  if (memory && trustProcessMemory()) {
     return memory;
   }
 
-  await ensureDirs();
-  try {
-    const raw = await readFile(dbPath(), "utf8");
-    const parsed = JSON.parse(raw) as Database;
-    if (!parsed.users?.length) {
-      memory = await withFixtureMachines(await seedDatabase());
-      await writeFile(dbPath(), JSON.stringify(memory, null, 2));
-      return memory;
-    }
-    const quotes = assignMissingQuoteNumbers(
-      (parsed.quotes ?? []).map((quote) => normalizeStoredQuote(quote)),
-    );
-    const next = await withFixtureMachines(
-      await ensureExtraCustomers(
-        stabilizeSeedUsers({
-          users: parsed.users ?? [],
-          machines: parsed.machines ?? [],
-          quotes,
-          bugReports: parsed.bugReports ?? [],
-        }),
-      ),
-    );
-    const numbersAssigned = (parsed.quotes ?? []).some(
-      (quote) => typeof quote.number !== "number" || quote.number < 1,
-    );
-    const usersRemapped =
-      next.users.length !== (parsed.users ?? []).length ||
-      next.users.some((user, index) => user.id !== (parsed.users ?? [])[index]?.id);
-    if (
-      next.machines.length !== (parsed.machines ?? []).length ||
-      numbersAssigned ||
-      usersRemapped
-    ) {
-      await writeFile(dbPath(), JSON.stringify(next, null, 2));
-    }
-    memory = next;
-    return memory;
-  } catch {
-    memory = await withFixtureMachines(await seedDatabase());
-    await writeFile(dbPath(), JSON.stringify(memory, null, 2));
-    return memory;
+  const raw = await getPersistence().readDatabaseJson();
+  const loaded = raw ? parseDatabase(raw) : null;
+  if (!loaded) {
+    const seeded = await withFixtureMachines(await seedDatabase());
+    await writeDatabase(seeded);
+    return seeded;
   }
+
+  const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
+  const next = await withFixtureMachines(
+    await ensureExtraCustomers(stabilizeSeedUsers({ ...loaded.db, quotes })),
+  );
+  const usersRemapped =
+    next.users.length !== loaded.db.users.length ||
+    next.users.some((user, index) => user.id !== loaded.db.users[index]?.id);
+  if (
+    next.machines.length !== loaded.db.machines.length ||
+    loaded.numbersAssigned ||
+    usersRemapped
+  ) {
+    await writeDatabase(next);
+    return next;
+  }
+  memory = next;
+  return next;
 }
 
 async function writeDatabase(next: Database) {
   memory = next;
-  await ensureDirs();
-  await writeFile(dbPath(), JSON.stringify(next, null, 2));
+  await getPersistence().writeDatabaseJson(JSON.stringify(next, null, 2));
 }
 
 function normalizeEmail(email: string) {
@@ -329,7 +347,7 @@ export function listMachines(options?: { heal?: boolean }) {
     if (options?.heal) {
       memory = null;
     }
-    const db = await ensureCatalog();
+    const db = await ensureCatalog({ restoreFiles: options?.heal });
     return db.machines.map((machine) => ({ id: machine.id, name: machine.name }));
   });
 }
@@ -515,8 +533,7 @@ export function createBugReport(input: {
     const id = randomUUID();
     const screenshotFileName = input.screenshot?.length ? `bug-${id}.jpg` : "";
     if (input.screenshot?.length && screenshotFileName) {
-      await ensureDirs();
-      await writeFile(machineFilePath(screenshotFileName), input.screenshot);
+      await persistFile(screenshotFileName, input.screenshot);
     }
     const report: StoredBugReport = {
       id,
@@ -553,12 +570,19 @@ export function attachBugReportGithubIssue(id: string, githubIssueUrl: string) {
 }
 
 export function machineFilePath(storedFileName: string) {
-  return path.join(filesDir(), storedFileName);
+  return `${filesDir()}/${safeStoredFileName(storedFileName)}`;
+}
+
+export async function readStoredFile(storedFileName: string): Promise<Buffer> {
+  const bytes = await getPersistence().readFileBytes(safeStoredFileName(storedFileName));
+  if (!bytes?.length) {
+    throw new Error("Stored file not found");
+  }
+  return bytes;
 }
 
 export function saveMachineFile(storedFileName: string, bytes: Buffer) {
   return withLock(async () => {
-    await ensureDirs();
-    await writeFile(machineFilePath(storedFileName), bytes);
+    await persistFile(storedFileName, bytes);
   });
 }
