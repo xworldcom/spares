@@ -21,11 +21,23 @@ type Sheet = "peek" | "full" | "out";
 
 export const SHEET_EASE_MS = 420;
 const DESKTOP_STAGE = "(min-width: 1024px) and (min-height: 840px)";
+const DRAG_SLOP = 8;
+const SAMPLE_WINDOW_MS = 90;
 
 function isDesktopStage() {
   return (
     typeof window !== "undefined" && window.matchMedia(DESKTOP_STAGE).matches
   );
+}
+
+function isSkipTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  if (target.closest(".quote-sheet-handle, .quote-sheet-grab")) {
+    return false;
+  }
+  return Boolean(target.closest("button, a, input, textarea, select, label"));
 }
 
 function QuoteTrayForm({
@@ -55,7 +67,7 @@ function QuoteTrayForm({
 }) {
   return (
     <div className="quote-sheet-form flex min-h-0 flex-1 flex-col px-5 pb-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="quote-sheet-grab flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] leading-tight font-semibold tracking-tight text-neutral-950">
             Quote
@@ -69,6 +81,7 @@ function QuoteTrayForm({
         {onClose ? (
           <button
             type="button"
+            data-no-drag=""
             className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
             aria-label="Hide quote"
             onClick={onClose}
@@ -191,7 +204,6 @@ export function QuoteTray({
   const [sentHref, setSentHref] = useState<string | undefined>();
   const [sheet, setSheet] = useState<Sheet>(open ? "full" : "out");
   const [dragging, setDragging] = useState(false);
-  const [dragPx, setDragPx] = useState(0);
   const card = useRef<HTMLElement>(null);
   const drag = useRef({
     y: 0,
@@ -199,6 +211,8 @@ export function QuoteTray({
     pending: false,
     from: "peek" as Sheet,
     t: 0,
+    moved: false,
+    samples: [] as { t: number; y: number }[],
   });
 
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
@@ -207,18 +221,33 @@ export function QuoteTray({
     onOpenChange?.(next);
   }
 
+  function paintDrag(px: number) {
+    card.current?.style.setProperty("--drag", `${px}px`);
+  }
+
+  function setDraggingClass(on: boolean) {
+    card.current?.classList.toggle("is-dragging", on);
+  }
+
   useEffect(() => {
     if (open) {
       // Only lift a closed sheet. Peek must survive parent open=true
       // the same way Yonder keeps peek after a drag settle.
-      setSheet((current) => (current === "out" ? "full" : current));
-      setDragPx(0);
+      setSheet((current) => {
+        if (current !== "out") {
+          return current;
+        }
+        return isDesktopStage() ? "full" : "peek";
+      });
+      paintDrag(0);
       setDragging(false);
+      setDraggingClass(false);
       return;
     }
     setSheet("out");
-    setDragPx(0);
+    paintDrag(0);
     setDragging(false);
+    setDraggingClass(false);
   }, [open]);
 
   const prevCount = useRef(count);
@@ -276,8 +305,9 @@ export function QuoteTray({
 
   function dismiss() {
     setSheet("out");
-    setDragPx(0);
+    paintDrag(0);
     setDragging(false);
+    setDraggingClass(false);
     setOpen(false);
   }
 
@@ -290,35 +320,61 @@ export function QuoteTray({
     dismiss();
   }
 
+  function beginDrag(event: ReactPointerEvent<HTMLElement>, from: Sheet, pending: boolean) {
+    drag.current = {
+      y: event.clientY,
+      on: !pending,
+      pending,
+      from,
+      t: performance.now(),
+      moved: false,
+      samples: [{ t: performance.now(), y: event.clientY }],
+    };
+    if (!pending) {
+      setDragging(true);
+      setDraggingClass(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  }
+
   function onCardPointerDown(event: ReactPointerEvent<HTMLElement>) {
     if (isDesktopStage()) {
       return;
     }
-    if ((event.target as HTMLElement).closest("button, a, input, textarea")) {
+    if (event.button !== 0 && event.pointerType === "mouse") {
+      return;
+    }
+    if (isSkipTarget(event.target)) {
       return;
     }
     const fromHandle = !!(event.target as HTMLElement).closest(
-      ".quote-sheet-handle",
+      ".quote-sheet-handle, .quote-sheet-grab",
     );
     if (sheet === "full" && !fromHandle) {
-      drag.current = {
-        y: event.clientY,
-        on: false,
-        pending: true,
-        from: "full",
-        t: performance.now(),
-      };
+      beginDrag(event, "full", true);
       return;
     }
-    drag.current = {
-      y: event.clientY,
-      on: true,
-      pending: false,
-      from: sheet === "full" ? "full" : "peek",
-      t: performance.now(),
-    };
-    setDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
+    beginDrag(event, sheet === "full" ? "full" : "peek", false);
+  }
+
+  function recordSample(y: number) {
+    const now = performance.now();
+    const samples = drag.current.samples;
+    samples.push({ t: now, y });
+    while (samples.length > 1 && now - samples[0].t > SAMPLE_WINDOW_MS) {
+      samples.shift();
+    }
+  }
+
+  function liveVelocity() {
+    const samples = drag.current.samples;
+    if (samples.length < 2) {
+      return 0;
+    }
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const dt = Math.max(last.t - first.t, 1);
+    return (last.y - first.y) / dt;
   }
 
   function onCardPointerMove(event: ReactPointerEvent<HTMLElement>) {
@@ -326,12 +382,14 @@ export function QuoteTray({
       const dy = event.clientY - drag.current.y;
       const body = card.current?.querySelector(".quote-sheet-form");
       const atTop = body instanceof HTMLElement ? body.scrollTop <= 1 : true;
-      if (dy > 10 && atTop) {
+      if (dy > DRAG_SLOP && atTop) {
         drag.current.on = true;
         drag.current.pending = false;
+        drag.current.moved = true;
         setDragging(true);
+        setDraggingClass(true);
         event.currentTarget.setPointerCapture(event.pointerId);
-      } else if (Math.abs(dy) > 10) {
+      } else if (Math.abs(dy) > DRAG_SLOP) {
         drag.current.pending = false;
         return;
       } else {
@@ -342,32 +400,44 @@ export function QuoteTray({
       return;
     }
     const dy = event.clientY - drag.current.y;
+    if (Math.abs(dy) > DRAG_SLOP) {
+      drag.current.moved = true;
+    }
     const from = drag.current.from;
-    setDragPx(from === "full" && dy < 0 ? dy * 0.22 : dy);
+    const next = from === "full" && dy < 0 ? dy * 0.18 : dy;
+    recordSample(event.clientY);
+    paintDrag(next);
   }
 
-  function settleSheet(dy: number, from: Sheet, dt: number) {
+  function settleSheet(dy: number, from: Sheet) {
     drag.current.on = false;
     drag.current.pending = false;
     setDragging(false);
-    const velocity = dy / Math.max(dt, 1);
+    setDraggingClass(false);
+    paintDrag(0);
+    const velocity = liveVelocity();
     if (from === "full") {
-      if (dy > 90 || velocity > 0.6) {
+      if (dy > 120 || velocity > 0.7) {
+        dismiss();
+      } else if (dy > 48 || velocity > 0.35) {
         setSheet("peek");
         setOpen(true);
       } else {
         setSheet("full");
       }
-    } else if (dy < -70 || velocity < -0.5) {
+      return;
+    }
+    if (dy < -36 || velocity < -0.35) {
       setSheet("full");
       setOpen(true);
-    } else if (dy > 90 || velocity > 0.55) {
-      dismiss();
-    } else {
-      setSheet("peek");
-      setOpen(true);
+      return;
     }
-    setDragPx(0);
+    if (dy > 72 || velocity > 0.5) {
+      dismiss();
+      return;
+    }
+    setSheet("peek");
+    setOpen(true);
   }
 
   function onCardPointerUp(event: ReactPointerEvent<HTMLElement>) {
@@ -380,16 +450,19 @@ export function QuoteTray({
       return;
     }
     const dy = event.clientY - drag.current.y;
-    const dt = performance.now() - drag.current.t;
-    if (drag.current.from !== "full" && Math.abs(dy) < 16 && dt < 340) {
+    recordSample(event.clientY);
+    if (!drag.current.moved && Math.abs(dy) < DRAG_SLOP) {
       drag.current.on = false;
       setDragging(false);
-      setDragPx(0);
-      setSheet("full");
-      setOpen(true);
+      setDraggingClass(false);
+      paintDrag(0);
+      if (drag.current.from !== "full") {
+        setSheet("full");
+        setOpen(true);
+      }
       return;
     }
-    settleSheet(dy, drag.current.from, dt);
+    settleSheet(dy, drag.current.from);
   }
 
   if (fullscreen) {
@@ -415,7 +488,6 @@ export function QuoteTray({
       className={`quote-sheet${sheet === "full" ? " is-full" : ""}${
         sheet === "peek" ? " is-peek" : ""
       }${sheet === "out" ? " is-out" : ""}${dragging ? " is-dragging" : ""}`}
-      style={{ ["--drag" as string]: `${dragPx}px` }}
       onPointerDown={onCardPointerDown}
       onPointerMove={onCardPointerMove}
       onPointerUp={onCardPointerUp}
@@ -426,6 +498,9 @@ export function QuoteTray({
         className="quote-sheet-handle"
         aria-label={sheet === "full" ? "Hide quote" : "Show quote"}
         onClick={() => {
+          if (drag.current.moved) {
+            return;
+          }
           if (isDesktopStage()) {
             hide();
             return;

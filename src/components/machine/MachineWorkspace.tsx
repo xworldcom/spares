@@ -55,9 +55,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!isCustomer || typeof window === "undefined") {
       return;
     }
-    if (window.matchMedia(DESKTOP_STAGE).matches) {
-      setTrayOpen(true);
-    }
+    setTrayOpen(true);
   }, [isCustomer, machineId]);
 
   useEffect(() => {
@@ -256,7 +254,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           ? "fixed inset-x-0 bottom-0 z-40 flex flex-col top-[var(--spares-header)]"
           : fullscreen
             ? "flex h-full min-h-0 flex-col"
-            : "machine-viewer overflow-hidden rounded-[22px] sm:rounded-[28px]"
+            : "machine-viewer overflow-hidden sm:rounded-[28px]"
       }
       style={{ background: VIEWER_STAGE }}
       onContextMenu={(event) => {
