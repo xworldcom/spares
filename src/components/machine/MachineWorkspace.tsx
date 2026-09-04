@@ -6,7 +6,7 @@ import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
 import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
-import { QuoteTray, type TrayLine } from "@/components/quote/QuoteTray";
+import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
@@ -46,6 +46,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [isolatedId, setIsolatedId] = useState<string | null>(null);
   const [lines, setLines] = useState<TrayLine[]>([]);
   const [trayOpen, setTrayOpen] = useState(false);
+  const [quoteChip, setQuoteChip] = useState(true);
   const [held, setHeld] = useState(false);
   const [bomOpen, setBomOpen] = useState(false);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
@@ -58,6 +59,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       setTrayOpen(true);
     }
   }, [isCustomer, machineId]);
+
+  useEffect(() => {
+    if (trayOpen) {
+      setQuoteChip(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setQuoteChip(true), SHEET_EASE_MS);
+    return () => window.clearTimeout(timer);
+  }, [trayOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -305,7 +315,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               }}
             />
           ) : null}
-          {isCustomer && !fullscreen && !trayOpen ? (
+          {isCustomer && !fullscreen && !trayOpen && quoteChip ? (
             <button
               type="button"
               data-quote-tray=""
