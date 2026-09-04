@@ -54,8 +54,11 @@ export function normalizeMachine(
   return detail;
 }
 
-export async function listMachines(): Promise<MachineSummary[]> {
-  const data = await apiFetch<MachinesListResponse>("/api/machines");
+export async function listMachines(options?: {
+  heal?: boolean;
+}): Promise<MachineSummary[]> {
+  const path = options?.heal ? "/api/machines?heal=1" : "/api/machines";
+  const data = await apiFetch<MachinesListResponse>(path);
   return data.machines ?? [];
 }
 

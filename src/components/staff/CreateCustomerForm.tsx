@@ -4,7 +4,11 @@ import { useState } from "react";
 import { createCustomer } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 
-export function CreateCustomerForm() {
+export function CreateCustomerForm({
+  onCreated,
+}: {
+  onCreated?: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -21,6 +25,7 @@ export function CreateCustomerForm() {
       setCreatedEmail(user.email);
       setEmail("");
       setPassword("");
+      onCreated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not create the customer account."));
     } finally {

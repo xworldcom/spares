@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
-  await setSessionCookie(user.id);
+  await setSessionCookie(user.id, user.email);
   if (html) {
     return redirectNoQuery("/machines");
   }

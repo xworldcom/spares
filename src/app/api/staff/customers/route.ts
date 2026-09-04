@@ -1,6 +1,14 @@
 import { hashPassword, requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { createCustomer } from "@/lib/store";
+import { createCustomer, listCustomers } from "@/lib/store";
+
+export async function GET() {
+  const auth = await requireRole("staff");
+  if ("error" in auth) {
+    return auth.error;
+  }
+  return json({ customers: await listCustomers() });
+}
 
 type CreateCustomerBody = {
   email?: unknown;

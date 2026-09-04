@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 
+const NO_STORE = { "Cache-Control": "private, no-store" };
+
 export function json(data: unknown, status = 200) {
-  return NextResponse.json(data, { status });
+  return NextResponse.json(data, { status, headers: NO_STORE });
 }
 
 export function error(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: NO_STORE });
 }
 
 export async function readJson<T>(request: Request): Promise<T | NextResponse> {

@@ -1,6 +1,13 @@
 "use client";
 
+import { useId, useRef, useState } from "react";
 import { formatMoney, lineSellTotal, quoteSellTotal } from "@/lib/quotes";
+import {
+  parseEditableQty,
+  qtyDraftIsComplete,
+  qtyKeyReplacesDraft,
+  sanitizeQtyDraft,
+} from "@/lib/ui/editable-qty";
 import type { QuoteItem, Role } from "@/types";
 
 function Field({
@@ -20,6 +27,105 @@ function Field({
 
 const inputClass =
   "h-11 w-full min-w-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none";
+
+function selectQtyInput(input: HTMLInputElement) {
+  input.select();
+  try {
+    input.setSelectionRange(0, input.value.length);
+  } catch {
+    // Some browsers reject setSelectionRange on certain input types.
+  }
+}
+
+function QtyField({
+  value,
+  onCommit,
+}: {
+  value: number;
+  onCommit: (qty: number) => void;
+}) {
+  const id = useId();
+  const [draft, setDraft] = useState<string | null>(null);
+  const replaceOnType = useRef(true);
+
+  function commit(raw: string) {
+    const next = parseEditableQty(raw);
+    onCommit(next);
+    setDraft(null);
+    replaceOnType.current = true;
+  }
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-medium text-neutral-500">
+        Qty
+      </label>
+      <div className="mt-1">
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          aria-label="Qty"
+          value={draft ?? String(value)}
+          onFocus={(event) => {
+            const input = event.currentTarget;
+            setDraft(String(value));
+            replaceOnType.current = true;
+            requestAnimationFrame(() => selectQtyInput(input));
+            window.setTimeout(() => selectQtyInput(input), 0);
+            window.setTimeout(() => selectQtyInput(input), 50);
+          }}
+          onPointerUp={(event) => {
+            event.preventDefault();
+            selectQtyInput(event.currentTarget);
+          }}
+          onMouseUp={(event) => {
+            event.preventDefault();
+            selectQtyInput(event.currentTarget);
+          }}
+          onChange={(event) => {
+            const next = sanitizeQtyDraft(event.target.value);
+            setDraft(next);
+            replaceOnType.current = false;
+            if (qtyDraftIsComplete(next)) {
+              onCommit(parseEditableQty(next));
+            }
+          }}
+          onBlur={() => {
+            commit(draft ?? String(value));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+              return;
+            }
+            if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
+              event.preventDefault();
+              replaceOnType.current = false;
+              setDraft(event.key);
+              onCommit(parseEditableQty(event.key));
+              return;
+            }
+            if (
+              event.key.length === 1 ||
+              event.key === "Backspace" ||
+              event.key === "Delete"
+            ) {
+              replaceOnType.current = false;
+            }
+          }}
+          className={inputClass}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function QuoteLines({
   items,
@@ -62,18 +168,10 @@ export function QuoteLines({
 
             {editable ? (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Field label="Qty">
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={item.qty}
-                    onChange={(event) =>
-                      patch(index, { qty: Number(event.target.value) || 1 })
-                    }
-                    className={inputClass}
-                  />
-                </Field>
+                <QtyField
+                  value={item.qty}
+                  onCommit={(qty) => patch(index, { qty })}
+                />
                 <Field label="Supplier cost">
                   <input
                     type="number"

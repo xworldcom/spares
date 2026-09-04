@@ -41,7 +41,7 @@ export function QuoteStatusStrip({
               <button
                 key={step}
                 type="button"
-                disabled={pending || current}
+                disabled={pending}
                 onClick={() => onChange(step)}
                 className={`inline-flex h-11 min-w-0 items-center justify-center ${className} disabled:opacity-100`}
               >

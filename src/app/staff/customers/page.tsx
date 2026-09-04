@@ -1,7 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { CreateCustomerForm } from "@/components/staff/CreateCustomerForm";
+import { CustomersList } from "@/components/staff/CustomersList";
 
 export default function StaffCustomersPage() {
+  const [reloadKey, setReloadKey] = useState(0);
+
   return (
     <RequireAuth role="staff">
       <div className="space-y-4">
@@ -11,7 +17,8 @@ export default function StaffCustomersPage() {
             Staff create customer accounts. There is no public registration.
           </p>
         </div>
-        <CreateCustomerForm />
+        <CustomersList reloadKey={reloadKey} />
+        <CreateCustomerForm onCreated={() => setReloadKey((key) => key + 1)} />
       </div>
     </RequireAuth>
   );

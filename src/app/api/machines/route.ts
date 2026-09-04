@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { NextRequest } from "next/server";
 import { requireRole, requireUser } from "@/lib/auth";
 import { extractMeshNames } from "@/lib/gltf";
 import { error, json } from "@/lib/http";
@@ -11,12 +12,13 @@ import {
 import { joinParts, parsePartsList } from "@/lib/parts";
 import { createMachine, listMachines, saveMachineFile } from "@/lib/store";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await requireUser();
   if ("error" in auth) {
     return auth.error;
   }
-  return json({ machines: await listMachines() });
+  const heal = request.nextUrl.searchParams.get("heal") === "1";
+  return json({ machines: await listMachines({ heal }) });
 }
 
 export async function POST(request: Request) {
