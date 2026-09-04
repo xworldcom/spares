@@ -15,6 +15,7 @@ import { quoteHref } from "@/lib/quotes";
 export type TrayLine = {
   part: Part;
   qty: number;
+  thumb?: string;
 };
 
 type Sheet = "peek" | "full" | "out";
@@ -97,10 +98,32 @@ function QuoteTrayForm({
             key={line.part.id}
             className="tray-line rounded-[18px] bg-[#f4f5f7] px-3 py-3"
           >
-            <p className="truncate text-[15px] font-medium text-neutral-950">
-              {line.part.name}
-            </p>
-            <p className="spares-muted truncate font-mono text-xs">{line.part.id}</p>
+            <div className="flex items-start gap-3">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#1c232c]">
+                {line.thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={line.thumb}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium tracking-wide text-white/45">
+                    3D
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-medium text-neutral-950">
+                  {line.part.name}
+                </p>
+                <p className="spares-muted truncate font-mono text-xs">{line.part.id}</p>
+                <p className="spares-muted mt-0.5 truncate text-[12px]">
+                  {line.part.meshName}
+                  {line.part.qty > 1 ? ` · BOM qty ${line.part.qty}` : ""}
+                </p>
+              </div>
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <button
                 type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
@@ -50,6 +50,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [held, setHeld] = useState(false);
   const [bomOpen, setBomOpen] = useState(false);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
+  const captureThumb = useRef<(partId: string) => string | null>(() => null);
 
   useEffect(() => {
     if (!isCustomer || typeof window === "undefined") {
@@ -232,11 +233,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!selectedPart) {
       return;
     }
+    const thumb = captureThumb.current(selectedPart.id) ?? undefined;
     setLines((current) => {
       if (current.some((line) => line.part.id === selectedPart.id)) {
         return current;
       }
-      return [...current, { part: selectedPart, qty: 1 }];
+      return [...current, { part: selectedPart, qty: 1, thumb }];
     });
     setTrayOpen(true);
     if (shouldAutoDismissPartSheet("add")) {
@@ -275,6 +277,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               setSelectedPart(part);
               setHeld(true);
               window.setTimeout(() => setHeld(false), 240);
+            }}
+            onCaptureReady={(capture) => {
+              captureThumb.current = capture;
             }}
             className="absolute inset-0"
           />
@@ -359,23 +364,26 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         >
           Parts
         </button>
-        {needsReset ? (
+        <div className="w-[6.6rem] shrink-0">
           <button
             type="button"
             data-show-all=""
             onPointerDown={(event) => {
-              if (event.button !== 0) {
+              if (!needsReset || event.button !== 0) {
                 return;
               }
               event.preventDefault();
               showAll();
             }}
             onClick={showAll}
-            className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold"
+            disabled={!needsReset}
+            className={`viewer-chrome-chip inline-flex h-11 w-full items-center justify-center rounded-full px-3 text-sm font-semibold ${
+              needsReset ? "" : "invisible pointer-events-none"
+            }`}
           >
             Show all
           </button>
-        ) : null}
+        </div>
         <label className="flex min-w-0 flex-1 items-center gap-3 text-[#fff]">
           <span className="shrink-0 text-[13px] font-medium tracking-wide text-[#fff]">
             Explode

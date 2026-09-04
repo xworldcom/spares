@@ -1,7 +1,7 @@
 "use client";
 
 import { Bounds, Grid, OrbitControls } from "@react-three/drei";
-import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Material, Object3D } from "three";
 import { Box3, Color, Matrix4, Mesh, MeshStandardMaterial, Vector3 } from "three";
@@ -340,6 +340,84 @@ function StudioGround() {
   );
 }
 
+function CaptureBridge({
+  parts,
+  onCaptureReady,
+}: {
+  parts: ViewerPart[];
+  onCaptureReady?: (capture: (partId: string) => string | null) => void;
+}) {
+  const { gl, scene, camera } = useThree();
+  const partsByName = useMemo(() => buildPartIndex(parts), [parts]);
+
+  useEffect(() => {
+    if (!onCaptureReady) {
+      return;
+    }
+    onCaptureReady((partId) => {
+      const meshes: Mesh[] = [];
+      scene.traverse((object) => {
+        if (!isMesh(object)) {
+          return;
+        }
+        if (partIdForObject(object, partsByName) === partId) {
+          meshes.push(object);
+        }
+      });
+      if (meshes.length === 0) {
+        return null;
+      }
+
+      const keep = new Set<Object3D>(meshes);
+      for (const mesh of meshes) {
+        let node: Object3D | null = mesh.parent;
+        while (node) {
+          keep.add(node);
+          node = node.parent;
+        }
+      }
+      const hidden: Object3D[] = [];
+      scene.traverse((object) => {
+        if (!object.visible || object === scene || keep.has(object)) {
+          return;
+        }
+        object.visible = false;
+        hidden.push(object);
+      });
+
+      const bounds = new Box3();
+      for (const mesh of meshes) {
+        bounds.expandByObject(mesh);
+      }
+      const center = bounds.getCenter(new Vector3());
+      const size = bounds.getSize(new Vector3());
+      const radius = Math.max(size.x, size.y, size.z, 0.25) * 1.7;
+      const prevPos = camera.position.clone();
+      const prevQuat = camera.quaternion.clone();
+      camera.position.set(center.x + radius, center.y + radius * 0.72, center.z + radius);
+      camera.lookAt(center);
+      camera.updateMatrixWorld();
+      gl.render(scene, camera);
+      let url: string | null = null;
+      try {
+        url = gl.domElement.toDataURL("image/jpeg", 0.78);
+      } catch {
+        url = null;
+      }
+      camera.position.copy(prevPos);
+      camera.quaternion.copy(prevQuat);
+      camera.updateMatrixWorld();
+      for (const object of hidden) {
+        object.visible = true;
+      }
+      gl.render(scene, camera);
+      return url;
+    });
+  }, [camera, gl, onCaptureReady, partsByName, scene]);
+
+  return null;
+}
+
 function ViewerCanvas({
   src,
   parts,
@@ -349,6 +427,7 @@ function ViewerCanvas({
   isolatedId,
   onPick,
   onLongPress,
+  onCaptureReady,
 }: {
   src: string;
   parts: ViewerPart[];
@@ -358,6 +437,7 @@ function ViewerCanvas({
   isolatedId: string | null;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
   onLongPress?: (part: ViewerPart) => void;
+  onCaptureReady?: (capture: (partId: string) => string | null) => void;
 }) {
   const [hovered, setHovered] = useState<ViewerPart | UnmatchedMesh | null>(null);
 
@@ -365,11 +445,12 @@ function ViewerCanvas({
     <Canvas
       camera={{ position: [2.8, 1.9, 2.5], fov: 40, near: 0.1, far: 80 }}
       dpr={[1, 2]}
-      gl={{ antialias: true }}
+      gl={{ antialias: true, preserveDrawingBuffer: true }}
       onPointerMissed={() => onPick(null)}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={[VIEWER_BG]} />
+      <CaptureBridge parts={parts} onCaptureReady={onCaptureReady} />
       <hemisphereLight args={["#e8eef6", "#1a1f26", 0.95]} />
       <ambientLight intensity={0.42} />
       <directionalLight position={[4, 8, 3]} intensity={1.2} />
@@ -413,6 +494,7 @@ export function PartPicker({
   onSelect,
   onUnmatchedSelect,
   onLongPress,
+  onCaptureReady,
   className,
 }: PartPickerProps) {
   const controlled = selectedId !== undefined;
@@ -465,6 +547,7 @@ export function PartPicker({
         isolatedId={isolatedId}
         onPick={handlePick}
         onLongPress={onLongPress}
+        onCaptureReady={onCaptureReady}
       />
     </div>
   );
