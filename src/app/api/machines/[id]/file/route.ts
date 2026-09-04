@@ -1,9 +1,8 @@
-import { readFile } from "node:fs/promises";
 import { requireUser } from "@/lib/auth";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
 import { canAccessMachine } from "@/lib/access";
-import { getMachine, listSites, machineFilePath } from "@/lib/store";
+import { getMachine, listSites, readStoredFile } from "@/lib/store";
 
 export async function GET(
   _request: Request,
@@ -21,8 +20,8 @@ export async function GET(
   }
 
   try {
-    const bytes = await readFile(machineFilePath(machine.storedFileName));
-    return new Response(bytes, {
+    const bytes = await readStoredFile(machine.storedFileName);
+    return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": modelContentType(machine.originalFileName),
         "Content-Disposition": `inline; filename="${machine.originalFileName}"`,

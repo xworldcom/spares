@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "path";
 import { extractMeshNames } from "./gltf.ts";
@@ -83,29 +83,32 @@ async function readPublicBytes(rel: string): Promise<Buffer> {
 
 export async function buildFixtureMachine(
   spec: FixtureSpec,
-  destPath: string,
-): Promise<FixtureMachine> {
+): Promise<{ machine: FixtureMachine; bytes: Buffer }> {
   const modelBytes = await readPublicBytes(spec.modelRel);
   const listText = (await readPublicBytes(spec.listRel)).toString("utf8");
   const rows = parsePartsList(listText, spec.listRel);
   const meshNames = extractMeshNames(modelBytes, spec.originalFileName);
   const { parts, unmatched } = joinParts(rows, meshNames);
-  await writeFile(destPath, modelBytes);
 
   return {
-    id: spec.id,
-    name: spec.name,
-    storedFileName: path.basename(destPath),
-    originalFileName: spec.originalFileName,
-    parts,
-    unmatched,
-    createdAt: new Date().toISOString(),
+    machine: {
+      id: spec.id,
+      name: spec.name,
+      storedFileName: `${spec.id}.glb`,
+      originalFileName: spec.originalFileName,
+      parts,
+      unmatched,
+      createdAt: new Date().toISOString(),
+    },
+    bytes: modelBytes,
   };
 }
 
+type SaveStoredFile = (storedFileName: string, bytes: Buffer) => Promise<void>;
+
 export async function missingFixtureMachines(
-  existing: FixtureMachine[],
-  filesDirPath: string,
+  existing: Array<{ id: string; name: string }>,
+  saveFile: SaveStoredFile,
 ): Promise<FixtureMachine[]> {
   const have = new Set(existing.map((machine) => machine.id));
   const alsoByName = new Set(existing.map((machine) => machine.name));
@@ -115,11 +118,10 @@ export async function missingFixtureMachines(
     if (have.has(spec.id) || alsoByName.has(spec.name)) {
       continue;
     }
-    const storedFileName = `${spec.id}.glb`;
     try {
-      created.push(
-        await buildFixtureMachine(spec, path.join(filesDirPath, storedFileName)),
-      );
+      const { machine, bytes } = await buildFixtureMachine(spec);
+      await saveFile(machine.storedFileName, bytes);
+      created.push(machine);
       have.add(spec.id);
       alsoByName.add(spec.name);
     } catch (cause) {
@@ -128,4 +130,25 @@ export async function missingFixtureMachines(
   }
 
   return created;
+}
+
+export async function restoreMissingFixtureFiles(
+  machines: Array<{ id: string; storedFileName: string }>,
+  fileExists: (storedFileName: string) => Promise<boolean>,
+  saveFile: SaveStoredFile,
+): Promise<void> {
+  for (const machine of machines) {
+    const spec = FIXTURES.find((row) => row.id === machine.id);
+    if (!spec) {
+      continue;
+    }
+    if (await fileExists(machine.storedFileName)) {
+      continue;
+    }
+    try {
+      await saveFile(machine.storedFileName, await readPublicBytes(spec.modelRel));
+    } catch (cause) {
+      console.error(`[spares] fixture file ${spec.id} restore failed`, cause);
+    }
+  }
 }
