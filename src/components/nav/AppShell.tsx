@@ -7,19 +7,32 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
+import { isNavActive } from "@/lib/nav-active";
+
+const CUSTOMER_NAV_HREFS = ["/machines", "/quotes"] as const;
+const STAFF_NAV_HREFS = [
+  "/machines",
+  "/machines/new",
+  "/staff/customers",
+  "/staff/quotes",
+  "/staff/bugs",
+] as const;
 
 function NavLink({
   href,
+  hrefs,
   children,
 }: {
   href: string;
+  hrefs: readonly string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+  const active = isNavActive(pathname, href, hrefs);
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={
         active
           ? "btn-primary inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium"
@@ -31,10 +44,20 @@ function NavLink({
   );
 }
 
-function QuotesNavLink({ href, unreadCount }: { href: string; unreadCount: number }) {
+function QuotesNavLink({
+  href,
+  hrefs,
+  unreadCount,
+}: {
+  href: string;
+  hrefs: readonly string[];
+  unreadCount: number;
+}) {
   return (
     <span className="relative inline-flex">
-      <NavLink href={href}>Quotes</NavLink>
+      <NavLink href={href} hrefs={hrefs}>
+        Quotes
+      </NavLink>
       {unreadCount > 0 ? (
         <span className="absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0a84ff] px-1 text-[10px] font-semibold text-white">
           {unreadCount > 9 ? "9+" : unreadCount}
@@ -51,6 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const machineStage = /^\/machines\/[^/]+$/.test(pathname);
+  const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
 
   async function handleLogout() {
     setLogoutError(null);
@@ -78,16 +102,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             {status === "signed-in" && user ? (
               <nav className="flex flex-wrap items-center" aria-label="Main">
-                <NavLink href="/machines">Machines</NavLink>
+                <NavLink href="/machines" hrefs={navHrefs}>
+                  Machines
+                </NavLink>
                 {user.role === "staff" ? (
                   <>
-                    <NavLink href="/machines/new">Upload</NavLink>
-                    <NavLink href="/staff/customers">Customers</NavLink>
-                    <QuotesNavLink href="/staff/quotes" unreadCount={unreadCount} />
-                    <NavLink href="/staff/bugs">Bug reports</NavLink>
+                    <NavLink href="/machines/new" hrefs={navHrefs}>
+                      Upload
+                    </NavLink>
+                    <NavLink href="/staff/customers" hrefs={navHrefs}>
+                      Customers
+                    </NavLink>
+                    <QuotesNavLink
+                      href="/staff/quotes"
+                      hrefs={navHrefs}
+                      unreadCount={unreadCount}
+                    />
+                    <NavLink href="/staff/bugs" hrefs={navHrefs}>
+                      Bug reports
+                    </NavLink>
                   </>
                 ) : (
-                  <QuotesNavLink href="/quotes" unreadCount={unreadCount} />
+                  <QuotesNavLink
+                    href="/quotes"
+                    hrefs={navHrefs}
+                    unreadCount={unreadCount}
+                  />
                 )}
               </nav>
             ) : null}
