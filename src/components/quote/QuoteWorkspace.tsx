@@ -47,7 +47,7 @@ export function QuoteWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const loading = loadedRef !== quoteRef;
-  const runLock = useRef(Promise.resolve());
+  const runLock = useRef<Promise<void>>(Promise.resolve());
 
   function applyQuote(next: Quote) {
     setQuote(next);
@@ -83,10 +83,10 @@ export function QuoteWorkspace({
   }, [quoteRef]);
 
   async function run(action: () => Promise<Quote>, success?: string) {
-    let release = () => undefined;
+    let release: () => void = () => {};
     const previous = runLock.current;
     runLock.current = new Promise<void>((resolve) => {
-      release = resolve;
+      release = () => resolve();
     });
     await previous;
     setBusy(true);
@@ -167,6 +167,9 @@ export function QuoteWorkspace({
         : "Save pricing";
 
   function applyStaffAction() {
+    if (!quote) {
+      return;
+    }
     if (statusDirty && pendingStatus === "shipped" && readyShipments.length === 0) {
       setError("Add a tracking number to mark this shipped.");
       return;
@@ -276,12 +279,12 @@ export function QuoteWorkspace({
         quote={quote}
         role={role}
         busy={busy}
-        onSaveNumber={(poNumber) =>
-          run(() => updateQuote(String(quote.number), { poNumber }), "PO number saved.")
-        }
-        onUpload={(input) =>
-          run(() => uploadQuotePo(String(quote.number), input), "PO uploaded.")
-        }
+        onSaveNumber={async (poNumber) => {
+          await run(() => updateQuote(String(quote.number), { poNumber }), "PO number saved.");
+        }}
+        onUpload={async (input) => {
+          await run(() => uploadQuotePo(String(quote.number), input), "PO uploaded.");
+        }}
       />
 
       {role === "staff" || quote.shipments.length > 0 || canEditTracking(quote.status) ? (
