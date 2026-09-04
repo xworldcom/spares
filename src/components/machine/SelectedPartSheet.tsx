@@ -13,7 +13,6 @@ export function SelectedPartSheet({
   onAdd,
   onDismiss,
   showAdd,
-  dimmed,
   held,
 }: {
   part: Part | null;
@@ -23,7 +22,6 @@ export function SelectedPartSheet({
   onAdd?: () => void;
   onDismiss: () => void;
   showAdd?: boolean;
-  dimmed?: boolean;
   held?: boolean;
 }) {
   const ready = useHydrated();
@@ -74,9 +72,7 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
-      className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-3 chrome-fade ${
-        dimmed ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
-      }`}
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-3"
     >
       <div
         className="pointer-events-auto flex flex-col justify-between rounded-[22px] bg-white px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/8"

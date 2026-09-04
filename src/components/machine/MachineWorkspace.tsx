@@ -44,7 +44,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [lines, setLines] = useState<TrayLine[]>([]);
   const [trayOpen, setTrayOpen] = useState(false);
   const [held, setHeld] = useState(false);
-  const [idle, setIdle] = useState(false);
   const [bomOpen, setBomOpen] = useState(false);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
 
@@ -89,26 +88,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }, [machineId, reloadKey, user?.role]);
 
   useEffect(() => {
-    if (!fullscreen) {
-      return;
-    }
-    let timer = window.setTimeout(() => setIdle(true), 2200);
-    function bump() {
-      setIdle(false);
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => setIdle(true), 2200);
-    }
-    const node = chromeRef.current;
-    node?.addEventListener("pointermove", bump);
-    node?.addEventListener("pointerdown", bump);
-    return () => {
-      window.clearTimeout(timer);
-      node?.removeEventListener("pointermove", bump);
-      node?.removeEventListener("pointerdown", bump);
-    };
-  }, [chromeRef, fullscreen]);
-
-  useEffect(() => {
     if (!selectedPart) {
       return;
     }
@@ -143,8 +122,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
   const showUnmatched =
     user?.role === "staff" && machine?.unmatched !== undefined;
-  const dimmed = fullscreen && idle;
-
   const tray = useMemo(() => {
     if (!isCustomer) {
       return null;
@@ -289,74 +266,35 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           onAdd={isCustomer ? addSelected : undefined}
           onDismiss={() => setSelectedPart(null)}
           showAdd={isCustomer}
-          dimmed={dimmed}
           held={held}
         />
         <div
           aria-hidden="true"
-          className={`viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-24 chrome-fade ${
-            dimmed ? "opacity-0" : "opacity-100"
-          }`}
+          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-24"
         />
-        <div
-          className={`absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 chrome-fade ${
-            dimmed ? "opacity-0" : "opacity-100"
-          }`}
-        >
-          {needsReset ? (
-            <button
-              type="button"
-              data-show-all=""
-              onPointerDown={(event) => {
-                if (event.button !== 0) {
-                  return;
-                }
-                event.preventDefault();
-                showAll();
-              }}
-              onClick={showAll}
-              className="viewer-chrome-chip inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-            >
-              Show all
-            </button>
-          ) : null}
-          <button
-            type="button"
-            data-parts-bom=""
-            onClick={() => setBomOpen(true)}
-            className="viewer-chrome-chip inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
-          >
-            Parts
-          </button>
-        </div>
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
           {isCustomer && fullscreen ? (
-            <div className={`chrome-fade ${dimmed ? "opacity-70" : "opacity-100"}`}>
-              <QuoteTray
-                machineId={machine.id}
-                lines={lines}
-                onQty={() => undefined}
-                onRemove={() => undefined}
-                onClear={() => undefined}
-                fullscreen
-                onExitToTray={() => {
-                  setIdle(false);
-                  exit();
-                  setTrayOpen(true);
-                }}
-              />
-            </div>
+            <QuoteTray
+              machineId={machine.id}
+              lines={lines}
+              onQty={() => undefined}
+              onRemove={() => undefined}
+              onClear={() => undefined}
+              fullscreen
+              onExitToTray={() => {
+                exit();
+                setTrayOpen(true);
+              }}
+            />
           ) : null}
           <button
             type="button"
             onClick={
               fullscreen
                 ? () => {
-                    setIdle(false);
                     exit();
                   }
                 : () => {
-                    setIdle(false);
                     enter();
                   }
             }
@@ -372,11 +310,32 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         </div>
       </div>
 
-      <div
-        className={`flex h-14 shrink-0 items-center gap-3 px-4 sm:px-5 chrome-fade ${
-          dimmed ? "opacity-55" : "opacity-100"
-        }`}
-      >
+      <div className="flex h-14 min-w-0 shrink-0 items-center gap-2 overflow-x-hidden px-3 sm:gap-3 sm:px-5">
+        <button
+          type="button"
+          data-parts-bom=""
+          onClick={() => setBomOpen(true)}
+          className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
+        >
+          Parts
+        </button>
+        {needsReset ? (
+          <button
+            type="button"
+            data-show-all=""
+            onPointerDown={(event) => {
+              if (event.button !== 0) {
+                return;
+              }
+              event.preventDefault();
+              showAll();
+            }}
+            onClick={showAll}
+            className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold"
+          >
+            Show all
+          </button>
+        ) : null}
         <label className="flex min-w-0 flex-1 items-center gap-3 text-[#fff]">
           <span className="shrink-0 text-[13px] font-medium tracking-wide text-[#fff]">
             Explode
@@ -413,7 +372,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       <div className="machine-stage-grid">
         {viewerBlock}
         {isCustomer ? (
-          <div className="min-h-0">{tray}</div>
+          tray
         ) : (
           <div className="quote-tray-dock rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join

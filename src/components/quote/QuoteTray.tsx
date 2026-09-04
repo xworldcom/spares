@@ -62,7 +62,7 @@ function QuoteTrayForm({
         ) : null}
       </div>
 
-      <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto">
+      <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
         {lines.map((line) => (
           <li
             key={line.part.id}
@@ -105,13 +105,13 @@ function QuoteTrayForm({
         ))}
       </ul>
 
-      <label className="mt-4 block text-sm font-medium text-neutral-700">
+      <label className="mt-3 block text-sm font-medium text-neutral-700">
         Note
         <textarea
           rows={2}
           value={note}
           onChange={(event) => onNote(event.target.value)}
-          className="mt-1.5 w-full resize-none rounded-2xl border-0 bg-[#f4f5f7] px-3 py-2.5 text-sm outline-none"
+          className="mt-1.5 w-full resize-none rounded-2xl border-0 bg-[#f4f5f7] px-3 py-2.5 text-[16px] outline-none"
           placeholder="Optional — site, serial, need-by…"
         />
       </label>
@@ -139,7 +139,7 @@ function QuoteTrayForm({
         type="button"
         disabled={submitting || lines.length === 0}
         onClick={onSubmit}
-        className="btn-accent mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-30"
+        className="btn-accent mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-30"
       >
         {submitting ? "Sending…" : "Request quote"}
       </button>
@@ -247,16 +247,17 @@ export function QuoteTray({
         <QuoteTrayForm {...formProps} />
       </aside>
 
-      <div className="quote-tray-overlay-root">
+      <div
+        className="quote-tray-phone w-full shrink-0 overflow-x-hidden rounded-[22px] bg-white shadow-[0_-8px_24px_rgba(15,18,22,0.06)]"
+        style={{
+          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+        }}
+      >
         {!open ? (
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[16px] font-semibold text-[#0b0d10] shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
-            style={{
-              bottom: "max(5.25rem, calc(env(safe-area-inset-bottom) + 4.5rem))",
-              right: "max(0.75rem, env(safe-area-inset-right))",
-            }}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 px-4 text-[16px] font-semibold text-[#0b0d10]"
             aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
           >
             Quote
@@ -264,21 +265,11 @@ export function QuoteTray({
               {count}
             </span>
           </button>
-        ) : null}
-
-        {open ? (
-          <div
-            className="fixed inset-x-0 z-30 px-3"
-            style={{
-              bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))",
-              paddingBottom: 0,
-            }}
-          >
-            <div className="tray-sheet flex max-h-[min(72dvh,34rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
-              <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
-            </div>
+        ) : (
+          <div className="flex max-h-[min(38vh,20rem)] flex-col px-4 pt-3">
+            <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
           </div>
-        ) : null}
+        )}
       </div>
     </>
   );

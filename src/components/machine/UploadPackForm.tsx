@@ -196,9 +196,9 @@ export function UploadPackForm() {
               {rows.map((row, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-2 gap-2 rounded-[20px] bg-[#f4f5f7] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_5rem_minmax(0,1fr)]"
+                  className="grid grid-cols-1 gap-2 rounded-[20px] bg-[#f4f5f7] p-3"
                 >
-                  <label className="col-span-2 block text-xs font-medium text-neutral-500 sm:col-span-1">
+                  <label className="block text-xs font-medium text-neutral-500">
                     Part number
                     <input
                       aria-label={`Part number ${index + 1}`}
@@ -209,7 +209,7 @@ export function UploadPackForm() {
                       className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 font-mono text-[15px] outline-none"
                     />
                   </label>
-                  <label className="col-span-2 block text-xs font-medium text-neutral-500 sm:col-span-1">
+                  <label className="block text-xs font-medium text-neutral-500">
                     Name
                     <input
                       aria-label={`Name ${index + 1}`}

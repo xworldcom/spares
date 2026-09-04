@@ -36,8 +36,8 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       className={
         active
-          ? "btn-primary inline-flex h-10 items-center rounded-full px-3.5 text-sm font-medium"
-          : "inline-flex h-10 items-center rounded-full px-3.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:bg-neutral-200/70 hover:text-neutral-950"
+          ? "btn-primary inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium"
+          : "inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:bg-neutral-200/70 hover:text-neutral-950"
       }
     >
       {children}
