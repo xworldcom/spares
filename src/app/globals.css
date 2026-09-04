@@ -41,6 +41,27 @@
   color: var(--spares-on-paper);
 }
 
+/*
+  Unlayered viewer chrome. Critical CSS also sets
+  `button { background: transparent }`, which beats Tailwind `bg-white`
+  on iOS Safari and leaves ink icons on the dark stage.
+*/
+.viewer-chrome-chip {
+  background: var(--spares-paper);
+  color: var(--spares-on-paper);
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.viewer-chrome-shade {
+  background: linear-gradient(
+    to bottom,
+    rgba(90, 96, 108, 0.62),
+    rgba(11, 13, 16, 0)
+  );
+}
+
 .row-on-ink {
   background: var(--spares-ink);
   color: var(--spares-on-ink);
