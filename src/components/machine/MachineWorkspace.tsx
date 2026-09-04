@@ -18,6 +18,9 @@ import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
+const VIEWER_STAGE = "#1c232c";
+const DESKTOP_STAGE = "(min-width: 1024px) and (min-height: 840px)";
+
 function ExpandIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
@@ -46,6 +49,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [held, setHeld] = useState(false);
   const [bomOpen, setBomOpen] = useState(false);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
+
+  useEffect(() => {
+    if (!isCustomer || typeof window === "undefined") {
+      return;
+    }
+    if (window.matchMedia(DESKTOP_STAGE).matches) {
+      setTrayOpen(true);
+    }
+  }, [isCustomer, machineId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +112,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         return;
       }
       if (target.closest("[data-parts-bom]")) {
+        return;
+      }
+      if (target.closest("[data-quote-tray]")) {
         return;
       }
       if (target.closest("canvas")) {
@@ -221,16 +236,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
   }
 
+  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
+
   const viewerBlock = (
     <div
       ref={chromeRef}
       className={
         overlay
-          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col bg-[#0b0d10] top-[var(--spares-header)]"
+          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col top-[var(--spares-header)]"
           : fullscreen
-            ? "flex h-full min-h-0 flex-col bg-[#0b0d10]"
-            : "machine-viewer overflow-hidden rounded-[22px] bg-[#0b0d10] sm:rounded-[28px]"
+            ? "flex h-full min-h-0 flex-col"
+            : "machine-viewer overflow-hidden rounded-[22px] sm:rounded-[28px]"
       }
+      style={{ background: VIEWER_STAGE }}
       onContextMenu={(event) => {
         event.preventDefault();
       }}
@@ -286,6 +304,20 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 setTrayOpen(true);
               }}
             />
+          ) : null}
+          {isCustomer && !fullscreen && !trayOpen ? (
+            <button
+              type="button"
+              data-quote-tray=""
+              onClick={() => setTrayOpen(true)}
+              className="viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold"
+              aria-label={`Show quote, ${quoteCount} ${quoteCount === 1 ? "item" : "items"}`}
+            >
+              Quote
+              <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
+                {quoteCount}
+              </span>
+            </button>
           ) : null}
           <button
             type="button"
@@ -369,12 +401,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       </div>
       <h1 className="sr-only">{machine.name}</h1>
 
-      <div className="machine-stage-grid">
+      <div
+        className="machine-stage-grid"
+        data-tray={isCustomer && trayOpen && !fullscreen ? "open" : "closed"}
+      >
         {viewerBlock}
         {isCustomer && !fullscreen ? (
           tray
         ) : isCustomer ? null : (
-          <div className="quote-tray-dock rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
+          <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join
             here. Unmatched meshes stay in the staff panel, not the picker.
           </div>
