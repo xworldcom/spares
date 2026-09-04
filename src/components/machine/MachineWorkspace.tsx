@@ -292,6 +292,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           held={held}
         />
         <div
+          aria-hidden="true"
+          className={`viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-24 chrome-fade ${
+            dimmed ? "opacity-0" : "opacity-100"
+          }`}
+        />
+        <div
           className={`absolute top-3 left-3 z-20 chrome-fade ${
             dimmed || !needsReset ? "opacity-0" : "opacity-100"
           }`}
@@ -308,7 +314,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 showAll();
               }}
               onClick={showAll}
-              className="inline-flex h-11 items-center rounded-full bg-white px-4 text-sm font-semibold text-[#0b0d10] shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+              className="viewer-chrome-chip inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
             >
               Show all
             </button>
@@ -345,7 +351,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                     enter();
                   }
             }
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0b0d10] shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+            className="viewer-chrome-chip inline-flex h-11 w-11 items-center justify-center rounded-full"
             aria-label={fullscreen ? "Exit full screen" : "Full screen"}
           >
             {fullscreen ? (

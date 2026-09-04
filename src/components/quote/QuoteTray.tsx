@@ -211,7 +211,7 @@ export function QuoteTray({
       <button
         type="button"
         onClick={onExitToTray}
-        className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#0b0d10] shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+        className="viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold"
         aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
       >
         Quote

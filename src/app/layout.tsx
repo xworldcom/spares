@@ -22,6 +22,8 @@ button{cursor:pointer;border:0;background:transparent;}
 .btn-accent{background:#0a84ff;color:#fff;}
 .btn-danger{background:#7f1d1d;color:#fff;}
 .btn-soft{background:#eceef2;color:#0b0d10;}
+.viewer-chrome-chip{background:#f4f5f7;color:#0b0d10;-webkit-appearance:none;appearance:none;box-shadow:0 8px 24px rgba(0,0,0,.22);}
+.viewer-chrome-shade{background:linear-gradient(to bottom,rgba(90,96,108,.62),rgba(11,13,16,0));}
 .row-on-ink{background:#0b0d10;color:#fff;}
 .row-on-ink .row-on-ink-muted{color:rgba(255,255,255,.72);}
 .spares-muted{color:#4b4f57;}
