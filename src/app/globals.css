@@ -17,9 +17,16 @@
   --spares-soft: #eceef2;
   --spares-stage: #1c232c;
   --spares-tray: 22.5rem;
+  --sheet-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --sheet-duration: 0.42s;
   color-scheme: light;
 }
 
+/*
+  Unlayered on purpose: critical CSS used to set `a, button { color: inherit }`,
+  which beat Tailwind `text-white` on iOS Safari (dark label on dark fill).
+  Token classes always win and pin light-on-dark / dark-on-light.
+*/
 .btn-primary {
   background: var(--spares-ink);
   color: var(--spares-on-ink);
@@ -40,6 +47,11 @@
   color: var(--spares-on-paper);
 }
 
+/*
+  Unlayered viewer chrome. Critical CSS also sets
+  `button { background: transparent }`, which beats Tailwind `bg-white`
+  on iOS Safari and leaves ink icons on the dark stage.
+*/
 .viewer-chrome-chip {
   background: var(--spares-paper);
   color: var(--spares-on-paper);
@@ -119,6 +131,10 @@
   touch-action: pan-y;
 }
 
+.quote-sheet.is-full.is-dragging {
+  touch-action: none;
+}
+
 .quote-sheet.is-out {
   --sheet-y: 110%;
   pointer-events: none;
@@ -129,7 +145,7 @@
 }
 
 .quote-sheet:not(.is-dragging) {
-  transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--sheet-duration) var(--sheet-ease);
 }
 
 .quote-tray-dock {
@@ -208,6 +224,7 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
+  transition: padding var(--sheet-duration) var(--sheet-ease);
 }
 
 .machine-viewer {
@@ -242,6 +259,10 @@
     grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
     gap: 0;
+  }
+
+  .machine-stage-grid[data-tray="open"] {
+    padding-right: calc(var(--spares-tray) + 2.2rem);
   }
 
   .machine-viewer {
@@ -386,4 +407,11 @@
   border: 0;
   border-radius: 999px;
   background: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-sheet,
+  .machine-stage-grid {
+    transition: none;
+  }
 }
