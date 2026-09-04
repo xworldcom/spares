@@ -15,14 +15,11 @@
   --spares-danger: #7f1d1d;
   --spares-on-danger: #ffffff;
   --spares-soft: #eceef2;
+  --spares-stage: #1c232c;
+  --spares-tray: 22.5rem;
   color-scheme: light;
 }
 
-/*
-  Unlayered on purpose: critical CSS used to set `a, button { color: inherit }`,
-  which beat Tailwind `text-white` on iOS Safari (dark label on dark fill).
-  Token classes always win and pin light-on-dark / dark-on-light.
-*/
 .btn-primary {
   background: var(--spares-ink);
   color: var(--spares-on-ink);
@@ -43,11 +40,6 @@
   color: var(--spares-on-paper);
 }
 
-/*
-  Unlayered viewer chrome. Critical CSS also sets
-  `button { background: transparent }`, which beats Tailwind `bg-white`
-  on iOS Safari and leaves ink icons on the dark stage.
-*/
 .viewer-chrome-chip {
   background: var(--spares-paper);
   color: var(--spares-on-paper);
@@ -60,7 +52,7 @@
   background: linear-gradient(
     to bottom,
     rgba(90, 96, 108, 0.62),
-    rgba(11, 13, 16, 0)
+    rgba(28, 35, 44, 0)
   );
 }
 
@@ -85,10 +77,20 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
+  transition:
+    max-height 280ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.quote-tray-handle {
+  width: 2.5rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #17141138;
 }
 
 @media (min-width: 1024px) and (min-height: 840px) {
-  .quote-tray-dock {
+  .quote-tray-dock.is-open {
     display: flex;
   }
 
@@ -136,6 +138,7 @@
   min-height: 0;
   height: 100%;
   flex-direction: column;
+  background: var(--spares-stage);
 }
 
 .machine-title {
@@ -158,10 +161,15 @@
   }
 
   .machine-stage-grid {
-    grid-template-columns: minmax(0, 1fr) 22.5rem;
+    grid-template-columns: minmax(0, 1fr) 0fr;
     grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
     gap: 1.25rem;
+    transition: grid-template-columns 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .machine-stage-grid[data-tray="open"] {
+    grid-template-columns: minmax(0, 1fr) var(--spares-tray);
   }
 
   .machine-viewer {
