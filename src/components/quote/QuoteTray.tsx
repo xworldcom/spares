@@ -54,7 +54,7 @@ function QuoteTrayForm({
           <button
             type="button"
             className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
-            aria-label="Close quote"
+            aria-label="Hide quote"
             onClick={onClose}
           >
             <span className="text-2xl leading-none">×</span>
@@ -243,12 +243,20 @@ export function QuoteTray({
 
   return (
     <>
-      <aside className="quote-tray-dock h-full min-h-0 flex-col rounded-[28px] bg-white p-5 shadow-[0_16px_40px_rgba(15,18,22,0.06)]">
-        <QuoteTrayForm {...formProps} />
+      <aside
+        data-quote-tray=""
+        className={`quote-tray-dock h-full min-h-0 flex-col rounded-[28px] bg-white p-5 shadow-[0_16px_40px_rgba(15,18,22,0.06)] ${
+          open ? "is-open" : "is-closed"
+        }`}
+      >
+        <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
       </aside>
 
       <div
-        className="quote-tray-phone w-full shrink-0 overflow-x-hidden rounded-[22px] bg-white shadow-[0_-8px_24px_rgba(15,18,22,0.06)]"
+        data-quote-tray=""
+        className={`quote-tray-phone w-full shrink-0 overflow-x-hidden rounded-[22px] bg-white shadow-[0_-8px_24px_rgba(15,18,22,0.06)] ${
+          open ? "is-open" : "is-closed"
+        }`}
         style={{
           paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
         }}
@@ -257,16 +265,27 @@ export function QuoteTray({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 px-4 text-[16px] font-semibold text-[#0b0d10]"
-            aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
+            className="inline-flex h-12 w-full flex-col items-center justify-center gap-1 px-4 text-[16px] font-semibold text-[#0b0d10]"
+            aria-label={`Show quote, ${count} ${count === 1 ? "item" : "items"}`}
           >
-            Quote
-            <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
-              {count}
+            <span className="quote-tray-handle" aria-hidden="true" />
+            <span className="inline-flex items-center gap-2">
+              Quote
+              <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
+                {count}
+              </span>
             </span>
           </button>
         ) : (
-          <div className="flex max-h-[min(38vh,20rem)] flex-col px-4 pt-3">
+          <div className="flex max-h-[min(52vh,28rem)] flex-col px-4 pt-2">
+            <button
+              type="button"
+              className="mx-auto mb-1 flex h-6 w-full items-center justify-center"
+              aria-label="Hide quote"
+              onClick={() => setOpen(false)}
+            >
+              <span className="quote-tray-handle" aria-hidden="true" />
+            </button>
             <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
           </div>
         )}
