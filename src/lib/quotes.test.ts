@@ -11,6 +11,7 @@ import {
   parseQuoteItems,
   parseShipments,
   pricesVisibleToCustomer,
+  quoteItemsEqual,
   shippedActivityText,
   toPublicQuote,
 } from "./quotes.ts";
@@ -232,6 +233,14 @@ describe("role-aware items and unread", () => {
     assert.equal(publicQuote.items[0]?.sellPrice, 20);
     assert.equal(publicQuote.items[0]?.supplierCost, undefined);
     assert.equal(publicQuote.customerEmail, "c@example.test");
+  });
+});
+
+describe("quoteItemsEqual", () => {
+  it("treats identical pricing as unchanged", () => {
+    const items = [{ id: "A", qty: 2, sellPrice: 10 }];
+    assert.equal(quoteItemsEqual(items, [{ id: "A", qty: 2, sellPrice: 10 }]), true);
+    assert.equal(quoteItemsEqual(items, [{ id: "A", qty: 3, sellPrice: 10 }]), false);
   });
 });
 

@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 import { ApiError } from "./errors";
-import type { AuthUserResponse, PublicUser } from "./types";
+import type { AuthUserResponse, CustomersListResponse, PublicUser } from "./types";
 
 export async function login(email: string, password: string) {
   const data = await apiFetch<AuthUserResponse>("/api/auth/login", {
@@ -24,6 +24,11 @@ export async function getMe(): Promise<PublicUser | null> {
     }
     throw error;
   }
+}
+
+export async function listCustomers(): Promise<PublicUser[]> {
+  const data = await apiFetch<CustomersListResponse>("/api/staff/customers");
+  return data.customers ?? [];
 }
 
 export async function createCustomer(email: string, password: string) {

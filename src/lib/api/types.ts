@@ -17,6 +17,10 @@ export type AuthUserResponse = {
   user: PublicUser;
 };
 
+export type CustomersListResponse = {
+  customers: PublicUser[];
+};
+
 export type MachinesListResponse = {
   machines: MachineSummary[];
 };

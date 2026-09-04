@@ -233,6 +233,28 @@ export function parseQuoteItems(
   return { ok: true, items };
 }
 
+export function quoteItemsEqual(left: QuoteItem[], right: QuoteItem[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((item, index) => {
+    const other = right[index];
+    if (!other) {
+      return false;
+    }
+    return (
+      item.id === other.id &&
+      item.qty === other.qty &&
+      item.name === other.name &&
+      item.sellPrice === other.sellPrice &&
+      item.supplierCost === other.supplierCost &&
+      item.supplier === other.supplier &&
+      item.leadTimeDays === other.leadTimeDays &&
+      item.note === other.note
+    );
+  });
+}
+
 export function mergeQuoteItems(
   existing: QuoteItem[],
   patch: QuoteItem[],

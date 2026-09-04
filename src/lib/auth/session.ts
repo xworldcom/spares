@@ -2,13 +2,14 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import type { PublicUser, Role } from "@/types";
 import { error } from "@/lib/http";
-import { findUserById } from "@/lib/store";
+import { findUserByEmail, findUserById } from "@/lib/store";
 
 export const SESSION_COOKIE = "spares_session";
 const SESSION_MS = 1000 * 60 * 60 * 24 * 7;
 
 type SessionPayload = {
   userId: string;
+  email?: string;
   exp: number;
 };
 
@@ -26,9 +27,13 @@ function cookieOptions(maxAge: number) {
   };
 }
 
-export function signSession(userId: string) {
+export function signSession(userId: string, email?: string) {
   const payload = Buffer.from(
-    JSON.stringify({ userId, exp: Date.now() + SESSION_MS } satisfies SessionPayload),
+    JSON.stringify({
+      userId,
+      exp: Date.now() + SESSION_MS,
+      ...(email ? { email: email.trim().toLowerCase() } : {}),
+    } satisfies SessionPayload),
   ).toString("base64url");
   const signature = createHmac("sha256", secret()).update(payload).digest("base64url");
   return `${payload}.${signature}`;
@@ -60,9 +65,13 @@ export function verifySession(token: string): SessionPayload | null {
   }
 }
 
-export async function setSessionCookie(userId: string) {
+export async function setSessionCookie(userId: string, email?: string) {
   const store = await cookies();
-  store.set(SESSION_COOKIE, signSession(userId), cookieOptions(SESSION_MS / 1000));
+  store.set(
+    SESSION_COOKIE,
+    signSession(userId, email),
+    cookieOptions(SESSION_MS / 1000),
+  );
 }
 
 export async function clearSessionCookie() {
@@ -82,7 +91,9 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     return null;
   }
 
-  const user = await findUserById(session.userId);
+  const user =
+    (await findUserById(session.userId)) ??
+    (session.email ? await findUserByEmail(session.email) : null);
   if (!user) {
     return null;
   }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { formatMoney, lineSellTotal, quoteSellTotal } from "@/lib/quotes";
 import {
   parseEditableQty,
   qtyDraftIsComplete,
+  qtyKeyReplacesDraft,
   sanitizeQtyDraft,
 } from "@/lib/ui/editable-qty";
 import type { QuoteItem, Role } from "@/types";
@@ -43,57 +44,86 @@ function QtyField({
   value: number;
   onCommit: (qty: number) => void;
 }) {
+  const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
+  const replaceOnType = useRef(true);
 
   function commit(raw: string) {
     const next = parseEditableQty(raw);
     onCommit(next);
     setDraft(null);
+    replaceOnType.current = true;
   }
 
   return (
-    <input
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      autoComplete="off"
-      autoCorrect="off"
-      autoCapitalize="off"
-      spellCheck={false}
-      enterKeyHint="done"
-      aria-label="Qty"
-      value={draft ?? String(value)}
-      onFocus={(event) => {
-        const input = event.currentTarget;
-        setDraft(String(value));
-        requestAnimationFrame(() => selectQtyInput(input));
-        window.setTimeout(() => selectQtyInput(input), 50);
-      }}
-      onPointerUp={(event) => {
-        event.preventDefault();
-        selectQtyInput(event.currentTarget);
-      }}
-      onMouseUp={(event) => {
-        event.preventDefault();
-        selectQtyInput(event.currentTarget);
-      }}
-      onChange={(event) => {
-        const next = sanitizeQtyDraft(event.target.value);
-        setDraft(next);
-        if (qtyDraftIsComplete(next)) {
-          onCommit(parseEditableQty(next));
-        }
-      }}
-      onBlur={() => {
-        commit(draft ?? String(value));
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          event.currentTarget.blur();
-        }
-      }}
-      className={inputClass}
-    />
+    <div>
+      <label htmlFor={id} className="block text-xs font-medium text-neutral-500">
+        Qty
+      </label>
+      <div className="mt-1">
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          aria-label="Qty"
+          value={draft ?? String(value)}
+          onFocus={(event) => {
+            const input = event.currentTarget;
+            setDraft(String(value));
+            replaceOnType.current = true;
+            requestAnimationFrame(() => selectQtyInput(input));
+            window.setTimeout(() => selectQtyInput(input), 0);
+            window.setTimeout(() => selectQtyInput(input), 50);
+          }}
+          onPointerUp={(event) => {
+            event.preventDefault();
+            selectQtyInput(event.currentTarget);
+          }}
+          onMouseUp={(event) => {
+            event.preventDefault();
+            selectQtyInput(event.currentTarget);
+          }}
+          onChange={(event) => {
+            const next = sanitizeQtyDraft(event.target.value);
+            setDraft(next);
+            replaceOnType.current = false;
+            if (qtyDraftIsComplete(next)) {
+              onCommit(parseEditableQty(next));
+            }
+          }}
+          onBlur={() => {
+            commit(draft ?? String(value));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+              return;
+            }
+            if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
+              event.preventDefault();
+              replaceOnType.current = false;
+              setDraft(event.key);
+              onCommit(parseEditableQty(event.key));
+              return;
+            }
+            if (
+              event.key.length === 1 ||
+              event.key === "Backspace" ||
+              event.key === "Delete"
+            ) {
+              replaceOnType.current = false;
+            }
+          }}
+          className={inputClass}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -138,12 +168,10 @@ export function QuoteLines({
 
             {editable ? (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Field label="Qty">
-                  <QtyField
-                    value={item.qty}
-                    onCommit={(qty) => patch(index, { qty })}
-                  />
-                </Field>
+                <QtyField
+                  value={item.qty}
+                  onCommit={(qty) => patch(index, { qty })}
+                />
                 <Field label="Supplier cost">
                   <input
                     type="number"

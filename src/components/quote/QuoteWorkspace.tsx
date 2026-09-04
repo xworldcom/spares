@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
@@ -42,15 +42,18 @@ export function QuoteWorkspace({
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [shipments, setShipments] = useState<QuoteShipment[]>([]);
   const [loadedRef, setLoadedRef] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<QuoteStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const loading = loadedRef !== quoteRef;
+  const runLock = useRef(Promise.resolve());
 
   function applyQuote(next: Quote) {
     setQuote(next);
     setItems(next.items);
     setShipments(draftShipmentsFrom(next));
+    setPendingStatus(null);
     setLoadedRef(quoteRef);
     void refresh();
   }
@@ -80,6 +83,12 @@ export function QuoteWorkspace({
   }, [quoteRef]);
 
   async function run(action: () => Promise<Quote>, success?: string) {
+    let release = () => undefined;
+    const previous = runLock.current;
+    runLock.current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -90,8 +99,38 @@ export function QuoteWorkspace({
       }
     } catch (cause) {
       setError(errorMessage(cause, "Could not update this quote."));
+      return false;
     } finally {
       setBusy(false);
+      release();
+    }
+    return true;
+  }
+
+  async function sendActivity(text: string) {
+    if (!quote || !user) {
+      return;
+    }
+    const tempId = `pending-${Date.now()}`;
+    const temp = {
+      id: tempId,
+      at: new Date().toISOString(),
+      actorRole: role,
+      actorEmail: user.email,
+      kind: "message" as const,
+      text,
+    };
+    setQuote({ ...quote, activities: [...quote.activities, temp] });
+    const ok = await run(() => postQuoteActivity(String(quote.number), text));
+    if (!ok) {
+      setQuote((current) =>
+        current
+          ? {
+              ...current,
+              activities: current.activities.filter((row) => row.id !== tempId),
+            }
+          : current,
+      );
     }
   }
 
@@ -115,6 +154,45 @@ export function QuoteWorkspace({
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
   const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
+  const displayStatus = pendingStatus ?? quote.status;
+  const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
+  const itemsDirty = JSON.stringify(items) !== JSON.stringify(quote.items);
+  const primaryLabel =
+    statusDirty && itemsDirty
+      ? "Apply changes"
+      : statusDirty
+        ? pendingStatus === "cancelled"
+          ? "Cancel quote"
+          : "Apply status"
+        : "Save pricing";
+
+  function applyStaffAction() {
+    if (statusDirty && pendingStatus === "shipped" && readyShipments.length === 0) {
+      setError("Add a tracking number to mark this shipped.");
+      return;
+    }
+    if (statusDirty && pendingStatus) {
+      const patch =
+        pendingStatus === "shipped"
+          ? {
+              status: pendingStatus,
+              shipments: readyShipments,
+              ...(itemsDirty ? { items } : {}),
+            }
+          : { status: pendingStatus, ...(itemsDirty ? { items } : {}) };
+      void run(
+        () => updateQuote(String(quote.number), patch),
+        pendingStatus === "shipped" ? "Marked shipped." : "Status updated.",
+      );
+      return;
+    }
+    if (itemsDirty) {
+      void run(
+        () => updateQuote(String(quote.number), { items }),
+        "Pricing saved.",
+      );
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -136,24 +214,24 @@ export function QuoteWorkspace({
       </div>
 
       <QuoteStatusStrip
-        status={quote.status}
+        status={displayStatus}
         editable={role === "staff"}
         pending={busy}
         onChange={(status: QuoteStatus) => {
-          if (status === "shipped") {
-            if (readyShipments.length === 0) {
-              setError("Add a tracking number to mark this shipped.");
-              return;
-            }
-            void run(
-              () => updateQuote(String(quote.number), { status, shipments: readyShipments }),
-              "Marked shipped.",
-            );
-            return;
-          }
-          void run(() => updateQuote(String(quote.number), { status }));
+          setError(null);
+          setPendingStatus(status);
         }}
       />
+      {role === "staff" && statusDirty ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => applyStaffAction()}
+          className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30"
+        >
+          {primaryLabel}
+        </button>
+      ) : null}
 
       {error ? (
         <p className="text-sm text-red-700" role="alert">
@@ -172,7 +250,7 @@ export function QuoteWorkspace({
           {role === "staff" ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !itemsDirty}
               onClick={() =>
                 void run(
                   () => updateQuote(String(quote.number), { items }),
@@ -235,9 +313,7 @@ export function QuoteWorkspace({
         role={role}
         selfEmail={user.email}
         busy={busy}
-        onSend={(text) =>
-          run(() => postQuoteActivity(String(quote.number), text))
-        }
+        onSend={sendActivity}
       />
 
       {role === "staff" ? (
@@ -249,16 +325,11 @@ export function QuoteWorkspace({
         >
           <button
             type="button"
-            disabled={busy}
-            onClick={() =>
-              void run(
-                () => updateQuote(String(quote.number), { items }),
-                "Pricing saved.",
-              )
-            }
+            disabled={busy || (!statusDirty && !itemsDirty)}
+            onClick={() => applyStaffAction()}
             className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-30"
           >
-            Save pricing
+            {primaryLabel}
           </button>
         </div>
       ) : null}

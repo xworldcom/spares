@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   parseEditableQty,
   qtyDraftIsComplete,
+  qtyKeyReplacesDraft,
   sanitizeQtyDraft,
 } from "./editable-qty.ts";
 
@@ -31,5 +32,12 @@ describe("editable qty", () => {
     assert.equal(sanitizeQtyDraft(""), "");
     assert.equal(sanitizeQtyDraft("12a"), "12");
     assert.equal(sanitizeQtyDraft(" 8 "), "8");
+  });
+
+  it("replaces the focused qty on the first typed digit", () => {
+    assert.equal(qtyKeyReplacesDraft(true, "2"), true);
+    assert.equal(qtyKeyReplacesDraft(true, "25"), false);
+    assert.equal(qtyKeyReplacesDraft(false, "2"), false);
+    assert.equal(qtyKeyReplacesDraft(true, "Backspace"), false);
   });
 });

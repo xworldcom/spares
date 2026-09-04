@@ -8,6 +8,7 @@ import {
   mergeQuoteItems,
   parseQuoteItems,
   parseShipments,
+  quoteItemsEqual,
   shippedActivityText,
   statusActivityText,
   toPublicQuote,
@@ -137,7 +138,7 @@ export async function PATCH(
     const activities = [...quote.activities];
     const stamp = now();
 
-    if (body.items !== undefined) {
+    if (body.items !== undefined && !quoteItemsEqual(items, quote.items)) {
       activities.push(createQuoteActivity(actor, "pricing", "Pricing updated.", stamp));
     }
     if (status && status !== quote.status) {

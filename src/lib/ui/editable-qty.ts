@@ -25,3 +25,8 @@ export function qtyDraftIsComplete(raw: string): boolean {
 export function sanitizeQtyDraft(raw: string): string {
   return raw.replace(/[^\d]/g, "");
 }
+
+/** First digit after focus replaces the current qty (Fern: typing replaces). */
+export function qtyKeyReplacesDraft(replaceOnType: boolean, key: string) {
+  return replaceOnType && /^\d$/.test(key);
+}

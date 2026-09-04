@@ -26,16 +26,17 @@ function InitialsAvatar({
   email: string;
   own: boolean;
 }) {
+  const initials = initialsFromEmail(email);
   return (
     <span
-      aria-hidden="true"
+      aria-label={`${initials} avatar`}
       className={
         own
           ? "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0a84ff] text-[12px] font-semibold tracking-wide text-white"
           : "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0b0d10] text-[12px] font-semibold tracking-wide text-white"
       }
     >
-      {initialsFromEmail(email)}
+      {initials}
     </span>
   );
 }

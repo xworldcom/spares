@@ -20,16 +20,33 @@ import type {
 } from "@/types";
 
 export const SEED_STAFF = {
+  id: "user-staff",
   email: "staff@spares.local",
   password: "SparesStaff1!",
   role: "staff" as const,
 };
 
 export const SEED_CUSTOMER = {
+  id: "user-customer",
   email: "customer@spares.local",
   password: "SparesCustomer1!",
   role: "customer" as const,
 };
+
+const EXTRA_SEED_CUSTOMERS = [
+  {
+    id: "user-acme",
+    email: "buyer@acme.test",
+    password: "SparesCustomer1!",
+    role: "customer" as const,
+  },
+  {
+    id: "user-mill",
+    email: "mill@example.test",
+    password: "SparesCustomer1!",
+    role: "customer" as const,
+  },
+] as const;
 
 export type StoredUser = {
   id: string;
@@ -105,22 +122,70 @@ async function ensureDirs() {
   await mkdir(filesDir(), { recursive: true });
 }
 
+async function seedUser(input: {
+  id: string;
+  email: string;
+  password: string;
+  role: Role;
+}): Promise<StoredUser> {
+  return {
+    id: input.id,
+    email: input.email,
+    passwordHash: await hashPassword(input.password),
+    role: input.role,
+  };
+}
+
 async function seedDatabase(): Promise<Database> {
   const users: StoredUser[] = [
-    {
-      id: randomUUID(),
-      email: SEED_STAFF.email,
-      passwordHash: await hashPassword(SEED_STAFF.password),
-      role: SEED_STAFF.role,
-    },
-    {
-      id: randomUUID(),
-      email: SEED_CUSTOMER.email,
-      passwordHash: await hashPassword(SEED_CUSTOMER.password),
-      role: SEED_CUSTOMER.role,
-    },
+    await seedUser(SEED_STAFF),
+    await seedUser(SEED_CUSTOMER),
+    ...(await Promise.all(EXTRA_SEED_CUSTOMERS.map((row) => seedUser(row)))),
   ];
   return { users, machines: [], quotes: [], bugReports: [] };
+}
+
+async function ensureExtraCustomers(db: Database): Promise<Database> {
+  const have = new Set(db.users.map((user) => user.email));
+  const extras: StoredUser[] = [];
+  for (const row of EXTRA_SEED_CUSTOMERS) {
+    if (!have.has(row.email)) {
+      extras.push(await seedUser(row));
+    }
+  }
+  if (extras.length === 0) {
+    return db;
+  }
+  return { ...db, users: [...db.users, ...extras] };
+}
+
+function stabilizeSeedUsers(db: Database): Database {
+  const idByEmail = new Map<string, string>([
+    [SEED_STAFF.email, SEED_STAFF.id],
+    [SEED_CUSTOMER.email, SEED_CUSTOMER.id],
+    ...EXTRA_SEED_CUSTOMERS.map((row) => [row.email, row.id] as const),
+  ]);
+  const remap = new Map<string, string>();
+  const users = db.users.map((user) => {
+    const stable = idByEmail.get(user.email);
+    if (!stable || user.id === stable) {
+      return user;
+    }
+    remap.set(user.id, stable);
+    return { ...user, id: stable };
+  });
+  if (remap.size === 0) {
+    return db;
+  }
+  const quotes = db.quotes.map((quote) => {
+    const lastReadAt: Record<string, string> = {};
+    for (const [key, value] of Object.entries(quote.lastReadAt ?? {})) {
+      lastReadAt[remap.get(key) ?? key] = value;
+    }
+    const customerId = remap.get(quote.customerId) ?? quote.customerId;
+    return { ...quote, customerId, lastReadAt };
+  });
+  return { ...db, users, quotes };
 }
 
 async function withFixtureMachines(db: Database): Promise<Database> {
@@ -149,18 +214,26 @@ async function readDatabase(): Promise<Database> {
     const quotes = assignMissingQuoteNumbers(
       (parsed.quotes ?? []).map((quote) => normalizeStoredQuote(quote)),
     );
-    const next = await withFixtureMachines({
-      users: parsed.users ?? [],
-      machines: parsed.machines ?? [],
-      quotes,
-      bugReports: parsed.bugReports ?? [],
-    });
+    const next = await withFixtureMachines(
+      await ensureExtraCustomers(
+        stabilizeSeedUsers({
+          users: parsed.users ?? [],
+          machines: parsed.machines ?? [],
+          quotes,
+          bugReports: parsed.bugReports ?? [],
+        }),
+      ),
+    );
     const numbersAssigned = (parsed.quotes ?? []).some(
       (quote) => typeof quote.number !== "number" || quote.number < 1,
     );
+    const usersRemapped =
+      next.users.length !== (parsed.users ?? []).length ||
+      next.users.some((user, index) => user.id !== (parsed.users ?? [])[index]?.id);
     if (
       next.machines.length !== (parsed.machines ?? []).length ||
-      numbersAssigned
+      numbersAssigned ||
+      usersRemapped
     ) {
       await writeFile(dbPath(), JSON.stringify(next, null, 2));
     }
@@ -195,6 +268,16 @@ export function findUserByEmail(email: string) {
   return withLock(async () => {
     const db = await readDatabase();
     return db.users.find((user) => user.email === normalized) ?? null;
+  });
+}
+
+export function listCustomers() {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return db.users
+      .filter((user) => user.role === "customer")
+      .map((user) => ({ id: user.id, email: user.email, role: user.role as Role }))
+      .sort((a, b) => a.email.localeCompare(b.email));
   });
 }
 
