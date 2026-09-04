@@ -105,7 +105,10 @@ class Probe:
         }
         if send_bypass and BYPASS:
             headers["x-vercel-protection-bypass"] = BYPASS
-            headers["x-vercel-set-bypass-cookie"] = "true"
+            # Only pin the bypass cookie on GET. Sending this on POST makes
+            # Vercel 307 to the same path and drops the login body.
+            if method == "GET":
+                headers["x-vercel-set-bypass-cookie"] = "true"
         if content_type:
             headers["Content-Type"] = content_type
         if extra_headers:
@@ -267,6 +270,7 @@ def main() -> int:
     report["log"].append(protection)
 
     customer = Probe("customer-a")
+    customer.request("GET", "/login")
     login = customer.login(*CUSTOMER)
     me = customer.request("GET", "/api/auth/me")
     machines = customer.request("GET", "/api/machines")
@@ -300,6 +304,7 @@ def main() -> int:
     machines_after = customer.request("GET", "/api/machines")
 
     staff = Probe("staff-b")
+    staff.request("GET", "/login")
     staff.login(*STAFF)
     staff_list = staff.request("GET", "/api/quotes")
     staff_get = staff.request("GET", f"/api/quotes/{ident}")
@@ -314,6 +319,7 @@ def main() -> int:
 
     # Brand-new staff session after the wait (new isolate + new cookie).
     staff2 = Probe("staff-c-after-wait")
+    staff2.request("GET", "/login")
     staff2.login(*STAFF)
     staff2_get = staff2.request("GET", f"/api/quotes/{ident}")
     staff2_machines = staff2.request("GET", "/api/machines")
@@ -339,11 +345,14 @@ def main() -> int:
     wait_staff = summarize_quote(after_wait_staff.get("body"))
     staff2_quote = summarize_quote(staff2_get.get("body"))
 
-    login_html = customer.request("GET", "/login")
-    report["log"].append(login_html)
+    login_html = next((e for e in customer.log if e.get("path") == "/login"), {}) or {}
     login_body = login_html.get("body") if isinstance(login_html.get("body"), str) else ""
-    spares_login = "staff and customers use the same screen" in login_body.lower() or (
-        'id="email"' in login_body.lower() and "password" in login_body.lower()
+    lowered = login_body.lower()
+    spares_login = (
+        "<title>spares</title>" in lowered
+        or "login-input" in lowered
+        or "staff and customers use the same screen" in lowered
+        or ('id="email"' in lowered and "password" in lowered)
     )
 
     instances = sorted(

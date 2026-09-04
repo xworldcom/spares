@@ -1,0 +1,35 @@
+{
+  "quote_1_api": {
+    "at": "2026-09-04T14:54:34Z",
+    "status": 200,
+    "vercel_id": "iad1::iad1::lvkwm-1788533674489-c9b910323f60",
+    "number": 1,
+    "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+    "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+    "messages": [
+      "QA-47 hop marker 2026-09-04T14:37:52Z"
+    ],
+    "machineName": "Hardware fixture",
+    "customerEmail": "customer@spares.local",
+    "status_quote": "requested"
+  },
+  "quote_2_ui": {
+    "at": "2026-09-04T14:54:35Z",
+    "status": 200,
+    "vercel_id": "iad1::iad1::zgkxr-1788533674841-49e45a129ecd",
+    "number": 2,
+    "id": "caa06306-c0b6-4fc7-ab28-3ec77ab151ce",
+    "note": "QA-47 UI quote note 2026-09-04T14:40Z",
+    "messages": [
+      "QA-47 UI hop comment 2026-09-04T14:40Z"
+    ],
+    "machineName": "Hardware fixture",
+    "customerEmail": "customer@spares.local",
+    "status_quote": "requested"
+  },
+  "machines": [
+    "Hardware fixture",
+    "Palletizer"
+  ],
+  "machines_vercel_id": "iad1::iad1::2p6jg-1788533675169-9de2c01f6e2e"
+}
