@@ -371,9 +371,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
       <div className="machine-stage-grid">
         {viewerBlock}
-        {isCustomer ? (
+        {isCustomer && !fullscreen ? (
           tray
-        ) : (
+        ) : isCustomer ? null : (
           <div className="quote-tray-dock rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join
             here. Unmatched meshes stay in the staff panel, not the picker.
