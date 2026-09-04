@@ -11,6 +11,11 @@ export const SPARES_TONES = {
   danger: "#7f1d1d",
   onDanger: "#ffffff",
   soft: "#eceef2",
+  stage: "#0b0d10",
+  chrome: "#5a606c",
+  onChrome: "#ffffff",
+  chip: "#f4f5f7",
+  onChip: "#0b0d10",
 } as const;
 
 function channel(value: number) {
