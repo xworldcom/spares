@@ -76,7 +76,7 @@ export function BugReportsList() {
       {reports.map((report) => (
         <li
           key={report.id}
-          className="overflow-hidden rounded-lg border border-neutral-200 bg-white"
+          className="overflow-hidden rounded-[24px] bg-white"
         >
           <div className="grid gap-4 p-4 md:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
             <div className="overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">

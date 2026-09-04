@@ -95,11 +95,11 @@ export function QuotesList({ role }: { role: Role }) {
           <li key={quote.id}>
             <Link
               href={quoteHref(role, quote)}
-              className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-neutral-50"
+              className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-neutral-50 sm:items-center"
             >
               {quote.unread ? (
                 <span
-                  className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0a84ff]"
+                  className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0a84ff] sm:mt-0.5"
                   aria-label="Unread"
                 />
               ) : (
@@ -115,9 +115,14 @@ export function QuotesList({ role }: { role: Role }) {
                   {role === "staff" ? ` · ${quote.customerEmail}` : ""}
                   {` · ${lines} ${lines === 1 ? "line" : "lines"}`}
                 </p>
+                <div className="mt-2 sm:hidden">
+                  <QuoteStatusChip status={quote.status} current />
+                </div>
               </div>
-              <QuoteStatusChip status={quote.status} current />
-              <span className="text-lg text-neutral-300" aria-hidden="true">
+              <span className="hidden shrink-0 sm:inline-flex">
+                <QuoteStatusChip status={quote.status} current />
+              </span>
+              <span className="hidden text-lg text-neutral-300 sm:inline" aria-hidden="true">
                 ›
               </span>
             </Link>

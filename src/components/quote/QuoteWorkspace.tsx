@@ -179,7 +179,7 @@ export function QuoteWorkspace({
                   "Pricing saved.",
                 )
               }
-              className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30"
+              className="btn-primary hidden h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30 sm:inline-flex"
             >
               Save pricing
             </button>
@@ -239,6 +239,29 @@ export function QuoteWorkspace({
           run(() => postQuoteActivity(String(quote.number), text))
         }
       />
+
+      {role === "staff" ? (
+        <div
+          className="sticky z-20 -mx-4 border-t border-black/6 bg-[#f4f5f7]/94 px-4 py-3 backdrop-blur-md sm:hidden"
+          style={{
+            bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(
+                () => updateQuote(String(quote.number), { items }),
+                "Pricing saved.",
+              )
+            }
+            className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-30"
+          >
+            Save pricing
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

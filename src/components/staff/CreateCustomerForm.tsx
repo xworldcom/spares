@@ -33,7 +33,7 @@ export function CreateCustomerForm() {
       onSubmit={(event) => {
         void handleSubmit(event);
       }}
-      className="max-w-md space-y-4 rounded-lg border border-neutral-200 bg-white p-5"
+      className="max-w-md space-y-4 rounded-[24px] bg-white p-5"
     >
       <div>
         <label htmlFor="customer-email" className="block text-sm font-medium">
@@ -47,7 +47,7 @@ export function CreateCustomerForm() {
           autoComplete="off"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
         />
       </div>
       <div>
@@ -62,7 +62,7 @@ export function CreateCustomerForm() {
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
         />
       </div>
       {error ? (
@@ -79,7 +79,7 @@ export function CreateCustomerForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-60"
+        className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-60 sm:w-auto sm:px-5"
       >
         {submitting ? "Creating…" : "Create customer"}
       </button>

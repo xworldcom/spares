@@ -91,13 +91,16 @@ export function UploadPackForm() {
     }
   }
 
+  const fieldClass =
+    "mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none";
+
   return (
     <div className="space-y-6">
       <form
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="space-y-5 rounded-lg border border-neutral-200 bg-white p-5"
+        className="space-y-5 rounded-[24px] bg-white p-5"
       >
         <div>
           <label htmlFor="machine-name" className="block text-sm font-medium">
@@ -109,7 +112,7 @@ export function UploadPackForm() {
             required
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+            className={fieldClass}
             placeholder="Press 4 — Line 2"
           />
         </div>
@@ -125,55 +128,47 @@ export function UploadPackForm() {
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             required
             onChange={(event) => setModel(event.target.files?.[0] ?? null)}
-            className="mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[#0b0d10] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[#fff]"
+            className="mt-1.5 block w-full text-[15px] file:mr-3 file:h-11 file:rounded-full file:border-0 file:bg-[#0b0d10] file:px-4 file:text-sm file:font-semibold file:text-[#fff]"
           />
-          <p className="mt-1 text-xs text-neutral-500">
-            SolidWorks conversion is out of scope. Upload a browser-ready GLB
-            or GLTF. Sample packs:{" "}
-            <code className="text-neutral-700">
-              public/placeholders/palletizer-placeholder.glb
-            </code>{" "}
-            or{" "}
-            <code className="text-neutral-700">
-              public/placeholders/hardware/mcmaster-hardware.glb
-            </code>
-            .
+          <p className="spares-muted mt-2 text-sm leading-relaxed">
+            Browser-ready GLB or GLTF. Sample packs live under
+            public/placeholders.
           </p>
         </div>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">ETO-shaped parts list</legend>
-          <p className="text-sm text-neutral-600">
-            Catalog source of truth is Total ETO (item master + job BOM), not
-            SolidWorks custom properties. Join key is part number. Include qty
-            so the list reads like a BOM. Matching sample lists:{" "}
-            <code className="text-neutral-700">
-              public/placeholders/palletizer-parts.csv
-            </code>{" "}
-            or{" "}
-            <code className="text-neutral-700">
-              public/placeholders/hardware/mcmaster-hardware-parts.csv
-            </code>
-            .
+          <legend className="text-sm font-medium">Parts list</legend>
+          <p className="spares-muted text-sm leading-relaxed">
+            Join key is part number. Include qty so it reads like a BOM.
           </p>
-          <div className="flex gap-3 text-sm">
-            <label className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label
+              className={`inline-flex h-11 items-center justify-center rounded-full text-sm font-medium ${
+                listMode === "rows" ? "btn-primary" : "btn-soft"
+              }`}
+            >
               <input
                 type="radio"
                 name="list-mode"
                 checked={listMode === "rows"}
                 onChange={() => setListMode("rows")}
+                className="sr-only"
               />
               Enter rows
             </label>
-            <label className="flex items-center gap-2">
+            <label
+              className={`inline-flex h-11 items-center justify-center rounded-full text-sm font-medium ${
+                listMode === "file" ? "btn-primary" : "btn-soft"
+              }`}
+            >
               <input
                 type="radio"
                 name="list-mode"
                 checked={listMode === "file"}
                 onChange={() => setListMode("file")}
+                className="sr-only"
               />
-              Upload CSV or JSON
+              Upload file
             </label>
           </div>
 
@@ -190,79 +185,73 @@ export function UploadPackForm() {
                 onChange={(event) =>
                   setPartsListFile(event.target.files?.[0] ?? null)
                 }
-                className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm"
+                className="mt-1.5 block w-full text-[15px] file:mr-3 file:h-11 file:rounded-full file:border-0 file:bg-[#eceef2] file:px-4 file:text-sm file:font-medium"
               />
-              <p className="mt-1 text-xs text-neutral-500">
-                CSV headers: partNumber, name, qty, meshName. JSON is an array
-                of the same fields.
+              <p className="spares-muted mt-2 text-sm">
+                CSV or JSON: partNumber, name, qty, meshName.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-xs tracking-wide text-neutral-500 uppercase">
-                  <tr>
-                    <th className="pr-2 pb-2 font-medium">Part number</th>
-                    <th className="pr-2 pb-2 font-medium">Name</th>
-                    <th className="pr-2 pb-2 font-medium">Qty</th>
-                    <th className="pb-2 font-medium">Mesh name (optional)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, index) => (
-                    <tr key={index}>
-                      <td className="pr-2 pb-2">
-                        <input
-                          aria-label={`Part number ${index + 1}`}
-                          value={row.partNumber}
-                          onChange={(event) =>
-                            updateRow(index, { partNumber: event.target.value })
-                          }
-                          className="w-full rounded-md border border-neutral-300 px-2 py-1.5 font-mono text-xs"
-                        />
-                      </td>
-                      <td className="pr-2 pb-2">
-                        <input
-                          aria-label={`Name ${index + 1}`}
-                          value={row.name}
-                          onChange={(event) =>
-                            updateRow(index, { name: event.target.value })
-                          }
-                          className="w-full rounded-md border border-neutral-300 px-2 py-1.5"
-                        />
-                      </td>
-                      <td className="pr-2 pb-2">
-                        <input
-                          aria-label={`Qty ${index + 1}`}
-                          type="number"
-                          min={1}
-                          value={row.qty ?? 1}
-                          onChange={(event) =>
-                            updateRow(index, {
-                              qty: Number(event.target.value) || 1,
-                            })
-                          }
-                          className="w-20 rounded-md border border-neutral-300 px-2 py-1.5 tabular-nums"
-                        />
-                      </td>
-                      <td className="pb-2">
-                        <input
-                          aria-label={`Mesh name ${index + 1}`}
-                          value={row.meshName ?? ""}
-                          onChange={(event) =>
-                            updateRow(index, { meshName: event.target.value })
-                          }
-                          className="w-full rounded-md border border-neutral-300 px-2 py-1.5 font-mono text-xs"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {rows.map((row, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-2 gap-2 rounded-[20px] bg-[#f4f5f7] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_5rem_minmax(0,1fr)]"
+                >
+                  <label className="col-span-2 block text-xs font-medium text-neutral-500 sm:col-span-1">
+                    Part number
+                    <input
+                      aria-label={`Part number ${index + 1}`}
+                      value={row.partNumber}
+                      onChange={(event) =>
+                        updateRow(index, { partNumber: event.target.value })
+                      }
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 font-mono text-[15px] outline-none"
+                    />
+                  </label>
+                  <label className="col-span-2 block text-xs font-medium text-neutral-500 sm:col-span-1">
+                    Name
+                    <input
+                      aria-label={`Name ${index + 1}`}
+                      value={row.name}
+                      onChange={(event) =>
+                        updateRow(index, { name: event.target.value })
+                      }
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 text-[16px] outline-none"
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-neutral-500">
+                    Qty
+                    <input
+                      aria-label={`Qty ${index + 1}`}
+                      type="number"
+                      min={1}
+                      value={row.qty ?? 1}
+                      onChange={(event) =>
+                        updateRow(index, {
+                          qty: Number(event.target.value) || 1,
+                        })
+                      }
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 text-[16px] tabular-nums outline-none"
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-neutral-500">
+                    Mesh name
+                    <input
+                      aria-label={`Mesh name ${index + 1}`}
+                      value={row.meshName ?? ""}
+                      onChange={(event) =>
+                        updateRow(index, { meshName: event.target.value })
+                      }
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 font-mono text-[15px] outline-none"
+                    />
+                  </label>
+                </div>
+              ))}
               <button
                 type="button"
                 onClick={() => setRows((current) => [...current, emptyPartsRow()])}
-                className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50"
+                className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
               >
                 Add row
               </button>
@@ -279,18 +268,18 @@ export function UploadPackForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-60"
+          className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-60 sm:w-auto sm:px-5"
         >
           {submitting ? "Uploading…" : "Upload pack"}
         </button>
       </form>
 
       {result ? (
-        <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-5">
-          <p className="text-sm font-semibold text-neutral-900">
+        <div className="space-y-3 rounded-[24px] bg-white p-5">
+          <p className="text-[17px] font-semibold text-neutral-900">
             Pack uploaded: {result.name}
           </p>
-          <p className="text-sm text-neutral-600">
+          <p className="spares-muted text-sm">
             {result.parts.length} joined part
             {result.parts.length === 1 ? "" : "s"}. Unmatched meshes are listed
             below and stay visible to staff.
@@ -299,7 +288,7 @@ export function UploadPackForm() {
           <button
             type="button"
             onClick={() => router.push(`/machines/${result.id}`)}
-            className="btn-primary rounded-full px-4 py-2 text-sm font-medium"
+            className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[16px] font-semibold"
           >
             Open machine
           </button>

@@ -143,16 +143,36 @@ export function BugReportControl() {
         <ReportIcon />
       </button>
 
-      {status === "sent" && !open ? (
-        <p className="spares-muted absolute top-full right-0 mt-1 whitespace-nowrap text-xs" role="status">
-          Sent. Thank you.
-        </p>
-      ) : null}
-      {status === "error" && error && !open ? (
-        <p className="absolute top-full right-0 mt-1 max-w-[12rem] text-right text-xs text-red-800" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {status === "sent" && !open && ready
+        ? createPortal(
+            <p
+              className="pointer-events-none fixed z-[80] rounded-full bg-[#0b0d10] px-3 py-1.5 text-xs font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
+              style={{
+                top: "calc(var(--spares-header) + 0.5rem)",
+                right: "max(0.75rem, env(safe-area-inset-right))",
+              }}
+              role="status"
+            >
+              Sent. Thank you.
+            </p>,
+            document.body,
+          )
+        : null}
+      {status === "error" && error && !open && ready
+        ? createPortal(
+            <p
+              className="pointer-events-none fixed z-[80] max-w-[14rem] rounded-2xl bg-white px-3 py-2 text-right text-xs text-red-800 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+              style={{
+                top: "calc(var(--spares-header) + 0.5rem)",
+                right: "max(0.75rem, env(safe-area-inset-right))",
+              }}
+              role="alert"
+            >
+              {error}
+            </p>,
+            document.body,
+          )
+        : null}
 
       {open && ready
         ? createPortal(
@@ -160,9 +180,9 @@ export function BugReportControl() {
               data-bug-report=""
               role="dialog"
               aria-labelledby={titleId}
-              className="fixed z-[70] w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-black/8 bg-white p-3 shadow-[0_16px_40px_rgba(15,18,22,0.16)]"
+              className="bug-report-sheet fixed z-[70] w-[min(22rem,calc(100vw-1.5rem))] rounded-[24px] border border-black/8 bg-white p-4 shadow-[0_16px_40px_rgba(15,18,22,0.16)]"
               style={{
-                top: "max(4.5rem, calc(env(safe-area-inset-top) + 3.75rem))",
+                top: "max(4.75rem, calc(env(safe-area-inset-top) + 4rem))",
                 right: "max(0.75rem, env(safe-area-inset-right))",
               }}
             >

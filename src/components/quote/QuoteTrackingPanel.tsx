@@ -4,7 +4,7 @@ import { TRACKING_CARRIERS, canEditTracking, trackingVisible } from "@/lib/quote
 import type { Quote, QuoteShipment, Role, TrackingCarrier } from "@/types";
 
 const inputClass =
-  "h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[15px] outline-none";
+  "h-11 w-full min-w-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none";
 
 function emptyShipment(): QuoteShipment {
   return { id: `draft-${Date.now()}`, trackingNumber: "" };

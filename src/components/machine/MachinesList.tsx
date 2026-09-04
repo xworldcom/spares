@@ -81,14 +81,14 @@ export function MachinesList() {
   }
 
   return (
-    <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white">
+    <ul className="divide-y divide-neutral-200/80 overflow-hidden rounded-[24px] bg-white">
       {machines.map((machine) => (
         <li key={machine.id}>
           <Link
             href={`/machines/${machine.id}`}
-            className="flex min-h-14 items-center justify-between px-4 py-3 hover:bg-neutral-50"
+            className="flex min-h-16 items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50"
           >
-            <span className="text-[17px] font-medium tracking-tight text-neutral-950">
+            <span className="min-w-0 truncate text-[17px] font-medium tracking-tight text-neutral-950">
               {machine.name}
             </span>
             <span className="text-lg text-neutral-300" aria-hidden="true">

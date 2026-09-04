@@ -76,7 +76,7 @@ export function QuotePoPanel({
             <input
               value={poNumber}
               onChange={(event) => setPoNumber(event.target.value)}
-              className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[15px] outline-none"
+              className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none"
               placeholder="Your PO"
             />
           </label>
@@ -86,7 +86,7 @@ export function QuotePoPanel({
               type="file"
               accept="application/pdf,.pdf"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              className="mt-1.5 block w-full text-sm"
+              className="mt-1.5 block w-full text-[15px] file:mr-3 file:h-11 file:rounded-full file:border-0 file:bg-[#eceef2] file:px-4 file:text-sm file:font-medium"
             />
           </label>
           <button

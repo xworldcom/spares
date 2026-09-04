@@ -37,4 +37,11 @@ describe("nav active state", () => {
     assert.deepEqual(actives("/login"), []);
     assert.deepEqual(actives("/"), []);
   });
+
+  it("highlights only Quotes on the customer quotes list", () => {
+    const customerHrefs = ["/machines", "/quotes"] as const;
+    assert.equal(isNavActive("/quotes", "/quotes", customerHrefs), true);
+    assert.equal(isNavActive("/quotes/3", "/quotes", customerHrefs), true);
+    assert.equal(isNavActive("/quotes", "/machines", customerHrefs), false);
+  });
 });

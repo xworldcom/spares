@@ -3,7 +3,7 @@ import type { UnmatchedPart } from "@/lib/api/types";
 export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
   if (unmatched.length === 0) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700">
+      <div className="rounded-[22px] bg-white px-4 py-3 text-sm text-neutral-700">
         All list rows joined to a mesh. No unmatched meshes.
       </div>
     );
@@ -12,7 +12,7 @@ export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
   return (
     <section
       aria-labelledby="unmatched-heading"
-      className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-4"
+      className="rounded-[22px] bg-amber-50 px-4 py-4"
     >
       <h2 id="unmatched-heading" className="text-sm font-semibold text-amber-950">
         Unmatched meshes

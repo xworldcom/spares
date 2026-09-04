@@ -51,7 +51,7 @@ export function PartPicker(props: {
 | `explode` | Radial explode from the assembly centroid. `0` is assembled. Meshes translate away from the centroid; camera framing is not refit. |
 | `hiddenIds` | Named parts with `visible = false`. |
 | `isolatedId` | Other meshes go to opacity ~0.12 and are not clickable. Isolated part stays solid. |
-| `onLongPress` | Press-and-hold (~500ms) on a named part. Parent shows Hide / See only this. Not a right-click CAD menu. |
+| `onLongPress` | Press-and-hold (~500ms) on a named part. Parent shows Hide / Only this. Not a right-click CAD menu. |
 | `onUnmatchedSelect` | Optional staff hook. A named mesh with no `parts[]` row reports `{ meshName }` and is **not** a quote-pickable part. |
 
 Unmatched meshes are never treated as named parts. Only rows in `parts` are customer-selectable. Staff unmatched QA belongs in Fern's staff panel, not in this picker.

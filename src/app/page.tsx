@@ -8,11 +8,11 @@ export default function Home() {
   const signedIn = status === "signed-in" && user;
 
   return (
-    <div className="max-w-lg">
-      <p className="spares-muted text-sm font-medium tracking-wide uppercase">
+    <div className="mx-auto max-w-lg">
+      <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
         Private
       </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Spares</h1>
+      <h1 className="mt-2 text-[32px] font-semibold tracking-tight">Spares</h1>
       <p className="mt-4 text-neutral-700">
         This application is private and is not live.
       </p>

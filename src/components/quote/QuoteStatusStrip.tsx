@@ -24,15 +24,18 @@ export function QuoteStatusStrip({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <p className="text-[15px] font-semibold tracking-tight sm:hidden">
+        {QUOTE_STATUS_LABELS[status]}
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {QUOTE_PIPELINE.map((step, index) => {
           const current = status === step;
           const past = status !== "cancelled" && index < currentIndex;
           const className = current
-            ? "btn-primary shrink-0 rounded-full px-3.5 text-sm font-semibold"
+            ? "btn-primary rounded-full px-3 text-[13px] font-semibold sm:px-3.5 sm:text-sm"
             : past
-              ? "btn-soft shrink-0 rounded-full px-3.5 text-sm font-medium"
-              : "shrink-0 rounded-full bg-white px-3.5 text-sm font-medium text-neutral-500";
+              ? "btn-soft rounded-full px-3 text-[13px] font-medium sm:px-3.5 sm:text-sm"
+              : "rounded-full bg-white px-3 text-[13px] font-medium text-neutral-500 sm:px-3.5 sm:text-sm";
           if (editable && onChange) {
             return (
               <button
@@ -40,7 +43,7 @@ export function QuoteStatusStrip({
                 type="button"
                 disabled={pending || current}
                 onClick={() => onChange(step)}
-                className={`inline-flex h-11 items-center ${className} disabled:opacity-100`}
+                className={`inline-flex h-11 min-w-0 items-center justify-center ${className} disabled:opacity-100`}
               >
                 {QUOTE_STATUS_LABELS[step]}
               </button>
@@ -49,7 +52,7 @@ export function QuoteStatusStrip({
           return (
             <span
               key={step}
-              className={`inline-flex h-11 items-center ${className}`}
+              className={`inline-flex h-11 min-w-0 items-center justify-center ${className}`}
             >
               {QUOTE_STATUS_LABELS[step]}
             </span>

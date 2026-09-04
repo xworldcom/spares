@@ -121,9 +121,11 @@ export function SelectedPartSheet({
             type="button"
             {...activate(onIsolate)}
             disabled={!canAct}
-            className="btn-soft inline-flex h-11 min-w-11 items-center justify-center rounded-full px-4 text-sm font-medium disabled:opacity-30"
+            className={`${
+              isolated ? "btn-primary" : "btn-soft"
+            } inline-flex h-11 min-w-11 items-center justify-center rounded-full px-4 text-sm font-medium disabled:opacity-30`}
           >
-            {isolated ? "Seeing only this" : "See only this"}
+            Only this
           </button>
           {showAdd && onAdd ? (
             <button

@@ -70,7 +70,7 @@ export function QuoteActivityFeed({
             rows={3}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            className="mt-1.5 w-full resize-none rounded-2xl border-0 bg-[#f4f5f7] px-3 py-2.5 text-[15px] outline-none"
+            className="mt-1.5 w-full resize-none rounded-2xl border-0 bg-[#f4f5f7] px-3 py-2.5 text-[16px] outline-none"
             placeholder="Write a note…"
           />
         </label>

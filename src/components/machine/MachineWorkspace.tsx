@@ -45,6 +45,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [trayOpen, setTrayOpen] = useState(false);
   const [held, setHeld] = useState(false);
   const [idle, setIdle] = useState(false);
+  const [bomOpen, setBomOpen] = useState(false);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
 
   useEffect(() => {
@@ -248,10 +249,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       ref={chromeRef}
       className={
         overlay
-          ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col bg-[#0b0d10]"
+          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col bg-[#0b0d10] top-[var(--spares-header)]"
           : fullscreen
             ? "flex h-full min-h-0 flex-col bg-[#0b0d10]"
-            : "machine-viewer overflow-hidden rounded-[28px] bg-[#0b0d10]"
+            : "machine-viewer overflow-hidden rounded-[22px] bg-[#0b0d10] sm:rounded-[28px]"
       }
       onContextMenu={(event) => {
         event.preventDefault();
@@ -298,8 +299,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           }`}
         />
         <div
-          className={`absolute top-3 left-3 z-20 chrome-fade ${
-            dimmed || !needsReset ? "opacity-0" : "opacity-100"
+          className={`absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 chrome-fade ${
+            dimmed ? "opacity-0" : "opacity-100"
           }`}
         >
           {needsReset ? (
@@ -319,6 +320,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               Show all
             </button>
           ) : null}
+          <button
+            type="button"
+            data-parts-bom=""
+            onClick={() => setBomOpen(true)}
+            className="viewer-chrome-chip inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
+          >
+            Parts
+          </button>
         </div>
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
           {isCustomer && fullscreen ? (
@@ -364,7 +373,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       </div>
 
       <div
-        className={`flex h-14 shrink-0 items-center gap-3 px-5 chrome-fade ${
+        className={`flex h-14 shrink-0 items-center gap-3 px-4 sm:px-5 chrome-fade ${
           dimmed ? "opacity-55" : "opacity-100"
         }`}
       >
@@ -391,7 +400,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   return (
     <div className="machine-stage">
-      <div className="mb-3 min-w-0 shrink-0">
+      <div className="machine-title mb-3 min-w-0 shrink-0">
         <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
           Machine
         </p>
@@ -399,6 +408,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           {machine.name}
         </h1>
       </div>
+      <h1 className="sr-only">{machine.name}</h1>
 
       <div className="machine-stage-grid">
         {viewerBlock}
@@ -412,7 +422,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         )}
       </div>
 
-      <section aria-labelledby="bom-heading" className="mt-6 shrink-0 space-y-3">
+      <section
+        aria-labelledby="bom-heading"
+        className="machine-bom mt-6 shrink-0 space-y-3"
+      >
         <div>
           <h2 id="bom-heading" className="text-[13px] font-semibold tracking-tight text-neutral-950">
             Parts
@@ -426,8 +439,49 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       </section>
 
       {showUnmatched ? (
-        <div className="mt-6">
+        <div className="machine-bom mt-6">
           <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
+        </div>
+      ) : null}
+
+      {bomOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close parts list"
+            className="absolute inset-0 bg-black/35"
+            onClick={() => setBomOpen(false)}
+          />
+          <div
+            data-parts-bom=""
+            className="absolute inset-x-0 bottom-0 max-h-[min(72dvh,36rem)] overflow-y-auto rounded-t-[28px] bg-white px-4 pt-4 shadow-[0_-12px_40px_rgba(0,0,0,0.18)]"
+            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-[19px] font-semibold tracking-tight">Parts</h2>
+              <button
+                type="button"
+                onClick={() => setBomOpen(false)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
+                aria-label="Close parts"
+              >
+                <span className="text-2xl leading-none">×</span>
+              </button>
+            </div>
+            <PartsBom
+              parts={joinedParts}
+              selectedPartId={selectedPart?.id ?? null}
+              onSelect={(part) => {
+                setSelectedPart(part);
+                setBomOpen(false);
+              }}
+            />
+            {showUnmatched ? (
+              <div className="mt-4">
+                <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

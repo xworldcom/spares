@@ -72,7 +72,7 @@ function QuoteTrayForm({
               {line.part.name}
             </p>
             <p className="spares-muted truncate font-mono text-xs">{line.part.id}</p>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 aria-label={`Decrease ${line.part.name}`}
@@ -252,8 +252,11 @@ export function QuoteTray({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-[#0b0d10] shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
-            style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
+            className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[16px] font-semibold text-[#0b0d10] shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
+            style={{
+              bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))",
+              right: "max(0.75rem, env(safe-area-inset-right))",
+            }}
             aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
           >
             Quote
@@ -270,7 +273,7 @@ export function QuoteTray({
               bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))",
             }}
           >
-            <div className="tray-sheet flex max-h-[min(42vh,24rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
+            <div className="tray-sheet flex max-h-[min(72dvh,34rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
               <QuoteTrayForm {...formProps} onClose={() => setOpen(false)} />
             </div>
           </div>

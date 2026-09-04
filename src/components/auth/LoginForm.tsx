@@ -76,7 +76,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           autoComplete="username"
           required
           defaultValue=""
-          className="login-input mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[15px] outline-none ring-1 ring-black/5"
+          className="login-input mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/5"
         />
       </div>
       <div>
@@ -91,7 +91,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           autoComplete="current-password"
           required
           defaultValue=""
-          className="login-input mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[15px] outline-none ring-1 ring-black/5"
+          className="login-input mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/5"
         />
       </div>
       {error ? (

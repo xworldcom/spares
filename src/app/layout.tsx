@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -9,6 +9,13 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f4f5f7",
 };
 
 const CRITICAL_CSS = `
@@ -27,8 +34,9 @@ button{cursor:pointer;border:0;background:transparent;}
 .row-on-ink{background:#0b0d10;color:#fff;}
 .row-on-ink .row-on-ink-muted{color:rgba(255,255,255,.72);}
 .spares-muted{color:#4b4f57;}
-.spares-app{min-height:100dvh;background:#f4f5f7;color:#0b0d10;}
-.spares-app header{background:#f4f5f7;}
+.spares-app{min-height:100dvh;background:#f4f5f7;color:#0b0d10;overflow-x:clip;}
+.spares-app header{background:#f4f5f7;padding-top:env(safe-area-inset-top,0px);}
+.spares-header-inner{min-height:3.5rem;}
 .spares-app a[href="/login"]{display:inline-flex;height:2.75rem;align-items:center;border-radius:999px;background:#0b0d10;color:#fff;padding:0 1rem;font-size:14px;font-weight:600;}
 .login-input{display:block;box-sizing:border-box;height:3rem;width:100%;border:0;border-radius:1rem;background:#fff;padding:0 1rem;color:#0b0d10;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}
 .login-submit{display:inline-flex;height:3rem;width:100%;align-items:center;justify-content:center;border:0;border-radius:999px;background:#0b0d10;color:#fff;font-size:17px;font-weight:600;}
