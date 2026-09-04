@@ -1,0 +1,179 @@
+{
+  "generatedAt": "2026-09-04T04:10:19.786Z",
+  "preview": "https://spares-6uk86cclc-yonder3.vercel.app",
+  "access": "automation bypass header (secret not stored)",
+  "matrix": [
+    {
+      "id": "0",
+      "title": "Bypass reaches Spares login (not Vercel SSO)",
+      "result": "PASS",
+      "evidence": "00-login-screen.png",
+      "notes": "Spares sign-in rendered",
+      "at": "2026-09-04T04:09:51.393Z"
+    },
+    {
+      "id": "0b",
+      "title": "Login does not show seed passwords",
+      "result": "PASS",
+      "evidence": "00-login-screen.png",
+      "notes": "",
+      "at": "2026-09-04T04:09:51.393Z"
+    },
+    {
+      "id": "0c",
+      "title": "No public signup",
+      "result": "PASS",
+      "evidence": "00-login-screen.png",
+      "notes": "",
+      "at": "2026-09-04T04:09:51.393Z"
+    },
+    {
+      "id": "1a",
+      "title": "Customer login → machines list (own session)",
+      "result": "PASS",
+      "evidence": "01a-customer-machines.png",
+      "notes": "",
+      "at": "2026-09-04T04:09:52.552Z"
+    },
+    {
+      "id": "99",
+      "title": "Walk completed without harness crash",
+      "result": "FAIL",
+      "evidence": "99-customer-error.png",
+      "notes": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n  - waiting for locator('[data-parts-bom]') to be visible\n",
+      "at": "2026-09-04T04:10:14.226Z"
+    }
+  ],
+  "clock": [
+    {
+      "at": "2026-09-04T04:09:49.610Z",
+      "step": "start",
+      "note": "preview https://spares-6uk86cclc-yonder3.vercel.app"
+    },
+    {
+      "at": "2026-09-04T04:09:49.840Z",
+      "step": "0",
+      "note": "open login"
+    },
+    {
+      "at": "2026-09-04T04:09:51.385Z",
+      "step": "screenshot",
+      "note": "00-login-screen.png"
+    },
+    {
+      "at": "2026-09-04T04:09:51.393Z",
+      "step": "1",
+      "note": "customer login"
+    },
+    {
+      "at": "2026-09-04T04:09:52.550Z",
+      "step": "screenshot",
+      "note": "01a-customer-machines.png"
+    },
+    {
+      "at": "2026-09-04T04:10:12.704Z",
+      "step": "error",
+      "note": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n  - waiting for locator('[data-parts-bom]') to be visible\n\n    at run (/workspace/qa/t3.0-quotes/walk.mjs:289:48)"
+    },
+    {
+      "at": "2026-09-04T04:10:13.386Z",
+      "step": "screenshot",
+      "note": "99-customer-error.png"
+    },
+    {
+      "at": "2026-09-04T04:10:14.226Z",
+      "step": "screenshot",
+      "note": "99-staff-error.png"
+    }
+  ],
+  "console": [
+    {
+      "at": "2026-09-04T04:09:50.141Z",
+      "persona": "customer",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "at": "2026-09-04T04:09:50.150Z",
+      "persona": "customer",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    },
+    {
+      "at": "2026-09-04T04:09:51.581Z",
+      "persona": "customer",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "at": "2026-09-04T04:09:52.148Z",
+      "persona": "customer",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "at": "2026-09-04T04:09:52.789Z",
+      "persona": "customer",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    }
+  ],
+  "network": [
+    {
+      "at": "2026-09-04T04:09:50.141Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "at": "2026-09-04T04:09:51.581Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "at": "2026-09-04T04:09:51.718Z",
+      "persona": "customer",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "at": "2026-09-04T04:09:51.801Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/quotes",
+      "status": 200
+    },
+    {
+      "at": "2026-09-04T04:09:52.066Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200
+    },
+    {
+      "at": "2026-09-04T04:09:52.133Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/machines",
+      "status": 200
+    },
+    {
+      "at": "2026-09-04T04:09:52.148Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/quotes",
+      "status": 401
+    },
+    {
+      "at": "2026-09-04T04:09:52.789Z",
+      "persona": "customer",
+      "method": "GET",
+      "path": "/api/machines/hardware-fixture",
+      "status": 401
+    }
+  ]
+}

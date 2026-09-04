@@ -3,10 +3,15 @@
  * Bypass header is read from SPARES_PROTECTION_BYPASS only — never logged,
  * screenshotted, or written to evidence files.
  */
-import { chromium } from "playwright";
+import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync, copyFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+const requirePlaywright = createRequire(
+  process.env.PLAYWRIGHT_REQUIRE_FROM || `${process.cwd()}/package.json`,
+);
+const { chromium } = requirePlaywright("playwright");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.SPARES_PREVIEW_URL ?? "https://spares-6uk86cclc-yonder3.vercel.app";
@@ -111,6 +116,24 @@ async function login(page, who) {
   await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 15000 });
 }
 
+async function recoverLoadError(page) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const failed = page.getByText(/Failed to load|Unauthorized|Could not load|not signed in/i);
+    if (!(await failed.count())) {
+      return;
+    }
+    const retry = page.getByRole("button", { name: "Try again" });
+    if (await retry.count()) {
+      mark("retry", `Try again (${attempt + 1})`);
+      await retry.click();
+      await page.waitForTimeout(800);
+      continue;
+    }
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForTimeout(800);
+  }
+}
+
 async function signOut(page) {
   const button = page.getByRole("button", { name: "Sign out" });
   if (await button.count()) {
@@ -196,9 +219,14 @@ async function run() {
   const contextOptions = {
     viewport: { width: 1440, height: 960 },
     extraHTTPHeaders: { "x-vercel-protection-bypass": BYPASS },
-    recordVideo: { dir: join(ARTIFACT, "video"), size: { width: 1440, height: 960 } },
     ignoreHTTPSErrors: true,
   };
+  if (process.env.SPARES_QA_VIDEO !== "0" && existsSync("/home/ubuntu/.cache/ms-playwright/ffmpeg-1011/ffmpeg-linux")) {
+    contextOptions.recordVideo = {
+      dir: join(ARTIFACT, "video"),
+      size: { width: 1440, height: 960 },
+    };
+  }
 
   const customerContext = await browser.newContext(contextOptions);
   const staffContext = await browser.newContext(contextOptions);
@@ -244,28 +272,21 @@ async function run() {
       loginShot,
     );
 
-    // 1 — customer request
+    // 1 — customer request (single pass, no retry storms — those hop /tmp isolates)
     mark("1", "customer login");
     await login(customer, CUSTOMER);
-    await customer.goto(`${BASE}/machines`, { waitUntil: "networkidle" });
+    await customer.goto(`${BASE}/machines`, { waitUntil: "domcontentloaded" });
+    await customer.getByRole("link", { name: /Hardware fixture|Palletizer/i }).first().waitFor({ timeout: 20000 });
     const machinesShot = await shot(customer, "01a-customer-machines");
-    const machinesCopy = await bodyText(customer);
-    const hasMachine = /Hardware fixture|Palletizer/i.test(machinesCopy);
     record(
       "1a",
       "Customer login → machines list (own session)",
-      hasMachine ? "PASS" : "FAIL",
+      /Hardware fixture|Palletizer/i.test(await bodyText(customer)) ? "PASS" : "FAIL",
       machinesShot,
-      hasMachine ? "Seed machines present" : "No machines",
     );
-
-    if (await customer.getByRole("link", { name: /Hardware fixture/i }).count()) {
-      await customer.getByRole("link", { name: /Hardware fixture/i }).click();
-    } else {
-      await customer.getByRole("link", { name: /Palletizer/i }).click();
-    }
+    await customer.getByRole("link", { name: /Hardware fixture/i }).click();
     await customer.waitForURL(/\/machines\//, { timeout: 15000 });
-    await customer.locator("[data-parts-bom]").waitFor({ timeout: 25000 });
+    await customer.locator("[data-parts-bom]").waitFor({ timeout: 20000 });
     const machineShot = await shot(customer, "01b-customer-machine");
     record(
       "1b",
@@ -273,15 +294,11 @@ async function run() {
       (await customer.locator("[data-parts-bom]").count()) > 0 ? "PASS" : "FAIL",
       machineShot,
     );
-
-    const firstPart = customer.locator("[data-parts-bom] button").first();
-    await firstPart.click();
+    await customer.locator("[data-parts-bom] button").first().click();
     const addBtn = customer.getByRole("button", { name: "Add" });
     await addBtn.waitFor({ timeout: 10000 });
     await customer.locator("text=Preparing controls…").waitFor({ state: "hidden", timeout: 10000 }).catch(() => {});
     await addBtn.click();
-    await customer.getByText(/1 part|parts/i).first().waitFor({ timeout: 8000 }).catch(() => {});
-    // Qty bump if the tray + control is on screen
     const plus = customer.getByRole("button", { name: /Increase /i }).first();
     if (await plus.count()) {
       await plus.click();
@@ -291,28 +308,32 @@ async function run() {
       await noteBox.fill("T3.0 QA — need-by Friday, line 3, serial QA-26.");
     }
     const trayShot = await shot(customer, "01c-tray-after-add");
-    const trayCopy = await bodyText(customer);
     record(
       "1c",
       "Customer adds a tray line (qty present)",
-      /Request quote/i.test(trayCopy) ? "PASS" : "FAIL",
+      /Request quote/i.test(await bodyText(customer)) ? "PASS" : "FAIL",
       trayShot,
     );
-
     await customer.getByRole("button", { name: "Request quote" }).click();
     await customer.getByText(/Quote sent|View quote/i).waitFor({ timeout: 20000 });
-    const requestedShot = await shot(customer, "01d-quote-requested");
+    await shot(customer, "01d-quote-requested");
     const view = customer.getByRole("link", { name: "View quote" });
     if (await view.count()) {
       await view.click();
     } else {
-      await customer.goto(`${BASE}/quotes`, { waitUntil: "networkidle" });
+      await customer.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
       await customer.getByRole("link", { name: /Quote \d+/i }).first().click();
     }
     await customer.waitForURL(/\/quotes\/\d+/, { timeout: 15000 });
     quoteNumber = customer.url().match(/\/quotes\/(\d+)/)?.[1] ?? null;
+    if (!quoteNumber) {
+      throw new Error("Quote number missing after request");
+    }
     quotePathCustomer = `/quotes/${quoteNumber}`;
     quotePathStaff = `/staff/quotes/${quoteNumber}`;
+    await customer.goto(`${BASE}/quotes/${quoteNumber}`, { waitUntil: "domcontentloaded" });
+    await customer.getByText("Loading quote…").waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
+    await customer.getByRole("heading", { name: /Quote \d+/ }).waitFor({ timeout: 15000 });
     const customerRequestedShot = await shot(customer, "01e-customer-quote-requested");
     const requestedCopy = await bodyText(customer);
     const pricesHidden = /Shown after quoted/i.test(requestedCopy);
@@ -323,8 +344,8 @@ async function run() {
       "1d",
       "Customer quote created at requested",
       /Requested/i.test(requestedCopy) && Boolean(quoteNumber) ? "PASS" : "FAIL",
-      requestedShot,
-      `Quote ${quoteNumber ?? "?"}`,
+      customerRequestedShot,
+      `Quote ${quoteNumber ?? "?"}${usedTray ? "" : " (API fallback)"}`,
     );
     record(
       "1e",
@@ -355,7 +376,7 @@ async function run() {
     // 2 — staff inbox + pricing + quoted
     mark("2", "staff login + inbox");
     await login(staff, STAFF);
-    await staff.goto(`${BASE}/staff/quotes`, { waitUntil: "networkidle" });
+    await staff.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     await staff.getByText(/Quote \d+/i).first().waitFor({ timeout: 15000 });
     const staffInboxShot = await shot(staff, "02a-staff-inbox-unread");
     const staffInboxCopy = await bodyText(staff);
@@ -379,6 +400,7 @@ async function run() {
 
     await staff.getByRole("link", { name: new RegExp(`Quote ${quoteNumber}`) }).click();
     await staff.waitForURL(new RegExp(`/staff/quotes/${quoteNumber}`), { timeout: 15000 });
+    await staff.getByText("Loading quote…").waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
     await staff.getByText("Lines").waitFor({ timeout: 10000 });
     const staffOpenShot = await shot(staff, "02b-staff-quote-requested");
     const staffOpenCopy = await bodyText(staff);
@@ -394,14 +416,17 @@ async function run() {
       staffOpenShot,
     );
 
-    if (await staff.getByRole("button", { name: "In review" }).count()) {
-      await staff.getByRole("button", { name: "In review" }).click();
-      await staff.waitForTimeout(400);
+    async function clickStatus(page, label) {
+      const btn = page.getByRole("button", { name: label, exact: true });
+      if (await btn.count()) {
+        await btn.click();
+        await page.getByText("Loading quote…").waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(350);
+      }
     }
-    if (await staff.getByRole("button", { name: "Pricing" }).count()) {
-      await staff.getByRole("button", { name: "Pricing" }).click();
-      await staff.getByText(/Pricing/i).first().waitFor({ timeout: 8000 }).catch(() => {});
-    }
+
+    await clickStatus(staff, "In review");
+    await clickStatus(staff, "Pricing");
 
     const sell = staff.getByLabel("Sell price");
     const cost = staff.getByLabel("Supplier cost");
@@ -433,8 +458,7 @@ async function run() {
       pricedShot,
     );
 
-    await staff.getByRole("button", { name: "Quoted" }).click();
-    await staff.waitForTimeout(600);
+    await clickStatus(staff, "Quoted");
     const quotedShot = await shot(staff, "02d-staff-quoted");
     const quotedCopy = await bodyText(staff);
     record(
@@ -461,6 +485,7 @@ async function run() {
 
     await customer.getByRole("link", { name: new RegExp(`Quote ${quoteNumber}`) }).click();
     await customer.waitForURL(new RegExp(`/quotes/${quoteNumber}`), { timeout: 15000 });
+    await customer.getByText("Loading quote…").waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
     const customerPricedShot = await shot(customer, "03b-customer-prices");
     const customerPriced = await bodyText(customer);
     const seesSell = /\$48|48\.00|48/.test(customerPriced) && /Sell/i.test(customerPriced);
@@ -534,6 +559,7 @@ async function run() {
 
     await staff.getByRole("link", { name: new RegExp(`Quote ${quoteNumber}`) }).click();
     await staff.waitForURL(new RegExp(`/staff/quotes/${quoteNumber}`), { timeout: 15000 });
+    await staff.getByText("Loading quote…").waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
     const staffPoShot = await shot(staff, "04b-staff-po-visible");
     const staffPoCopy = await bodyText(staff);
     const seesPo = /PO-T30-001/i.test(staffPoCopy);
@@ -568,11 +594,7 @@ async function run() {
     }
 
     for (const label of ["Confirmed", "Ordered"]) {
-      const btn = staff.getByRole("button", { name: label, exact: true });
-      if (await btn.count()) {
-        await btn.click();
-        await staff.waitForTimeout(500);
-      }
+      await clickStatus(staff, label);
     }
     const orderedShot = await shot(staff, "04c-staff-ordered");
     record(
@@ -597,11 +619,7 @@ async function run() {
       await saveTracking.click();
       await staff.getByText(/Tracking saved|Marked shipped|Shipped/i).waitFor({ timeout: 15000 }).catch(() => {});
     }
-    const shipBtn = staff.getByRole("button", { name: "Shipped", exact: true });
-    if (await shipBtn.count()) {
-      await shipBtn.click();
-      await staff.waitForTimeout(600);
-    }
+    await clickStatus(staff, "Shipped");
     const shippedShot = await shot(staff, "04d-staff-shipped");
     const shippedCopy = await bodyText(staff);
     record(
@@ -616,6 +634,7 @@ async function run() {
     await customer.goto(`${BASE}/quotes`, { waitUntil: "networkidle" });
     await customer.getByRole("link", { name: new RegExp(`Quote ${quoteNumber}`) }).click();
     await customer.waitForURL(new RegExp(`/quotes/${quoteNumber}`), { timeout: 15000 });
+    await customer.getByText("Loading quote…").waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
     const customerShipShot = await shot(customer, "05a-customer-shipped");
     const customerShip = await bodyText(customer);
     record(

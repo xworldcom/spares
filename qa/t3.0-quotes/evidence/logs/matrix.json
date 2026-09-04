@@ -1,0 +1,42 @@
+[
+  {
+    "id": "0",
+    "title": "Bypass reaches Spares login (not Vercel SSO)",
+    "result": "PASS",
+    "evidence": "00-login-screen.png",
+    "notes": "Spares sign-in rendered",
+    "at": "2026-09-04T04:09:51.393Z"
+  },
+  {
+    "id": "0b",
+    "title": "Login does not show seed passwords",
+    "result": "PASS",
+    "evidence": "00-login-screen.png",
+    "notes": "",
+    "at": "2026-09-04T04:09:51.393Z"
+  },
+  {
+    "id": "0c",
+    "title": "No public signup",
+    "result": "PASS",
+    "evidence": "00-login-screen.png",
+    "notes": "",
+    "at": "2026-09-04T04:09:51.393Z"
+  },
+  {
+    "id": "1a",
+    "title": "Customer login → machines list (own session)",
+    "result": "PASS",
+    "evidence": "01a-customer-machines.png",
+    "notes": "",
+    "at": "2026-09-04T04:09:52.552Z"
+  },
+  {
+    "id": "99",
+    "title": "Walk completed without harness crash",
+    "result": "FAIL",
+    "evidence": "99-customer-error.png",
+    "notes": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n  - waiting for locator('[data-parts-bom]') to be visible\n",
+    "at": "2026-09-04T04:10:14.226Z"
+  }
+]
