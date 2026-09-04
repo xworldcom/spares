@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
 import { error, json } from "@/lib/http";
 import {
@@ -11,8 +10,8 @@ import {
 } from "@/lib/quotes";
 import {
   createQuoteActivity,
-  machineFilePath,
   mutateQuote,
+  readStoredFile,
   saveMachineFile,
 } from "@/lib/store";
 
@@ -30,11 +29,11 @@ export async function GET(
   }
 
   try {
-    const bytes = await readFile(machineFilePath(access.quote.poStoredFileName));
+    const bytes = await readStoredFile(access.quote.poStoredFileName);
     const filename = safeDownloadName(
       access.quote.poOriginalFileName ?? "purchase-order.pdf",
     );
-    return new Response(bytes, {
+    return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
