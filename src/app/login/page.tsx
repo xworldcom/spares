@@ -12,7 +12,7 @@ export default async function LoginPage({
   return (
     <div className="login-page mx-auto max-w-md">
       <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-2 text-sm text-neutral-600">
+      <p className="spares-muted mt-2 text-sm">
         Staff and customers use this screen. Cookie session. No public signup.
       </p>
       <div className="mt-6">

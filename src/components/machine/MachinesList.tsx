@@ -70,7 +70,7 @@ export function MachinesList() {
           user?.role === "staff" ? (
             <Link
               href="/machines/new"
-              className="inline-flex rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800"
+              className="btn-primary inline-flex rounded-full px-4 py-2 text-sm font-medium"
             >
               Upload pack
             </Link>

@@ -16,7 +16,7 @@ export default function ErrorPage({
       <button
         type="button"
         onClick={reset}
-        className="mt-3 rounded-md bg-red-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800"
+        className="btn-danger mt-3 rounded-full px-4 py-2 text-sm font-medium"
       >
         Try again
       </button>

@@ -79,7 +79,7 @@ export function CreateCustomerForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+        className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-60"
       >
         {submitting ? "Creating…" : "Create customer"}
       </button>

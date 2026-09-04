@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { errorMessage } from "@/lib/api/errors";
 
 function NavLink({
@@ -20,8 +21,8 @@ function NavLink({
       href={href}
       className={
         active
-          ? "inline-flex h-11 items-center rounded-full bg-neutral-950 px-3.5 text-sm font-medium text-white"
-          : "inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-600 transition-colors duration-200 hover:bg-neutral-200/70 hover:text-neutral-950"
+          ? "btn-primary inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium"
+          : "inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:bg-neutral-200/70 hover:text-neutral-950"
       }
     >
       {children}
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           : "spares-app min-h-dvh bg-[#f4f5f7] text-[#0b0d10]"
       }
     >
-      <header className="shrink-0 bg-[#f4f5f7]/90 backdrop-blur-md">
+      <header className="sticky top-0 z-[60] shrink-0 bg-[#f4f5f7]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex items-center gap-2">
             <Link href="/" className="px-1 text-[15px] font-semibold tracking-tight">
@@ -75,12 +76,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
           <div className="flex items-center gap-3">
-            <p className="text-[11px] font-medium tracking-[0.14em] text-neutral-400 uppercase">
+            <p className="spares-muted text-[11px] font-medium tracking-[0.14em] uppercase">
               Private
             </p>
+            <BugReportControl />
             {status === "signed-in" && user ? (
               <div className="flex items-center gap-2">
-                <span className="hidden text-sm text-neutral-500 sm:inline">
+                <span className="spares-muted hidden text-sm sm:inline">
                   {user.email}
                 </span>
                 <button
@@ -88,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => {
                     void handleLogout();
                   }}
-                  className="inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:bg-neutral-200/80"
+                  className="inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-800 transition-colors duration-200 hover:bg-neutral-200/80"
                 >
                   Sign out
                 </button>
@@ -96,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="inline-flex h-11 items-center rounded-full bg-neutral-950 px-4 text-sm font-semibold text-white"
+                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
               >
                 Sign in
               </Link>
