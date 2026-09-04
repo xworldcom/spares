@@ -115,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : (
             <Link
               href="/"
-              className="shrink-0 px-1 text-[15px] font-semibold tracking-tight"
+              className="inline-flex h-11 shrink-0 items-center rounded-full px-2 text-[15px] font-semibold tracking-tight"
             >
               Spares
             </Link>
