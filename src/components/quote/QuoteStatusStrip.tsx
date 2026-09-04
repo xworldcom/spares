@@ -24,7 +24,7 @@ export function QuoteStatusStrip({
 
   return (
     <div className="space-y-3">
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div className="flex flex-wrap gap-2">
         {QUOTE_PIPELINE.map((step, index) => {
           const current = status === step;
           const past = status !== "cancelled" && index < currentIndex;
