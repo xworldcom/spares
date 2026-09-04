@@ -1,0 +1,123 @@
+{
+  "path": "/machines/palletizer",
+  "fullscreenElement": false,
+  "buttons": [
+    {
+      "i": 0,
+      "aria": "Report bug",
+      "text": "",
+      "className": "inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10] transition-colors duration-200 hover:bg-neutral-200/80",
+      "color": "rgb(11, 13, 16)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "x": 1045.359375,
+      "y": 10,
+      "w": 44,
+      "h": 44
+    },
+    {
+      "i": 1,
+      "aria": null,
+      "text": "Sign out",
+      "className": "inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-800 transition-colors duration-200 hover:bg-neutral-200/80",
+      "color": "lab(15.204 0 -0.00000596046)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "x": 1261.609375,
+      "y": 10,
+      "w": 82.390625,
+      "h": 44
+    },
+    {
+      "i": 2,
+      "aria": "Quote tray, 0 items",
+      "text": "Quote 0",
+      "className": "viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold",
+      "color": "rgb(11, 13, 16)",
+      "backgroundColor": "rgb(244, 245, 247)",
+      "opacity": "1",
+      "x": 1268.640625,
+      "y": 68,
+      "w": 107.359375,
+      "h": 44
+    },
+    {
+      "i": 3,
+      "aria": "Exit full screen",
+      "text": "×",
+      "className": "viewer-chrome-chip inline-flex h-11 w-11 items-center justify-center rounded-full",
+      "color": "rgb(11, 13, 16)",
+      "backgroundColor": "rgb(244, 245, 247)",
+      "opacity": "1",
+      "x": 1384,
+      "y": 68,
+      "w": 44,
+      "h": 44
+    },
+    {
+      "i": 4,
+      "aria": null,
+      "text": "Request quote",
+      "className": "btn-accent mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-30",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgb(10, 132, 255)",
+      "opacity": "0.3",
+      "x": 116,
+      "y": 593,
+      "w": 828,
+      "h": 48
+    },
+    {
+      "i": 5,
+      "aria": "Quote tray, 0 items",
+      "text": "Quote0",
+      "className": "fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-[#0b0d10] shadow-[0_10px_30px_rgba(15,18,22,0.16)]",
+      "color": "rgb(11, 13, 16)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
+    },
+    {
+      "i": 6,
+      "aria": null,
+      "text": "Frame weldment PN-FRAME-1000 1",
+      "className": "flex min-h-14 w-full items-center justify-between gap-4 px-5 py-3 text-left chrome-fade text-neutral-800 hover:bg-neutral-50",
+      "color": "lab(15.204 0 -0.00000596046)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "x": 96,
+      "y": 716.5,
+      "w": 1248,
+      "h": 62.5
+    },
+    {
+      "i": 7,
+      "aria": null,
+      "text": "Drive roller PN-ROLL-2104 2",
+      "className": "flex min-h-14 w-full items-center justify-between gap-4 px-5 py-3 text-left chrome-fade text-neutral-800 hover:bg-neutral-50",
+      "color": "lab(15.204 0 -0.00000596046)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "x": 96,
+      "y": 779,
+      "w": 1248,
+      "h": 62.5
+    },
+    {
+      "i": 8,
+      "aria": null,
+      "text": "Gearmotor PN-MTR-3301 1",
+      "className": "flex min-h-14 w-full items-center justify-between gap-4 px-5 py-3 text-left chrome-fade text-neutral-800 hover:bg-neutral-50",
+      "color": "lab(15.204 0 -0.00000596046)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "x": 96,
+      "y": 841.5,
+      "w": 1248,
+      "h": 62.5
+    }
+  ]
+}

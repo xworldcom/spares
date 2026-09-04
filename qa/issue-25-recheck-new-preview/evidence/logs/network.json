@@ -1,0 +1,170 @@
+[
+  {
+    "t": "2026-09-04T04:49:37.410Z",
+    "relMs": 1602,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/login",
+    "status": 307
+  },
+  {
+    "t": "2026-09-04T04:49:37.500Z",
+    "relMs": 1692,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/login",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:37.985Z",
+    "relMs": 2177,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/login?_rsc=sW2A7HEmFQnSVIMx",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:37.987Z",
+    "relMs": 2179,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/api/auth/me",
+    "status": 401
+  },
+  {
+    "t": "2026-09-04T04:49:38.747Z",
+    "relMs": 2939,
+    "phase": "response",
+    "method": "POST",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/api/auth/login",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:38.861Z",
+    "relMs": 3053,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines?_rsc=_H_fFy2_Q06N8BA7",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:38.866Z",
+    "relMs": 3058,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:38.913Z",
+    "relMs": 3105,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines?_rsc=Yaku0SukotyQAzL7",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:39.008Z",
+    "relMs": 3200,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/api/machines",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:39.029Z",
+    "relMs": 3221,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines?_rsc=FuW4_ePwJkP6q8CZ",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:39.104Z",
+    "relMs": 3296,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines/hardware-fixture?_rsc=FYULMev5O-sEhXiM",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:39.180Z",
+    "relMs": 3372,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines/hardware-fixture?_rsc=EDAR0EQWBceSwtxK",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:39.269Z",
+    "relMs": 3461,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines/palletizer?_rsc=FYULMev5O-sEhXiM",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:39.350Z",
+    "relMs": 3542,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines/palletizer?_rsc=EDAR0EQWBceSwtxK",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:40.325Z",
+    "relMs": 4517,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines/palletizer",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:40.736Z",
+    "relMs": 4928,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/api/auth/me",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:40.749Z",
+    "relMs": 4941,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/login?_rsc=2kc06Z-JY0J988WZ",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:40.794Z",
+    "relMs": 4986,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines?_rsc=2kc06Z-JY0J988WZ",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:40.821Z",
+    "relMs": 5013,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/api/machines/palletizer",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:40.835Z",
+    "relMs": 5027,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/machines?_rsc=11MXsfpl_LkbEBTv",
+    "status": 200
+  },
+  {
+    "t": "2026-09-04T04:49:41.326Z",
+    "relMs": 5518,
+    "phase": "response",
+    "method": "GET",
+    "url": "https://spares-88zuixxl3-yonder3.vercel.app/api/machines/palletizer/file",
+    "status": 200
+  }
+]
