@@ -67,8 +67,13 @@ function QtyField({
         const input = event.currentTarget;
         setDraft(String(value));
         requestAnimationFrame(() => selectQtyInput(input));
+        window.setTimeout(() => selectQtyInput(input), 50);
       }}
       onPointerUp={(event) => {
+        event.preventDefault();
+        selectQtyInput(event.currentTarget);
+      }}
+      onMouseUp={(event) => {
         event.preventDefault();
         selectQtyInput(event.currentTarget);
       }}
