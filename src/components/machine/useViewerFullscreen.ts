@@ -58,7 +58,7 @@ export function useViewerFullscreen() {
       }
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !event.defaultPrevented) {
         exit();
       }
     }

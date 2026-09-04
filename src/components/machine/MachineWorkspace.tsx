@@ -16,6 +16,7 @@ import { viewerNeedsReset } from "@/components/viewer/assemblyView";
 import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
+import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 function ExpandIcon() {
   return (
@@ -106,6 +107,36 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     };
   }, [chromeRef, fullscreen]);
 
+  useEffect(() => {
+    if (!selectedPart) {
+      return;
+    }
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      if (target.closest("[data-part-sheet]")) {
+        return;
+      }
+      if (target.closest("[data-parts-bom]")) {
+        return;
+      }
+      if (target.closest("canvas")) {
+        return;
+      }
+      if (target.closest("[data-show-all]")) {
+        return;
+      }
+      if (target.closest("[data-bug-report]")) {
+        return;
+      }
+      setSelectedPart(null);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [selectedPart]);
+
   const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
   const src = machine ? machineFileSrc(machine.id) : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
@@ -180,6 +211,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (isolatedId === selectedPart.id) {
       setIsolatedId(null);
     }
+    if (shouldAutoDismissPartSheet("hide")) {
+      setSelectedPart(null);
+    }
   }
 
   function isolateSelected() {
@@ -188,6 +222,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     setIsolatedId(selectedPart.id);
     setHiddenIds((current) => current.filter((id) => id !== selectedPart.id));
+    if (shouldAutoDismissPartSheet("isolate")) {
+      setSelectedPart(null);
+    }
   }
 
   function addSelected() {
@@ -201,6 +238,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       return [...current, { part: selectedPart, qty: 1 }];
     });
     setTrayOpen(true);
+    if (shouldAutoDismissPartSheet("add")) {
+      setSelectedPart(null);
+    }
   }
 
   const viewerBlock = (
@@ -208,7 +248,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       ref={chromeRef}
       className={
         overlay
-          ? "fixed inset-0 z-50 flex flex-col bg-[#0b0d10]"
+          ? "fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col bg-[#0b0d10]"
           : fullscreen
             ? "flex h-full min-h-0 flex-col bg-[#0b0d10]"
             : "machine-viewer overflow-hidden rounded-[28px] bg-[#0b0d10]"
@@ -246,6 +286,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           onHide={hideSelected}
           onIsolate={isolateSelected}
           onAdd={isCustomer ? addSelected : undefined}
+          onDismiss={() => setSelectedPart(null)}
           showAdd={isCustomer}
           dimmed={dimmed}
           held={held}
@@ -258,6 +299,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           {needsReset ? (
             <button
               type="button"
+              data-show-all=""
               onPointerDown={(event) => {
                 if (event.button !== 0) {
                   return;
@@ -266,7 +308,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 showAll();
               }}
               onClick={showAll}
-              className="inline-flex h-11 items-center rounded-full bg-white/92 px-4 text-sm font-semibold text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+              className="inline-flex h-11 items-center rounded-full bg-white px-4 text-sm font-semibold text-[#0b0d10] shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
             >
               Show all
             </button>
@@ -303,7 +345,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                     enter();
                   }
             }
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0b0d10] shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
             aria-label={fullscreen ? "Exit full screen" : "Full screen"}
           >
             {fullscreen ? (
@@ -320,8 +362,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           dimmed ? "opacity-55" : "opacity-100"
         }`}
       >
-        <label className="flex min-w-0 flex-1 items-center gap-3 text-white">
-          <span className="shrink-0 text-[13px] font-medium tracking-wide text-white/80">
+        <label className="flex min-w-0 flex-1 items-center gap-3 text-[#fff]">
+          <span className="shrink-0 text-[13px] font-medium tracking-wide text-[#fff]">
             Explode
           </span>
           <input
@@ -344,7 +386,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   return (
     <div className="machine-stage">
       <div className="mb-3 min-w-0 shrink-0">
-        <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-400 uppercase">
+        <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
           Machine
         </p>
         <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">

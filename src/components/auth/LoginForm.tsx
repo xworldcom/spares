@@ -103,11 +103,11 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
         type="submit"
         disabled={!hydrated || submitting}
         aria-disabled={!hydrated || submitting}
-        className="login-submit inline-flex h-12 w-full items-center justify-center rounded-full bg-neutral-950 text-[17px] font-semibold text-white disabled:opacity-40"
+        className="login-submit btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-40"
       >
         {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
       </button>
-      <p className="text-xs text-neutral-500">
+      <p className="spares-muted text-xs">
         Staff and customers use the same screen. Accounts are created by staff —
         there is no public signup.
       </p>

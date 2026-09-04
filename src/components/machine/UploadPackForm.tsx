@@ -125,7 +125,7 @@ export function UploadPackForm() {
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             required
             onChange={(event) => setModel(event.target.files?.[0] ?? null)}
-            className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
+            className="mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[#0b0d10] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[#fff]"
           />
           <p className="mt-1 text-xs text-neutral-500">
             SolidWorks conversion is out of scope. Upload a browser-ready GLB
@@ -279,7 +279,7 @@ export function UploadPackForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+          className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-60"
         >
           {submitting ? "Uploading…" : "Upload pack"}
         </button>
@@ -299,7 +299,7 @@ export function UploadPackForm() {
           <button
             type="button"
             onClick={() => router.push(`/machines/${result.id}`)}
-            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className="btn-primary rounded-full px-4 py-2 text-sm font-medium"
           >
             Open machine
           </button>

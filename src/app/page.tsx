@@ -9,7 +9,7 @@ export default function Home() {
 
   return (
     <div className="max-w-lg">
-      <p className="text-sm font-medium tracking-wide text-neutral-500 uppercase">
+      <p className="spares-muted text-sm font-medium tracking-wide uppercase">
         Private
       </p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">Spares</h1>
@@ -26,14 +26,14 @@ export default function Home() {
           <>
             <Link
               href="/machines"
-              className="inline-flex h-12 items-center rounded-full bg-neutral-950 px-5 text-[15px] font-semibold text-white"
+              className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[15px] font-semibold"
             >
               Open machines
             </Link>
             {user.role === "staff" ? (
               <Link
                 href="/machines/new"
-                className="inline-flex h-12 items-center rounded-full px-5 text-[15px] font-medium text-neutral-700"
+                className="inline-flex h-12 items-center rounded-full px-5 text-[15px] font-medium text-neutral-800"
               >
                 Upload pack
               </Link>
@@ -42,7 +42,7 @@ export default function Home() {
         ) : (
           <Link
             href="/login"
-            className="inline-flex h-12 items-center rounded-full bg-neutral-950 px-5 text-[15px] font-semibold text-white"
+            className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[15px] font-semibold"
           >
             Sign in
           </Link>

@@ -40,7 +40,7 @@ function QuoteTrayForm({
           <h2 className="text-[21px] leading-tight font-semibold tracking-tight text-neutral-950">
             Quote
           </h2>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="spares-muted mt-0.5 text-sm">
             {lines.length === 0
               ? "Add a part to get started."
               : `${lines.length} ${lines.length === 1 ? "part" : "parts"}`}
@@ -49,7 +49,7 @@ function QuoteTrayForm({
         {onClose ? (
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-400"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
             aria-label="Close quote"
             onClick={onClose}
           >
@@ -67,14 +67,14 @@ function QuoteTrayForm({
             <p className="truncate text-[15px] font-medium text-neutral-950">
               {line.part.name}
             </p>
-            <p className="truncate font-mono text-xs text-neutral-400">{line.part.id}</p>
+            <p className="spares-muted truncate font-mono text-xs">{line.part.id}</p>
             <div className="mt-2 flex items-center gap-2">
               <button
                 type="button"
                 aria-label={`Decrease ${line.part.name}`}
                 disabled={line.qty <= 1}
                 onClick={() => onQty(line.part.id, Math.max(1, line.qty - 1))}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-medium text-neutral-900 disabled:opacity-30"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-medium text-[#0b0d10] disabled:opacity-30"
               >
                 −
               </button>
@@ -85,14 +85,14 @@ function QuoteTrayForm({
                 type="button"
                 aria-label={`Increase ${line.part.name}`}
                 onClick={() => onQty(line.part.id, line.qty + 1)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-medium text-neutral-900"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-medium text-[#0b0d10]"
               >
                 +
               </button>
               <button
                 type="button"
                 onClick={() => onRemove(line.part.id)}
-                className="ml-auto inline-flex h-11 items-center rounded-full px-3 text-sm font-medium text-neutral-400"
+                className="spares-muted ml-auto inline-flex h-11 items-center rounded-full px-3 text-sm font-medium"
               >
                 Remove
               </button>
@@ -127,7 +127,7 @@ function QuoteTrayForm({
         type="button"
         disabled={submitting || lines.length === 0}
         onClick={onSubmit}
-        className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#0a84ff] text-[17px] font-semibold text-white disabled:opacity-30"
+        className="btn-accent mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-30"
       >
         {submitting ? "Sending…" : "Request quote"}
       </button>
@@ -211,11 +211,11 @@ export function QuoteTray({
       <button
         type="button"
         onClick={onExitToTray}
-        className="inline-flex h-11 items-center gap-2 rounded-full bg-white/92 px-4 text-sm font-semibold text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+        className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#0b0d10] shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
         aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
       >
         Quote
-        <span className="inline-flex min-w-6 justify-center rounded-full bg-[#0a84ff] px-2 py-0.5 text-xs text-white tabular-nums">
+        <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
           {count}
         </span>
       </button>
@@ -233,12 +233,12 @@ export function QuoteTray({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-neutral-950 shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
-            style={{ bottom: "max(4.75rem, calc(env(safe-area-inset-bottom) + 3.75rem))" }}
+            className="fixed right-3 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-[#0b0d10] shadow-[0_10px_30px_rgba(15,18,22,0.16)]"
+            style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
             aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
           >
             Quote
-            <span className="inline-flex min-w-6 justify-center rounded-full bg-[#0a84ff] px-2 py-0.5 text-xs text-white tabular-nums">
+            <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
               {count}
             </span>
           </button>
@@ -248,7 +248,7 @@ export function QuoteTray({
           <div
             className="fixed inset-x-0 z-30 px-3"
             style={{
-              bottom: "max(4.5rem, calc(env(safe-area-inset-bottom) + 3.75rem))",
+              bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))",
             }}
           >
             <div className="tray-sheet flex max-h-[min(42vh,24rem)] flex-col rounded-[28px] bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">

@@ -4,8 +4,54 @@
   --spares-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --spares-duration: 200ms;
   --spares-accent: #0a84ff;
+  --spares-on-accent: #ffffff;
   --spares-ink: #0b0d10;
+  --spares-on-ink: #ffffff;
   --spares-paper: #f4f5f7;
+  --spares-on-paper: #0b0d10;
+  --spares-muted: #4b4f57;
+  --spares-danger: #7f1d1d;
+  --spares-on-danger: #ffffff;
+  --spares-soft: #eceef2;
+  color-scheme: light;
+}
+
+/*
+  Unlayered on purpose: critical CSS used to set `a, button { color: inherit }`,
+  which beat Tailwind `text-white` on iOS Safari (dark label on dark fill).
+  Token classes always win and pin light-on-dark / dark-on-light.
+*/
+.btn-primary {
+  background: var(--spares-ink);
+  color: var(--spares-on-ink);
+}
+
+.btn-accent {
+  background: var(--spares-accent);
+  color: var(--spares-on-accent);
+}
+
+.btn-danger {
+  background: var(--spares-danger);
+  color: var(--spares-on-danger);
+}
+
+.btn-soft {
+  background: var(--spares-soft);
+  color: var(--spares-on-paper);
+}
+
+.row-on-ink {
+  background: var(--spares-ink);
+  color: var(--spares-on-ink);
+}
+
+.row-on-ink .row-on-ink-muted {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.spares-muted {
+  color: var(--spares-muted);
 }
 
 .quote-tray-dock {
@@ -58,37 +104,40 @@
   }
 }
 
-html {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    "Segoe UI", system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  background: var(--spares-paper);
-  color: var(--spares-ink);
-}
+@layer base {
+  html {
+    font-family:
+      -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+      "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background: var(--spares-paper);
+    color: var(--spares-ink);
+    color-scheme: light;
+  }
 
-body {
-  font-family: inherit;
-  margin: 0;
-}
+  body {
+    font-family: inherit;
+    margin: 0;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
-}
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
 
-button {
-  cursor: pointer;
+  button {
+    cursor: pointer;
+  }
 }
 
 @keyframes tray-line-in {
