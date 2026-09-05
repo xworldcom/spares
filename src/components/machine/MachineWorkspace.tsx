@@ -229,18 +229,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
   }
 
+  function addPart(part: Part) {
+    const thumb = captureThumb.current(part.id) ?? undefined;
+    setLines((current) => {
+      if (current.some((line) => line.part.id === part.id)) {
+        return current;
+      }
+      return [...current, { part, qty: 1, thumb }];
+    });
+    setTrayOpen(true);
+    setBomOpen(false);
+  }
+
   function addSelected() {
     if (!selectedPart) {
       return;
     }
-    const thumb = captureThumb.current(selectedPart.id) ?? undefined;
-    setLines((current) => {
-      if (current.some((line) => line.part.id === selectedPart.id)) {
-        return current;
-      }
-      return [...current, { part: selectedPart, qty: 1, thumb }];
-    });
-    setTrayOpen(true);
+    addPart(selectedPart);
     if (shouldAutoDismissPartSheet("add")) {
       setSelectedPart(null);
     }
@@ -299,6 +304,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           showAdd={isCustomer}
           held={held}
         />
+        {isCustomer ? tray : null}
         <div
           aria-hidden="true"
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-24"
@@ -318,11 +324,26 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               }}
             />
           ) : null}
-          {isCustomer && !fullscreen && !trayOpen && quoteChip ? (
+          {isCustomer && !trayOpen && quoteChip ? (
             <button
               type="button"
               data-quote-tray=""
-              onClick={() => setTrayOpen(true)}
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                if (fullscreen) {
+                  exit();
+                }
+                setTrayOpen(true);
+              }}
+              onClick={() => {
+                if (fullscreen) {
+                  exit();
+                }
+                setTrayOpen(true);
+              }}
               className="viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold"
               aria-label={`Show quote, ${quoteCount} ${quoteCount === 1 ? "item" : "items"}`}
             >
@@ -334,16 +355,25 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           ) : null}
           <button
             type="button"
-            onClick={
-              fullscreen
-                ? () => {
-                    exit();
-                  }
-                : () => {
-                    enter();
-                  }
-            }
-            className="viewer-chrome-chip inline-flex h-11 w-11 items-center justify-center rounded-full"
+            onPointerDown={(event) => {
+              if (event.button !== 0) {
+                return;
+              }
+              event.preventDefault();
+              if (fullscreen) {
+                exit();
+              } else {
+                enter();
+              }
+            }}
+            onClick={() => {
+              if (fullscreen) {
+                exit();
+              } else {
+                enter();
+              }
+            }}
+            className="viewer-chrome-chip relative z-40 inline-flex h-11 w-11 items-center justify-center rounded-full"
             aria-label={fullscreen ? "Exit full screen" : "Full screen"}
           >
             {fullscreen ? (
@@ -422,12 +452,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         data-tray={isCustomer && trayOpen && !fullscreen ? "open" : "closed"}
       >
         {viewerBlock}
-        {isCustomer && !fullscreen ? (
-          tray
-        ) : isCustomer ? null : (
+        {isCustomer ? null : (
           <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join
-            here. Unmatched meshes stay in the staff panel, not the picker.
+            here.
           </div>
         )}
       </div>
@@ -445,6 +473,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           parts={joinedParts}
           selectedPartId={selectedPart?.id ?? null}
           onSelect={setSelectedPart}
+          showAdd={isCustomer}
+          onAdd={addPart}
         />
       </section>
 
@@ -485,6 +515,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 setSelectedPart(part);
                 setBomOpen(false);
               }}
+              showAdd={isCustomer}
+              onAdd={addPart}
             />
             {showUnmatched ? (
               <div className="mt-4">

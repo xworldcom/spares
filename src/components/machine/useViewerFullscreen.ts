@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+function isEmbedded() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.parent !== window;
+  } catch {
+    return true;
+  }
+}
+
 function isIos() {
   if (typeof navigator === "undefined") {
     return false;
@@ -13,7 +24,7 @@ function preferNativeFullscreen() {
   if (typeof window === "undefined") {
     return false;
   }
-  if (isIos()) {
+  if (isEmbedded() || isIos()) {
     return false;
   }
   return window.matchMedia("(pointer: coarse)").matches;
