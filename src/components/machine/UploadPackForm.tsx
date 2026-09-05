@@ -262,7 +262,7 @@ export function UploadPackForm() {
           <FileDrop
             id="model-file"
             label="GLB or GLTF"
-            hint="Save As glTF/GLB from the assembly. Pump-1 and Pump<2> join to part number Pump — no rename required."
+            hint="Save As glTF/GLB from the assembly. Pump-1 joins to Pump. Sample from a real SW assembly: public/placeholders/arm."
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             file={model}
             onFile={setModel}
