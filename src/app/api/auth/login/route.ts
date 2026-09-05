@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { findUserByEmail } from "@/lib/store";
+import { toPublicUser } from "@/lib/access";
+import { findUserByEmail, listSites } from "@/lib/store";
 
 type LoginBody = {
   email?: unknown;
@@ -74,6 +75,6 @@ export async function POST(request: Request) {
     return redirectNoQuery("/machines");
   }
   return json({
-    user: { id: user.id, email: user.email, role: user.role },
+    user: toPublicUser(user, user.role === "customer" ? await listSites() : []),
   });
 }

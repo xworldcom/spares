@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { requireUser } from "@/lib/auth";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
+import { canAccessMachine } from "@/lib/access";
 import { getMachine, machineFilePath } from "@/lib/store";
 
 export async function GET(
@@ -15,7 +16,7 @@ export async function GET(
 
   const { id } = await params;
   const machine = await getMachine(id);
-  if (!machine) {
+  if (!machine || !canAccessMachine(auth.user, machine)) {
     return error("Machine not found", 404);
   }
 

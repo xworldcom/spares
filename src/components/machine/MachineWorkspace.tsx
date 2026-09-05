@@ -16,6 +16,7 @@ import { viewerNeedsReset } from "@/components/viewer/assemblyView";
 import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
+import { siteLabel } from "@/lib/access";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#1c232c";
@@ -445,6 +446,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">
           {machine.name}
         </h1>
+        {machine.company && machine.siteName ? (
+          <p className="spares-muted mt-1 truncate text-sm">
+            {siteLabel({ company: machine.company, name: machine.siteName })}
+          </p>
+        ) : null}
       </div>
       <h1 className="sr-only">{machine.name}</h1>
 

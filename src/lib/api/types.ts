@@ -10,6 +10,7 @@ export type {
   Quote,
   QuoteItem,
   Role,
+  Site,
   UnmatchedPart,
 } from "@/types";
 
@@ -19,6 +20,10 @@ export type AuthUserResponse = {
 
 export type CustomersListResponse = {
   customers: PublicUser[];
+};
+
+export type SitesListResponse = {
+  sites: Site[];
 };
 
 export type MachinesListResponse = {

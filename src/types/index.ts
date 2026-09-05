@@ -1,9 +1,17 @@
 export type Role = "staff" | "customer";
 
+export type Site = {
+  id: string;
+  company: string;
+  name: string;
+};
+
 export type PublicUser = {
   id: string;
   email: string;
   role: Role;
+  siteIds?: string[];
+  sites?: Site[];
 };
 
 export type Part = {
@@ -24,6 +32,9 @@ export type UnmatchedPart = {
 export type MachineSummary = {
   id: string;
   name: string;
+  siteId?: string;
+  company?: string;
+  siteName?: string;
 };
 
 export type MachineDetail = {
@@ -32,6 +43,9 @@ export type MachineDetail = {
   fileUrl: string;
   parts: Part[];
   unmatched?: UnmatchedPart[];
+  siteId?: string;
+  company?: string;
+  siteName?: string;
 };
 
 export type QuoteStatus =

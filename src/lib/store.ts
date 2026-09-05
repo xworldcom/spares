@@ -10,12 +10,14 @@ import {
   statusActivityText,
 } from "./quotes.ts";
 import { missingFixtureMachines } from "./seed-fixtures.ts";
+import { toPublicUser } from "./access.ts";
 import type {
   Part,
   QuoteActivity,
   QuoteItem,
   QuoteRecord,
   Role,
+  Site,
   UnmatchedPart,
 } from "../types/index.ts";
 
@@ -48,11 +50,29 @@ const EXTRA_SEED_CUSTOMERS = [
   },
 ] as const;
 
+export const SEED_SITES: Site[] = [
+  { id: "site-cargill-ftw", company: "Cargill", name: "Fort Worth" },
+  { id: "site-acme-dayton", company: "Acme", name: "Dayton" },
+  { id: "site-demo-plant1", company: "Demo", name: "Plant 1" },
+];
+
+const SEED_USER_SITES: Record<string, string[]> = {
+  "user-customer": ["site-cargill-ftw"],
+  "user-acme": ["site-acme-dayton"],
+  "user-mill": ["site-demo-plant1"],
+};
+
+const SEED_MACHINE_SITES: Record<string, string> = {
+  palletizer: "site-cargill-ftw",
+  "hardware-fixture": "site-acme-dayton",
+};
+
 export type StoredUser = {
   id: string;
   email: string;
   passwordHash: string;
   role: Role;
+  siteIds?: string[];
 };
 
 export type StoredMachine = {
@@ -63,6 +83,7 @@ export type StoredMachine = {
   parts: Part[];
   unmatched: UnmatchedPart[];
   createdAt: string;
+  siteId?: string;
 };
 
 export type StoredQuote = QuoteRecord;
@@ -86,6 +107,7 @@ type Database = {
   machines: StoredMachine[];
   quotes: StoredQuote[];
   bugReports: StoredBugReport[];
+  sites: Site[];
 };
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -142,7 +164,7 @@ async function seedDatabase(): Promise<Database> {
     await seedUser(SEED_CUSTOMER),
     ...(await Promise.all(EXTRA_SEED_CUSTOMERS.map((row) => seedUser(row)))),
   ];
-  return { users, machines: [], quotes: [], bugReports: [] };
+  return { users, machines: [], quotes: [], bugReports: [], sites: [...SEED_SITES] };
 }
 
 async function ensureExtraCustomers(db: Database): Promise<Database> {
@@ -188,6 +210,36 @@ function stabilizeSeedUsers(db: Database): Database {
   return { ...db, users, quotes };
 }
 
+function ensureSites(db: Database): Database {
+  const have = new Map((db.sites ?? []).map((site) => [site.id, site]));
+  for (const site of SEED_SITES) {
+    if (!have.has(site.id)) {
+      have.set(site.id, site);
+    }
+  }
+  const sites = [...have.values()].sort((a, b) =>
+    `${a.company} ${a.name}`.localeCompare(`${b.company} ${b.name}`),
+  );
+  const users = db.users.map((user) => {
+    if (user.role !== "customer") {
+      return user;
+    }
+    if (user.siteIds && user.siteIds.length > 0) {
+      return user;
+    }
+    const seeded = SEED_USER_SITES[user.id];
+    return seeded ? { ...user, siteIds: seeded } : user;
+  });
+  const machines = db.machines.map((machine) => {
+    if (machine.siteId) {
+      return machine;
+    }
+    const seeded = SEED_MACHINE_SITES[machine.id];
+    return seeded ? { ...machine, siteId: seeded } : machine;
+  });
+  return { ...db, sites, users, machines };
+}
+
 async function withFixtureMachines(db: Database): Promise<Database> {
   await ensureDirs();
   const extras = await missingFixtureMachines(db.machines, filesDir());
@@ -201,6 +253,7 @@ function catalogChanged(before: Database, after: Database) {
   return (
     after.machines.length !== before.machines.length ||
     after.users.length !== before.users.length ||
+    (after.sites?.length ?? 0) !== (before.sites?.length ?? 0) ||
     after.users.some((user, index) => user.id !== before.users[index]?.id)
   );
 }
@@ -211,8 +264,10 @@ function catalogChanged(before: Database, after: Database) {
  */
 async function ensureCatalog(): Promise<Database> {
   const db = await readDatabase();
-  const next = await withFixtureMachines(
-    await ensureExtraCustomers(stabilizeSeedUsers(db)),
+  const next = ensureSites(
+    await withFixtureMachines(
+      await ensureExtraCustomers(stabilizeSeedUsers(db)),
+    ),
   );
   if (catalogChanged(db, next)) {
     await writeDatabase(next);
@@ -239,14 +294,17 @@ async function readDatabase(): Promise<Database> {
     const quotes = assignMissingQuoteNumbers(
       (parsed.quotes ?? []).map((quote) => normalizeStoredQuote(quote)),
     );
-    const next = await withFixtureMachines(
-      await ensureExtraCustomers(
-        stabilizeSeedUsers({
-          users: parsed.users ?? [],
-          machines: parsed.machines ?? [],
-          quotes,
-          bugReports: parsed.bugReports ?? [],
-        }),
+    const next = ensureSites(
+      await withFixtureMachines(
+        await ensureExtraCustomers(
+          stabilizeSeedUsers({
+            users: parsed.users ?? [],
+            machines: parsed.machines ?? [],
+            quotes,
+            bugReports: parsed.bugReports ?? [],
+            sites: parsed.sites ?? [],
+          }),
+        ),
       ),
     );
     const numbersAssigned = (parsed.quotes ?? []).some(
@@ -301,26 +359,111 @@ export function listCustomers() {
     const db = await ensureCatalog();
     return db.users
       .filter((user) => user.role === "customer")
-      .map((user) => ({ id: user.id, email: user.email, role: user.role as Role }))
+      .map((user) => toPublicUser(user, db.sites ?? []))
       .sort((a, b) => a.email.localeCompare(b.email));
   });
 }
 
-export function createCustomer(email: string, passwordHash: string) {
+export function createCustomer(
+  email: string,
+  passwordHash: string,
+  siteIds: string[] = [],
+) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
     const db = await readDatabase();
     if (db.users.some((user) => user.email === normalized)) {
       return { error: "email-taken" as const };
     }
+    const known = new Set((db.sites ?? []).map((site) => site.id));
     const user: StoredUser = {
       id: randomUUID(),
       email: normalized,
       passwordHash,
       role: "customer",
+      siteIds: siteIds.filter((id) => known.has(id)),
     };
     await writeDatabase({ ...db, users: [...db.users, user] });
     return { user };
+  });
+}
+
+export function listSites() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return [...(db.sites ?? [])];
+  });
+}
+
+export function createSite(company: string, name: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const nextCompany = company.trim();
+    const nextName = name.trim();
+    if (!nextCompany || !nextName) {
+      return { error: "invalid" as const };
+    }
+    const exists = (db.sites ?? []).some(
+      (site) =>
+        site.company.toLowerCase() === nextCompany.toLowerCase() &&
+        site.name.toLowerCase() === nextName.toLowerCase(),
+    );
+    if (exists) {
+      return { error: "taken" as const };
+    }
+    const site: Site = {
+      id: `site-${randomUUID()}`,
+      company: nextCompany,
+      name: nextName,
+    };
+    const sites = [...(db.sites ?? []), site].sort((a, b) =>
+      `${a.company} ${a.name}`.localeCompare(`${b.company} ${b.name}`),
+    );
+    await writeDatabase({ ...db, sites });
+    return { site };
+  });
+}
+
+export function updateCustomerSites(userId: string, siteIds: string[]) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const index = db.users.findIndex((user) => user.id === userId);
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const user = db.users[index];
+    if (user.role !== "customer") {
+      return { error: "not-customer" as const };
+    }
+    const known = new Set((db.sites ?? []).map((site) => site.id));
+    const next = {
+      ...user,
+      siteIds: [...new Set(siteIds.filter((id) => known.has(id)))],
+    };
+    const users = db.users.slice();
+    users[index] = next;
+    await writeDatabase({ ...db, users });
+    return { user: next };
+  });
+}
+
+export function updateMachineSite(machineId: string, siteId: string | null) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const index = db.machines.findIndex((machine) => machine.id === machineId);
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    if (siteId && !(db.sites ?? []).some((site) => site.id === siteId)) {
+      return { error: "bad-site" as const };
+    }
+    const machines = db.machines.slice();
+    const current = machines[index];
+    machines[index] = siteId
+      ? { ...current, siteId }
+      : { ...current, siteId: undefined };
+    await writeDatabase({ ...db, machines });
+    return { machine: machines[index] };
   });
 }
 
@@ -330,7 +473,11 @@ export function listMachines(options?: { heal?: boolean }) {
       memory = null;
     }
     const db = await ensureCatalog();
-    return db.machines.map((machine) => ({ id: machine.id, name: machine.name }));
+    return db.machines.map((machine) => ({
+      id: machine.id,
+      name: machine.name,
+      siteId: machine.siteId,
+    }));
   });
 }
 
@@ -348,7 +495,7 @@ export function resetStoreMemoryForTests() {
 
 /** Test helper: simulate a warm instance that has users but no machines. */
 export function seedEmptyMachineCatalogForTests(users: StoredUser[]) {
-  memory = { users, machines: [], quotes: [], bugReports: [] };
+  memory = { users, machines: [], quotes: [], bugReports: [], sites: [] };
 }
 
 export function createMachine(input: {
@@ -357,6 +504,7 @@ export function createMachine(input: {
   originalFileName: string;
   parts: Part[];
   unmatched: UnmatchedPart[];
+  siteId?: string;
 }) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -368,6 +516,7 @@ export function createMachine(input: {
       parts: input.parts,
       unmatched: input.unmatched,
       createdAt: new Date().toISOString(),
+      siteId: input.siteId,
     };
     await writeDatabase({ ...db, machines: [...db.machines, machine] });
     return machine;

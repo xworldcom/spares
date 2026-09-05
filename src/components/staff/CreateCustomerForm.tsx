@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { createCustomer } from "@/lib/api/auth";
+import { useEffect, useState } from "react";
+import { createCustomer, listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
+import type { Site } from "@/lib/api/types";
+import { siteLabel } from "@/lib/access";
 
 export function CreateCustomerForm({
   onCreated,
@@ -11,9 +13,25 @@ export function CreateCustomerForm({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [siteId, setSiteId] = useState("");
+  const [sites, setSites] = useState<Site[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdEmail, setCreatedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listSites()
+      .then((next) => {
+        if (!cancelled) {
+          setSites(next);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,7 +39,11 @@ export function CreateCustomerForm({
     setCreatedEmail(null);
     setSubmitting(true);
     try {
-      const user = await createCustomer(email.trim(), password);
+      const user = await createCustomer(
+        email.trim(),
+        password,
+        siteId ? [siteId] : [],
+      );
       setCreatedEmail(user.email);
       setEmail("");
       setPassword("");
@@ -69,6 +91,27 @@ export function CreateCustomerForm({
           onChange={(event) => setPassword(event.target.value)}
           className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
         />
+      </div>
+      <div>
+        <label htmlFor="customer-site" className="block text-sm font-medium">
+          Plant
+        </label>
+        <select
+          id="customer-site"
+          value={siteId}
+          onChange={(event) => setSiteId(event.target.value)}
+          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
+        >
+          <option value="">Choose a plant</option>
+          {sites.map((site) => (
+            <option key={site.id} value={site.id}>
+              {siteLabel(site)}
+            </option>
+          ))}
+        </select>
+        <p className="spares-muted mt-1.5 text-sm">
+          They will only see machines assigned to this plant.
+        </p>
       </div>
       {error ? (
         <p className="text-sm text-red-700" role="alert">

@@ -1,6 +1,7 @@
 import { requireRole, requireUser } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
+import { canAccessMachine } from "@/lib/access";
 import { createQuote, getMachine, listMachines, listQuotes } from "@/lib/store";
 import type { QuoteItem } from "@/types";
 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     typeof body.note === "string" && body.note.trim() ? body.note.trim() : undefined;
 
   const machine = await getMachine(machineId);
-  if (!machine) {
+  if (!machine || !canAccessMachine(auth.user, machine)) {
     return error("Machine not found", 404);
   }
 

@@ -39,6 +39,9 @@ export function normalizeMachine(
       name: machine.name,
       fileUrl: machineFileSrc(machine.id),
       parts,
+      siteId: machine.siteId,
+      company: machine.company,
+      siteName: machine.siteName,
     };
   }
 
@@ -47,6 +50,9 @@ export function normalizeMachine(
     name: machine.name,
     fileUrl: machineFileSrc(machine.id),
     parts,
+    siteId: machine.siteId,
+    company: machine.company,
+    siteName: machine.siteName,
   };
   if (Array.isArray(machine.unmatched)) {
     detail.unmatched = machine.unmatched;
@@ -70,15 +76,27 @@ export async function getMachine(
   return normalizeMachine(data, role);
 }
 
+export async function updateMachineSite(machineId: string, siteId: string | null) {
+  const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ siteId }),
+  });
+  return normalizeMachine(data, "staff");
+}
+
 export async function uploadMachinePack(input: {
   name: string;
   model: File;
   partsList: File;
+  siteId?: string;
 }): Promise<MachineDetail> {
   const form = new FormData();
   form.set("name", input.name);
   form.set("model", input.model);
   form.set("partsList", input.partsList);
+  if (input.siteId) {
+    form.set("siteId", input.siteId);
+  }
 
   const data = await apiFetch<MachineDetail>("/api/machines", {
     method: "POST",

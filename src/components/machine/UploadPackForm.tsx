@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
+import { siteLabel } from "@/lib/access";
+import { listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import { uploadMachinePack } from "@/lib/api/machines";
-import type { MachineDetail, PartsListRow } from "@/lib/api/types";
+import type { MachineDetail, PartsListRow, Site } from "@/lib/api/types";
 import { emptyPartsRow, partsListToJsonFile } from "@/lib/parts-list";
 
 type ListMode = "rows" | "file";
@@ -20,6 +22,22 @@ export function UploadPackForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MachineDetail | null>(null);
+  const [siteId, setSiteId] = useState("");
+  const [sites, setSites] = useState<Site[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listSites()
+      .then((next) => {
+        if (!cancelled) {
+          setSites(next);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validRows = useMemo(
     () =>
@@ -82,6 +100,7 @@ export function UploadPackForm() {
         name: name.trim(),
         model,
         partsList,
+        siteId: siteId || undefined,
       });
       setResult(machine);
     } catch (cause) {
@@ -115,6 +134,25 @@ export function UploadPackForm() {
             className={fieldClass}
             placeholder="Press 4 — Line 2"
           />
+        </div>
+
+        <div>
+          <label htmlFor="machine-site" className="block text-sm font-medium">
+            Plant
+          </label>
+          <select
+            id="machine-site"
+            value={siteId}
+            onChange={(event) => setSiteId(event.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Unassigned — staff only</option>
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {siteLabel(site)}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

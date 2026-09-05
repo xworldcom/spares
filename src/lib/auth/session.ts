@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import type { PublicUser, Role } from "@/types";
 import { error } from "@/lib/http";
-import { findUserByEmail, findUserById } from "@/lib/store";
+import { toPublicUser } from "@/lib/access";
+import { findUserByEmail, findUserById, listSites } from "@/lib/store";
 import {
   SESSION_COOKIE,
   SESSION_MS,
@@ -49,7 +50,8 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     await setSessionCookie(user.id, user.email);
   }
 
-  return { id: user.id, email: user.email, role: user.role };
+  const sites = user.role === "customer" ? await listSites() : [];
+  return toPublicUser(user, sites);
 }
 
 export async function requireUser() {

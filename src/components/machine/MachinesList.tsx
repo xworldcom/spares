@@ -6,9 +6,11 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
-import { listMachines } from "@/lib/api/machines";
+import { listSites } from "@/lib/api/auth";
+import { listMachines, updateMachineSite } from "@/lib/api/machines";
 import { errorMessage, isUnauthorized } from "@/lib/api/errors";
-import type { MachineSummary } from "@/lib/api/types";
+import type { MachineSummary, Site } from "@/lib/api/types";
+import { siteLabel } from "@/lib/access";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -23,17 +25,22 @@ async function loadMachines(heal: boolean): Promise<MachineSummary[]> {
 export function MachinesList() {
   const { user, refresh } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    loadMachines(false)
-      .then((next) => {
+    const sitesLoad =
+      user?.role === "staff" ? listSites().catch(() => [] as Site[]) : Promise.resolve([] as Site[]);
+    Promise.all([loadMachines(false), sitesLoad])
+      .then(([next, nextSites]) => {
         if (cancelled) {
           return;
         }
         setMachines(next);
+        setSites(nextSites);
         setError(null);
         setLoading(false);
       })
@@ -47,7 +54,30 @@ export function MachinesList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user?.role]);
+
+  async function onAssign(machineId: string, siteId: string) {
+    setSavingId(machineId);
+    try {
+      const next = await updateMachineSite(machineId, siteId || null);
+      setMachines((current) =>
+        current.map((row) =>
+          row.id === machineId
+            ? {
+                ...row,
+                siteId: next.siteId,
+                company: next.company,
+                siteName: next.siteName,
+              }
+            : row,
+        ),
+      );
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not update that plant."));
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   async function retry() {
     setLoading(true);
@@ -133,17 +163,45 @@ export function MachinesList() {
     <ul className="divide-y divide-neutral-200/80 overflow-hidden rounded-[24px] bg-white">
       {machines.map((machine) => (
         <li key={machine.id}>
-          <Link
-            href={`/machines/${machine.id}`}
-            className="flex min-h-16 items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50"
-          >
-            <span className="min-w-0 truncate text-[17px] font-medium tracking-tight text-neutral-950">
-              {machine.name}
-            </span>
-            <span className="text-lg text-neutral-300" aria-hidden="true">
-              ›
-            </span>
-          </Link>
+          <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              href={`/machines/${machine.id}`}
+              className="min-w-0 flex-1"
+            >
+              <span className="block truncate text-[17px] font-medium tracking-tight text-neutral-950">
+                {machine.name}
+              </span>
+              <span className="spares-muted mt-0.5 block truncate text-[13px]">
+                {machine.company && machine.siteName
+                  ? siteLabel({ company: machine.company, name: machine.siteName })
+                  : user?.role === "staff"
+                    ? "No plant — customers cannot see this"
+                    : ""}
+              </span>
+            </Link>
+            {user?.role === "staff" ? (
+              <select
+                value={machine.siteId ?? ""}
+                disabled={savingId === machine.id}
+                onChange={(event) => {
+                  void onAssign(machine.id, event.target.value);
+                }}
+                className="h-11 w-full max-w-xs shrink-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[15px] outline-none sm:w-56"
+                aria-label={`Plant for ${machine.name}`}
+              >
+                <option value="">No plant</option>
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {siteLabel(site)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-lg text-neutral-300" aria-hidden="true">
+                ›
+              </span>
+            )}
+          </div>
         </li>
       ))}
     </ul>
