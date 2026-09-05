@@ -8,8 +8,8 @@ export default function UploadPackPage() {
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Upload pack</h1>
           <p className="spares-muted mt-1 text-sm">
-            Name the machine, attach a GLB/GLTF, and provide an ETO-shaped
-            parts list (part number, name, qty). Join errors stay visible.
+            Drop a GLB and a BOM. We join part numbers to meshes and keep
+            mismatches visible.
           </p>
         </div>
         <UploadPackForm />

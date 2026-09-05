@@ -1,6 +1,6 @@
 import type { Part, PartsListRow, UnmatchedPart } from "@/types";
 
-function parseCsv(text: string): string[][] {
+function parseDelimited(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -21,7 +21,7 @@ function parseCsv(text: string): string[][] {
       }
     } else if (char === '"') {
       inQuotes = true;
-    } else if (char === ",") {
+    } else if (char === delimiter) {
       row.push(field);
       field = "";
     } else if (char === "\n" || char === "\r") {
@@ -49,12 +49,25 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
+function detectDelimiter(headerLine: string) {
+  const commas = (headerLine.match(/,/g) ?? []).length;
+  const tabs = (headerLine.match(/\t/g) ?? []).length;
+  const semis = (headerLine.match(/;/g) ?? []).length;
+  if (tabs > commas && tabs >= semis) {
+    return "\t";
+  }
+  if (semis > commas && semis >= tabs) {
+    return ";";
+  }
+  return ",";
+}
+
 function parseQty(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
     return Math.floor(value);
   }
   if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value.trim());
+    const parsed = Number(value.trim().replace(/,/g, ""));
     if (Number.isFinite(parsed) && parsed >= 1) {
       return Math.floor(parsed);
     }
@@ -62,21 +75,103 @@ function parseQty(value: unknown): number {
   return 1;
 }
 
+function normalizeHeader(value: string) {
+  return value.trim().toLowerCase().replace(/[\s_\-/]+/g, "");
+}
+
+const PART_NUMBER_HEADERS = new Set([
+  "partnumber",
+  "partno",
+  "part#",
+  "pn",
+  "itemnumber",
+  "itemno",
+  "item",
+  "number",
+  "material",
+  "sku",
+  "id",
+]);
+
+const NAME_HEADERS = new Set([
+  "name",
+  "description",
+  "desc",
+  "title",
+  "partname",
+  "itemname",
+  "component",
+]);
+
+const MESH_HEADERS = new Set([
+  "meshname",
+  "mesh",
+  "node",
+  "object",
+  "objectname",
+  "cadname",
+  "filename",
+]);
+
+const QTY_HEADERS = new Set(["qty", "quantity", "qty.", "count", "q", "bomqty"]);
+
+function firstString(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+  return "";
+}
+
 function asRow(value: unknown): PartsListRow | null {
   if (!value || typeof value !== "object") {
     return null;
   }
   const record = value as Record<string, unknown>;
-  const partNumber = typeof record.partNumber === "string" ? record.partNumber.trim() : "";
-  const name = typeof record.name === "string" ? record.name.trim() : "";
+  const normalized: Record<string, unknown> = {};
+  for (const [key, cell] of Object.entries(record)) {
+    normalized[normalizeHeader(key)] = cell;
+  }
+
+  const partNumber =
+    firstString(normalized, [...PART_NUMBER_HEADERS]) ||
+    (typeof record.partNumber === "string" ? record.partNumber.trim() : "");
+  const name =
+    firstString(normalized, [...NAME_HEADERS]) ||
+    (typeof record.name === "string" ? record.name.trim() : "");
   const meshName =
-    typeof record.meshName === "string" && record.meshName.trim()
-      ? record.meshName.trim()
-      : undefined;
+    firstString(normalized, [...MESH_HEADERS]) || undefined;
+
   if (!partNumber || !name) {
     return null;
   }
-  return { partNumber, name, meshName, qty: parseQty(record.qty) };
+  const qtySource =
+    normalized.qty ??
+    normalized.quantity ??
+    normalized.count ??
+    normalized.bomqty ??
+    record.qty;
+  return { partNumber, name, meshName, qty: parseQty(qtySource) };
+}
+
+function rowsFromUnknown(parsed: unknown): PartsListRow[] {
+  if (Array.isArray(parsed)) {
+    return parsed.map(asRow).filter((row): row is PartsListRow => row !== null);
+  }
+  if (parsed && typeof parsed === "object") {
+    const record = parsed as Record<string, unknown>;
+    for (const key of ["parts", "items", "rows", "bom"]) {
+      if (Array.isArray(record[key])) {
+        return rowsFromUnknown(record[key]);
+      }
+    }
+  }
+  return [];
 }
 
 export function parsePartsList(text: string, filename: string): PartsListRow[] {
@@ -86,33 +181,37 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
   }
 
   const lower = filename.toLowerCase();
-  const looksJson = lower.endsWith(".json") || trimmed.startsWith("[");
+  const looksJson =
+    lower.endsWith(".json") || trimmed.startsWith("[") || trimmed.startsWith("{");
   if (looksJson) {
     const parsed = JSON.parse(trimmed) as unknown;
-    if (!Array.isArray(parsed)) {
-      throw new Error("Parts list JSON must be an array");
-    }
-    const rows = parsed.map(asRow).filter((row): row is PartsListRow => row !== null);
+    const rows = rowsFromUnknown(parsed);
     if (rows.length === 0) {
       throw new Error("Parts list has no valid rows");
     }
     return rows;
   }
 
-  const table = parseCsv(trimmed);
+  const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? "";
+  const delimiter = lower.endsWith(".tsv") ? "\t" : detectDelimiter(firstLine);
+  const table = parseDelimited(trimmed, delimiter);
   const header = table[0]?.map((cell) => cell.trim());
   if (!header) {
-    throw new Error("Parts list CSV is missing a header row");
+    throw new Error("Parts list is missing a header row");
   }
 
   const index = {
-    partNumber: header.findIndex((cell) => cell.toLowerCase() === "partnumber"),
-    name: header.findIndex((cell) => cell.toLowerCase() === "name"),
-    meshName: header.findIndex((cell) => cell.toLowerCase() === "meshname"),
-    qty: header.findIndex((cell) => cell.toLowerCase() === "qty"),
+    partNumber: header.findIndex((cell) =>
+      PART_NUMBER_HEADERS.has(normalizeHeader(cell)),
+    ),
+    name: header.findIndex((cell) => NAME_HEADERS.has(normalizeHeader(cell))),
+    meshName: header.findIndex((cell) => MESH_HEADERS.has(normalizeHeader(cell))),
+    qty: header.findIndex((cell) => QTY_HEADERS.has(normalizeHeader(cell))),
   };
   if (index.partNumber < 0 || index.name < 0) {
-    throw new Error("Parts list CSV must include partNumber and name headers");
+    throw new Error(
+      "Parts list needs a part number column and a name/description column",
+    );
   }
 
   const rows: PartsListRow[] = [];

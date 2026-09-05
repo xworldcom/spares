@@ -27,6 +27,32 @@ describe("parsePartsList", () => {
       { partNumber: "A-2", name: "Bolt", meshName: undefined, qty: 12 },
     ]);
   });
+
+  it("accepts shop-export headers, TSV, and a JSON { parts } wrapper", () => {
+    const csv = parsePartsList(
+      "Part Number,Description,Quantity,Mesh Name\nPN-9,Guard,2,GuardMesh\n",
+      "bom.csv",
+    );
+    assert.deepEqual(csv, [
+      { partNumber: "PN-9", name: "Guard", meshName: "GuardMesh", qty: 2 },
+    ]);
+
+    const tsv = parsePartsList(
+      "Item Number\tName\tQty\nA-4\tArm\t3\n",
+      "bom.tsv",
+    );
+    assert.deepEqual(tsv, [
+      { partNumber: "A-4", name: "Arm", meshName: undefined, qty: 3 },
+    ]);
+
+    const wrapped = parsePartsList(
+      JSON.stringify({ parts: [{ pn: "B-1", description: "Bracket", quantity: 8 }] }),
+      "bom.json",
+    );
+    assert.equal(wrapped[0]?.partNumber, "B-1");
+    assert.equal(wrapped[0]?.name, "Bracket");
+    assert.equal(wrapped[0]?.qty, 8);
+  });
 });
 
 describe("joinParts", () => {

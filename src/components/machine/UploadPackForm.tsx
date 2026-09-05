@@ -9,15 +9,76 @@ import { errorMessage } from "@/lib/api/errors";
 import { uploadMachinePack } from "@/lib/api/machines";
 import type { MachineDetail, PartsListRow, Site } from "@/lib/api/types";
 import { emptyPartsRow, partsListToJsonFile } from "@/lib/parts-list";
+import { parsePartsList } from "@/lib/parts";
 
-type ListMode = "rows" | "file";
+type ListMode = "file" | "rows";
+
+function FileDrop({
+  id,
+  label,
+  hint,
+  accept,
+  file,
+  onFile,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  accept: string;
+  file: File | null;
+  onFile: (file: File | null) => void;
+}) {
+  const [over, setOver] = useState(false);
+
+  return (
+    <label
+      htmlFor={id}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setOver(false);
+        const next = event.dataTransfer.files[0];
+        if (next) {
+          onFile(next);
+        }
+      }}
+      className={`block cursor-pointer rounded-[22px] px-4 py-5 ring-1 ring-black/8 ${
+        over ? "bg-[#eceef2]" : "bg-[#f4f5f7]"
+      }`}
+    >
+      <span className="block text-sm font-medium text-neutral-950">{label}</span>
+      <span className="spares-muted mt-1 block text-sm leading-relaxed">{hint}</span>
+      <span className="mt-3 inline-flex h-11 items-center rounded-full bg-[#0b0d10] px-4 text-sm font-semibold text-[#fff]">
+        {file ? "Replace file" : "Choose file"}
+      </span>
+      {file ? (
+        <span className="mt-2 block truncate font-mono text-[13px] text-neutral-700">
+          {file.name}
+        </span>
+      ) : null}
+      <input
+        id={id}
+        type="file"
+        accept={accept}
+        className="sr-only"
+        onChange={(event) => onFile(event.target.files?.[0] ?? null)}
+      />
+    </label>
+  );
+}
 
 export function UploadPackForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [model, setModel] = useState<File | null>(null);
-  const [listMode, setListMode] = useState<ListMode>("rows");
+  const [listMode, setListMode] = useState<ListMode>("file");
   const [partsListFile, setPartsListFile] = useState<File | null>(null);
+  const [previewRows, setPreviewRows] = useState<PartsListRow[]>([]);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [rows, setRows] = useState<PartsListRow[]>([emptyPartsRow()]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +99,37 @@ export function UploadPackForm() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!partsListFile) {
+      setPreviewRows([]);
+      setPreviewError(null);
+      return;
+    }
+    let cancelled = false;
+    partsListFile
+      .text()
+      .then((text) => {
+        if (cancelled) {
+          return;
+        }
+        const parsed = parsePartsList(text, partsListFile.name);
+        setPreviewRows(parsed);
+        setPreviewError(null);
+      })
+      .catch((cause) => {
+        if (cancelled) {
+          return;
+        }
+        setPreviewRows([]);
+        setPreviewError(
+          cause instanceof Error ? cause.message : "Could not read that parts list.",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [partsListFile]);
 
   const validRows = useMemo(
     () =>
@@ -61,11 +153,11 @@ export function UploadPackForm() {
     setResult(null);
 
     if (!name.trim()) {
-      setError("Machine name is required.");
+      setError("Name the machine.");
       return;
     }
     if (!model) {
-      setError("A GLB or GLTF 3D file is required.");
+      setError("Add a GLB or GLTF model.");
       return;
     }
 
@@ -73,12 +165,16 @@ export function UploadPackForm() {
     if (listMode === "file") {
       partsList = partsListFile;
       if (!partsList) {
-        setError("Upload a parts list CSV or JSON file.");
+        setError("Add a parts list file.");
+        return;
+      }
+      if (previewError) {
+        setError(previewError);
         return;
       }
     } else {
       if (validRows.length === 0) {
-        setError("Add at least one parts-list row with a part number and name.");
+        setError("Add at least one part number and name.");
         return;
       }
       partsList = partsListToJsonFile(
@@ -119,124 +215,144 @@ export function UploadPackForm() {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="space-y-5 rounded-[24px] bg-white p-5"
+        className="space-y-4"
       >
-        <div>
-          <label htmlFor="machine-name" className="block text-sm font-medium">
-            Machine name
-          </label>
-          <input
-            id="machine-name"
-            name="name"
-            required
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={fieldClass}
-            placeholder="Press 4 — Line 2"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="machine-site" className="block text-sm font-medium">
-            Plant
-          </label>
-          <select
-            id="machine-site"
-            value={siteId}
-            onChange={(event) => setSiteId(event.target.value)}
-            className={fieldClass}
-          >
-            <option value="">Unassigned — staff only</option>
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {siteLabel(site)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="model-file" className="block text-sm font-medium">
-            3D model (GLB or GLTF)
-          </label>
-          <input
-            id="model-file"
-            name="model"
-            type="file"
-            accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
-            required
-            onChange={(event) => setModel(event.target.files?.[0] ?? null)}
-            className="mt-1.5 block w-full text-[15px] file:mr-3 file:h-11 file:rounded-full file:border-0 file:bg-[#0b0d10] file:px-4 file:text-sm file:font-semibold file:text-[#fff]"
-          />
-          <p className="spares-muted mt-2 text-sm leading-relaxed">
-            Browser-ready GLB or GLTF. Sample packs live under
-            public/placeholders.
+        <section className="space-y-4 rounded-[24px] bg-white p-5">
+          <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+            1 · Where it lives
           </p>
-        </div>
+          <div>
+            <label htmlFor="machine-name" className="block text-sm font-medium">
+              Machine name
+            </label>
+            <input
+              id="machine-name"
+              name="name"
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className={fieldClass}
+              placeholder="Palletizer 4"
+            />
+          </div>
+          <div>
+            <label htmlFor="machine-site" className="block text-sm font-medium">
+              Plant
+            </label>
+            <select
+              id="machine-site"
+              value={siteId}
+              onChange={(event) => setSiteId(event.target.value)}
+              className={fieldClass}
+            >
+              <option value="">Unassigned — staff only</option>
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {siteLabel(site)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
 
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">Parts list</legend>
+        <section className="space-y-3 rounded-[24px] bg-white p-5">
+          <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+            2 · 3D model
+          </p>
+          <FileDrop
+            id="model-file"
+            label="GLB or GLTF"
+            hint="Export from SolidWorks, Inventor, Fusion, or Blender. Native CAD files (STEP, SLDASM) cannot run in the browser."
+            accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+            file={model}
+            onFile={setModel}
+          />
+        </section>
+
+        <section className="space-y-3 rounded-[24px] bg-white p-5">
+          <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+            3 · Parts list
+          </p>
           <p className="spares-muted text-sm leading-relaxed">
-            Join key is part number. Include qty so it reads like a BOM.
+            CSV, TSV, or JSON from the BOM. Columns can be Part Number /
+            Description / Qty — we join those names to meshes in the model.
           </p>
           <div className="grid grid-cols-2 gap-2">
-            <label
-              className={`inline-flex h-11 items-center justify-center rounded-full text-sm font-medium ${
-                listMode === "rows" ? "btn-primary" : "btn-soft"
-              }`}
-            >
-              <input
-                type="radio"
-                name="list-mode"
-                checked={listMode === "rows"}
-                onChange={() => setListMode("rows")}
-                className="sr-only"
-              />
-              Enter rows
-            </label>
-            <label
+            <button
+              type="button"
+              onClick={() => setListMode("file")}
               className={`inline-flex h-11 items-center justify-center rounded-full text-sm font-medium ${
                 listMode === "file" ? "btn-primary" : "btn-soft"
               }`}
             >
-              <input
-                type="radio"
-                name="list-mode"
-                checked={listMode === "file"}
-                onChange={() => setListMode("file")}
-                className="sr-only"
-              />
               Upload file
-            </label>
+            </button>
+            <button
+              type="button"
+              onClick={() => setListMode("rows")}
+              className={`inline-flex h-11 items-center justify-center rounded-full text-sm font-medium ${
+                listMode === "rows" ? "btn-primary" : "btn-soft"
+              }`}
+            >
+              Type rows
+            </button>
           </div>
 
           {listMode === "file" ? (
-            <div>
-              <label htmlFor="parts-file" className="block text-sm font-medium">
-                Parts list file
-              </label>
-              <input
+            <div className="space-y-3">
+              <FileDrop
                 id="parts-file"
-                name="partsList"
-                type="file"
-                accept=".csv,.json,text/csv,application/json"
-                onChange={(event) =>
-                  setPartsListFile(event.target.files?.[0] ?? null)
-                }
-                className="mt-1.5 block w-full text-[15px] file:mr-3 file:h-11 file:rounded-full file:border-0 file:bg-[#eceef2] file:px-4 file:text-sm file:font-medium"
+                label="BOM or parts list"
+                hint="CSV, TSV, or JSON. Headers like Part Number, Description, Quantity, Mesh Name all work."
+                accept=".csv,.tsv,.txt,.json,text/csv,text/tab-separated-values,application/json"
+                file={partsListFile}
+                onFile={setPartsListFile}
               />
-              <p className="spares-muted mt-2 text-sm">
-                CSV or JSON: partNumber, name, qty, meshName.
-              </p>
+              {previewError ? (
+                <p className="text-sm text-red-700" role="alert">
+                  {previewError}
+                </p>
+              ) : null}
+              {previewRows.length > 0 ? (
+                <div className="overflow-x-auto rounded-[18px] bg-[#f4f5f7] px-3 py-3">
+                  <p className="text-[13px] font-medium text-neutral-800">
+                    {previewRows.length} part
+                    {previewRows.length === 1 ? "" : "s"} ready to join
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {previewRows.slice(0, 6).map((row) => (
+                      <li
+                        key={`${row.partNumber}-${row.name}`}
+                        className="flex justify-between gap-3 text-[13px]"
+                      >
+                        <span className="min-w-0 truncate">
+                          <span className="font-mono text-neutral-700">
+                            {row.partNumber}
+                          </span>
+                          <span className="text-neutral-500"> · {row.name}</span>
+                        </span>
+                        <span className="shrink-0 tabular-nums text-neutral-500">
+                          ×{row.qty}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {previewRows.length > 6 ? (
+                    <p className="spares-muted mt-2 text-[12px]">
+                      +{previewRows.length - 6} more
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="space-y-3">
               {rows.map((row, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-1 gap-2 rounded-[20px] bg-[#f4f5f7] p-3"
+                  className="grid grid-cols-2 gap-2 rounded-[20px] bg-[#f4f5f7] p-3"
                 >
-                  <label className="block text-xs font-medium text-neutral-500">
+                  <label className="col-span-2 block text-xs font-medium text-neutral-500">
                     Part number
                     <input
                       aria-label={`Part number ${index + 1}`}
@@ -247,7 +363,7 @@ export function UploadPackForm() {
                       className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 font-mono text-[15px] outline-none"
                     />
                   </label>
-                  <label className="block text-xs font-medium text-neutral-500">
+                  <label className="col-span-2 block text-xs font-medium text-neutral-500">
                     Name
                     <input
                       aria-label={`Name ${index + 1}`}
@@ -295,7 +411,7 @@ export function UploadPackForm() {
               </button>
             </div>
           )}
-        </fieldset>
+        </section>
 
         {error ? (
           <p className="text-sm text-red-700" role="alert">
@@ -308,7 +424,7 @@ export function UploadPackForm() {
           disabled={submitting}
           className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-60 sm:w-auto sm:px-5"
         >
-          {submitting ? "Uploading…" : "Upload pack"}
+          {submitting ? "Joining pack…" : "Upload pack"}
         </button>
       </form>
 
@@ -319,8 +435,11 @@ export function UploadPackForm() {
           </p>
           <p className="spares-muted text-sm">
             {result.parts.length} joined part
-            {result.parts.length === 1 ? "" : "s"}. Unmatched meshes are listed
-            below and stay visible to staff.
+            {result.parts.length === 1 ? "" : "s"}
+            {result.company && result.siteName
+              ? ` · ${siteLabel({ company: result.company, name: result.siteName })}`
+              : ""}
+            .
           </p>
           <UnmatchedMeshes unmatched={result.unmatched ?? []} />
           <button
