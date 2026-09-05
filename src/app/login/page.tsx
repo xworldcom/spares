@@ -16,7 +16,9 @@ export default async function LoginPage({
       </p>
       <h1 className="mt-2 text-[32px] font-semibold tracking-tight">Sign in</h1>
       <p className="spares-muted mt-2 text-[15px] leading-relaxed">
-        Staff and customers use this screen. Cookie session. No public signup.
+        Staff and customers use this screen. Company emails (like @cargill.com)
+        are the plant login — this preview still uses the password staff set.
+        Cookie session. No public signup.
       </p>
       <div className="mt-8">
         <LoginForm nextPath={nextPath} />

@@ -157,7 +157,24 @@ function asRow(value: unknown): PartsListRow | null {
     normalized.count ??
     normalized.bomqty ??
     record.qty;
-  return { partNumber, name, meshName, qty: parseQty(qtySource) };
+  const material = firstString(normalized, ["material", "matl"]);
+  const vendor = firstString(normalized, ["vendor", "manufacturer", "mfr", "supplier"]);
+  const weight = firstString(normalized, ["weight", "mass"]);
+  const category = firstString(normalized, ["category", "type", "class"]);
+  const replaces = firstString(normalized, ["replaces", "supersedes", "replacement"]);
+  const stock = firstString(normalized, ["stock", "onhand", "qtyonhand", "inventory"]);
+  return {
+    partNumber,
+    name,
+    meshName,
+    qty: parseQty(qtySource),
+    ...(material ? { material } : {}),
+    ...(vendor ? { vendor } : {}),
+    ...(weight ? { weight } : {}),
+    ...(category ? { category } : {}),
+    ...(replaces ? { replaces } : {}),
+    ...(stock ? { stock } : {}),
+  };
 }
 
 function rowsFromUnknown(parsed: unknown): PartsListRow[] {
@@ -208,6 +225,24 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
     name: header.findIndex((cell) => NAME_HEADERS.has(normalizeHeader(cell))),
     meshName: header.findIndex((cell) => MESH_HEADERS.has(normalizeHeader(cell))),
     qty: header.findIndex((cell) => QTY_HEADERS.has(normalizeHeader(cell))),
+    material: header.findIndex((cell) =>
+      ["material", "matl"].includes(normalizeHeader(cell)),
+    ),
+    vendor: header.findIndex((cell) =>
+      ["vendor", "manufacturer", "mfr", "supplier"].includes(normalizeHeader(cell)),
+    ),
+    weight: header.findIndex((cell) =>
+      ["weight", "mass"].includes(normalizeHeader(cell)),
+    ),
+    category: header.findIndex((cell) =>
+      ["category", "type", "class"].includes(normalizeHeader(cell)),
+    ),
+    replaces: header.findIndex((cell) =>
+      ["replaces", "supersedes", "replacement"].includes(normalizeHeader(cell)),
+    ),
+    stock: header.findIndex((cell) =>
+      ["stock", "onhand", "qtyonhand", "inventory"].includes(normalizeHeader(cell)),
+    ),
   };
   if (index.partNumber < 0 || index.name < 0) {
     throw new Error(
@@ -222,6 +257,12 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
       name: cells[index.name] ?? "",
       meshName: index.meshName >= 0 ? (cells[index.meshName] ?? "") : "",
       qty: index.qty >= 0 ? (cells[index.qty] ?? "") : "",
+      material: index.material >= 0 ? (cells[index.material] ?? "") : "",
+      vendor: index.vendor >= 0 ? (cells[index.vendor] ?? "") : "",
+      weight: index.weight >= 0 ? (cells[index.weight] ?? "") : "",
+      category: index.category >= 0 ? (cells[index.category] ?? "") : "",
+      replaces: index.replaces >= 0 ? (cells[index.replaces] ?? "") : "",
+      stock: index.stock >= 0 ? (cells[index.stock] ?? "") : "",
     });
     if (row) {
       rows.push(row);
@@ -268,7 +309,18 @@ export function joinParts(
   for (const row of listRows) {
     const meshName = takeMeshes(row);
     if (meshName) {
-      parts.push({ id: row.partNumber, name: row.name, meshName, qty: row.qty });
+      parts.push({
+        id: row.partNumber,
+        name: row.name,
+        meshName,
+        qty: row.qty,
+        ...(row.material ? { material: row.material } : {}),
+        ...(row.vendor ? { vendor: row.vendor } : {}),
+        ...(row.weight ? { weight: row.weight } : {}),
+        ...(row.category ? { category: row.category } : {}),
+        ...(row.replaces ? { replaces: row.replaces } : {}),
+        ...(row.stock ? { stock: row.stock } : {}),
+      });
     } else {
       unmatched.push({
         source: "list",

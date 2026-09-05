@@ -72,11 +72,14 @@ export function accessLabel(
 }
 
 export function canAccessMachine(
-  user: Pick<PublicUser, "role" | "siteIds" | "companyAccess">,
-  machine: { siteId?: string | null; company?: string | null },
+  user: Pick<PublicUser, "role" | "siteIds" | "companyAccess" | "machineIds">,
+  machine: { id?: string; siteId?: string | null; company?: string | null },
   sites: readonly Site[] = [],
 ) {
   if (user.role === "staff") {
+    return true;
+  }
+  if (machine.id && (user.machineIds ?? []).includes(machine.id)) {
     return true;
   }
   const siteId = machine.siteId;
@@ -108,6 +111,8 @@ export function toPublicUser(
     role: Role;
     siteIds?: string[];
     companyAccess?: string[];
+    machineIds?: string[];
+    emailDomain?: string;
   },
   sites: readonly Site[] = [],
 ): PublicUser {
@@ -116,16 +121,20 @@ export function toPublicUser(
   }
   const siteIds = user.siteIds ?? [];
   const companyAccess = user.companyAccess ?? [];
+  const machineIds = user.machineIds ?? [];
   const resolved =
     siteIds.length > 0
       ? sites.filter((site) => siteIds.includes(site.id))
       : undefined;
+  const domain = user.email.split("@")[1] ?? user.emailDomain;
   return {
     id: user.id,
     email: user.email,
     role: user.role,
     siteIds,
     companyAccess,
+    machineIds,
+    ...(domain ? { emailDomain: domain } : {}),
     ...(resolved && resolved.length > 0 ? { sites: resolved } : {}),
   };
 }

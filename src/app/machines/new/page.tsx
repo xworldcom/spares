@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { UploadPackForm } from "@/components/machine/UploadPackForm";
 
@@ -16,7 +17,9 @@ export default function UploadPackPage() {
             .
           </p>
         </div>
-        <UploadPackForm />
+        <Suspense>
+          <UploadPackForm />
+        </Suspense>
       </div>
     </RequireAuth>
   );

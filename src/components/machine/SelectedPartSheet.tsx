@@ -95,6 +95,13 @@ export function SelectedPartSheet({
             <p className="spares-muted truncate font-mono text-[11px]">
               {part.id}
             </p>
+            {part.vendor || part.stock ? (
+              <p className="spares-muted truncate text-[11px]">
+                {[part.vendor, part.stock ? `stock ${part.stock}` : ""]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
           </div>
           {showAdd && onAdd ? (
             <button
@@ -116,7 +123,15 @@ export function SelectedPartSheet({
           </button>
         </div>
         {more ? (
-          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-black/6 pt-2">
+          <div className="mt-2 space-y-2 border-t border-black/6 pt-2">
+            {part.material || part.weight || part.replaces || part.category ? (
+              <p className="text-[12px] leading-snug text-neutral-600">
+                {[part.category, part.material, part.weight, part.replaces ? `replaces ${part.replaces}` : ""]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               {...activate(onHide)}
@@ -142,6 +157,7 @@ export function SelectedPartSheet({
             >
               Close
             </button>
+            </div>
           </div>
         ) : null}
       </div>

@@ -13,6 +13,12 @@ function normalizePart(part: Part): Part {
     name: part.name,
     meshName: part.meshName,
     qty: typeof part.qty === "number" && Number.isFinite(part.qty) ? part.qty : 1,
+    ...(part.material ? { material: part.material } : {}),
+    ...(part.vendor ? { vendor: part.vendor } : {}),
+    ...(part.weight ? { weight: part.weight } : {}),
+    ...(part.category ? { category: part.category } : {}),
+    ...(part.replaces ? { replaces: part.replaces } : {}),
+    ...(part.stock ? { stock: part.stock } : {}),
   };
 }
 
@@ -42,6 +48,8 @@ export function normalizeMachine(
       siteId: machine.siteId,
       company: machine.company,
       siteName: machine.siteName,
+      version: machine.version,
+      revisedAt: machine.revisedAt,
     };
   }
 
@@ -53,6 +61,8 @@ export function normalizeMachine(
     siteId: machine.siteId,
     company: machine.company,
     siteName: machine.siteName,
+    version: machine.version,
+    revisedAt: machine.revisedAt,
   };
   if (Array.isArray(machine.unmatched)) {
     detail.unmatched = machine.unmatched;
@@ -99,6 +109,21 @@ export async function uploadMachinePack(input: {
   }
 
   const data = await apiFetch<MachineDetail>("/api/machines", {
+    method: "POST",
+    body: form,
+  });
+  return normalizeMachine(data, "staff");
+}
+
+export async function replaceMachinePack(
+  machineId: string,
+  input: { name: string; model: File; partsList: File },
+): Promise<MachineDetail> {
+  const form = new FormData();
+  form.set("name", input.name);
+  form.set("model", input.model);
+  form.set("partsList", input.partsList);
+  const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}/pack`, {
     method: "POST",
     body: form,
   });

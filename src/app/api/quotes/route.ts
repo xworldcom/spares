@@ -75,6 +75,11 @@ export async function POST(request: Request) {
     if (name) {
       next.name = name;
     }
+    if (part?.vendor) next.vendor = part.vendor;
+    if (part?.material) next.material = part.material;
+    if (part?.replaces) next.replaces = part.replaces;
+    if (part?.stock) next.stock = part.stock;
+    if (part?.category) next.category = part.category;
     return next;
   });
 

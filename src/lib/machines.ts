@@ -45,6 +45,8 @@ export function toMachineDetail(
       fileUrl,
       parts: machine.parts,
       unmatched: machine.unmatched,
+      version: machine.version ?? 1,
+      revisedAt: machine.revisedAt,
       ...located,
     };
   }
@@ -54,6 +56,8 @@ export function toMachineDetail(
     name: machine.name,
     fileUrl,
     parts: machine.parts,
+    version: machine.version ?? 1,
+    revisedAt: machine.revisedAt,
     ...located,
   };
 }

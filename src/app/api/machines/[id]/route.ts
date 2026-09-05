@@ -2,7 +2,7 @@ import { requireRole, requireUser } from "@/lib/auth";
 import { canAccessMachine } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { machineFileUrl, toMachineDetail } from "@/lib/machines";
-import { getMachine, listSites, updateMachineSite } from "@/lib/store";
+import { getMachine, listSites, recordMachineView, updateMachineSite } from "@/lib/store";
 
 export async function GET(
   request: Request,
@@ -17,6 +17,14 @@ export async function GET(
   const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
   if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
+  }
+
+  if (auth.user.role === "customer") {
+    void recordMachineView({
+      userId: auth.user.id,
+      email: auth.user.email,
+      machineId: machine.id,
+    });
   }
 
   return json(

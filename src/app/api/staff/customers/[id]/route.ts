@@ -6,6 +6,7 @@ import { toPublicUser } from "@/lib/access";
 type PatchBody = {
   siteIds?: unknown;
   companyAccess?: unknown;
+  machineIds?: unknown;
 };
 
 export async function PATCH(
@@ -29,11 +30,14 @@ export async function PATCH(
   const companyAccess = Array.isArray(body.companyAccess)
     ? body.companyAccess.filter((value): value is string => typeof value === "string")
     : [];
-  if (!("siteIds" in body) && !("companyAccess" in body)) {
-    return error("siteIds or companyAccess is required", 400);
+  const machineIds = Array.isArray(body.machineIds)
+    ? body.machineIds.filter((value): value is string => typeof value === "string")
+    : [];
+  if (!("siteIds" in body) && !("companyAccess" in body) && !("machineIds" in body)) {
+    return error("siteIds, companyAccess, or machineIds is required", 400);
   }
 
-  const updated = await updateCustomerSites(id, { siteIds, companyAccess });
+  const updated = await updateCustomerSites(id, { siteIds, companyAccess, machineIds });
   if ("error" in updated) {
     return error("Customer not found", 404);
   }

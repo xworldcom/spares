@@ -69,13 +69,18 @@ export async function createSite(company: string, name: string): Promise<Site> {
 
 export async function updateCustomerSites(
   userId: string,
-  access: { siteIds?: string[]; companyAccess?: string[] },
+  access: {
+    siteIds?: string[];
+    companyAccess?: string[];
+    machineIds?: string[];
+  },
 ) {
   const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
     method: "PATCH",
     body: JSON.stringify({
       siteIds: access.siteIds ?? [],
       companyAccess: access.companyAccess ?? [],
+      machineIds: access.machineIds ?? [],
     }),
   });
   return data.user;

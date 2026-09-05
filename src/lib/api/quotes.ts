@@ -45,6 +45,7 @@ export async function updateQuote(
     items?: QuoteItem[];
     shipments?: Array<Omit<QuoteShipment, "id"> & { id?: string }>;
     poNumber?: string;
+    invoiceNumber?: string;
   },
 ): Promise<Quote> {
   const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`, {

@@ -22,6 +22,7 @@ type PatchBody = {
   items?: unknown;
   shipments?: unknown;
   poNumber?: unknown;
+  invoiceNumber?: unknown;
 };
 
 export async function GET(
@@ -135,6 +136,11 @@ export async function PATCH(
 
   const next = await mutateQuote(access.quote.id, (quote) => {
     let updated: QuoteRecord = { ...quote, items, shipments };
+    const invoiceNumber =
+      typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : quote.invoiceNumber;
+    if (invoiceNumber) {
+      updated = { ...updated, invoiceNumber };
+    }
     const activities = [...quote.activities];
     const stamp = now();
 

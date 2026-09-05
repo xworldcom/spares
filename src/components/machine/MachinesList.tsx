@@ -177,9 +177,13 @@ export function MachinesList() {
                   : user?.role === "staff"
                     ? "No plant — customers cannot see this"
                     : ""}
+                {machine.version && machine.version > 1
+                  ? ` · v${machine.version}`
+                  : ""}
               </span>
             </Link>
             {user?.role === "staff" ? (
+              <div className="flex w-full max-w-xs shrink-0 flex-col gap-2 sm:w-56">
               <select
                 value={machine.siteId ?? ""}
                 disabled={savingId === machine.id}
@@ -196,6 +200,13 @@ export function MachinesList() {
                   </option>
                 ))}
               </select>
+              <Link
+                href={`/machines/new?replace=${machine.id}`}
+                className="text-sm font-medium text-neutral-700"
+              >
+                Replace pack
+              </Link>
+              </div>
             ) : (
               <span className="text-lg text-neutral-300" aria-hidden="true">
                 ›

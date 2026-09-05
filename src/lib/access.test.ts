@@ -29,6 +29,22 @@ describe("plant access", () => {
     assert.equal(canAccessMachine(ftw, {}, sites), false);
   });
 
+  it("lets a person through on a single machine grant", () => {
+    const guest = {
+      role: "customer" as const,
+      siteIds: [],
+      machineIds: ["palletizer"],
+    };
+    assert.equal(
+      canAccessMachine(guest, { id: "palletizer", siteId: "site-acme-dayton" }, sites),
+      true,
+    );
+    assert.equal(
+      canAccessMachine(guest, { id: "other", siteId: "site-acme-dayton" }, sites),
+      false,
+    );
+  });
+
   it("lets corporate see every plant at their company", () => {
     const corp = {
       role: "customer" as const,

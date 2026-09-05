@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
 import { siteLabel } from "@/lib/access";
 import { listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
-import { uploadMachinePack } from "@/lib/api/machines";
+import { replaceMachinePack, uploadMachinePack } from "@/lib/api/machines";
 import type { MachineDetail, PartsListRow, Site } from "@/lib/api/types";
 import { emptyPartsRow, partsListToJsonFile } from "@/lib/parts-list";
 import { parsePartsList } from "@/lib/parts";
@@ -73,6 +73,8 @@ function FileDrop({
 
 export function UploadPackForm() {
   const router = useRouter();
+  const search = useSearchParams();
+  const replaceId = search.get("replace");
   const [name, setName] = useState("");
   const [model, setModel] = useState<File | null>(null);
   const [listMode, setListMode] = useState<ListMode>("file");
@@ -192,12 +194,18 @@ export function UploadPackForm() {
 
     setSubmitting(true);
     try {
-      const machine = await uploadMachinePack({
-        name: name.trim(),
-        model,
-        partsList,
-        siteId: siteId || undefined,
-      });
+      const machine = replaceId
+        ? await replaceMachinePack(replaceId, {
+            name: name.trim(),
+            model,
+            partsList,
+          })
+        : await uploadMachinePack({
+            name: name.trim(),
+            model,
+            partsList,
+            siteId: siteId || undefined,
+          });
       setResult(machine);
     } catch (cause) {
       setError(errorMessage(cause, "Upload or join failed."));
@@ -424,7 +432,7 @@ export function UploadPackForm() {
           disabled={submitting}
           className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-60 sm:w-auto sm:px-5"
         >
-          {submitting ? "Joining pack…" : "Upload pack"}
+          {submitting ? "Joining pack…" : replaceId ? "Replace pack" : "Upload pack"}
         </button>
       </form>
 

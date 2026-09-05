@@ -12,6 +12,8 @@ export type PublicUser = {
   role: Role;
   siteIds?: string[];
   companyAccess?: string[];
+  machineIds?: string[];
+  emailDomain?: string;
   sites?: Site[];
 };
 
@@ -20,6 +22,12 @@ export type Part = {
   name: string;
   meshName: string;
   qty: number;
+  material?: string;
+  vendor?: string;
+  weight?: string;
+  category?: string;
+  replaces?: string;
+  stock?: string;
 };
 
 export type UnmatchedPart = {
@@ -36,6 +44,7 @@ export type MachineSummary = {
   siteId?: string;
   company?: string;
   siteName?: string;
+  version?: number;
 };
 
 export type MachineDetail = {
@@ -47,6 +56,16 @@ export type MachineDetail = {
   siteId?: string;
   company?: string;
   siteName?: string;
+  version?: number;
+  revisedAt?: string;
+};
+
+export type MachineView = {
+  id: string;
+  at: string;
+  userId: string;
+  email: string;
+  machineId: string;
 };
 
 export type QuoteStatus =
@@ -80,6 +99,11 @@ export type QuoteItem = {
   supplier?: string;
   leadTimeDays?: number;
   note?: string;
+  material?: string;
+  vendor?: string;
+  replaces?: string;
+  stock?: string;
+  category?: string;
 };
 
 export type QuoteActivityKind = "message" | "status" | "pricing" | "po" | "shipment";
@@ -110,6 +134,7 @@ export type Quote = {
   shipments: QuoteShipment[];
   activities: QuoteActivity[];
   unread: boolean;
+  invoiceNumber?: string;
 };
 
 export type QuoteRecord = {
@@ -129,6 +154,7 @@ export type QuoteRecord = {
   shipments: QuoteShipment[];
   activities: QuoteActivity[];
   lastReadAt: Record<string, string>;
+  invoiceNumber?: string;
 };
 
 export type BugReport = {
@@ -150,4 +176,10 @@ export type PartsListRow = {
   name: string;
   meshName?: string;
   qty: number;
+  material?: string;
+  vendor?: string;
+  weight?: string;
+  category?: string;
+  replaces?: string;
+  stock?: string;
 };

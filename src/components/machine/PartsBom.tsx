@@ -19,16 +19,34 @@ export function PartsBom({
   searchable?: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const categories = useMemo(() => {
+    return [...new Set(parts.map((part) => part.category).filter(Boolean))] as string[];
+  }, [parts]);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return parts;
-    }
     return parts.filter((part) => {
-      const hay = `${part.name} ${part.id} ${part.meshName}`.toLowerCase();
+      if (category && (part.category ?? "") !== category) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      const hay = [
+        part.name,
+        part.id,
+        part.meshName,
+        part.vendor,
+        part.material,
+        part.replaces,
+        part.category,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return hay.includes(needle);
     });
-  }, [parts, query]);
+  }, [parts, query, category]);
 
   if (parts.length === 0) {
     return (
@@ -41,16 +59,43 @@ export function PartsBom({
   return (
     <div className="space-y-3">
       {searchable ? (
-        <label className="block">
-          <span className="sr-only">Search parts</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search name or part number"
-            className="h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/8"
-          />
-        </label>
+        <div className="space-y-2">
+          <label className="block">
+            <span className="sr-only">Search parts</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search name, number, vendor"
+              className="h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/8"
+            />
+          </label>
+          {categories.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCategory("")}
+                className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
+                  category === "" ? "btn-primary" : "btn-soft"
+                }`}
+              >
+                All
+              </button>
+              {categories.map((row) => (
+                <button
+                  key={row}
+                  type="button"
+                  onClick={() => setCategory(row)}
+                  className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
+                    category === row ? "btn-primary" : "btn-soft"
+                  }`}
+                >
+                  {row}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {filtered.length === 0 ? (
         <p className="text-sm text-neutral-500">No parts match that search.</p>
@@ -81,6 +126,7 @@ export function PartsBom({
                         }`}
                       >
                         {part.id}
+                        {part.replaces ? ` · replaces ${part.replaces}` : ""}
                       </span>
                     </span>
                     <span
