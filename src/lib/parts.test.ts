@@ -75,4 +75,16 @@ describe("joinParts", () => {
       { source: "model", meshName: "Orphan" },
     ]);
   });
+
+  it("joins SolidWorks instance names to one BOM row", () => {
+    const { parts, unmatched } = joinParts(
+      [{ partNumber: "PN-100", name: "Pump", qty: 2 }],
+      ["PN-100-1", "PN-100-2", "Cover"],
+    );
+    assert.equal(parts[0]?.meshName, "PN-100-1");
+    assert.deepEqual(
+      unmatched.map((row) => row.meshName),
+      ["Cover"],
+    );
+  });
 });

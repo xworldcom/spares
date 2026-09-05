@@ -262,7 +262,7 @@ export function UploadPackForm() {
           <FileDrop
             id="model-file"
             label="GLB or GLTF"
-            hint="Export from SolidWorks, Inventor, Fusion, or Blender. Native CAD files (STEP, SLDASM) cannot run in the browser."
+            hint="Save As glTF/GLB from the assembly. Pump-1 and Pump<2> join to part number Pump — no rename required."
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             file={model}
             onFile={setModel}

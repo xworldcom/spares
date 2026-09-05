@@ -1,3 +1,4 @@
+import { cadKeys } from "./cad-name.ts";
 import type { Part, PartsListRow, UnmatchedPart } from "@/types";
 
 function parseDelimited(text: string, delimiter: string): string[][] {
@@ -238,20 +239,36 @@ export function joinParts(
   listRows: PartsListRow[],
   meshNames: string[],
 ): { parts: Part[]; unmatched: UnmatchedPart[] } {
-  const available = new Set(meshNames);
-  const used = new Set<string>();
+  const unused = new Set(meshNames);
   const parts: Part[] = [];
   const unmatched: UnmatchedPart[] = [];
 
-  for (const row of listRows) {
-    const candidates = [row.meshName, row.partNumber, row.name].filter(
-      (value): value is string => Boolean(value),
+  function takeMeshes(row: PartsListRow): string | null {
+    const rowKeys = new Set(
+      [row.meshName, row.partNumber, row.name].flatMap((value) => cadKeys(value)),
     );
-    const meshName = candidates.find((name) => available.has(name) && !used.has(name));
+    if (rowKeys.size === 0) {
+      return null;
+    }
+    const hits = meshNames.filter((meshName) => {
+      if (!unused.has(meshName)) {
+        return false;
+      }
+      return cadKeys(meshName).some((key) => rowKeys.has(key));
+    });
+    if (hits.length === 0) {
+      return null;
+    }
+    for (const hit of hits) {
+      unused.delete(hit);
+    }
+    return hits[0] ?? null;
+  }
 
+  for (const row of listRows) {
+    const meshName = takeMeshes(row);
     if (meshName) {
       parts.push({ id: row.partNumber, name: row.name, meshName, qty: row.qty });
-      used.add(meshName);
     } else {
       unmatched.push({
         source: "list",
@@ -264,7 +281,7 @@ export function joinParts(
   }
 
   for (const meshName of meshNames) {
-    if (!used.has(meshName)) {
+    if (unused.has(meshName)) {
       unmatched.push({ source: "model", meshName });
     }
   }

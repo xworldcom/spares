@@ -49,7 +49,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [trayOpen, setTrayOpen] = useState(false);
   const [quoteChip, setQuoteChip] = useState(true);
   const [held, setHeld] = useState(false);
-  const [bomOpen, setBomOpen] = useState(false);
+  const [view, setView] = useState<"model" | "list">("model");
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const captureThumb = useRef<(partId: string) => string | null>(() => null);
 
@@ -239,7 +239,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       return [...current, { part, qty: 1, thumb }];
     });
     setTrayOpen(true);
-    setBomOpen(false);
   }
 
   function addSelected() {
@@ -389,10 +388,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             <button
               type="button"
               data-parts-bom=""
-              onClick={() => setBomOpen(true)}
+              onClick={() => setView("list")}
               className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
             >
-              Parts
+              List
             </button>
             <div className="w-[6.6rem] shrink-0">
               <button
@@ -439,18 +438,40 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   return (
     <div className="machine-stage">
-      <div className="machine-title mb-3 min-w-0 shrink-0">
-        <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
-          Machine
-        </p>
-        <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">
-          {machine.name}
-        </h1>
-        {machine.company && machine.siteName ? (
-          <p className="spares-muted mt-1 truncate text-sm">
-            {siteLabel({ company: machine.company, name: machine.siteName })}
+      <div className="machine-title mb-3 flex min-w-0 shrink-0 items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
+            Machine
           </p>
-        ) : null}
+          <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">
+            {machine.name}
+          </h1>
+          {machine.company && machine.siteName ? (
+            <p className="spares-muted mt-1 truncate text-sm">
+              {siteLabel({ company: machine.company, name: machine.siteName })}
+            </p>
+          ) : null}
+        </div>
+        <div className="grid shrink-0 grid-cols-2 rounded-full bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setView("model")}
+            className={`inline-flex h-10 items-center justify-center rounded-full px-3 text-sm font-semibold ${
+              view === "model" ? "btn-primary" : "text-neutral-600"
+            }`}
+          >
+            3D
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("list")}
+            className={`inline-flex h-10 items-center justify-center rounded-full px-3 text-sm font-semibold ${
+              view === "list" ? "btn-primary" : "text-neutral-600"
+            }`}
+          >
+            List
+          </button>
+        </div>
       </div>
       <h1 className="sr-only">{machine.name}</h1>
 
@@ -458,7 +479,26 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         className="machine-stage-grid"
         data-tray={isCustomer && trayOpen && !fullscreen ? "open" : "closed"}
       >
-        {viewerBlock}
+        {view === "model" ? (
+          viewerBlock
+        ) : (
+          <section className="min-h-0 space-y-4 overflow-y-auto pb-8">
+            <PartsBom
+              parts={joinedParts}
+              selectedPartId={selectedPart?.id ?? null}
+              onSelect={(part) => {
+                setSelectedPart(part);
+                setView("model");
+              }}
+              showAdd={isCustomer}
+              onAdd={addPart}
+              searchable
+            />
+            {showUnmatched ? (
+              <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
+            ) : null}
+          </section>
+        )}
         {isCustomer ? null : (
           <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join
@@ -466,73 +506,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           </div>
         )}
       </div>
-
-      <section
-        aria-labelledby="bom-heading"
-        className="machine-bom mt-6 shrink-0 space-y-3"
-      >
-        <div>
-          <h2 id="bom-heading" className="text-[13px] font-semibold tracking-tight text-neutral-950">
-            Parts
-          </h2>
-        </div>
-        <PartsBom
-          parts={joinedParts}
-          selectedPartId={selectedPart?.id ?? null}
-          onSelect={setSelectedPart}
-          showAdd={isCustomer}
-          onAdd={addPart}
-        />
-      </section>
-
-      {showUnmatched ? (
-        <div className="machine-bom mt-6">
-          <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
-        </div>
-      ) : null}
-
-      {bomOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close parts list"
-            className="absolute inset-0 bg-black/35"
-            onClick={() => setBomOpen(false)}
-          />
-          <div
-            data-parts-bom=""
-            className="absolute inset-x-0 bottom-0 max-h-[min(72dvh,36rem)] overflow-y-auto rounded-t-[28px] bg-white px-4 pt-4 shadow-[0_-12px_40px_rgba(0,0,0,0.18)]"
-            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-[19px] font-semibold tracking-tight">Parts</h2>
-              <button
-                type="button"
-                onClick={() => setBomOpen(false)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
-                aria-label="Close parts"
-              >
-                <span className="text-2xl leading-none">×</span>
-              </button>
-            </div>
-            <PartsBom
-              parts={joinedParts}
-              selectedPartId={selectedPart?.id ?? null}
-              onSelect={(part) => {
-                setSelectedPart(part);
-                setBomOpen(false);
-              }}
-              showAdd={isCustomer}
-              onAdd={addPart}
-            />
-            {showUnmatched ? (
-              <div className="mt-4">
-                <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
