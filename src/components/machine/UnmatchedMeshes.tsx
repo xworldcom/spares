@@ -1,12 +1,9 @@
 import type { UnmatchedPart } from "@/lib/api/types";
 
 export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
-  if (unmatched.length === 0) {
-    return (
-      <div className="rounded-[22px] bg-white px-4 py-3 text-sm text-neutral-700">
-        All list rows joined to a mesh. No unmatched meshes.
-      </div>
-    );
+  const rows = Array.isArray(unmatched) ? unmatched : [];
+  if (rows.length === 0) {
+    return null;
   }
 
   return (
@@ -15,14 +12,14 @@ export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
       className="rounded-[22px] bg-amber-50 px-4 py-4"
     >
       <h2 id="unmatched-heading" className="text-sm font-semibold text-amber-950">
-        Unmatched meshes
+        Join notes
       </h2>
       <p className="mt-1 text-sm text-amber-900">
-        Staff only. These list rows or 3D meshes did not join on part number /
-        mesh name. They are not hidden.
+        These rows or meshes did not line up on part number. They stay in
+        the model; they are not quote items.
       </p>
       <ul className="mt-3 space-y-2">
-        {unmatched.map((row, index) => (
+        {rows.map((row, index) => (
           <li
             key={`${row.source}-${row.id ?? row.meshName ?? index}`}
             className="rounded-md bg-white/70 px-3 py-2 text-sm text-amber-950"

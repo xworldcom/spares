@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
-import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
 import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -16,7 +15,6 @@ import { viewerNeedsReset } from "@/components/viewer/assemblyView";
 import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
-import { siteLabel } from "@/lib/access";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#1c232c";
@@ -286,7 +284,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onCaptureReady={(capture) => {
               captureThumb.current = capture;
             }}
-            className="absolute inset-0"
+            className={`absolute inset-0 ${view === "list" ? "invisible" : ""}`}
           />
         ) : (
           <EmptyState
@@ -294,21 +292,94 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             message="This machine pack does not have a GLB or GLTF file to display."
           />
         )}
-        <SelectedPartSheet
-          part={selectedPart}
-          isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
-          onHide={hideSelected}
-          onIsolate={isolateSelected}
-          onAdd={isCustomer ? addSelected : undefined}
-          onDismiss={() => setSelectedPart(null)}
-          showAdd={isCustomer}
-          held={held}
-        />
+        {view === "list" ? (
+          <section
+            data-parts-bom=""
+            className="absolute inset-0 z-[15] overflow-y-auto bg-[#f4f5f7] px-4 pb-8"
+            style={{ paddingTop: "4.35rem" }}
+          >
+            <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+              {machine.name}
+            </p>
+            <PartsBom
+              parts={joinedParts}
+              selectedPartId={selectedPart?.id ?? null}
+              onSelect={(part) => {
+                setSelectedPart(part);
+                setView("model");
+              }}
+              showAdd={isCustomer}
+              onAdd={addPart}
+              searchable
+            />
+            {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
+              <p className="spares-muted mt-3 text-sm">
+                {machine.unmatched?.length} extra mesh
+                {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the
+                model are not on this list.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+        {view === "model" ? (
+          <SelectedPartSheet
+            part={selectedPart}
+            isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
+            onHide={hideSelected}
+            onIsolate={isolateSelected}
+            onAdd={isCustomer ? addSelected : undefined}
+            onDismiss={() => setSelectedPart(null)}
+            showAdd={isCustomer}
+            held={held}
+          />
+        ) : null}
         {isCustomer ? tray : null}
         <div
           aria-hidden="true"
-          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-36"
+          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-28"
         />
+        <div className="absolute top-3 left-3 z-20 flex min-w-0 items-center gap-2">
+          <div className="viewer-chrome-chip flex h-11 items-center rounded-full p-1">
+            <button
+              type="button"
+              onClick={() => setView("model")}
+              className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                view === "model" ? "btn-primary" : "text-neutral-600"
+              }`}
+            >
+              3D
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                view === "list" ? "btn-primary" : "text-neutral-600"
+              }`}
+            >
+              List
+            </button>
+          </div>
+          {view === "model" ? (
+            <button
+              type="button"
+              data-show-all=""
+              onPointerDown={(event) => {
+                if (!needsReset || event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                showAll();
+              }}
+              onClick={showAll}
+              disabled={!needsReset}
+              className={`viewer-chrome-chip inline-flex h-11 items-center justify-center rounded-full px-3 text-sm font-semibold ${
+                needsReset ? "" : "invisible pointer-events-none"
+              }`}
+            >
+              Show all
+            </button>
+          ) : null}
+        </div>
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
           {isCustomer && fullscreen ? (
             <QuoteTray
@@ -324,7 +395,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               }}
             />
           ) : null}
-          {isCustomer && !trayOpen && quoteChip ? (
+          {isCustomer && !fullscreen && !trayOpen && quoteChip ? (
             <button
               type="button"
               data-quote-tray=""
@@ -333,17 +404,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   return;
                 }
                 event.preventDefault();
-                if (fullscreen) {
-                  exit();
-                }
                 setTrayOpen(true);
               }}
-              onClick={() => {
-                if (fullscreen) {
-                  exit();
-                }
-                setTrayOpen(true);
-              }}
+              onClick={() => setTrayOpen(true)}
               className="viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold"
               aria-label={`Show quote, ${quoteCount} ${quoteCount === 1 ? "item" : "items"}`}
             >
@@ -383,38 +446,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             )}
           </button>
         </div>
-        <div className="absolute top-3 left-3 right-[7.25rem] z-20 flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <button
-              type="button"
-              data-parts-bom=""
-              onClick={() => setView("list")}
-              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
-            >
-              List
-            </button>
-            <div className="w-[6.6rem] shrink-0">
-              <button
-                type="button"
-                data-show-all=""
-                onPointerDown={(event) => {
-                  if (!needsReset || event.button !== 0) {
-                    return;
-                  }
-                  event.preventDefault();
-                  showAll();
-                }}
-                onClick={showAll}
-                disabled={!needsReset}
-                className={`viewer-chrome-chip inline-flex h-11 w-full items-center justify-center rounded-full px-3 text-sm font-semibold ${
-                  needsReset ? "" : "invisible pointer-events-none"
-                }`}
-              >
-                Show all
-              </button>
-            </div>
-          </div>
-          <label className="viewer-chrome-chip flex min-h-11 min-w-0 items-center gap-3 px-3">
+        {view === "model" ? (
+          <label className="viewer-chrome-chip absolute top-[3.85rem] left-3 right-[7.25rem] z-20 flex min-h-11 min-w-0 items-center gap-3 px-3">
             <span className="shrink-0 text-[13px] font-medium tracking-wide">
               Explode
             </span>
@@ -431,74 +464,20 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               aria-label="Explode assembly"
             />
           </label>
-        </div>
+        ) : null}
       </div>
     </div>
   );
 
   return (
     <div className="machine-stage">
-      <div className="machine-title mb-3 flex min-w-0 shrink-0 items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
-            Machine
-          </p>
-          <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">
-            {machine.name}
-          </h1>
-          {machine.company && machine.siteName ? (
-            <p className="spares-muted mt-1 truncate text-sm">
-              {siteLabel({ company: machine.company, name: machine.siteName })}
-            </p>
-          ) : null}
-        </div>
-        <div className="grid shrink-0 grid-cols-2 rounded-full bg-white p-1">
-          <button
-            type="button"
-            onClick={() => setView("model")}
-            className={`inline-flex h-10 items-center justify-center rounded-full px-3 text-sm font-semibold ${
-              view === "model" ? "btn-primary" : "text-neutral-600"
-            }`}
-          >
-            3D
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("list")}
-            className={`inline-flex h-10 items-center justify-center rounded-full px-3 text-sm font-semibold ${
-              view === "list" ? "btn-primary" : "text-neutral-600"
-            }`}
-          >
-            List
-          </button>
-        </div>
-      </div>
       <h1 className="sr-only">{machine.name}</h1>
 
       <div
         className="machine-stage-grid"
         data-tray={isCustomer && trayOpen && !fullscreen ? "open" : "closed"}
       >
-        {view === "model" ? (
-          viewerBlock
-        ) : (
-          <section className="min-h-0 space-y-4 overflow-y-auto pb-8">
-            <PartsBom
-              parts={joinedParts}
-              selectedPartId={selectedPart?.id ?? null}
-              onSelect={(part) => {
-                setSelectedPart(part);
-                setView("model");
-              }}
-              showAdd={isCustomer}
-              onAdd={addPart}
-              searchable
-            />
-            {showUnmatched ? (
-              <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
-            ) : null}
-          </section>
-        )}
+        {viewerBlock}
         {isCustomer ? null : (
           <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join

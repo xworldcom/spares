@@ -256,7 +256,7 @@ html.spares-embed .spares-app-stage {
 }
 
 .machine-title {
-  display: none;
+  display: block;
 }
 
 .machine-bom {
