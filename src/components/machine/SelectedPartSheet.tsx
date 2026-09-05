@@ -77,7 +77,7 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
-      className="pointer-events-none absolute top-14 left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
+      className="pointer-events-none absolute top-[7.25rem] left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
     >
       <div
         className={`pointer-events-auto rounded-2xl bg-white/92 px-2.5 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ring-black/8 backdrop-blur-md ${

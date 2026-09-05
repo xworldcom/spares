@@ -307,7 +307,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         {isCustomer ? tray : null}
         <div
           aria-hidden="true"
-          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-24"
+          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-36"
         />
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
           {isCustomer && fullscreen ? (
@@ -383,54 +383,55 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             )}
           </button>
         </div>
-      </div>
-
-      <div className="flex h-14 min-w-0 shrink-0 items-center gap-2 overflow-x-hidden px-3 sm:gap-3 sm:px-5">
-        <button
-          type="button"
-          data-parts-bom=""
-          onClick={() => setBomOpen(true)}
-          className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
-        >
-          Parts
-        </button>
-        <div className="w-[6.6rem] shrink-0">
-          <button
-            type="button"
-            data-show-all=""
-            onPointerDown={(event) => {
-              if (!needsReset || event.button !== 0) {
-                return;
-              }
-              event.preventDefault();
-              showAll();
-            }}
-            onClick={showAll}
-            disabled={!needsReset}
-            className={`viewer-chrome-chip inline-flex h-11 w-full items-center justify-center rounded-full px-3 text-sm font-semibold ${
-              needsReset ? "" : "invisible pointer-events-none"
-            }`}
-          >
-            Show all
-          </button>
+        <div className="absolute top-3 left-3 right-[7.25rem] z-20 flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              data-parts-bom=""
+              onClick={() => setBomOpen(true)}
+              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
+            >
+              Parts
+            </button>
+            <div className="w-[6.6rem] shrink-0">
+              <button
+                type="button"
+                data-show-all=""
+                onPointerDown={(event) => {
+                  if (!needsReset || event.button !== 0) {
+                    return;
+                  }
+                  event.preventDefault();
+                  showAll();
+                }}
+                onClick={showAll}
+                disabled={!needsReset}
+                className={`viewer-chrome-chip inline-flex h-11 w-full items-center justify-center rounded-full px-3 text-sm font-semibold ${
+                  needsReset ? "" : "invisible pointer-events-none"
+                }`}
+              >
+                Show all
+              </button>
+            </div>
+          </div>
+          <label className="viewer-chrome-chip flex min-h-11 min-w-0 items-center gap-3 px-3">
+            <span className="shrink-0 text-[13px] font-medium tracking-wide">
+              Explode
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(explode * 100)}
+              onChange={(event) => setExplode(Number(event.target.value) / 100)}
+              className="explode-slider"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(explode * 100)}
+              aria-label="Explode assembly"
+            />
+          </label>
         </div>
-        <label className="flex min-w-0 flex-1 items-center gap-3 text-[#fff]">
-          <span className="shrink-0 text-[13px] font-medium tracking-wide text-[#fff]">
-            Explode
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(explode * 100)}
-            onChange={(event) => setExplode(Number(event.target.value) / 100)}
-            className="explode-slider"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(explode * 100)}
-            aria-label="Explode assembly"
-          />
-        </label>
       </div>
     </div>
   );

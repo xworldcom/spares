@@ -402,7 +402,7 @@ html.spares-embed .spares-app-stage {
 .explode-slider::-webkit-slider-runnable-track {
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(11, 13, 16, 0.22);
 }
 
 .explode-slider::-webkit-slider-thumb {
@@ -411,14 +411,14 @@ html.spares-embed .spares-app-stage {
   height: 28px;
   margin-top: -12.5px;
   border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  background: #0b0d10;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
 }
 
 .explode-slider::-moz-range-track {
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(11, 13, 16, 0.22);
 }
 
 .explode-slider::-moz-range-thumb {
@@ -426,7 +426,7 @@ html.spares-embed .spares-app-stage {
   height: 28px;
   border: 0;
   border-radius: 999px;
-  background: #fff;
+  background: #0b0d10;
 }
 
 @media (prefers-reduced-motion: reduce) {
