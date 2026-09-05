@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createCustomer, listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import type { Site } from "@/lib/api/types";
-import { siteLabel } from "@/lib/access";
+import { accessOptions, parseAccessValue } from "@/lib/access";
 
 export function CreateCustomerForm({
   onCreated,
@@ -42,7 +42,7 @@ export function CreateCustomerForm({
       const user = await createCustomer(
         email.trim(),
         password,
-        siteId ? [siteId] : [],
+        parseAccessValue(siteId),
       );
       setCreatedEmail(user.email);
       setEmail("");
@@ -94,7 +94,7 @@ export function CreateCustomerForm({
       </div>
       <div>
         <label htmlFor="customer-site" className="block text-sm font-medium">
-          Plant
+          Access
         </label>
         <select
           id="customer-site"
@@ -102,15 +102,15 @@ export function CreateCustomerForm({
           onChange={(event) => setSiteId(event.target.value)}
           className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
         >
-          <option value="">Choose a plant</option>
-          {sites.map((site) => (
-            <option key={site.id} value={site.id}>
-              {siteLabel(site)}
+          <option value="">No access</option>
+          {accessOptions(sites).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
         <p className="spares-muted mt-1.5 text-sm">
-          They will only see machines assigned to this plant.
+          One plant, or All plants at that company for corporate users.
         </p>
       </div>
       {error ? (

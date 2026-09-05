@@ -11,6 +11,7 @@ export type PublicUser = {
   email: string;
   role: Role;
   siteIds?: string[];
+  companyAccess?: string[];
   sites?: Site[];
 };
 

@@ -68,7 +68,7 @@ export function SitesPanel({
         <h2 className="text-[19px] font-semibold tracking-tight">Plants</h2>
         <p className="spares-muted mt-1 text-sm">
           A plant is a company plus a location. People and machines both point
-          here — not at each other.
+          here. Corporate users pick All plants for their company.
         </p>
       </div>
       {sites.length === 0 ? (

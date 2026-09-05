@@ -40,11 +40,16 @@ export async function listCustomers(): Promise<PublicUser[]> {
 export async function createCustomer(
   email: string,
   password: string,
-  siteIds: string[] = [],
+  access: { siteIds?: string[]; companyAccess?: string[] } = {},
 ) {
   const data = await apiFetch<AuthUserResponse>("/api/staff/customers", {
     method: "POST",
-    body: JSON.stringify({ email, password, siteIds }),
+    body: JSON.stringify({
+      email,
+      password,
+      siteIds: access.siteIds ?? [],
+      companyAccess: access.companyAccess ?? [],
+    }),
   });
   return data.user;
 }
@@ -62,10 +67,16 @@ export async function createSite(company: string, name: string): Promise<Site> {
   return data.site;
 }
 
-export async function updateCustomerSites(userId: string, siteIds: string[]) {
+export async function updateCustomerSites(
+  userId: string,
+  access: { siteIds?: string[]; companyAccess?: string[] },
+) {
   const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
     method: "PATCH",
-    body: JSON.stringify({ siteIds }),
+    body: JSON.stringify({
+      siteIds: access.siteIds ?? [],
+      companyAccess: access.companyAccess ?? [],
+    }),
   });
   return data.user;
 }

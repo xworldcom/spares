@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
-import { siteLabel } from "@/lib/access";
+import { accessLabel, accessOptions, accessValue, parseAccessValue, siteLabel } from "@/lib/access";
 import {
   listCustomers,
   listSites,
@@ -54,6 +54,7 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
     return customers.filter((row) => {
       const hay = [
         row.email,
+        accessLabel(row),
         ...(row.sites ?? []).map((site) => siteLabel(site)),
       ]
         .join(" ")
@@ -62,10 +63,10 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
     });
   }, [customers, query]);
 
-  async function onAssign(userId: string, siteId: string) {
+  async function onAssign(userId: string, value: string) {
     setSavingId(userId);
     try {
-      const next = await updateCustomerSites(userId, siteId ? [siteId] : []);
+      const next = await updateCustomerSites(userId, parseAccessValue(value));
       setCustomers((current) =>
         current.map((row) => (row.id === userId ? next : row)),
       );
@@ -128,12 +129,12 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
             <thead>
               <tr className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
                 <th className="pb-2 font-medium">Email</th>
-                <th className="pb-2 font-medium">Plant</th>
+                <th className="pb-2 font-medium">Access</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((row) => {
-                const current = row.siteIds?.[0] ?? "";
+                const current = accessValue(row);
                 return (
                   <tr key={row.id} className="border-t border-black/6">
                     <td className="py-3 font-medium text-neutral-950">
@@ -149,10 +150,10 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
                         className="h-11 w-full max-w-xs rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[15px] outline-none"
                         aria-label={`Plant for ${row.email}`}
                       >
-                        <option value="">No plant — hidden from models</option>
-                        {sites.map((site) => (
-                          <option key={site.id} value={site.id}>
-                            {siteLabel(site)}
+                        <option value="">No access — hidden from models</option>
+                        {accessOptions(sites).map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
                           </option>
                         ))}
                       </select>

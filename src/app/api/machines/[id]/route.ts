@@ -14,12 +14,11 @@ export async function GET(
   }
 
   const { id } = await params;
-  const machine = await getMachine(id);
-  if (!machine || !canAccessMachine(auth.user, machine)) {
+  const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
+  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
   }
 
-  const sites = await listSites();
   return json(
     toMachineDetail(machine, machineFileUrl(request, machine.id), auth.user.role, sites),
   );

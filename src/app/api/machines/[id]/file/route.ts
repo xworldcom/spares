@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
 import { canAccessMachine } from "@/lib/access";
-import { getMachine, machineFilePath } from "@/lib/store";
+import { getMachine, listSites, machineFilePath } from "@/lib/store";
 
 export async function GET(
   _request: Request,
@@ -15,8 +15,8 @@ export async function GET(
   }
 
   const { id } = await params;
-  const machine = await getMachine(id);
-  if (!machine || !canAccessMachine(auth.user, machine)) {
+  const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
+  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
   }
 

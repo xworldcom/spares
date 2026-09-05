@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const heal = request.nextUrl.searchParams.get("heal") === "1";
   const [machines, sites] = await Promise.all([listMachines({ heal }), listSites()]);
   const visible = machines.filter((machine) =>
-    canAccessMachine(auth.user, machine),
+    canAccessMachine(auth.user, machine, sites),
   );
   return json({
     machines: visible.map((machine) => toMachineSummary(machine, sites)),

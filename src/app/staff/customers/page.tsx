@@ -19,7 +19,7 @@ export default function StaffCustomersPage() {
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Customers</h1>
           <p className="spares-muted mt-1 text-sm">
-            Give each person a plant. They only see machines at that plant.
+            Give each person a plant, or All plants at their company.
           </p>
         </div>
         <SitesPanel reloadKey={reloadKey} onChange={refresh} />

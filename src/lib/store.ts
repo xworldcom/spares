@@ -48,10 +48,17 @@ const EXTRA_SEED_CUSTOMERS = [
     password: "SparesCustomer1!",
     role: "customer" as const,
   },
+  {
+    id: "user-cargill-corp",
+    email: "corp@cargill.test",
+    password: "SparesCustomer1!",
+    role: "customer" as const,
+  },
 ] as const;
 
 export const SEED_SITES: Site[] = [
   { id: "site-cargill-ftw", company: "Cargill", name: "Fort Worth" },
+  { id: "site-cargill-wichita", company: "Cargill", name: "Wichita" },
   { id: "site-acme-dayton", company: "Acme", name: "Dayton" },
   { id: "site-demo-plant1", company: "Demo", name: "Plant 1" },
 ];
@@ -60,6 +67,10 @@ const SEED_USER_SITES: Record<string, string[]> = {
   "user-customer": ["site-cargill-ftw"],
   "user-acme": ["site-acme-dayton"],
   "user-mill": ["site-demo-plant1"],
+};
+
+const SEED_USER_COMPANIES: Record<string, string[]> = {
+  "user-cargill-corp": ["Cargill"],
 };
 
 const SEED_MACHINE_SITES: Record<string, string> = {
@@ -73,6 +84,7 @@ export type StoredUser = {
   passwordHash: string;
   role: Role;
   siteIds?: string[];
+  companyAccess?: string[];
 };
 
 export type StoredMachine = {
@@ -224,8 +236,15 @@ function ensureSites(db: Database): Database {
     if (user.role !== "customer") {
       return user;
     }
-    if (user.siteIds && user.siteIds.length > 0) {
+    const hasPlant =
+      (user.siteIds && user.siteIds.length > 0) ||
+      (user.companyAccess && user.companyAccess.length > 0);
+    if (hasPlant) {
       return user;
+    }
+    const company = SEED_USER_COMPANIES[user.id];
+    if (company) {
+      return { ...user, companyAccess: company, siteIds: [] };
     }
     const seeded = SEED_USER_SITES[user.id];
     return seeded ? { ...user, siteIds: seeded } : user;
@@ -367,7 +386,7 @@ export function listCustomers() {
 export function createCustomer(
   email: string,
   passwordHash: string,
-  siteIds: string[] = [],
+  access: { siteIds?: string[]; companyAccess?: string[] } = {},
 ) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
@@ -376,12 +395,16 @@ export function createCustomer(
       return { error: "email-taken" as const };
     }
     const known = new Set((db.sites ?? []).map((site) => site.id));
+    const companies = new Set((db.sites ?? []).map((site) => site.company));
     const user: StoredUser = {
       id: randomUUID(),
       email: normalized,
       passwordHash,
       role: "customer",
-      siteIds: siteIds.filter((id) => known.has(id)),
+      siteIds: (access.siteIds ?? []).filter((id) => known.has(id)),
+      companyAccess: (access.companyAccess ?? []).filter((name) =>
+        companies.has(name),
+      ),
     };
     await writeDatabase({ ...db, users: [...db.users, user] });
     return { user };
@@ -424,7 +447,10 @@ export function createSite(company: string, name: string) {
   });
 }
 
-export function updateCustomerSites(userId: string, siteIds: string[]) {
+export function updateCustomerSites(
+  userId: string,
+  access: { siteIds?: string[]; companyAccess?: string[] },
+) {
   return withLock(async () => {
     const db = await readDatabase();
     const index = db.users.findIndex((user) => user.id === userId);
@@ -436,9 +462,11 @@ export function updateCustomerSites(userId: string, siteIds: string[]) {
       return { error: "not-customer" as const };
     }
     const known = new Set((db.sites ?? []).map((site) => site.id));
+    const companies = new Set((db.sites ?? []).map((site) => site.company));
     const next = {
       ...user,
-      siteIds: [...new Set(siteIds.filter((id) => known.has(id)))],
+      siteIds: [...new Set((access.siteIds ?? []).filter((id) => known.has(id)))],
+      companyAccess: [...new Set((access.companyAccess ?? []).filter((name) => companies.has(name)))],
     };
     const users = db.users.slice();
     users[index] = next;
