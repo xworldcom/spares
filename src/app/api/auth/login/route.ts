@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
+import { allowRateLimit, clientIp } from "@/lib/rate-limit";
 import { findUserByEmail, listSites } from "@/lib/store";
 
 type LoginBody = {
@@ -59,6 +60,17 @@ export async function POST(request: Request) {
   const password = typeof body.password === "string" ? body.password : "";
   if (!email || !password) {
     return html ? redirectNoQuery("/login") : error("Email and password are required", 400);
+  }
+
+  const ip = clientIp(request);
+  const emailKey = email.trim().toLowerCase();
+  if (
+    !allowRateLimit(`login-ip:${ip}`, 8, 15 * 60 * 1000) ||
+    !allowRateLimit(`login-email:${emailKey}`, 8, 15 * 60 * 1000)
+  ) {
+    return html
+      ? redirectNoQuery("/login")
+      : error("Too many sign-in attempts. Try again in a few minutes.", 429);
   }
 
   const user = await findUserByEmail(email);

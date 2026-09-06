@@ -838,7 +838,11 @@ export function attachBugReportGithubIssue(id: string, githubIssueUrl: string) {
 }
 
 export function machineFilePath(storedFileName: string) {
-  return path.join(filesDir(), storedFileName);
+  const safe = path.basename(storedFileName).replace(/[^A-Za-z0-9._-]/g, "");
+  if (!safe) {
+    throw new Error("Invalid stored file name");
+  }
+  return path.join(filesDir(), safe);
 }
 
 export function saveMachineFile(storedFileName: string, bytes: Buffer) {

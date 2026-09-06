@@ -25,7 +25,7 @@ export async function GET(
     return new Response(bytes, {
       headers: {
         "Content-Type": modelContentType(machine.originalFileName),
-        "Content-Disposition": `inline; filename="${machine.originalFileName}"`,
+        "Content-Disposition": `inline; filename="${machine.originalFileName.replace(/[\r\n"]/g, "")}"`,
         "Cache-Control": "private, no-store",
       },
     });
