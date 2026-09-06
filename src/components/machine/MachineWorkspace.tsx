@@ -16,9 +16,9 @@ import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
+import { DESKTOP_MQ } from "@/lib/ui/breakpoints";
 
 const VIEWER_STAGE = "#1c232c";
-const DESKTOP_STAGE = "(min-width: 1024px) and (min-height: 840px)";
 
 function ExpandIcon() {
   return (
@@ -48,8 +48,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [quoteChip, setQuoteChip] = useState(true);
   const [held, setHeld] = useState(false);
   const [view, setView] = useState<"model" | "list">("model");
+  const [desktop, setDesktop] = useState(false);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const captureThumb = useRef<(partId: string) => string | null>(() => null);
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_MQ);
+    const sync = () => setDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!isCustomer || typeof window === "undefined") {
@@ -333,7 +342,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             held={held}
           />
         ) : null}
-        {isCustomer ? tray : null}
+        {isCustomer && (!desktop || fullscreen) ? tray : null}
         <div
           aria-hidden="true"
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
@@ -472,9 +481,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
       <div
         className="machine-stage-grid"
-        data-tray={isCustomer && trayOpen && !fullscreen ? "open" : "closed"}
+        data-tray={
+          (!isCustomer && desktop) || (isCustomer && trayOpen && !fullscreen)
+            ? "open"
+            : "closed"
+        }
       >
         {viewerBlock}
+        {isCustomer && desktop && !fullscreen ? tray : null}
         {isCustomer ? null : (
           <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
             Customers request quotes from this page. Staff inspect the join

@@ -11,6 +11,7 @@ import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
 import { quoteHref } from "@/lib/quotes";
+import { isDesktopStage } from "@/lib/ui/breakpoints";
 
 export type TrayLine = {
   part: Part;
@@ -21,15 +22,8 @@ export type TrayLine = {
 type Sheet = "peek" | "full" | "out";
 
 export const SHEET_EASE_MS = 420;
-const DESKTOP_STAGE = "(min-width: 1024px) and (min-height: 840px)";
 const DRAG_SLOP = 8;
 const SAMPLE_WINDOW_MS = 90;
-
-function isDesktopStage() {
-  return (
-    typeof window !== "undefined" && window.matchMedia(DESKTOP_STAGE).matches
-  );
-}
 
 function isSkipTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
