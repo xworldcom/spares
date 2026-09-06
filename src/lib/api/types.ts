@@ -1,4 +1,4 @@
-import type { BugReport, MachineSummary, PublicUser, Quote } from "@/types";
+import type { BugReport, MachineSummary, PublicUser, Quote, Site } from "@/types";
 
 export type {
   BugReport,
