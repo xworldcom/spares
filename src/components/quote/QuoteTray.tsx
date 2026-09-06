@@ -427,7 +427,10 @@ export function QuoteTray({
       drag.current.moved = true;
     }
     const from = drag.current.from;
-    const next = from === "full" && dy < 0 ? dy * 0.18 : dy;
+    const next =
+      (from === "full" && dy < 0) || (from === "peek" && dy > 0)
+        ? dy * 0.18
+        : dy;
     recordSample(event.clientY);
     paintDrag(next);
   }
@@ -440,9 +443,7 @@ export function QuoteTray({
     paintDrag(0);
     const velocity = liveVelocity();
     if (from === "full") {
-      if (dy > 120 || velocity > 0.7) {
-        dismiss();
-      } else if (dy > 48 || velocity > 0.35) {
+      if (dy > 48 || velocity > 0.35) {
         setSheet("peek");
         setOpen(true);
       } else {
@@ -453,10 +454,6 @@ export function QuoteTray({
     if (dy < -36 || velocity < -0.35) {
       setSheet("full");
       setOpen(true);
-      return;
-    }
-    if (dy > 72 || velocity > 0.5) {
-      dismiss();
       return;
     }
     setSheet("peek");
