@@ -336,10 +336,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         {isCustomer ? tray : null}
         <div
           aria-hidden="true"
-          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-28"
+          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
-        <div className="absolute top-3 left-3 z-20 flex min-w-0 items-center gap-2">
-          <div className="viewer-chrome-chip flex h-11 items-center rounded-full p-1">
+        <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
+          <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full p-1">
             <button
               type="button"
               onClick={() => setView("model")}
@@ -360,27 +360,43 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             </button>
           </div>
           {view === "model" ? (
+            <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
+              <span className="hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
+                Explode
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(explode * 100)}
+                onChange={(event) => setExplode(Number(event.target.value) / 100)}
+                className="explode-slider"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(explode * 100)}
+                aria-label="Explode assembly"
+              />
+            </label>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          {view === "model" && needsReset ? (
             <button
               type="button"
               data-show-all=""
               onPointerDown={(event) => {
-                if (!needsReset || event.button !== 0) {
+                if (event.button !== 0) {
                   return;
                 }
                 event.preventDefault();
                 showAll();
               }}
               onClick={showAll}
-              disabled={!needsReset}
-              className={`viewer-chrome-chip inline-flex h-11 items-center justify-center rounded-full px-3 text-sm font-semibold ${
-                needsReset ? "" : "invisible pointer-events-none"
-              }`}
+              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
             >
               Show all
             </button>
           ) : null}
-        </div>
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
           {isCustomer && fullscreen ? (
             <QuoteTray
               machineId={machine.id}
@@ -407,7 +423,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 setTrayOpen(true);
               }}
               onClick={() => setTrayOpen(true)}
-              className="viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold"
+              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold"
               aria-label={`Show quote, ${quoteCount} ${quoteCount === 1 ? "item" : "items"}`}
             >
               Quote
@@ -436,7 +452,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 enter();
               }
             }}
-            className="viewer-chrome-chip relative z-40 inline-flex h-11 w-11 items-center justify-center rounded-full"
+            className="viewer-chrome-chip relative z-40 hidden h-11 w-11 shrink-0 items-center justify-center rounded-full lg:inline-flex"
             aria-label={fullscreen ? "Exit full screen" : "Full screen"}
           >
             {fullscreen ? (
@@ -446,25 +462,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             )}
           </button>
         </div>
-        {view === "model" ? (
-          <label className="viewer-chrome-chip absolute top-[3.85rem] left-3 right-[7.25rem] z-20 flex min-h-11 min-w-0 items-center gap-3 px-3">
-            <span className="shrink-0 text-[13px] font-medium tracking-wide">
-              Explode
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(explode * 100)}
-              onChange={(event) => setExplode(Number(event.target.value) / 100)}
-              className="explode-slider"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(explode * 100)}
-              aria-label="Explode assembly"
-            />
-          </label>
-        ) : null}
       </div>
     </div>
   );
