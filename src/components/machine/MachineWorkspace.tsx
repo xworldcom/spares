@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
@@ -49,6 +49,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [held, setHeld] = useState(false);
   const [view, setView] = useState<"model" | "list">("model");
   const [desktop, setDesktop] = useState(false);
+  const [railPx, setRailPx] = useState(360);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const captureThumb = useRef<(partId: string) => string | null>(() => null);
 
@@ -59,6 +60,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    if (desktop && !isCustomer) {
+      setView("model");
+    }
+  }, [desktop, isCustomer]);
 
   useEffect(() => {
     if (!isCustomer || typeof window === "undefined") {
@@ -293,7 +300,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onCaptureReady={(capture) => {
               captureThumb.current = capture;
             }}
-            className={`absolute inset-0 ${view === "list" ? "invisible" : ""}`}
+            className={`absolute inset-0 ${view === "list" && !(desktop && !isCustomer) ? "invisible" : ""}`}
           />
         ) : (
           <EmptyState
@@ -301,7 +308,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             message="This machine pack does not have a GLB or GLTF file to display."
           />
         )}
-        {view === "list" ? (
+        {view === "list" && !(desktop && !isCustomer) ? (
           <section
             data-parts-bom=""
             className="absolute inset-0 z-[15] overflow-y-auto bg-[#f4f5f7] px-4 pb-8"
@@ -348,6 +355,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
+          {!(desktop && !isCustomer && !fullscreen) ? (
           <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full p-1">
             <button
               type="button"
@@ -368,6 +376,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               List
             </button>
           </div>
+          ) : null}
           {view === "model" ? (
             <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
               <span className="hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
@@ -481,20 +490,71 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
       <div
         className="machine-stage-grid"
+        data-staff={!isCustomer ? "1" : undefined}
         data-tray={
-          (!isCustomer && desktop) || (isCustomer && trayOpen && !fullscreen)
+          (!isCustomer && desktop && !fullscreen) ||
+          (isCustomer && trayOpen && !fullscreen)
             ? "open"
             : "closed"
+        }
+        style={
+          !isCustomer && desktop
+            ? ({ "--staff-rail": `${railPx}px` } as CSSProperties)
+            : undefined
         }
       >
         {viewerBlock}
         {isCustomer && desktop && !fullscreen ? tray : null}
-        {isCustomer ? null : (
-          <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
-            Customers request quotes from this page. Staff inspect the join
-            here.
-          </div>
-        )}
+        {!isCustomer && desktop && !fullscreen ? (
+          <aside
+            className="staff-parts-rail flex min-h-0 w-full flex-col overflow-hidden rounded-[28px] bg-white"
+          >
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize parts list"
+              className="staff-rail-handle"
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                const startX = event.clientX;
+                const startW = railPx;
+                const handle = event.currentTarget;
+                handle.setPointerCapture(event.pointerId);
+                function onMove(move: PointerEvent) {
+                  const next = Math.min(560, Math.max(260, startW + (startX - move.clientX));
+                  setRailPx(next);
+                }
+                function onUp() {
+                  handle.removeEventListener("pointermove", onMove);
+                  handle.removeEventListener("pointerup", onUp);
+                }
+                handle.addEventListener("pointermove", onMove);
+                handle.addEventListener("pointerup", onUp);
+              }}
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+                {machine.name}
+              </p>
+              <PartsBom
+                parts={joinedParts}
+                selectedPartId={selectedPart?.id ?? null}
+                onSelect={setSelectedPart}
+                searchable
+              />
+              {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
+                <p className="spares-muted mt-3 text-sm">
+                  {machine.unmatched?.length} extra mesh
+                  {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the
+                  model are not on this list.
+                </p>
+              ) : null}
+            </div>
+          </aside>
+        ) : null}
       </div>
     </div>
   );
