@@ -9,15 +9,8 @@ export default function UploadPackPage() {
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Upload pack</h1>
           <p className="spares-muted mt-1 text-sm">
-            Drop a GLB and a parts list (JSON or CSV). From SolidWorks, run the{" "}
-            <a className="underline" href="/export/README.md">
-              Publish to Spares macro
-            </a>{" "}
-            (
-            <a className="underline" href="/export/spares-pack.bas">
-              download .bas
-            </a>
-            ) to build both files in one step.
+            Add a GLB and parts list for a machine. SolidWorks? Start with the
+            macro below.
           </p>
         </div>
         <Suspense>
