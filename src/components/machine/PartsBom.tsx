@@ -1,7 +1,49 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/api/types";
+import { createTapGesture, tapActivateHandlers } from "@/lib/ui/tap-gesture";
+
+function PartRowSelectButton({
+  part,
+  selected,
+  onSelect,
+}: {
+  part: Part;
+  selected: boolean;
+  onSelect: (part: Part) => void;
+}) {
+  const gesture = useRef(createTapGesture());
+  const handlers = useMemo(
+    () => tapActivateHandlers(gesture.current, () => onSelect(part)),
+    [onSelect, part],
+  );
+
+  return (
+    <button
+      type="button"
+      {...handlers}
+      className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
+    >
+      <span className="min-w-0">
+        <span className="block truncate text-[15px] font-medium">{part.name}</span>
+        <span
+          className={`block truncate font-mono text-xs ${
+            selected ? "row-on-ink-muted" : "spares-muted"
+          }`}
+        >
+          {part.id}
+          {part.replaces ? ` · replaces ${part.replaces}` : ""}
+        </span>
+      </span>
+      <span
+        className={`tabular-nums text-sm ${selected ? "row-on-ink-muted" : "spares-muted"}`}
+      >
+        {part.qty}
+      </span>
+    </button>
+  );
+}
 
 export function PartsBom({
   parts,
@@ -110,33 +152,11 @@ export function PartsBom({
                     selected ? "row-on-ink" : "text-neutral-800"
                   }`}
                 >
-                  <button
-                    type="button"
-                    onPointerDown={() => onSelect(part)}
-                    onClick={() => onSelect(part)}
-                    className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-medium">
-                        {part.name}
-                      </span>
-                      <span
-                        className={`block truncate font-mono text-xs ${
-                          selected ? "row-on-ink-muted" : "spares-muted"
-                        }`}
-                      >
-                        {part.id}
-                        {part.replaces ? ` · replaces ${part.replaces}` : ""}
-                      </span>
-                    </span>
-                    <span
-                      className={`tabular-nums text-sm ${
-                        selected ? "row-on-ink-muted" : "spares-muted"
-                      }`}
-                    >
-                      {part.qty}
-                    </span>
-                  </button>
+                  <PartRowSelectButton
+                    part={part}
+                    selected={selected}
+                    onSelect={onSelect}
+                  />
                   {showAdd && onAdd ? (
                     <button
                       type="button"

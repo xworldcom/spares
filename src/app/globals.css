@@ -514,4 +514,33 @@ html.spares-embed .spares-app-stage {
   .machine-stage-grid {
     transition: none;
   }
+
+  .quote-badge-pulse {
+    animation: none;
+  }
+
+  .quote-badge-pulse.btn-accent {
+    filter: brightness(1.15);
+  }
+
+  p.quote-badge-pulse {
+    color: #0a84ff;
+  }
+}
+
+@keyframes quote-badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.2);
+  }
+  65% {
+    transform: scale(0.94);
+  }
+}
+
+.quote-badge-pulse {
+  animation: quote-badge-pulse 0.45s ease-out;
 }

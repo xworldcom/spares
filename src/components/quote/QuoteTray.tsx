@@ -53,6 +53,7 @@ function QuoteTrayForm({
   sent,
   sentHref,
   onClose,
+  countPulse,
 }: {
   lines: TrayLine[];
   note: string;
@@ -65,7 +66,9 @@ function QuoteTrayForm({
   sent: boolean;
   sentHref?: string;
   onClose?: () => void;
+  countPulse?: boolean;
 }) {
+  const count = lines.reduce((sum, line) => sum + line.qty, 0);
   return (
     <div className="quote-sheet-form flex min-h-0 flex-1 flex-col px-5 pb-5">
       <div className="quote-sheet-grab flex items-center justify-between gap-3">
@@ -73,10 +76,14 @@ function QuoteTrayForm({
           <h2 className="text-[21px] leading-tight font-semibold tracking-tight text-neutral-950">
             Quote
           </h2>
-          <p className="spares-muted mt-0.5 text-sm">
+          <p
+            className={`spares-muted mt-0.5 text-sm${
+              countPulse ? " quote-badge-pulse" : ""
+            }`}
+          >
             {lines.length === 0
               ? "Add a part to get started."
-              : `${lines.length} ${lines.length === 1 ? "part" : "parts"}`}
+              : `${count} ${count === 1 ? "item" : "items"}`}
           </p>
         </div>
         {onClose ? (
@@ -274,12 +281,16 @@ export function QuoteTray({
   }, [open]);
 
   const prevCount = useRef(count);
+  const [countPulse, setCountPulse] = useState(false);
   useEffect(() => {
-    if (open && count > prevCount.current) {
-      setSheet("full");
+    if (count > prevCount.current) {
+      setCountPulse(true);
+      const timer = window.setTimeout(() => setCountPulse(false), 480);
+      prevCount.current = count;
+      return () => window.clearTimeout(timer);
     }
     prevCount.current = count;
-  }, [count, open]);
+  }, [count]);
 
   async function handleSubmit() {
     setError(null);
@@ -324,6 +335,7 @@ export function QuoteTray({
     error,
     sent,
     sentHref,
+    countPulse,
   };
 
   function dismiss() {
@@ -494,7 +506,11 @@ export function QuoteTray({
         aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
       >
         Quote
-        <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
+        <span
+          className={`btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums${
+            countPulse ? " quote-badge-pulse" : ""
+          }`}
+        >
           {count}
         </span>
       </button>
