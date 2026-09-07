@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
+import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
 import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -18,7 +20,6 @@ import type { MachineDetail, Part } from "@/lib/api/types";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#1c232c";
-const DESKTOP_STAGE = "(min-width: 1024px) and (min-height: 840px)";
 
 function ExpandIcon() {
   return (
@@ -49,7 +50,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [held, setHeld] = useState(false);
   const [view, setView] = useState<"model" | "list">("model");
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
+  const desktopStage = useDesktopStage();
+  const staffSplit = useResizableSplit(!isCustomer && desktopStage);
   const captureThumb = useRef<(partId: string) => string | null>(() => null);
+  const customerTrayInViewer = isCustomer && !desktopStage;
+  const staffSplitView = !isCustomer && desktopStage;
+  const showViewToggle = !staffSplitView;
 
   useEffect(() => {
     if (!isCustomer || typeof window === "undefined") {
@@ -292,7 +298,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             message="This machine pack does not have a GLB or GLTF file to display."
           />
         )}
-        {view === "list" ? (
+        {view === "list" && !staffSplitView ? (
           <section
             data-parts-bom=""
             className="absolute inset-0 z-[15] overflow-y-auto bg-[#f4f5f7] px-4 pb-8"
@@ -333,33 +339,35 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             held={held}
           />
         ) : null}
-        {isCustomer ? tray : null}
+        {customerTrayInViewer ? tray : null}
         <div
           aria-hidden="true"
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
-          <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full p-1">
-            <button
-              type="button"
-              onClick={() => setView("model")}
-              className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                view === "model" ? "btn-primary" : "text-neutral-600"
-              }`}
-            >
-              3D
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                view === "list" ? "btn-primary" : "text-neutral-600"
-              }`}
-            >
-              List
-            </button>
-          </div>
-          {view === "model" ? (
+          {showViewToggle ? (
+            <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => setView("model")}
+                className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                  view === "model" ? "btn-primary" : "text-neutral-600"
+                }`}
+              >
+                3D
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("list")}
+                className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                  view === "list" ? "btn-primary" : "text-neutral-600"
+                }`}
+              >
+                List
+              </button>
+            </div>
+          ) : null}
+          {(showViewToggle && view === "model") || staffSplitView ? (
             <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
               <span className="hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
                 Explode
@@ -377,10 +385,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 aria-label="Explode assembly"
               />
             </label>
-          ) : (
+          ) : showViewToggle ? (
             <div className="min-w-0 flex-1" />
-          )}
-          {view === "model" && needsReset ? (
+          ) : null}
+          {((showViewToggle && view === "model") || staffSplitView) && needsReset ? (
             <button
               type="button"
               data-show-all=""
@@ -466,21 +474,68 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     </div>
   );
 
+  const staffPartsPanel = (
+    <aside className="machine-bom" data-parts-bom="">
+      <div className="machine-bom-scroll">
+        <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+          {machine.name}
+        </p>
+        <PartsBom
+          parts={joinedParts}
+          selectedPartId={selectedPart?.id ?? null}
+          onSelect={setSelectedPart}
+          searchable
+        />
+        {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
+          <p className="spares-muted mt-3 text-sm">
+            {machine.unmatched?.length} extra mesh
+            {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the model are
+            not on this list.
+          </p>
+        ) : null}
+      </div>
+    </aside>
+  );
+
   return (
     <div className="machine-stage">
       <h1 className="sr-only">{machine.name}</h1>
 
       <div
+        ref={staffSplitView ? staffSplit.containerRef : undefined}
         className="machine-stage-grid"
-        data-tray={isCustomer && trayOpen && !fullscreen ? "open" : "closed"}
+        data-tray={
+          isCustomer && trayOpen && !fullscreen && desktopStage ? "open" : "closed"
+        }
+        data-customer-desktop={isCustomer && desktopStage ? "true" : undefined}
+        data-staff-split={staffSplitView ? "true" : undefined}
+        style={
+          staffSplitView
+            ? ({ "--staff-split": `${staffSplit.split * 100}%` } as React.CSSProperties)
+            : undefined
+        }
       >
         {viewerBlock}
-        {isCustomer ? null : (
-          <div className="quote-tray-dock is-open rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
-            Customers request quotes from this page. Staff inspect the join
-            here.
+        {staffSplitView ? (
+          <>
+            <div
+              className="machine-split-handle"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize 3D and parts list"
+              {...staffSplit.handleProps}
+            />
+            {staffPartsPanel}
+          </>
+        ) : null}
+        {isCustomer && desktopStage && !fullscreen ? (
+          <div
+            className={`quote-tray-dock${trayOpen ? " is-open" : ""}`}
+            data-quote-tray=""
+          >
+            {tray}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

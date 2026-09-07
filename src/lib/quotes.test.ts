@@ -12,6 +12,7 @@ import {
   parseShipments,
   pricesVisibleToCustomer,
   quoteItemsEqual,
+  quotePricingComplete,
   shippedActivityText,
   toPublicQuote,
 } from "./quotes.ts";
@@ -204,6 +205,14 @@ describe("role-aware items and unread", () => {
     ]);
   });
 
+  it("maps legacy unitPrice for customers after quoted", () => {
+    const legacy = [
+      { id: "A", name: "Bearing", qty: 2, unitPrice: 20, leadTimeDays: 4 },
+    ];
+    const items = itemsForRole(legacy, "customer", "quoted");
+    assert.equal(items[0]?.sellPrice, 20);
+  });
+
   it("marks a new quote unread for staff and read for the customer", () => {
     assert.equal(
       isQuoteUnreadForUser(record, {
@@ -291,6 +300,17 @@ describe("mergeQuoteItems and numbers", () => {
     ]);
     assert.equal(numbered.find((row) => row.id === "a")?.number, 1);
     assert.equal(numbered.find((row) => row.id === "b")?.number, 2);
+  });
+});
+
+describe("quotePricingComplete", () => {
+  it("requires a sell price on every line", () => {
+    assert.equal(
+      quotePricingComplete([{ id: "A", qty: 1, sellPrice: 10 }]),
+      true,
+    );
+    assert.equal(quotePricingComplete([{ id: "A", qty: 1 }]), false);
+    assert.equal(quotePricingComplete([]), false);
   });
 });
 

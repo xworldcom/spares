@@ -27,7 +27,7 @@ function preferNativeFullscreen() {
   if (isEmbedded() || isIos()) {
     return false;
   }
-  return window.matchMedia("(pointer: coarse)").matches;
+  return true;
 }
 
 export function useViewerFullscreen() {
