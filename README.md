@@ -122,11 +122,34 @@ Optional (from T1.2, plus T3 durable store):
 
 - `AUTH_SECRET` — signs the httpOnly session cookie. A local non-production default is used when unset.
 - `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
-- `BLOB_READ_WRITE_TOKEN` — **required on Vercel Preview.** Quotes, activity, PO PDFs, tracking, users, machine metadata, and GLB files live in a private Vercel Blob store so they survive serverless hops. Local `npm run dev` does not need this; it keeps using `./data`.
+- `BLOB_READ_WRITE_TOKEN` — **required on Vercel Preview** when S3/R2 is not configured. Quotes, activity, PO PDFs, tracking, users, and machine metadata live in a private Vercel Blob store (`spares/db.json`). Local `npm run dev` does not need this; it keeps using `./data`.
+- **S3-compatible object storage (preferred for GLB files)** — keeps large model binaries off Vercel origin transfer. Set all of:
+  - `S3_ENDPOINT` — R2 endpoint, e.g. `https://<accountid>.r2.cloudflarestorage.com`
+  - `S3_REGION` — use `auto` for Cloudflare R2
+  - `S3_BUCKET` — bucket name
+  - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
+  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base, e.g. `https://models.preview.example.com` (no trailing slash). When set, the viewer loads GLBs from this URL instead of proxying through Next.js.
 
-### Tess: attach Blob on Preview (required)
+### Tess: wire Cloudflare R2 for model files (recommended)
 
-Vercel `/tmp` is per-instance. Without Blob, a quote created on one function instance disappears on the next cold start.
+Large GLBs should not stream through Vercel on every view. JSON records can stay on Blob; only model binaries need R2.
+
+1. In Cloudflare, create an **R2 bucket** (private preview is fine) and an **API token** with read/write on that bucket.
+2. Optionally attach a **custom domain** or R2 public bucket URL for `S3_PUBLIC_BASE_URL` so the browser loads models from the CDN.
+3. In the Vercel project **Preview** environment, set:
+   - `S3_ENDPOINT` = `https://<accountid>.r2.cloudflarestorage.com`
+   - `S3_REGION` = `auto`
+   - `S3_BUCKET` = your bucket name
+   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` = R2 token
+   - `S3_PUBLIC_BASE_URL` = public CDN base (recommended)
+4. Keep `BLOB_READ_WRITE_TOKEN` for `spares/db.json` and small files (PO PDFs, bug screenshots) unless you move JSON elsewhere later.
+5. Redeploy Preview only. Do **not** promote to Production.
+
+On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. The API returns `fileUrl` as the CDN URL when `S3_PUBLIC_BASE_URL` is set; PartPicker loads that URL directly (no Next.js proxy bandwidth). `GET /api/machines/:id/file` remains a credentialed fallback when CDN is not configured.
+
+### Tess: attach Blob on Preview (JSON + small files)
+
+Vercel `/tmp` is per-instance. Without Blob **or** another durable store, a quote created on one function instance disappears on the next cold start.
 
 1. In the Vercel dashboard, open **Storage** and create a **Blob** store (private preview is fine).
 2. Connect that store to the `spares` project for the **Preview** environment (Development too if you want). Vercel injects `BLOB_READ_WRITE_TOKEN` — you should not need to paste the token by hand.
@@ -138,17 +161,19 @@ Empty Blob store auto-seeds Hardware fixture, Palletizer, and the seed users the
 
 ### Large GLB packs
 
-Staff Upload pack sends the 3D file **straight to Vercel Blob** (private, same `spares/files/…` path the viewer already reads). The create/replace request only carries the machine name, plant, and parts list — so a ~49 MB SolidWorks export no longer dies with `Request failed (413)` at the Next/Vercel body limit.
+Staff Upload pack sends the 3D file **straight to object storage** when configured (S3/R2 presigned PUT, or Vercel Blob when S3 is not set). The create/replace request only carries the machine name, plant, and parts list — so a ~49 MB SolidWorks export no longer dies with `Request failed (413)` at the Next/Vercel body limit. On ingest, Spares normalizes and compresses the GLB (meshopt + Draco) before the final object is stored.
 
 | Path | What succeeds | Hard ceiling |
 | --- | --- | --- |
-| Preview with Blob (`BLOB_READ_WRITE_TOKEN`) | GLB packs **up to 256 MB** | Token `maximumSizeInBytes` = 256 MB. Larger files get a plain-English error. |
-| Local `npm run dev` without Blob | Multipart through the API | Next/Vercel practical cap **100 MB** (`proxyClientMaxBodySize`). |
+| Preview with S3/R2 | GLB packs **up to 256 MB** via presigned upload | Client `maximumSizeInBytes` = 256 MB. Larger files get a plain-English error. |
+| Preview with Blob only (`BLOB_READ_WRITE_TOKEN`, no S3) | GLB packs **up to 256 MB** | Token `maximumSizeInBytes` = 256 MB. |
+| Local `npm run dev` without object storage | Multipart through the API | Next/Vercel practical cap **100 MB** (`proxyClientMaxBodySize`). |
+| Over 15 MB without successful compression | Upload is refused before save | “Could not be compressed enough for storage…” — re-export with Draco/meshopt or simplify. |
 | Over the ceiling | Upload is refused before join | “This model is N MB. Staff packs can be up to 256 MB.” |
 
-256 MB is a Vercel-practical ceiling: the join step still reads the stored GLB in the function to extract mesh names. Blob itself can take much larger objects; raising this later means streaming the JSON chunk instead of buffering the whole file.
+256 MB is a Vercel-practical ceiling: the join step still reads the stored GLB in the function to extract mesh names.
 
-The 3D viewer still loads the model through `GET /api/machines/:id/file` (session cookie). Very large assemblies may be slow to open even after a successful upload.
+When `S3_PUBLIC_BASE_URL` is set, the 3D viewer loads the model from the CDN URL in `fileUrl`. Otherwise it uses `GET /api/machines/:id/file` (session cookie). Very large assemblies may be slow to open even after a successful upload.
 
 ## API (T1.2, stacked from #7)
 

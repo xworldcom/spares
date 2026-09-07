@@ -14,7 +14,7 @@ import { LoadingState } from "@/components/states/LoadingState";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
 import { viewerNeedsReset } from "@/components/viewer/assemblyView";
-import { getMachine, machineFileSrc } from "@/lib/api/machines";
+import { getMachine } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import { quoteAddFeedback } from "@/lib/ui/quote-feedback";
@@ -149,7 +149,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }, [selectedPart]);
 
   const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
-  const src = machine ? machineFileSrc(machine.id) : "";
+  const src = machine?.fileUrl ?? "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
   const showUnmatched =
     user?.role === "staff" && machine?.unmatched !== undefined;

@@ -6,12 +6,15 @@ import {
   packOverLimitMessage,
   storedFileNameFromUploadPath,
 } from "@/lib/pack-limits";
-import { isModelFilename } from "@/lib/machines";
+import { isModelFilename, modelExtension } from "@/lib/machines";
+import { createModelUploadUrl } from "@/lib/model-storage";
+import { isS3Configured } from "@/lib/s3-config";
+import { randomUUID } from "node:crypto";
 
 export const maxDuration = 60;
 
-function clientUploadAvailable() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+function blobClientUploadAvailable() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN) && !isS3Configured();
 }
 
 export async function GET() {
@@ -20,15 +23,46 @@ export async function GET() {
     return auth.error;
   }
   return json({
-    clientUpload: clientUploadAvailable(),
+    clientUpload: blobClientUploadAvailable(),
+    s3Upload: isS3Configured(),
     maxBytes: CLIENT_PACK_MAX_BYTES,
   });
 }
 
 export async function POST(request: Request) {
-  if (!clientUploadAvailable()) {
+  if (isS3Configured()) {
+    const auth = await requireRole("staff");
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    let body: { originalFileName?: string };
+    try {
+      body = (await request.json()) as { originalFileName?: string };
+    } catch {
+      return error("Expected JSON", 400);
+    }
+
+    const originalFileName =
+      typeof body.originalFileName === "string" ? body.originalFileName.trim() : "";
+    if (!originalFileName || !isModelFilename(originalFileName)) {
+      return error("Model must be a .glb or .gltf file.", 400);
+    }
+
+    const storedFileName = `${randomUUID()}${modelExtension(originalFileName)}`;
+    try {
+      const { uploadUrl } = await createModelUploadUrl(storedFileName);
+      return json({ uploadUrl, storedFileName, method: "PUT" });
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "Could not start the model upload.";
+      return error(message, 400);
+    }
+  }
+
+  if (!blobClientUploadAvailable()) {
     return error(
-      "Blob storage is not attached on this preview, so large models cannot go straight to storage.",
+      "Object storage is not attached on this preview, so large models cannot go straight to storage.",
       503,
     );
   }

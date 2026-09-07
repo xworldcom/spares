@@ -1,12 +1,12 @@
 import { requireUser } from "@/lib/auth";
-import { prepareModelBytes } from "@/lib/gltf";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
+import { modelPublicUrl } from "@/lib/model-url";
 import { canAccessMachine } from "@/lib/access";
 import { getMachine, listSites, readStoredFile } from "@/lib/store";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireUser();
@@ -20,8 +20,13 @@ export async function GET(
     return error("Machine not found", 404);
   }
 
+  const publicUrl = modelPublicUrl(machine.storedFileName);
+  if (publicUrl) {
+    return Response.redirect(publicUrl, 307);
+  }
+
   try {
-    const bytes = prepareModelBytes(await readStoredFile(machine.storedFileName));
+    const bytes = await readStoredFile(machine.storedFileName);
     return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": modelContentType(machine.originalFileName),

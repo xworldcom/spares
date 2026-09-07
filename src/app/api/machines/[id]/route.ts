@@ -34,7 +34,7 @@ export async function GET(
   }
 
   return json(
-    toMachineDetail(machine, machineFileUrl(request, machine.id), auth.user.role, sites),
+    toMachineDetail(machine, machineFileUrl(request, machine), auth.user.role, sites),
   );
 }
 
@@ -97,7 +97,7 @@ export async function PATCH(
   return json(
     toMachineDetail(
       updated.machine,
-      machineFileUrl(request, updated.machine.id),
+      machineFileUrl(request, updated.machine),
       auth.user.role,
       await listSites(),
     ),
