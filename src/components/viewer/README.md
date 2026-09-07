@@ -44,7 +44,7 @@ export function PartPicker(props: {
 
 | Prop | Behavior |
 | --- | --- |
-| `src` | URL of a `.glb` / `.gltf`. Loaded with `fetch(..., { credentials: "include" })` so the `spares_session` cookie is sent. A cookie-less load 401s on the protected preview. |
+| `src` | URL of a `.glb` / `.gltf`. Same-origin paths load with `fetch(..., { credentials: "include" })` so the `spares_session` cookie is sent. Presigned R2/CDN URLs load cross-origin without cookies. |
 | `parts` | Joined named parts only (customer-pickable). `id` is the part number. |
 | `onSelect` | Pointer-down on a mesh that maps to `parts[]` → `{ id, name, meshName, qty }`. Empty space → `null`. |
 | `selectedId` | Optional controlled highlight (list → viewer). Omit to let the viewer keep last named pick. |
@@ -60,12 +60,12 @@ Rotate, zoom, and pan are built in (OrbitControls). There is no CAD ribbon. Hide
 
 WebXR / VR is a later pass — do not add XR buttons here.
 
-## Cookie file URL
+## Model file URL
 
-`src` is Brent's same-origin `fileUrl` (`GET /api/machines/:id/file`), not a public blob. The loader:
+`src` is Brent's `fileUrl` from `GET /api/machines/:id`. With S3/R2 configured, that is a short-lived presigned GET URL (browser loads directly from object storage, no cookies). Without S3, it is the same-origin proxy `GET /api/machines/:id/file`. The loader:
 
-1. `fetch(src, { credentials: "include" })` for the GLB/GLTF bytes
-2. `GLTFLoader.setWithCredentials(true)` for any follow-up buffer/texture requests
+1. `fetch(src, { credentials: "include" })` for same-origin URLs; `credentials: "omit"` for presigned/CDN URLs
+2. `GLTFLoader.setWithCredentials(true)` only for same-origin follow-up buffer/texture requests
 
 Public fixture URLs such as `/placeholders/palletizer-placeholder.glb` and `/placeholders/hardware/mcmaster-hardware.glb` still work.
 

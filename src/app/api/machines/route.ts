@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { requireRole, requireUser } from "@/lib/auth";
 import { error, json } from "@/lib/http";
-import { machineFileUrl, toMachineDetail, toMachineSummary } from "@/lib/machines";
+import { machineFileUrl } from "@/lib/machine-file-url";
+import { toMachineDetail, toMachineSummary } from "@/lib/machines";
 import {
   isPackFormError,
   joinPackFiles,
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
   return json(
     toMachineDetail(
       machine,
-      machineFileUrl(request, machine),
+      await machineFileUrl(request, machine),
       auth.user.role,
       sites,
     ),

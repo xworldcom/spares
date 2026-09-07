@@ -1,7 +1,8 @@
 import { requireRole, requireUser } from "@/lib/auth";
 import { canAccessMachine } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { machineFileUrl, toMachineDetail } from "@/lib/machines";
+import { machineFileUrl } from "@/lib/machine-file-url";
+import { toMachineDetail } from "@/lib/machines";
 import {
   deleteMachine,
   getMachine,
@@ -34,7 +35,12 @@ export async function GET(
   }
 
   return json(
-    toMachineDetail(machine, machineFileUrl(request, machine), auth.user.role, sites),
+    toMachineDetail(
+      machine,
+      await machineFileUrl(request, machine),
+      auth.user.role,
+      sites,
+    ),
   );
 }
 
@@ -97,7 +103,7 @@ export async function PATCH(
   return json(
     toMachineDetail(
       updated.machine,
-      machineFileUrl(request, updated.machine),
+      await machineFileUrl(request, updated.machine),
       auth.user.role,
       await listSites(),
     ),

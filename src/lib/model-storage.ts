@@ -125,3 +125,18 @@ export async function createModelUploadUrl(
   });
   return { uploadUrl, storedFileName: name };
 }
+
+export async function createModelDownloadUrl(
+  storedFileName: string,
+  expiresInSeconds = 3600,
+) {
+  const name = safeStoredFileName(storedFileName);
+  const command = new GetObjectCommand({
+    Bucket: s3Bucket(),
+    Key: modelObjectKey(name),
+  });
+  const downloadUrl = await getSignedUrl(getS3Client(), command, {
+    expiresIn: expiresInSeconds,
+  });
+  return { downloadUrl, storedFileName: name };
+}

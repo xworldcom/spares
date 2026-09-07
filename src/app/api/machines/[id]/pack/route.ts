@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { error, json } from "@/lib/http";
-import { machineFileUrl, toMachineDetail } from "@/lib/machines";
+import { machineFileUrl } from "@/lib/machine-file-url";
+import { toMachineDetail } from "@/lib/machines";
 import {
   isPackFormError,
   joinPackFiles,
@@ -77,7 +78,7 @@ export async function POST(
   return json(
     toMachineDetail(
       updated.machine,
-      machineFileUrl(request, updated.machine),
+      await machineFileUrl(request, updated.machine),
       auth.user.role,
       await listSites(),
     ),

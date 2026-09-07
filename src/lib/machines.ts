@@ -1,17 +1,5 @@
 import type { MachineDetail, MachineSummary, Role, Site } from "../types/index.ts";
 import type { StoredMachine } from "./store.ts";
-import { modelPublicUrl } from "./model-url.ts";
-
-export function machineFileUrl(
-  request: Request,
-  machine: Pick<StoredMachine, "id" | "storedFileName">,
-) {
-  const publicUrl = modelPublicUrl(machine.storedFileName);
-  if (publicUrl) {
-    return publicUrl;
-  }
-  return new URL(`/api/machines/${machine.id}/file`, request.url).toString();
-}
 
 export function siteFields(
   machine: { siteId?: string },
