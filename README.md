@@ -155,6 +155,8 @@ On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. Whe
 
 Until backfill completes, the viewer falls back to Blob for small GLBs (&lt; 5 MB) via `/api/machines/:id/file`. Larger legacy models refuse to proxy through Vercel and ask staff to backfill or re-upload.
 
+**Hard stops (no silent Vercel transfer):** When `S3_*` is set, staff uploads use presigned R2 PUT only — a failed upload ticket or S3 POST never falls back to Vercel Blob or multipart. `GET /api/machines/:id/file` redirects to R2 when the object exists; otherwise it proxies legacy Blob/fs models **only** if they are ≤ 5 MB. On Vercel Preview/Production without S3, GLBs over 5 MB are refused with a message to wire R2 (`S3_*`); local `npm run dev` without object storage may still use multipart for DX.
+
 ### Tess: attach Blob on Preview (JSON + small files)
 
 Vercel `/tmp` is per-instance. Without Blob **or** another durable store, a quote created on one function instance disappears on the next cold start.
@@ -173,8 +175,8 @@ Staff Upload pack sends the 3D file **straight to object storage** when configur
 
 | Path | What succeeds | Hard ceiling |
 | --- | --- | --- |
-| Preview with S3/R2 | GLB packs **up to 256 MB** via presigned upload | Client `maximumSizeInBytes` = 256 MB. Larger files get a plain-English error. |
-| Preview with Blob only (`BLOB_READ_WRITE_TOKEN`, no S3) | GLB packs **up to 256 MB** | Token `maximumSizeInBytes` = 256 MB. |
+| Preview with S3/R2 | GLB packs **up to 256 MB** via presigned upload | Presigned PUT only — no Blob/multipart fallback. |
+| Preview with Blob only (`BLOB_READ_WRITE_TOKEN`, no S3) | GLB packs **up to 5 MB** via Blob client upload | Larger files are refused — wire R2 (`S3_*`) instead of streaming 50–200 MB through Vercel. |
 | Local `npm run dev` without object storage | Multipart through the API | Next/Vercel practical cap **100 MB** (`proxyClientMaxBodySize`). |
 | Over 15 MB without successful compression | Upload is refused before save | “Could not be compressed enough for storage…” — re-export with Draco/meshopt or simplify. |
 | Over the ceiling | Upload is refused before join | “This model is N MB. Staff packs can be up to 256 MB.” |

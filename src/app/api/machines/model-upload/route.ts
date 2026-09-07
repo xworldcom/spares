@@ -2,6 +2,10 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { requireRole } from "@/lib/auth";
 import { json, error } from "@/lib/http";
 import {
+  blobUploadMaxBytes,
+  isVercelRuntime,
+} from "@/lib/model-upload-policy";
+import {
   CLIENT_PACK_MAX_BYTES,
   packOverLimitMessage,
   storedFileNameFromUploadPath,
@@ -22,10 +26,15 @@ export async function GET() {
   if ("error" in auth) {
     return auth.error;
   }
-  return json({
+  const availability = {
     clientUpload: blobClientUploadAvailable(),
     s3Upload: isS3Configured(),
     maxBytes: CLIENT_PACK_MAX_BYTES,
+    vercelRuntime: isVercelRuntime(),
+  };
+  return json({
+    ...availability,
+    maxBytes: blobUploadMaxBytes(availability),
   });
 }
 
@@ -94,6 +103,13 @@ export async function POST(request: Request) {
           throw new Error("Model must be a .glb or .gltf file.");
         }
 
+        const availability = {
+          clientUpload: true,
+          s3Upload: false,
+          maxBytes: CLIENT_PACK_MAX_BYTES,
+          vercelRuntime: isVercelRuntime(),
+        };
+
         return {
           allowedContentTypes: [
             "model/gltf-binary",
@@ -103,7 +119,7 @@ export async function POST(request: Request) {
           ],
           addRandomSuffix: false,
           allowOverwrite: false,
-          maximumSizeInBytes: CLIENT_PACK_MAX_BYTES,
+          maximumSizeInBytes: blobUploadMaxBytes(availability),
           cacheControlMaxAge: 60,
           tokenPayload: JSON.stringify({
             storedFileName,

@@ -1,13 +1,16 @@
 import {
   CLIENT_PACK_MAX_BYTES,
-  MULTIPART_PACK_MAX_BYTES,
   machineBlobPathname,
-  multipartTooLargeMessage,
   packOverLimitMessage,
   platform413Message,
   storedFileNameFromUploadPath,
 } from "../pack-limits.ts";
 import { modelContentType, modelExtension } from "../machines.ts";
+import {
+  modelUploadTicketFailedMessage,
+  resolveModelUploadStrategy,
+  type ModelUploadAvailability,
+} from "../model-upload-policy.ts";
 import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
 import type {
@@ -133,13 +136,9 @@ function assertModelSize(file: File) {
   }
 }
 
-async function clientModelUploadAvailable() {
+async function clientModelUploadAvailable(): Promise<ModelUploadAvailability | null> {
   try {
-    return await apiFetch<{
-      clientUpload: boolean;
-      s3Upload?: boolean;
-      maxBytes: number;
-    }>(MODEL_UPLOAD);
+    return await apiFetch<ModelUploadAvailability>(MODEL_UPLOAD);
   } catch {
     return null;
   }
@@ -215,7 +214,12 @@ async function uploadOrReplacePack(
   assertModelSize(input.model);
 
   const availability = await clientModelUploadAvailable();
-  if (availability?.s3Upload) {
+  const strategy = resolveModelUploadStrategy(availability, input.model.size);
+  if (strategy.mode === "refuse") {
+    throw new ApiError(strategy.message, strategy.status);
+  }
+
+  if (strategy.mode === "s3") {
     try {
       const storedFileName = await uploadModelToS3(input.model);
       const data = await postPackForm(path, {
@@ -231,15 +235,13 @@ async function uploadOrReplacePack(
         throw cause;
       }
       throw new ApiError(
-        errorMessage(
-          cause,
-          "Could not upload the 3D model to storage. Try again, or use a smaller GLB.",
-        ),
+        errorMessage(cause, modelUploadTicketFailedMessage()),
         0,
       );
     }
   }
-  if (availability?.clientUpload) {
+
+  if (strategy.mode === "blob") {
     try {
       const storedFileName = await uploadModelToBlob(input.model);
       const data = await postPackForm(path, {
@@ -266,10 +268,6 @@ async function uploadOrReplacePack(
       }
       throw new ApiError(message, 0);
     }
-  }
-
-  if (input.model.size > MULTIPART_PACK_MAX_BYTES) {
-    throw new ApiError(multipartTooLargeMessage(), 413);
   }
 
   try {
