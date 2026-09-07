@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
@@ -75,6 +75,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const machineStage = /^\/machines\/[^/]+$/.test(pathname) && pathname !== "/machines/new";
+
+  useEffect(() => {
+    const root = document.documentElement;
+    function syncEmbed() {
+      const embedded = window.parent !== window;
+      root.classList.toggle("spares-embed", embedded);
+      const vv = window.visualViewport;
+      const top = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
+      root.style.setProperty("--embed-top", embedded ? `${top}px` : "0px");
+    }
+    syncEmbed();
+    window.visualViewport?.addEventListener("resize", syncEmbed);
+    window.visualViewport?.addEventListener("scroll", syncEmbed);
+    window.addEventListener("resize", syncEmbed);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", syncEmbed);
+      window.visualViewport?.removeEventListener("scroll", syncEmbed);
+      window.removeEventListener("resize", syncEmbed);
+    };
+  }, []);
   const onLogin = pathname === "/login";
   const signedIn = status === "signed-in" && user;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
@@ -192,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={
           machineStage
-            ? "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-3 pt-2 pb-2 sm:px-4"
+            ? "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-0 pt-0 pb-0 sm:px-4 sm:pt-2 sm:pb-2"
             : "mx-auto w-full max-w-6xl px-4 py-5 sm:py-8"
         }
       >

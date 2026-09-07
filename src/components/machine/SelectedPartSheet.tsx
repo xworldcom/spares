@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Part } from "@/lib/api/types";
 import { partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
@@ -27,6 +27,11 @@ export function SelectedPartSheet({
   const ready = useHydrated();
   const open = partSheetVisible(part?.id);
   const canAct = open && ready;
+  const [more, setMore] = useState(false);
+
+  useEffect(() => {
+    setMore(false);
+  }, [part?.id]);
 
   useEffect(() => {
     if (!open) {
@@ -72,68 +77,89 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-3"
+      className="pointer-events-none absolute top-[4.35rem] left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
     >
       <div
-        className="pointer-events-auto flex flex-col justify-between rounded-[22px] bg-white px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/8"
+        className={`pointer-events-auto rounded-2xl bg-white/92 px-2.5 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ring-black/8 backdrop-blur-md ${
+          held ? "scale-[1.02]" : "scale-100"
+        } chrome-fade`}
         onPointerDown={(event) => {
           event.stopPropagation();
         }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-h-[3.25rem] min-w-0">
-            <p className="truncate text-[17px] leading-tight font-semibold tracking-tight text-[#0b0d10]">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] leading-tight font-semibold tracking-tight text-[#0b0d10]">
               {part.name}
             </p>
-            <p className="spares-muted mt-1 truncate font-mono text-[13px]">
-              {!ready
-                ? "Preparing controls…"
-                : isolated
-                  ? "Only this part is solid. Others are dimmed."
-                  : part.id}
+            <p className="spares-muted truncate font-mono text-[11px]">
+              {part.id}
             </p>
+            {part.vendor || part.stock ? (
+              <p className="spares-muted truncate text-[11px]">
+                {[part.vendor, part.stock ? `stock ${part.stock}` : ""]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
           </div>
-          <button
-            type="button"
-            {...activate(onDismiss)}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#0b0d10] hover:bg-neutral-100"
-            aria-label="Close part actions"
-          >
-            <span className="text-2xl leading-none">×</span>
-          </button>
-        </div>
-        <div
-          className={`mt-2 flex flex-wrap gap-2 ${held ? "scale-[1.02]" : "scale-100"} chrome-fade`}
-        >
-          <button
-            type="button"
-            {...activate(onHide)}
-            disabled={!canAct}
-            className="btn-soft inline-flex h-11 min-w-11 items-center justify-center rounded-full px-4 text-sm font-medium disabled:opacity-30"
-          >
-            Hide
-          </button>
-          <button
-            type="button"
-            {...activate(onIsolate)}
-            disabled={!canAct}
-            className={`${
-              isolated ? "btn-primary" : "btn-soft"
-            } inline-flex h-11 min-w-11 items-center justify-center rounded-full px-4 text-sm font-medium disabled:opacity-30`}
-          >
-            Only this
-          </button>
           {showAdd && onAdd ? (
             <button
               type="button"
               {...activate(onAdd)}
               disabled={!canAct}
-              className="btn-accent inline-flex h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-semibold disabled:opacity-30"
+              className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >
               Add
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => setMore((current) => !current)}
+            className="inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-100"
+            aria-expanded={more}
+          >
+            More
+          </button>
         </div>
+        {more ? (
+          <div className="mt-2 space-y-2 border-t border-black/6 pt-2">
+            {part.material || part.weight || part.replaces || part.category ? (
+              <p className="text-[12px] leading-snug text-neutral-600">
+                {[part.category, part.material, part.weight, part.replaces ? `replaces ${part.replaces}` : ""]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              {...activate(onHide)}
+              disabled={!canAct}
+              className="btn-soft inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30"
+            >
+              Hide
+            </button>
+            <button
+              type="button"
+              {...activate(onIsolate)}
+              disabled={!canAct}
+              className={`${
+                isolated ? "btn-primary" : "btn-soft"
+              } inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30`}
+            >
+              Only this
+            </button>
+            <button
+              type="button"
+              {...activate(onDismiss)}
+              className="inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium text-neutral-600 hover:bg-neutral-100"
+            >
+              Close
+            </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { createCustomer } from "@/lib/api/auth";
+import { useEffect, useState } from "react";
+import { createCustomer, listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
+import type { Site } from "@/lib/api/types";
+import { accessOptions, parseAccessValue } from "@/lib/access";
 
 export function CreateCustomerForm({
   onCreated,
@@ -11,9 +13,25 @@ export function CreateCustomerForm({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [siteId, setSiteId] = useState("");
+  const [sites, setSites] = useState<Site[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdEmail, setCreatedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listSites()
+      .then((next) => {
+        if (!cancelled) {
+          setSites(next);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,7 +39,11 @@ export function CreateCustomerForm({
     setCreatedEmail(null);
     setSubmitting(true);
     try {
-      const user = await createCustomer(email.trim(), password);
+      const user = await createCustomer(
+        email.trim(),
+        password,
+        parseAccessValue(siteId),
+      );
       setCreatedEmail(user.email);
       setEmail("");
       setPassword("");
@@ -64,11 +86,34 @@ export function CreateCustomerForm({
           name="password"
           type="password"
           required
+          minLength={10}
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
         />
+        <p className="spares-muted mt-1 text-xs">At least 10 characters.</p>
+      </div>
+      <div>
+        <label htmlFor="customer-site" className="block text-sm font-medium">
+          Access
+        </label>
+        <select
+          id="customer-site"
+          value={siteId}
+          onChange={(event) => setSiteId(event.target.value)}
+          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
+        >
+          <option value="">No access</option>
+          {accessOptions(sites).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <p className="spares-muted mt-1.5 text-sm">
+          One plant, or All plants at that company for corporate users.
+        </p>
       </div>
       {error ? (
         <p className="text-sm text-red-700" role="alert">

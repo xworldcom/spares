@@ -1,0 +1,4 @@
+partNumber,name,meshName,qty
+3_DOF_ARM_BASE,Arm base,3_DOF_ARM_BASE,1
+3_DOF_ARM_SEGMENT,Arm segment,3_DOF_ARM_SEGMENT,2
+3_DOF_ARM_END_EFFECTOR,End effector,3_DOF_ARM_END_EFFECTOR,1

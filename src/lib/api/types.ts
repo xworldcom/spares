@@ -1,4 +1,4 @@
-import type { BugReport, MachineSummary, PublicUser, Quote } from "@/types";
+import type { BugReport, MachineSummary, PublicUser, Quote, Site } from "@/types";
 
 export type {
   BugReport,
@@ -10,6 +10,7 @@ export type {
   Quote,
   QuoteItem,
   Role,
+  Site,
   UnmatchedPart,
 } from "@/types";
 
@@ -19,6 +20,10 @@ export type AuthUserResponse = {
 
 export type CustomersListResponse = {
   customers: PublicUser[];
+};
+
+export type SitesListResponse = {
+  sites: Site[];
 };
 
 export type MachinesListResponse = {

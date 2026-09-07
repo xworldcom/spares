@@ -8,9 +8,11 @@ import {
   machineFileUrl,
   modelExtension,
   toMachineDetail,
+  toMachineSummary,
 } from "@/lib/machines";
 import { joinParts, parsePartsList } from "@/lib/parts";
-import { createMachine, listMachines, saveMachineFile } from "@/lib/store";
+import { canAccessMachine } from "@/lib/access";
+import { createMachine, listMachines, listSites, saveMachineFile } from "@/lib/store";
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser();
@@ -18,7 +20,13 @@ export async function GET(request: NextRequest) {
     return auth.error;
   }
   const heal = request.nextUrl.searchParams.get("heal") === "1";
-  return json({ machines: await listMachines({ heal }) });
+  const [machines, sites] = await Promise.all([listMachines({ heal }), listSites()]);
+  const visible = machines.filter((machine) =>
+    canAccessMachine(auth.user, machine, sites),
+  );
+  return json({
+    machines: visible.map((machine) => toMachineSummary(machine, sites)),
+  });
 }
 
 export async function POST(request: Request) {
@@ -77,16 +85,29 @@ export async function POST(request: Request) {
   const storedFileName = `${randomUUID()}${modelExtension(model.name)}`;
   await saveMachineFile(storedFileName, modelBytes);
 
+  const siteValue = form.get("siteId");
+  const siteId = typeof siteValue === "string" && siteValue.trim() ? siteValue.trim() : undefined;
+  const sites = await listSites();
+  if (siteId && !sites.some((site) => site.id === siteId)) {
+    return error("Choose a valid plant", 400);
+  }
+
   const machine = await createMachine({
     name,
     storedFileName,
     originalFileName: model.name,
     parts,
     unmatched,
+    siteId,
   });
 
   return json(
-    toMachineDetail(machine, machineFileUrl(request, machine.id), auth.user.role),
+    toMachineDetail(
+      machine,
+      machineFileUrl(request, machine.id),
+      auth.user.role,
+      sites,
+    ),
     201,
   );
 }

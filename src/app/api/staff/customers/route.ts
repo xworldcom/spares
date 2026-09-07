@@ -1,6 +1,7 @@
-import { hashPassword, requireRole } from "@/lib/auth";
+import { hashPassword, passwordIssue, requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { createCustomer, listCustomers } from "@/lib/store";
+import { toPublicUser } from "@/lib/access";
+import { createCustomer, listCustomers, listSites } from "@/lib/store";
 
 export async function GET() {
   const auth = await requireRole("staff");
@@ -13,6 +14,8 @@ export async function GET() {
 type CreateCustomerBody = {
   email?: unknown;
   password?: unknown;
+  siteIds?: unknown;
+  companyAccess?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -31,19 +34,28 @@ export async function POST(request: Request) {
   if (!email || !password) {
     return error("Email and password are required", 400);
   }
+  const weak = passwordIssue(password);
+  if (weak) {
+    return error(weak, 400);
+  }
 
-  const created = await createCustomer(email, await hashPassword(password));
+  const siteIds = Array.isArray(body.siteIds)
+    ? body.siteIds.filter((value): value is string => typeof value === "string")
+    : [];
+  const companyAccess = Array.isArray(body.companyAccess)
+    ? body.companyAccess.filter((value): value is string => typeof value === "string")
+    : [];
+  const created = await createCustomer(email, await hashPassword(password), {
+    siteIds,
+    companyAccess,
+  });
   if ("error" in created) {
     return error("A user with that email already exists", 409);
   }
 
   return json(
     {
-      user: {
-        id: created.user.id,
-        email: created.user.email,
-        role: created.user.role,
-      },
+      user: toPublicUser(created.user, await listSites()),
     },
     201,
   );

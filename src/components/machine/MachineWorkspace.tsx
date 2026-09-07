@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
-import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
-import { QuoteTray, type TrayLine } from "@/components/quote/QuoteTray";
+import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
@@ -17,6 +16,9 @@ import { getMachine, machineFileSrc } from "@/lib/api/machines";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
+import { DESKTOP_MQ } from "@/lib/ui/breakpoints";
+
+const VIEWER_STAGE = "#1c232c";
 
 function ExpandIcon() {
   return (
@@ -43,9 +45,43 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [isolatedId, setIsolatedId] = useState<string | null>(null);
   const [lines, setLines] = useState<TrayLine[]>([]);
   const [trayOpen, setTrayOpen] = useState(false);
+  const [quoteChip, setQuoteChip] = useState(true);
   const [held, setHeld] = useState(false);
-  const [bomOpen, setBomOpen] = useState(false);
+  const [view, setView] = useState<"model" | "list">("model");
+  const [desktop, setDesktop] = useState(false);
+  const [railPx, setRailPx] = useState(360);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
+  const captureThumb = useRef<(partId: string) => string | null>(() => null);
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_MQ);
+    const sync = () => setDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (desktop && !isCustomer) {
+      setView("model");
+    }
+  }, [desktop, isCustomer]);
+
+  useEffect(() => {
+    if (!isCustomer || typeof window === "undefined") {
+      return;
+    }
+    setTrayOpen(true);
+  }, [isCustomer, machineId]);
+
+  useEffect(() => {
+    if (trayOpen) {
+      setQuoteChip(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setQuoteChip(true), SHEET_EASE_MS);
+    return () => window.clearTimeout(timer);
+  }, [trayOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +136,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         return;
       }
       if (target.closest("[data-parts-bom]")) {
+        return;
+      }
+      if (target.closest("[data-quote-tray]")) {
         return;
       }
       if (target.closest("canvas")) {
@@ -205,32 +244,40 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
   }
 
+  function addPart(part: Part) {
+    const thumb = captureThumb.current(part.id) ?? undefined;
+    setLines((current) => {
+      if (current.some((line) => line.part.id === part.id)) {
+        return current;
+      }
+      return [...current, { part, qty: 1, thumb }];
+    });
+    setTrayOpen(true);
+  }
+
   function addSelected() {
     if (!selectedPart) {
       return;
     }
-    setLines((current) => {
-      if (current.some((line) => line.part.id === selectedPart.id)) {
-        return current;
-      }
-      return [...current, { part: selectedPart, qty: 1 }];
-    });
-    setTrayOpen(true);
+    addPart(selectedPart);
     if (shouldAutoDismissPartSheet("add")) {
       setSelectedPart(null);
     }
   }
+
+  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
 
   const viewerBlock = (
     <div
       ref={chromeRef}
       className={
         overlay
-          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col bg-[#0b0d10] top-[var(--spares-header)]"
+          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col top-[var(--spares-header)]"
           : fullscreen
-            ? "flex h-full min-h-0 flex-col bg-[#0b0d10]"
-            : "machine-viewer overflow-hidden rounded-[22px] bg-[#0b0d10] sm:rounded-[28px]"
+            ? "flex h-full min-h-0 flex-col"
+            : "machine-viewer overflow-hidden sm:rounded-[28px]"
       }
+      style={{ background: VIEWER_STAGE }}
       onContextMenu={(event) => {
         event.preventDefault();
       }}
@@ -250,7 +297,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               setHeld(true);
               window.setTimeout(() => setHeld(false), 240);
             }}
-            className="absolute inset-0"
+            onCaptureReady={(capture) => {
+              captureThumb.current = capture;
+            }}
+            className={`absolute inset-0 ${view === "list" && !(desktop && !isCustomer) ? "invisible" : ""}`}
           />
         ) : (
           <EmptyState
@@ -258,21 +308,113 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             message="This machine pack does not have a GLB or GLTF file to display."
           />
         )}
-        <SelectedPartSheet
-          part={selectedPart}
-          isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
-          onHide={hideSelected}
-          onIsolate={isolateSelected}
-          onAdd={isCustomer ? addSelected : undefined}
-          onDismiss={() => setSelectedPart(null)}
-          showAdd={isCustomer}
-          held={held}
-        />
+        {view === "list" && !(desktop && !isCustomer) ? (
+          <section
+            data-parts-bom=""
+            className="absolute inset-0 z-[15] overflow-y-auto bg-[#f4f5f7] px-4 pb-8"
+            style={{ paddingTop: "4.35rem" }}
+          >
+            <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+              {machine.name}
+            </p>
+            <PartsBom
+              parts={joinedParts}
+              selectedPartId={selectedPart?.id ?? null}
+              onSelect={(part) => {
+                setSelectedPart(part);
+                setView("model");
+              }}
+              showAdd={isCustomer}
+              onAdd={addPart}
+              searchable
+            />
+            {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
+              <p className="spares-muted mt-3 text-sm">
+                {machine.unmatched?.length} extra mesh
+                {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the
+                model are not on this list.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+        {view === "model" ? (
+          <SelectedPartSheet
+            part={selectedPart}
+            isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
+            onHide={hideSelected}
+            onIsolate={isolateSelected}
+            onAdd={isCustomer ? addSelected : undefined}
+            onDismiss={() => setSelectedPart(null)}
+            showAdd={isCustomer}
+            held={held}
+          />
+        ) : null}
+        {isCustomer && (!desktop || fullscreen) ? tray : null}
         <div
           aria-hidden="true"
-          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-24"
+          className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
+          {!(desktop && !isCustomer && !fullscreen) ? (
+          <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full p-1">
+            <button
+              type="button"
+              onClick={() => setView("model")}
+              className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                view === "model" ? "btn-primary" : "text-neutral-600"
+              }`}
+            >
+              3D
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                view === "list" ? "btn-primary" : "text-neutral-600"
+              }`}
+            >
+              List
+            </button>
+          </div>
+          ) : null}
+          {view === "model" ? (
+            <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
+              <span className="hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
+                Explode
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(explode * 100)}
+                onChange={(event) => setExplode(Number(event.target.value) / 100)}
+                className="explode-slider"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(explode * 100)}
+                aria-label="Explode assembly"
+              />
+            </label>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          {view === "model" && needsReset ? (
+            <button
+              type="button"
+              data-show-all=""
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                showAll();
+              }}
+              onClick={showAll}
+              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
+            >
+              Show all
+            </button>
+          ) : null}
           {isCustomer && fullscreen ? (
             <QuoteTray
               machineId={machine.id}
@@ -287,18 +429,48 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               }}
             />
           ) : null}
+          {isCustomer && !fullscreen && !trayOpen && quoteChip ? (
+            <button
+              type="button"
+              data-quote-tray=""
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                setTrayOpen(true);
+              }}
+              onClick={() => setTrayOpen(true)}
+              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold"
+              aria-label={`Show quote, ${quoteCount} ${quoteCount === 1 ? "item" : "items"}`}
+            >
+              Quote
+              <span className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums">
+                {quoteCount}
+              </span>
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={
-              fullscreen
-                ? () => {
-                    exit();
-                  }
-                : () => {
-                    enter();
-                  }
-            }
-            className="viewer-chrome-chip inline-flex h-11 w-11 items-center justify-center rounded-full"
+            onPointerDown={(event) => {
+              if (event.button !== 0) {
+                return;
+              }
+              event.preventDefault();
+              if (fullscreen) {
+                exit();
+              } else {
+                enter();
+              }
+            }}
+            onClick={() => {
+              if (fullscreen) {
+                exit();
+              } else {
+                enter();
+              }
+            }}
+            className="viewer-chrome-chip relative z-40 hidden h-11 w-11 shrink-0 items-center justify-center rounded-full lg:inline-flex"
             aria-label={fullscreen ? "Exit full screen" : "Full screen"}
           >
             {fullscreen ? (
@@ -309,140 +481,81 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           </button>
         </div>
       </div>
-
-      <div className="flex h-14 min-w-0 shrink-0 items-center gap-2 overflow-x-hidden px-3 sm:gap-3 sm:px-5">
-        <button
-          type="button"
-          data-parts-bom=""
-          onClick={() => setBomOpen(true)}
-          className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold lg:hidden"
-        >
-          Parts
-        </button>
-        {needsReset ? (
-          <button
-            type="button"
-            data-show-all=""
-            onPointerDown={(event) => {
-              if (event.button !== 0) {
-                return;
-              }
-              event.preventDefault();
-              showAll();
-            }}
-            onClick={showAll}
-            className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold"
-          >
-            Show all
-          </button>
-        ) : null}
-        <label className="flex min-w-0 flex-1 items-center gap-3 text-[#fff]">
-          <span className="shrink-0 text-[13px] font-medium tracking-wide text-[#fff]">
-            Explode
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(explode * 100)}
-            onChange={(event) => setExplode(Number(event.target.value) / 100)}
-            className="explode-slider"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(explode * 100)}
-            aria-label="Explode assembly"
-          />
-        </label>
-      </div>
     </div>
   );
 
   return (
     <div className="machine-stage">
-      <div className="machine-title mb-3 min-w-0 shrink-0">
-        <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
-          Machine
-        </p>
-        <h1 className="mt-1 truncate text-[28px] leading-tight font-semibold tracking-tight">
-          {machine.name}
-        </h1>
-      </div>
       <h1 className="sr-only">{machine.name}</h1>
 
-      <div className="machine-stage-grid">
-        {viewerBlock}
-        {isCustomer && !fullscreen ? (
-          tray
-        ) : isCustomer ? null : (
-          <div className="quote-tray-dock rounded-[28px] bg-white p-5 text-sm leading-relaxed text-neutral-500">
-            Customers request quotes from this page. Staff inspect the join
-            here. Unmatched meshes stay in the staff panel, not the picker.
-          </div>
-        )}
-      </div>
-
-      <section
-        aria-labelledby="bom-heading"
-        className="machine-bom mt-6 shrink-0 space-y-3"
+      <div
+        className="machine-stage-grid"
+        data-staff={!isCustomer ? "1" : undefined}
+        data-tray={
+          (!isCustomer && desktop && !fullscreen) ||
+          (isCustomer && trayOpen && !fullscreen)
+            ? "open"
+            : "closed"
+        }
+        style={
+          !isCustomer && desktop
+            ? ({ "--staff-rail": `${railPx}px` } as CSSProperties)
+            : undefined
+        }
       >
-        <div>
-          <h2 id="bom-heading" className="text-[13px] font-semibold tracking-tight text-neutral-950">
-            Parts
-          </h2>
-        </div>
-        <PartsBom
-          parts={joinedParts}
-          selectedPartId={selectedPart?.id ?? null}
-          onSelect={setSelectedPart}
-        />
-      </section>
-
-      {showUnmatched ? (
-        <div className="machine-bom mt-6">
-          <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
-        </div>
-      ) : null}
-
-      {bomOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close parts list"
-            className="absolute inset-0 bg-black/35"
-            onClick={() => setBomOpen(false)}
-          />
-          <div
-            data-parts-bom=""
-            className="absolute inset-x-0 bottom-0 max-h-[min(72dvh,36rem)] overflow-y-auto rounded-t-[28px] bg-white px-4 pt-4 shadow-[0_-12px_40px_rgba(0,0,0,0.18)]"
-            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        {viewerBlock}
+        {isCustomer && desktop && !fullscreen ? tray : null}
+        {!isCustomer && desktop && !fullscreen ? (
+          <aside
+            className="staff-parts-rail flex min-h-0 w-full flex-col overflow-hidden rounded-[28px] bg-white"
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-[19px] font-semibold tracking-tight">Parts</h2>
-              <button
-                type="button"
-                onClick={() => setBomOpen(false)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
-                aria-label="Close parts"
-              >
-                <span className="text-2xl leading-none">×</span>
-              </button>
-            </div>
-            <PartsBom
-              parts={joinedParts}
-              selectedPartId={selectedPart?.id ?? null}
-              onSelect={(part) => {
-                setSelectedPart(part);
-                setBomOpen(false);
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize parts list"
+              className="staff-rail-handle"
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                const startX = event.clientX;
+                const startW = railPx;
+                const handle = event.currentTarget;
+                handle.setPointerCapture(event.pointerId);
+                function onMove(move: PointerEvent) {
+                  const next = Math.min(560, Math.max(260, startW + (startX - move.clientX));
+                  setRailPx(next);
+                }
+                function onUp() {
+                  handle.removeEventListener("pointermove", onMove);
+                  handle.removeEventListener("pointerup", onUp);
+                }
+                handle.addEventListener("pointermove", onMove);
+                handle.addEventListener("pointerup", onUp);
               }}
             />
-            {showUnmatched ? (
-              <div className="mt-4">
-                <UnmatchedMeshes unmatched={machine.unmatched ?? []} />
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+                {machine.name}
+              </p>
+              <PartsBom
+                parts={joinedParts}
+                selectedPartId={selectedPart?.id ?? null}
+                onSelect={setSelectedPart}
+                searchable
+              />
+              {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
+                <p className="spares-muted mt-3 text-sm">
+                  {machine.unmatched?.length} extra mesh
+                  {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the
+                  model are not on this list.
+                </p>
+              ) : null}
+            </div>
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 }

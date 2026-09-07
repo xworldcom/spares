@@ -424,6 +424,11 @@ export function itemsForRole(
     if (item.name) {
       next.name = item.name;
     }
+    if (item.vendor) next.vendor = item.vendor;
+    if (item.material) next.material = item.material;
+    if (item.replaces) next.replaces = item.replaces;
+    if (item.stock) next.stock = item.stock;
+    if (item.category) next.category = item.category;
     if (pricesVisibleToCustomer(status)) {
       if (item.sellPrice !== undefined) {
         next.sellPrice = item.sellPrice;
@@ -597,6 +602,9 @@ export function toPublicQuote(
   }
   if (quote.poUploadedAt) {
     publicQuote.poUploadedAt = quote.poUploadedAt;
+  }
+  if (quote.invoiceNumber) {
+    publicQuote.invoiceNumber = quote.invoiceNumber;
   }
   return publicQuote;
 }

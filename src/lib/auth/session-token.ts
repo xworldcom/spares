@@ -10,7 +10,14 @@ export type SessionPayload = {
 };
 
 function secret() {
-  return process.env.AUTH_SECRET ?? "spares-not-live-local-secret";
+  const value = process.env.AUTH_SECRET?.trim();
+  if (value && value.length >= 16) {
+    return value;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET must be set in production");
+  }
+  return "spares-not-live-local-secret";
 }
 
 export function sessionCookieOptions(maxAge: number) {
@@ -18,7 +25,8 @@ export function sessionCookieOptions(maxAge: number) {
     httpOnly: true,
     sameSite: "lax" as const,
     path: "/",
-    secure: process.env.NODE_ENV === "production",
+    secure:
+      process.env.NODE_ENV === "production" || process.env.VERCEL === "1",
     maxAge,
   };
 }

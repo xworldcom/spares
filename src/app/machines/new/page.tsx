@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { UploadPackForm } from "@/components/machine/UploadPackForm";
 
@@ -8,11 +9,17 @@ export default function UploadPackPage() {
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Upload pack</h1>
           <p className="spares-muted mt-1 text-sm">
-            Name the machine, attach a GLB/GLTF, and provide an ETO-shaped
-            parts list (part number, name, qty). Join errors stay visible.
+            Drop a GLB and a Total ETO CSV. Instance names like Pump-1 join
+            without renaming. Optional SolidWorks macro:{" "}
+            <a className="underline" href="/export/spares-pack.bas">
+              spares-pack.bas
+            </a>
+            .
           </p>
         </div>
-        <UploadPackForm />
+        <Suspense>
+          <UploadPackForm />
+        </Suspense>
       </div>
     </RequireAuth>
   );

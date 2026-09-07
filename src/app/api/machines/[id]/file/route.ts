@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import { requireUser } from "@/lib/auth";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
-import { getMachine, machineFilePath } from "@/lib/store";
+import { canAccessMachine } from "@/lib/access";
+import { getMachine, listSites, machineFilePath } from "@/lib/store";
 
 export async function GET(
   _request: Request,
@@ -14,8 +15,8 @@ export async function GET(
   }
 
   const { id } = await params;
-  const machine = await getMachine(id);
-  if (!machine) {
+  const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
+  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
   }
 
@@ -24,7 +25,7 @@ export async function GET(
     return new Response(bytes, {
       headers: {
         "Content-Type": modelContentType(machine.originalFileName),
-        "Content-Disposition": `inline; filename="${machine.originalFileName}"`,
+        "Content-Disposition": `inline; filename="${machine.originalFileName.replace(/[\r\n"]/g, "")}"`,
         "Cache-Control": "private, no-store",
       },
     });

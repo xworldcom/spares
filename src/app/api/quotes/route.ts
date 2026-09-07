@@ -1,7 +1,8 @@
 import { requireRole, requireUser } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
-import { createQuote, getMachine, listMachines, listQuotes } from "@/lib/store";
+import { canAccessMachine } from "@/lib/access";
+import { createQuote, getMachine, listMachines, listQuotes, listSites } from "@/lib/store";
 import type { QuoteItem } from "@/types";
 
 type CreateQuoteBody = {
@@ -57,8 +58,8 @@ export async function POST(request: Request) {
   const note =
     typeof body.note === "string" && body.note.trim() ? body.note.trim() : undefined;
 
-  const machine = await getMachine(machineId);
-  if (!machine) {
+  const [machine, sites] = await Promise.all([getMachine(machineId), listSites()]);
+  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
   }
 
@@ -74,6 +75,11 @@ export async function POST(request: Request) {
     if (name) {
       next.name = name;
     }
+    if (part?.vendor) next.vendor = part.vendor;
+    if (part?.material) next.material = part.material;
+    if (part?.replaces) next.replaces = part.replaces;
+    if (part?.stock) next.stock = part.stock;
+    if (part?.category) next.category = part.category;
     return next;
   });
 

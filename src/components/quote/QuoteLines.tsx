@@ -249,6 +249,21 @@ export function QuoteLines({
                   <dt className="spares-muted text-xs">Qty</dt>
                   <dd className="tabular-nums">{item.qty}</dd>
                 </div>
+                {item.vendor || item.material || item.replaces || item.stock ? (
+                  <div className="col-span-2 sm:col-span-4">
+                    <dt className="spares-muted text-xs">Details</dt>
+                    <dd>
+                      {[
+                        item.vendor,
+                        item.material,
+                        item.stock ? `stock ${item.stock}` : "",
+                        item.replaces ? `replaces ${item.replaces}` : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </dd>
+                  </div>
+                ) : null}
                 {pricesVisible ? (
                   <>
                     <div>

@@ -1,4 +1,4 @@
-export { hashPassword, verifyPassword } from "./password";
+export { hashPassword, passwordIssue, verifyPassword } from "./password";
 export {
   SESSION_COOKIE,
   clearSessionCookie,
