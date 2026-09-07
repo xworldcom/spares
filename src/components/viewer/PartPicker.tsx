@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode,
 } from "react";
 import type { Material, Object3D } from "three";
@@ -36,6 +37,18 @@ const UNMATCHED_HIGHLIGHT = new Color("#f59e0b");
 const HOVER_HIGHLIGHT = new Color("#7dd3fc");
 const DRAG_THRESHOLD = 4;
 const HOLD_MS = 500;
+
+type PickHit = { part: ViewerPart } | UnmatchedMesh | null;
+
+type ViewerGesture = {
+  dragging: boolean;
+  moved: boolean;
+  fired: boolean;
+  startX: number;
+  startY: number;
+  pointerId: number;
+  pendingHit: PickHit;
+};
 const VIEWER_BG = "#1c232c";
 const box = new Box3();
 const localCenter = new Vector3();
@@ -192,9 +205,11 @@ function LoadedModel({
   explode,
   hiddenIds,
   isolatedId,
+  gestureRef,
   onPick,
   onLongPress,
   onHover,
+  onRegisterCancelHold,
 }: {
   src: string;
   parts: ViewerPart[];
@@ -203,19 +218,16 @@ function LoadedModel({
   explode: number;
   hiddenIds: readonly string[];
   isolatedId: string | null;
+  gestureRef: MutableRefObject<ViewerGesture>;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
   onLongPress?: (part: ViewerPart) => void;
   onHover: (hit: ViewerPart | UnmatchedMesh | null) => void;
+  onRegisterCancelHold?: (cancelHold: () => void) => void;
 }) {
   const gltf = useCredentialedGLTF(src);
   const partsByName = useMemo(() => buildPartIndex(parts), [parts]);
   const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
-  const holdRef = useRef<{
-    timer: number | null;
-    startX: number;
-    startY: number;
-    fired: boolean;
-  }>({ timer: null, startX: 0, startY: 0, fired: false });
+  const holdRef = useRef<{ timer: number | null }>({ timer: null });
 
   const scene = useMemo(() => {
     const cloned = gltf.scene.clone(true);
@@ -251,10 +263,9 @@ function LoadedModel({
   }, [scene, explode, hiddenSet, isolatedId, partsByName, selected, hovered]);
 
   useEffect(() => {
-    const hold = holdRef.current;
     return () => {
-      if (hold.timer != null) {
-        window.clearTimeout(hold.timer);
+      if (holdRef.current.timer != null) {
+        window.clearTimeout(holdRef.current.timer);
       }
       scene.traverse((object) => {
         if (!isMesh(object)) {
@@ -274,48 +285,49 @@ function LoadedModel({
     }
   }
 
-  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
-    holdRef.current.fired = false;
-    holdRef.current.startX = event.clientX;
-    holdRef.current.startY = event.clientY;
-    clearHold();
-    const hit = resolvePick(event.object, partsByName);
-    const part = hit && "part" in hit ? hit.part : null;
-    if (hit) {
-      onHover("part" in hit ? hit.part : hit);
-      if (part) {
-        onPick({ part });
-      }
+  useEffect(() => {
+    onRegisterCancelHold?.(clearHold);
+  });
+
+  function isTap(event: ThreeEvent<PointerEvent>) {
+    const gesture = gestureRef.current;
+    if (gesture.fired || gesture.dragging || gesture.moved) {
+      return false;
     }
+    const dx = event.clientX - gestureRef.current.startX;
+    const dy = event.clientY - gestureRef.current.startY;
+    return dx * dx + dy * dy <= DRAG_THRESHOLD * DRAG_THRESHOLD;
+  }
+
+  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+    clearHold();
+    gestureRef.current.fired = false;
+    const hit = resolvePick(event.object, partsByName);
+    gestureRef.current.pendingHit = hit;
+    const part = hit && "part" in hit ? hit.part : null;
     holdRef.current.timer = window.setTimeout(() => {
-      holdRef.current.fired = true;
+      gestureRef.current.fired = true;
       if (part) {
         onLongPress?.(part);
       }
     }, HOLD_MS);
   }
 
-  function handlePointerMove(event: ThreeEvent<PointerEvent>) {
-    const dx = event.clientX - holdRef.current.startX;
-    const dy = event.clientY - holdRef.current.startY;
-    if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
-      clearHold();
-    }
-  }
-
-  function handlePointerUp() {
+  function handlePointerUp(event: ThreeEvent<PointerEvent>) {
     clearHold();
-  }
-
-  function handleClick(event: ThreeEvent<MouseEvent>) {
-    event.stopPropagation();
-    if (holdRef.current.fired || event.delta > DRAG_THRESHOLD) {
+    if (!isTap(event)) {
       return;
     }
-    onPick(resolvePick(event.object, partsByName));
+    onPick(gestureRef.current.pendingHit);
   }
 
   function handlePointerOver(event: ThreeEvent<PointerEvent>) {
+    if (
+      gestureRef.current.dragging ||
+      event.nativeEvent.pointerType === "touch"
+    ) {
+      return;
+    }
     event.stopPropagation();
     const hit = resolvePick(event.object, partsByName);
     if (!hit) {
@@ -325,18 +337,26 @@ function LoadedModel({
     onHover("part" in hit ? hit.part : hit);
   }
 
+  function handlePointerOut(event: ThreeEvent<PointerEvent>) {
+    if (
+      gestureRef.current.dragging ||
+      event.nativeEvent.pointerType === "touch"
+    ) {
+      return;
+    }
+    onHover(null);
+  }
+
   return (
     <>
       <ExpandCameraFar object={scene} />
       <primitive
         object={scene}
-        onClick={handleClick}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onPointerOver={handlePointerOver}
-        onPointerOut={() => onHover(null)}
+        onPointerOut={handlePointerOut}
       />
     </>
   );
@@ -360,6 +380,74 @@ function StudioGround() {
       />
     </group>
   );
+}
+
+function ViewerGestureTracker({
+  gestureRef,
+  onDragStart,
+}: {
+  gestureRef: MutableRefObject<ViewerGesture>;
+  onDragStart: () => void;
+}) {
+  const { gl } = useThree();
+  const onDragStartRef = useRef(onDragStart);
+  onDragStartRef.current = onDragStart;
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const gesture = gestureRef.current;
+
+    function markDragging() {
+      if (gesture.dragging) {
+        return;
+      }
+      gesture.dragging = true;
+      gesture.moved = true;
+      onDragStartRef.current();
+    }
+
+    function onCanvasPointerDown(event: PointerEvent) {
+      gesture.dragging = false;
+      gesture.moved = false;
+      gesture.fired = false;
+      gesture.startX = event.clientX;
+      gesture.startY = event.clientY;
+      gesture.pointerId = event.pointerId;
+    }
+
+    function onCanvasPointerMove(event: PointerEvent) {
+      if (event.pointerId !== gesture.pointerId) {
+        return;
+      }
+      const dx = event.clientX - gesture.startX;
+      const dy = event.clientY - gesture.startY;
+      if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
+        markDragging();
+      }
+    }
+
+    function onCanvasPointerEnd(event: PointerEvent) {
+      if (event.pointerId !== gesture.pointerId) {
+        return;
+      }
+      gesture.pointerId = -1;
+      gesture.dragging = false;
+    }
+
+    canvas.addEventListener("pointerdown", onCanvasPointerDown);
+    canvas.addEventListener("pointermove", onCanvasPointerMove);
+    canvas.addEventListener("pointerup", onCanvasPointerEnd);
+    canvas.addEventListener("pointercancel", onCanvasPointerEnd);
+
+    return () => {
+      canvas.removeEventListener("pointerdown", onCanvasPointerDown);
+      canvas.removeEventListener("pointermove", onCanvasPointerMove);
+      canvas.removeEventListener("pointerup", onCanvasPointerEnd);
+      canvas.removeEventListener("pointercancel", onCanvasPointerEnd);
+    };
+  }, [gl, gestureRef]);
+
+  return null;
 }
 
 function CaptureBridge({
@@ -508,6 +596,16 @@ function ViewerCanvas({
   onCaptureReady?: (capture: (partId: string) => string | null) => void;
 }) {
   const [hovered, setHovered] = useState<ViewerPart | UnmatchedMesh | null>(null);
+  const gestureRef = useRef<ViewerGesture>({
+    dragging: false,
+    moved: false,
+    fired: false,
+    startX: 0,
+    startY: 0,
+    pointerId: -1,
+    pendingHit: null,
+  });
+  const cancelHoldRef = useRef<(() => void) | null>(null);
   const [load, setLoad] = useState<{
     status: "loading" | "ready" | "error";
     message?: string;
@@ -548,10 +646,22 @@ function ViewerCanvas({
       camera={{ position: [2.8, 1.9, 2.5], fov: 40, near: 0.05, far: 8000 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, preserveDrawingBuffer: true }}
-      onPointerMissed={() => onPick(null)}
+      onPointerMissed={() => {
+        const gesture = gestureRef.current;
+        if (!gesture.dragging && !gesture.moved) {
+          onPick(null);
+        }
+      }}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={[VIEWER_BG]} />
+      <ViewerGestureTracker
+        gestureRef={gestureRef}
+        onDragStart={() => {
+          setHovered(null);
+          cancelHoldRef.current?.();
+        }}
+      />
       <CaptureBridge parts={parts} onCaptureReady={onCaptureReady} />
       <hemisphereLight args={["#e8eef6", "#1a1f26", 0.95]} />
       <ambientLight intensity={0.42} />
@@ -570,9 +680,13 @@ function ViewerCanvas({
             explode={explode}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
+            gestureRef={gestureRef}
             onPick={onPick}
             onLongPress={onLongPress}
             onHover={setHovered}
+            onRegisterCancelHold={(cancelHold) => {
+              cancelHoldRef.current = cancelHold;
+            }}
           />
         </Bounds>
         </Suspense>
