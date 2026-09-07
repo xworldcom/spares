@@ -2,6 +2,12 @@ import { requireUser } from "@/lib/auth";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
 import { modelPublicUrl } from "@/lib/model-url";
+import {
+  modelExistsInS3,
+  modelProxyRefusedMessage,
+  selectModelStoreKind,
+} from "@/lib/model-storage";
+import { MODEL_PROXY_MAX_BYTES } from "@/lib/pack-limits";
 import { canAccessMachine } from "@/lib/access";
 import { getMachine, listSites, readStoredFile } from "@/lib/store";
 
@@ -21,12 +27,18 @@ export async function GET(
   }
 
   const publicUrl = modelPublicUrl(machine.storedFileName);
-  if (publicUrl) {
+  if (publicUrl && (await modelExistsInS3(machine.storedFileName))) {
     return Response.redirect(publicUrl, 307);
   }
 
   try {
     const bytes = await readStoredFile(machine.storedFileName);
+    if (
+      selectModelStoreKind() === "s3" &&
+      bytes.length > MODEL_PROXY_MAX_BYTES
+    ) {
+      return error(modelProxyRefusedMessage(bytes.length), 413);
+    }
     return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": modelContentType(machine.originalFileName),

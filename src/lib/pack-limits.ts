@@ -9,6 +9,12 @@ export const MULTIPART_PACK_MAX_BYTES = 100 * 1024 * 1024;
 /** Parts lists stay on the function request; keep them small. */
 export const PARTS_LIST_MAX_BYTES = 5 * 1024 * 1024;
 
+/** During Blob→R2 migration, refuse to proxy large models through Vercel origin. */
+export const MODEL_PROXY_MAX_BYTES = 5 * 1024 * 1024;
+
+/** One-shot backfill skips stress/XL fixtures above this size (staff re-upload instead). */
+export const MODEL_BACKFILL_MAX_BYTES = 40 * 1024 * 1024;
+
 export function formatMegabytes(bytes: number) {
   const mb = bytes / (1024 * 1024);
   if (mb >= 10) {

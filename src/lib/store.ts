@@ -647,6 +647,17 @@ export function getMachine(id: string) {
   });
 }
 
+export function listMachineModelFiles() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return db.machines.map((machine) => ({
+      id: machine.id,
+      name: machine.name,
+      storedFileName: machine.storedFileName,
+    }));
+  });
+}
+
 /** Test helper: drop the in-process cache so the next read hits disk. */
 export function resetStoreMemoryForTests() {
   memory = null;
