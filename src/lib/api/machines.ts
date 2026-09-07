@@ -107,6 +107,20 @@ export async function updateMachineSite(machineId: string, siteId: string | null
   return normalizeMachine(data, "staff");
 }
 
+export async function updateMachineName(machineId: string, name: string) {
+  const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+  return normalizeMachine(data, "staff");
+}
+
+export async function deleteMachine(machineId: string) {
+  await apiFetch<{ ok: true }>(`/api/machines/${machineId}`, {
+    method: "DELETE",
+  });
+}
+
 function assertModelSize(file: File) {
   if (file.size > CLIENT_PACK_MAX_BYTES) {
     throw new ApiError(packOverLimitMessage(file.size, CLIENT_PACK_MAX_BYTES), 413);

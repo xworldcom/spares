@@ -2,7 +2,13 @@ import { requireRole, requireUser } from "@/lib/auth";
 import { canAccessMachine } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { machineFileUrl, toMachineDetail } from "@/lib/machines";
-import { getMachine, listSites, recordMachineView, updateMachineSite } from "@/lib/store";
+import {
+  deleteMachine,
+  getMachine,
+  listSites,
+  recordMachineView,
+  updateMachine,
+} from "@/lib/store";
 
 export async function GET(
   request: Request,
@@ -34,6 +40,7 @@ export async function GET(
 
 type PatchBody = {
   siteId?: unknown;
+  name?: unknown;
 };
 
 export async function PATCH(
@@ -51,20 +58,38 @@ export async function PATCH(
     return body;
   }
 
-  const siteId =
-    body.siteId === null || body.siteId === ""
-      ? null
-      : typeof body.siteId === "string"
-        ? body.siteId
-        : undefined;
-  if (siteId === undefined) {
-    return error("siteId is required", 400);
+  const hasSiteId = "siteId" in body;
+  const hasName = "name" in body;
+  if (!hasSiteId && !hasName) {
+    return error("Send a name or plant to update", 400);
   }
 
-  const updated = await updateMachineSite(id, siteId);
+  const patch: { name?: string; siteId?: string | null } = {};
+  if (hasSiteId) {
+    patch.siteId =
+      body.siteId === null || body.siteId === ""
+        ? null
+        : typeof body.siteId === "string"
+          ? body.siteId
+          : undefined;
+    if (patch.siteId === undefined) {
+      return error("Choose a valid plant", 400);
+    }
+  }
+  if (hasName) {
+    if (typeof body.name !== "string") {
+      return error("Enter a machine name", 400);
+    }
+    patch.name = body.name;
+  }
+
+  const updated = await updateMachine(id, patch);
   if ("error" in updated) {
     if (updated.error === "bad-site") {
       return error("Choose a valid plant", 400);
+    }
+    if (updated.error === "bad-name") {
+      return error("Enter a machine name", 400);
     }
     return error("Machine not found", 404);
   }
@@ -77,4 +102,22 @@ export async function PATCH(
       await listSites(),
     ),
   );
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireRole("staff");
+  if ("error" in auth) {
+    return auth.error;
+  }
+
+  const { id } = await params;
+  const deleted = await deleteMachine(id);
+  if ("error" in deleted) {
+    return error("Machine not found", 404);
+  }
+
+  return json({ ok: true });
 }

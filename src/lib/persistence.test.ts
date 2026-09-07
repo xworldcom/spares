@@ -64,5 +64,7 @@ describe("memory persistence", () => {
     assert.equal(await store.readDatabaseJson(), '{"ok":true}');
     assert.equal((await store.readFileBytes("part.glb"))?.toString(), "glb");
     assert.equal(await store.readFileBytes("missing.bin"), null);
+    await store.deleteFileBytes("part.glb");
+    assert.equal(await store.readFileBytes("part.glb"), null);
   });
 });
