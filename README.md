@@ -145,7 +145,15 @@ Large GLBs should not stream through Vercel on every view. JSON records can stay
 3. Keep `BLOB_READ_WRITE_TOKEN` for `spares/db.json` and small files (PO PDFs, bug screenshots) unless you move JSON elsewhere later.
 4. Redeploy Preview only. Do **not** promote to Production.
 
-On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. When S3 credentials are set, `GET /api/machines/:id` returns a **short-lived presigned GET URL** in `fileUrl` so the browser loads the GLB straight from R2 without cookies and without Vercel origin transfer. The bucket stays private. Optional `S3_PUBLIC_BASE_URL` switches to a permanent CDN URL instead. `GET /api/machines/:id/file` remains a credentialed same-origin fallback when S3 is not configured (local dev).
+On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. When S3 credentials are set, `GET /api/machines/:id` returns a **short-lived presigned GET URL** in `fileUrl` so the browser loads the GLB straight from R2 without cookies and without Vercel origin transfer. The bucket stays private. Optional `S3_PUBLIC_BASE_URL` switches to a permanent CDN URL instead. `GET /api/machines/:id/file` remains a credentialed same-origin fallback when the object is not in R2 yet (small models only — see migration below).
+
+**After enabling S3 on Preview for the first time**, run the one-shot model backfill so machines uploaded to Vercel Blob before R2 are copied into the bucket:
+
+1. Sign in as staff on Preview.
+2. `POST /api/staff/machines/backfill-models` with your session cookie (browser devtools, or `curl` with the `spares_session` cookie).
+3. Check the JSON summary: `copied` should match legacy machines; `skippedExists` on reruns is normal. Models over 40 MB are skipped with a warning — re-upload those packs manually.
+
+Until backfill completes, the viewer falls back to Blob for small GLBs (&lt; 5 MB) via `/api/machines/:id/file`. Larger legacy models refuse to proxy through Vercel and ask staff to backfill or re-upload.
 
 ### Tess: attach Blob on Preview (JSON + small files)
 
@@ -187,8 +195,9 @@ The UI calls these routes with `credentials: "include"`:
 - `POST /api/machines/model-upload` — staff-only Vercel Blob client-token endpoint for the GLB
 - `POST /api/machines/:id/pack` — same pack payload as create, replaces the model + join
 - `GET /api/machines` → `{ machines: [{ id, name }] }`
-- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }` (`fileUrl` is a presigned R2 URL when S3 is configured, or same-origin `/file` when not)
-- `GET /api/machines/:id/file` — session cookie required; same-origin fallback when S3 is not configured
+- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }` (`fileUrl` is a presigned R2 URL when the object exists in S3, or same-origin `/file` during Blob→R2 migration)
+- `GET /api/machines/:id/file` — session cookie required; same-origin fallback when the GLB is not in R2 yet (small models only; large legacy files return a plain-English error)
+- `POST /api/staff/machines/backfill-models` — staff-only one-shot copy of legacy Blob/fs GLBs into R2 (idempotent; skips files over 40 MB)
 - `POST /api/quotes` — customer `{ machineId, items: [{ id, qty, name? }], note? }` (`qty` ≥ 1). Creates `status=requested`.
 - `GET /api/quotes` — staff sees all; customer sees own. Includes `unread` and `unreadCount`.
 - `GET /api/quotes/:id` — role-aware detail; marks the quote read for the current user. `:id` may be the sequential number.

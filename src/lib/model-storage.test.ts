@@ -11,10 +11,12 @@ import {
   selectStoreKind,
   setPersistenceForTests,
 } from "./persistence.ts";
+import { setTestS3Objects } from "./model-storage.ts";
 
 describe("model storage selection", () => {
   after(() => {
     setPersistenceForTests(null);
+    setTestS3Objects(null);
     delete process.env.S3_ENDPOINT;
     delete process.env.S3_REGION;
     delete process.env.S3_BUCKET;
@@ -88,6 +90,9 @@ describe("model public URLs", () => {
     process.env.S3_ACCESS_KEY_ID = "key";
     process.env.S3_SECRET_ACCESS_KEY = "secret";
     process.env.S3_PUBLIC_BASE_URL = "https://cdn.example.test/spares";
+    setTestS3Objects(
+      new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
+    );
     const request = new Request("https://preview.example.test/api/machines/m1");
     const url = await machineFileUrl(request, {
       id: "m1",
@@ -102,6 +107,10 @@ describe("model public URLs", () => {
     process.env.S3_ACCESS_KEY_ID = "key";
     process.env.S3_SECRET_ACCESS_KEY = "secret";
     delete process.env.S3_PUBLIC_BASE_URL;
+    setPersistenceForTests(createMemoryPersistence());
+    setTestS3Objects(
+      new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
+    );
     const request = new Request("https://preview.example.test/api/machines/m1");
     const url = await machineFileUrl(request, {
       id: "m1",
