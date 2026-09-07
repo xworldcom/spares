@@ -23,7 +23,7 @@ export function packOverLimitMessage(bytes: number, limitBytes: number) {
 }
 
 export function multipartTooLargeMessage() {
-  return "This model is too large to send through the server, and Blob storage is not attached on this preview. Attach Vercel Blob so the GLB goes straight to storage (up to 256 MB), or use a file under 100 MB.";
+  return "This model is too large to send through the server. With S3/R2 object storage configured, the GLB goes straight to storage (up to 256 MB). With Vercel Blob attached instead, use client upload (up to 256 MB). Otherwise keep the file under 100 MB.";
 }
 
 export function platform413Message() {

@@ -36,12 +36,17 @@ function normalizePart(part: Part): Part {
 }
 
 /**
- * Same-origin path for PartPicker `src`.
- * Pass this path through as-is. Do not pre-fetch into a blob URL;
- * PartPicker’s loader sends the login cookie on this `src`.
+ * Same-origin API path for PartPicker when object storage CDN is not configured.
  */
 export function machineFileSrc(machineId: string) {
   return `/api/machines/${machineId}/file`;
+}
+
+function resolvedFileUrl(machine: MachineDetail) {
+  if (machine.fileUrl.startsWith("http://") || machine.fileUrl.startsWith("https://")) {
+    return machine.fileUrl;
+  }
+  return machineFileSrc(machine.id);
 }
 
 export function normalizeMachine(
@@ -51,12 +56,13 @@ export function normalizeMachine(
   const parts = Array.isArray(machine.parts)
     ? machine.parts.map(normalizePart)
     : [];
+  const fileUrl = resolvedFileUrl(machine);
 
   if (role === "customer") {
     return {
       id: machine.id,
       name: machine.name,
-      fileUrl: machineFileSrc(machine.id),
+      fileUrl,
       parts,
       siteId: machine.siteId,
       company: machine.company,
@@ -69,7 +75,7 @@ export function normalizeMachine(
   const detail: MachineDetail = {
     id: machine.id,
     name: machine.name,
-    fileUrl: machineFileSrc(machine.id),
+    fileUrl,
     parts,
     siteId: machine.siteId,
     company: machine.company,
@@ -129,12 +135,34 @@ function assertModelSize(file: File) {
 
 async function clientModelUploadAvailable() {
   try {
-    return await apiFetch<{ clientUpload: boolean; maxBytes: number }>(
-      MODEL_UPLOAD,
-    );
+    return await apiFetch<{
+      clientUpload: boolean;
+      s3Upload?: boolean;
+      maxBytes: number;
+    }>(MODEL_UPLOAD);
   } catch {
     return null;
   }
+}
+
+async function uploadModelToS3(file: File) {
+  const ticket = await apiFetch<{
+    uploadUrl: string;
+    storedFileName: string;
+    method?: string;
+  }>(MODEL_UPLOAD, {
+    method: "POST",
+    body: JSON.stringify({ originalFileName: file.name }),
+  });
+  const response = await fetch(ticket.uploadUrl, {
+    method: ticket.method ?? "PUT",
+    body: file,
+    headers: { "Content-Type": modelContentType(file.name) },
+  });
+  if (!response.ok) {
+    throw new Error(`Could not upload the 3D model to storage (${response.status}).`);
+  }
+  return ticket.storedFileName;
 }
 
 async function uploadModelToBlob(file: File) {
@@ -187,6 +215,30 @@ async function uploadOrReplacePack(
   assertModelSize(input.model);
 
   const availability = await clientModelUploadAvailable();
+  if (availability?.s3Upload) {
+    try {
+      const storedFileName = await uploadModelToS3(input.model);
+      const data = await postPackForm(path, {
+        name: input.name,
+        partsList: input.partsList,
+        siteId: input.siteId,
+        storedFileName,
+        originalFileName: input.model.name,
+      });
+      return normalizeMachine(data, "staff");
+    } catch (cause) {
+      if (isApiError(cause)) {
+        throw cause;
+      }
+      throw new ApiError(
+        errorMessage(
+          cause,
+          "Could not upload the 3D model to storage. Try again, or use a smaller GLB.",
+        ),
+        0,
+      );
+    }
+  }
   if (availability?.clientUpload) {
     try {
       const storedFileName = await uploadModelToBlob(input.model);

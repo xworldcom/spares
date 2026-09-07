@@ -12,6 +12,7 @@ import {
   createMachine,
   listMachines,
   listSites,
+  ModelPackError,
   saveMachineFile,
 } from "@/lib/store";
 
@@ -60,7 +61,14 @@ export async function POST(request: Request) {
     return error(joined.error, joined.status);
   }
 
-  await saveMachineFile(pack.storedFileName, pack.modelBytes);
+  try {
+    await saveMachineFile(pack.storedFileName, pack.modelBytes);
+  } catch (cause) {
+    if (cause instanceof ModelPackError) {
+      return error(cause.message, 413);
+    }
+    throw cause;
+  }
 
   const sites = await listSites();
   if (pack.siteId && !sites.some((site) => site.id === pack.siteId)) {
@@ -79,7 +87,7 @@ export async function POST(request: Request) {
   return json(
     toMachineDetail(
       machine,
-      machineFileUrl(request, machine.id),
+      machineFileUrl(request, machine),
       auth.user.role,
       sites,
     ),

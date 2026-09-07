@@ -1,6 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "./auth/password.ts";
+import {
+  compressModelGlb,
+  validateLargeModelCompression,
+} from "./gltf-compress.ts";
 import { prepareModelBytes } from "./gltf.ts";
+import { isModelFilename } from "./machines.ts";
+import {
+  deleteModelFile,
+  readModelFile,
+  writeModelFile,
+} from "./model-storage.ts";
 import {
   filesDir,
   getPersistence,
@@ -162,14 +172,38 @@ function logStoreKind() {
   console.info(`[spares] store backend: ${getPersistence().kind}`);
 }
 
+export class ModelPackError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ModelPackError";
+  }
+}
+
+async function persistModelFile(storedFileName: string, bytes: Buffer) {
+  const result = await compressModelGlb(bytes);
+  const validation = validateLargeModelCompression(bytes.length, result);
+  if (!validation.ok) {
+    throw new ModelPackError(validation.message);
+  }
+  await writeModelFile(storedFileName, result.bytes);
+}
+
 async function persistFile(storedFileName: string, bytes: Buffer) {
+  if (isModelFilename(storedFileName)) {
+    await persistModelFile(storedFileName, bytes);
+    return;
+  }
   await getPersistence().writeFileBytes(
     safeStoredFileName(storedFileName),
-    prepareModelBytes(bytes),
+    bytes,
   );
 }
 
 async function deleteStoredFile(storedFileName: string) {
+  if (isModelFilename(storedFileName)) {
+    await deleteModelFile(storedFileName);
+    return;
+  }
   await getPersistence().deleteFileBytes(safeStoredFileName(storedFileName));
 }
 
@@ -307,7 +341,7 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
   if (options?.restoreFiles) {
     await restoreMissingFixtureFiles(
       next.machines,
-      async (name) => Boolean((await getPersistence().readFileBytes(name))?.length),
+      async (name) => Boolean((await readModelFile(name))?.length),
       persistFile,
     );
   }
@@ -923,11 +957,14 @@ export function machineFilePath(storedFileName: string) {
 }
 
 export async function readStoredFile(storedFileName: string): Promise<Buffer> {
-  const bytes = await getPersistence().readFileBytes(safeStoredFileName(storedFileName));
+  const name = safeStoredFileName(storedFileName);
+  const bytes = isModelFilename(name)
+    ? await readModelFile(name)
+    : await getPersistence().readFileBytes(name);
   if (!bytes?.length) {
     throw new Error("Stored file not found");
   }
-  return bytes;
+  return isModelFilename(name) ? prepareModelBytes(bytes) : bytes;
 }
 
 export function saveMachineFile(storedFileName: string, bytes: Buffer) {

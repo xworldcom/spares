@@ -9,6 +9,7 @@ import {
 import {
   getMachine,
   listSites,
+  ModelPackError,
   replaceMachinePack,
   saveMachineFile,
 } from "@/lib/store";
@@ -54,7 +55,14 @@ export async function POST(
     return error(joined.error, joined.status);
   }
 
-  await saveMachineFile(pack.storedFileName, pack.modelBytes);
+  try {
+    await saveMachineFile(pack.storedFileName, pack.modelBytes);
+  } catch (cause) {
+    if (cause instanceof ModelPackError) {
+      return error(cause.message, 413);
+    }
+    throw cause;
+  }
 
   const updated = await replaceMachinePack(id, {
     name: pack.name,
@@ -69,7 +77,7 @@ export async function POST(
   return json(
     toMachineDetail(
       updated.machine,
-      machineFileUrl(request, updated.machine.id),
+      machineFileUrl(request, updated.machine),
       auth.user.role,
       await listSites(),
     ),
