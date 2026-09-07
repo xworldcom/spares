@@ -121,6 +121,17 @@ describe("normalizeStoredQuote", () => {
     } as never);
     assert.equal(quote.items[0]?.sellPrice, 9.99);
   });
+
+  it("coerces string sell prices from legacy storage", () => {
+    const quote = normalizeStoredQuote({
+      id: "q4",
+      machineId: "m1",
+      items: [{ id: "A", qty: 1, sellPrice: "24.50" }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "c@example.test",
+    } as never);
+    assert.equal(quote.items[0]?.sellPrice, 24.5);
+  });
 });
 
 describe("status and visibility", () => {
@@ -304,11 +315,12 @@ describe("mergeQuoteItems and numbers", () => {
 });
 
 describe("quotePricingComplete", () => {
-  it("requires a sell price on every line", () => {
+  it("requires a real sell price on every line", () => {
     assert.equal(
       quotePricingComplete([{ id: "A", qty: 1, sellPrice: 10 }]),
       true,
     );
+    assert.equal(quotePricingComplete([{ id: "A", qty: 1, sellPrice: 0 }]), false);
     assert.equal(quotePricingComplete([{ id: "A", qty: 1 }]), false);
     assert.equal(quotePricingComplete([]), false);
   });

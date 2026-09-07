@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
+import { DESKTOP_STAGE } from "@/components/machine/useDesktopStage";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
@@ -21,7 +22,6 @@ export type TrayLine = {
 type Sheet = "peek" | "full" | "out";
 
 export const SHEET_EASE_MS = 420;
-const DESKTOP_STAGE = "(min-width: 1024px) and (min-height: 840px)";
 const DRAG_SLOP = 8;
 const SAMPLE_WINDOW_MS = 90;
 

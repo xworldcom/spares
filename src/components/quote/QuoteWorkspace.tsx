@@ -177,7 +177,7 @@ export function QuoteWorkspace({
     }
     if (statusDirty && pendingStatus === "quoted" && !quotePricingComplete(items)) {
       const proceed = window.confirm(
-        "Some lines are missing sell prices. Customers will see quoted status with blank pricing until you fill them in. Apply anyway?",
+        "Some lines are missing or have zero sell prices. Customers will see quoted status with blank pricing until you enter a real price on every line. Apply anyway?",
       );
       if (!proceed) {
         return;
@@ -248,6 +248,13 @@ export function QuoteWorkspace({
         >
           {primaryLabel}
         </button>
+      ) : null}
+
+      {role === "staff" && statusDirty && pendingStatus === "quoted" && !quotePricingComplete(items) ? (
+        <p className="text-sm text-amber-800" role="status">
+          Enter a sell price above zero on every line before quoting, or confirm to apply
+          anyway.
+        </p>
       ) : null}
 
       {error ? (
