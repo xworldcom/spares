@@ -25,3 +25,13 @@ export function s3PublicBaseUrl() {
   const base = process.env.S3_PUBLIC_BASE_URL?.trim();
   return base ? base.replace(/\/$/, "") : null;
 }
+
+/** Default lifetime for presigned GET URLs returned in machine `fileUrl`. */
+export function modelDownloadUrlTtlSeconds() {
+  const raw = process.env.S3_SIGNED_URL_TTL_SECONDS?.trim();
+  if (!raw) {
+    return 3600;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3600;
+}

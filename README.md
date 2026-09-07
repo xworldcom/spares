@@ -128,24 +128,24 @@ Optional (from T1.2, plus T3 durable store):
   - `S3_REGION` — use `auto` for Cloudflare R2
   - `S3_BUCKET` — bucket name
   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
-  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base, e.g. `https://models.preview.example.com` (no trailing slash). When set, the viewer loads GLBs from this URL instead of proxying through Next.js.
+  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base, e.g. `https://models.preview.example.com` (no trailing slash). When set, the viewer loads GLBs from this permanent URL instead of presigned URLs.
+  - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, one hour).
 
 ### Tess: wire Cloudflare R2 for model files (recommended)
 
-Large GLBs should not stream through Vercel on every view. JSON records can stay on Blob; only model binaries need R2.
+Large GLBs should not stream through Vercel on every view. JSON records can stay on Blob; only model binaries need R2. **Keep the bucket private** — do not enable r2.dev public access or world-readable listing for Spares critique.
 
-1. In Cloudflare, create an **R2 bucket** (private preview is fine) and an **API token** with read/write on that bucket.
-2. Optionally attach a **custom domain** or R2 public bucket URL for `S3_PUBLIC_BASE_URL` so the browser loads models from the CDN.
-3. In the Vercel project **Preview** environment, set:
+1. In Cloudflare, create a **private R2 bucket** and an **API token** with read/write on that bucket.
+2. In the Vercel project **Preview** environment, set:
    - `S3_ENDPOINT` = `https://<accountid>.r2.cloudflarestorage.com`
    - `S3_REGION` = `auto`
-   - `S3_BUCKET` = your bucket name
+   - `S3_BUCKET` = `spares-models` (or your bucket name)
    - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` = R2 token
-   - `S3_PUBLIC_BASE_URL` = public CDN base (recommended)
-4. Keep `BLOB_READ_WRITE_TOKEN` for `spares/db.json` and small files (PO PDFs, bug screenshots) unless you move JSON elsewhere later.
-5. Redeploy Preview only. Do **not** promote to Production.
+   - Do **not** set `S3_PUBLIC_BASE_URL` unless you later attach a public CDN domain.
+3. Keep `BLOB_READ_WRITE_TOKEN` for `spares/db.json` and small files (PO PDFs, bug screenshots) unless you move JSON elsewhere later.
+4. Redeploy Preview only. Do **not** promote to Production.
 
-On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. The API returns `fileUrl` as the CDN URL when `S3_PUBLIC_BASE_URL` is set; PartPicker loads that URL directly (no Next.js proxy bandwidth). `GET /api/machines/:id/file` remains a credentialed fallback when CDN is not configured.
+On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. When S3 credentials are set, `GET /api/machines/:id` returns a **short-lived presigned GET URL** in `fileUrl` so the browser loads the GLB straight from R2 without cookies and without Vercel origin transfer. The bucket stays private. Optional `S3_PUBLIC_BASE_URL` switches to a permanent CDN URL instead. `GET /api/machines/:id/file` remains a credentialed same-origin fallback when S3 is not configured (local dev).
 
 ### Tess: attach Blob on Preview (JSON + small files)
 
@@ -173,7 +173,7 @@ Staff Upload pack sends the 3D file **straight to object storage** when configur
 
 256 MB is a Vercel-practical ceiling: the join step still reads the stored GLB in the function to extract mesh names.
 
-When `S3_PUBLIC_BASE_URL` is set, the 3D viewer loads the model from the CDN URL in `fileUrl`. Otherwise it uses `GET /api/machines/:id/file` (session cookie). Very large assemblies may be slow to open even after a successful upload.
+When S3 is configured, the 3D viewer loads the model from the presigned `fileUrl` (or the optional CDN URL when `S3_PUBLIC_BASE_URL` is set). Without S3, it uses `GET /api/machines/:id/file` (session cookie). Very large assemblies may be slow to open even after a successful upload.
 
 ## API (T1.2, stacked from #7)
 
@@ -187,8 +187,8 @@ The UI calls these routes with `credentials: "include"`:
 - `POST /api/machines/model-upload` — staff-only Vercel Blob client-token endpoint for the GLB
 - `POST /api/machines/:id/pack` — same pack payload as create, replaces the model + join
 - `GET /api/machines` → `{ machines: [{ id, name }] }`
-- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
-- `GET /api/machines/:id/file` — session cookie required; this is the viewer `src`
+- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }` (`fileUrl` is a presigned R2 URL when S3 is configured, or same-origin `/file` when not)
+- `GET /api/machines/:id/file` — session cookie required; same-origin fallback when S3 is not configured
 - `POST /api/quotes` — customer `{ machineId, items: [{ id, qty, name? }], note? }` (`qty` ≥ 1). Creates `status=requested`.
 - `GET /api/quotes` — staff sees all; customer sees own. Includes `unread` and `unreadCount`.
 - `GET /api/quotes/:id` — role-aware detail; marks the quote read for the current user. `:id` may be the sequential number.
