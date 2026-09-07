@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { prepareModelBytes } from "@/lib/gltf";
 import { error } from "@/lib/http";
 import { modelContentType } from "@/lib/machines";
 import { canAccessMachine } from "@/lib/access";
@@ -20,7 +21,7 @@ export async function GET(
   }
 
   try {
-    const bytes = await readStoredFile(machine.storedFileName);
+    const bytes = prepareModelBytes(await readStoredFile(machine.storedFileName));
     return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": modelContentType(machine.originalFileName),

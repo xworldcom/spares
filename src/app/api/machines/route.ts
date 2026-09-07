@@ -60,9 +60,7 @@ export async function POST(request: Request) {
     return error(joined.error, joined.status);
   }
 
-  if (!pack.alreadyStored) {
-    await saveMachineFile(pack.storedFileName, pack.modelBytes);
-  }
+  await saveMachineFile(pack.storedFileName, pack.modelBytes);
 
   const sites = await listSites();
   if (pack.siteId && !sites.some((site) => site.id === pack.siteId)) {

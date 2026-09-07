@@ -54,9 +54,7 @@ export async function POST(
     return error(joined.error, joined.status);
   }
 
-  if (!pack.alreadyStored) {
-    await saveMachineFile(pack.storedFileName, pack.modelBytes);
-  }
+  await saveMachineFile(pack.storedFileName, pack.modelBytes);
 
   const updated = await replaceMachinePack(id, {
     name: pack.name,

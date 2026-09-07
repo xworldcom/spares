@@ -15,6 +15,11 @@ type GltfRoot = {
   meshes?: GltfMesh[];
 };
 
+type GlbChunk = {
+  type: number;
+  data: Buffer;
+};
+
 export function isGlb(bytes: Buffer) {
   return bytes.length >= 12 && bytes.readUInt32LE(0) === GLB_MAGIC;
 }
@@ -80,19 +85,23 @@ function endOfJsonValue(bytes: Buffer, start: number) {
   throw new Error("GLB JSON chunk truncated");
 }
 
-function parseLeadingJson(bytes: Buffer): unknown {
+function jsonObjectBytes(chunkData: Buffer): Buffer {
   let start = 0;
-  while (start < bytes.length && isPadByte(bytes[start] ?? 0)) {
+  while (start < chunkData.length && isPadByte(chunkData[start] ?? 0)) {
     start += 1;
   }
-  if (start >= bytes.length) {
+  if (start >= chunkData.length) {
     throw new Error("GLB JSON chunk is empty");
   }
-  const end = endOfJsonValue(bytes, start);
-  return JSON.parse(bytes.subarray(start, end).toString("utf8"));
+  const end = endOfJsonValue(chunkData, start);
+  return chunkData.subarray(start, end);
 }
 
-function parseGlbJson(bytes: Buffer): unknown {
+function parseLeadingJson(bytes: Buffer): unknown {
+  return JSON.parse(jsonObjectBytes(bytes).toString("utf8"));
+}
+
+function readGlbChunks(bytes: Buffer): GlbChunk[] {
   if (bytes.length < 12) {
     throw new Error("GLB too short");
   }
@@ -103,6 +112,7 @@ function parseGlbJson(bytes: Buffer): unknown {
     throw new Error("Unsupported GLB version");
   }
 
+  const chunks: GlbChunk[] = [];
   let offset = 12;
   while (offset + 8 <= bytes.length) {
     const chunkLength = bytes.readUInt32LE(offset);
@@ -111,13 +121,78 @@ function parseGlbJson(bytes: Buffer): unknown {
     if (offset + chunkLength > bytes.length) {
       throw new Error("GLB chunk truncated");
     }
-    if (chunkType === JSON_CHUNK) {
-      return parseLeadingJson(bytes.subarray(offset, offset + chunkLength));
-    }
+    chunks.push({
+      type: chunkType,
+      data: bytes.subarray(offset, offset + chunkLength),
+    });
     offset += chunkLength;
   }
+  return chunks;
+}
 
-  throw new Error("GLB missing JSON chunk");
+function padChunkTo4(data: Buffer): Buffer {
+  const padLen = (4 - (data.length % 4)) % 4;
+  if (padLen === 0) {
+    return data;
+  }
+  return Buffer.concat([data, Buffer.alloc(padLen, 0x20)]);
+}
+
+function writeGlb(chunks: GlbChunk[]): Buffer {
+  const bodyParts: Buffer[] = [];
+  for (const chunk of chunks) {
+    const header = Buffer.alloc(8);
+    header.writeUInt32LE(chunk.data.length, 0);
+    header.writeUInt32LE(chunk.type, 4);
+    bodyParts.push(header, chunk.data);
+  }
+  const body = Buffer.concat(bodyParts);
+  const fileHeader = Buffer.alloc(12);
+  fileHeader.writeUInt32LE(GLB_MAGIC, 0);
+  fileHeader.writeUInt32LE(2, 4);
+  fileHeader.writeUInt32LE(12 + body.length, 8);
+  return Buffer.concat([fileHeader, body]);
+}
+
+/**
+ * Rewrite the JSON chunk so it contains only the glTF JSON object, padded to
+ * a 4-byte boundary with spaces (0x20). three.js GLTFLoader JSON.parse's the
+ * whole chunk; NUL padding or BIN bleed breaks the browser loader.
+ */
+export function normalizeGlb(bytes: Buffer): Buffer {
+  if (!isGlb(bytes)) {
+    return bytes;
+  }
+
+  const chunks = readGlbChunks(bytes);
+  let changed = false;
+  const nextChunks = chunks.map((chunk) => {
+    if (chunk.type !== JSON_CHUNK) {
+      return chunk;
+    }
+    const canonical = padChunkTo4(jsonObjectBytes(chunk.data));
+    if (!chunk.data.equals(canonical)) {
+      changed = true;
+      return { ...chunk, data: canonical };
+    }
+    return chunk;
+  });
+
+  return changed ? writeGlb(nextChunks) : bytes;
+}
+
+/** Normalize GLB bytes before persistence or download. Non-GLB input is unchanged. */
+export function prepareModelBytes(bytes: Buffer): Buffer {
+  return normalizeGlb(bytes);
+}
+
+function parseGlbJson(bytes: Buffer): unknown {
+  const chunks = readGlbChunks(bytes);
+  const jsonChunk = chunks.find((chunk) => chunk.type === JSON_CHUNK);
+  if (!jsonChunk) {
+    throw new Error("GLB missing JSON chunk");
+  }
+  return parseLeadingJson(jsonChunk.data);
 }
 
 function namesFromGltf(json: unknown): string[] {
