@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { BLOB_DB_PATH, BLOB_FILES_PREFIX } from "./blob-paths.ts";
 
@@ -10,6 +10,7 @@ export type Persistence = {
   writeDatabaseJson(json: string): Promise<void>;
   readFileBytes(name: string): Promise<Buffer | null>;
   writeFileBytes(name: string, bytes: Buffer): Promise<void>;
+  deleteFileBytes(name: string): Promise<void>;
 };
 
 let override: Persistence | null = null;
@@ -54,6 +55,9 @@ export function createMemoryPersistence(): Persistence {
     },
     async writeFileBytes(name, bytes) {
       files.set(safeStoredFileName(name), Buffer.from(bytes));
+    },
+    async deleteFileBytes(name) {
+      files.delete(safeStoredFileName(name));
     },
   };
 }
@@ -132,6 +136,13 @@ function fsPersistence(root: string): Persistence {
       await mkdir(filesRoot, { recursive: true });
       await writeFile(path.join(filesRoot, safeStoredFileName(name)), bytes);
     },
+    async deleteFileBytes(name) {
+      try {
+        await unlink(path.join(filesRoot, safeStoredFileName(name)));
+      } catch {
+        // Missing files are fine during cleanup.
+      }
+    },
   };
 }
 
@@ -167,6 +178,14 @@ function blobPersistence(): Persistence {
         contentType: contentTypeFor(stored),
         multipart: bytes.length > 4 * 1024 * 1024,
       });
+    },
+    async deleteFileBytes(name) {
+      const { del } = await import("@vercel/blob");
+      try {
+        await del(blobFilePath(safeStoredFileName(name)));
+      } catch {
+        // Missing blobs are fine during cleanup.
+      }
     },
   };
 }

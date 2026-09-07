@@ -6,7 +6,7 @@ import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
 import { siteLabel } from "@/lib/access";
 import { listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
-import { replaceMachinePack, uploadMachinePack } from "@/lib/api/machines";
+import { replaceMachinePack, uploadMachinePack, getMachine } from "@/lib/api/machines";
 import type { MachineDetail, PartsListRow, Site } from "@/lib/api/types";
 import { formatMegabytes } from "@/lib/pack-limits";
 import { emptyPartsRow, partsListToJsonFile } from "@/lib/parts-list";
@@ -89,6 +89,31 @@ export function UploadPackForm() {
   const [result, setResult] = useState<MachineDetail | null>(null);
   const [siteId, setSiteId] = useState("");
   const [sites, setSites] = useState<Site[]>([]);
+  const [replaceName, setReplaceName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!replaceId) {
+      setReplaceName(null);
+      return;
+    }
+    let cancelled = false;
+    getMachine(replaceId, "staff")
+      .then((machine) => {
+        if (cancelled) {
+          return;
+        }
+        setName(machine.name);
+        setReplaceName(machine.name);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReplaceName(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [replaceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,7 +181,7 @@ export function UploadPackForm() {
     setError(null);
     setResult(null);
 
-    if (!name.trim()) {
+    if (!name.trim() && !replaceId) {
       setError("Name the machine.");
       return;
     }
@@ -229,8 +254,18 @@ export function UploadPackForm() {
       >
         <section className="space-y-4 rounded-[24px] bg-white p-5">
           <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
-            1 · Where it lives
+            1 · {replaceId ? "Machine details" : "Where it lives"}
           </p>
+          {replaceId ? (
+            <p className="text-sm leading-relaxed text-neutral-700">
+              Replacing the pack for{" "}
+              <span className="font-medium text-neutral-950">
+                {replaceName ?? "this machine"}
+              </span>
+              . Upload a new GLB and parts list. Change the plant from the machines
+              list if needed.
+            </p>
+          ) : null}
           <div>
             <label htmlFor="machine-name" className="block text-sm font-medium">
               Machine name
@@ -238,31 +273,33 @@ export function UploadPackForm() {
             <input
               id="machine-name"
               name="name"
-              required
+              required={!replaceId}
               value={name}
               onChange={(event) => setName(event.target.value)}
               className={fieldClass}
               placeholder="Palletizer 4"
             />
           </div>
-          <div>
-            <label htmlFor="machine-site" className="block text-sm font-medium">
-              Plant
-            </label>
-            <select
-              id="machine-site"
-              value={siteId}
-              onChange={(event) => setSiteId(event.target.value)}
-              className={fieldClass}
-            >
-              <option value="">Unassigned — staff only</option>
-              {sites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {siteLabel(site)}
-                </option>
-              ))}
-            </select>
-          </div>
+          {replaceId ? null : (
+            <div>
+              <label htmlFor="machine-site" className="block text-sm font-medium">
+                Plant
+              </label>
+              <select
+                id="machine-site"
+                value={siteId}
+                onChange={(event) => setSiteId(event.target.value)}
+                className={fieldClass}
+              >
+                <option value="">Unassigned — staff only</option>
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {siteLabel(site)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3 rounded-[24px] bg-white p-5">
@@ -441,7 +478,7 @@ export function UploadPackForm() {
       {result ? (
         <div className="space-y-3 rounded-[24px] bg-white p-5">
           <p className="text-[17px] font-semibold text-neutral-900">
-            Pack uploaded: {result.name}
+            {replaceId ? "Pack replaced" : "Pack uploaded"}: {result.name}
           </p>
           <p className="spares-muted text-sm">
             {result.parts.length} joined part

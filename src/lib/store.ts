@@ -169,6 +169,10 @@ async function persistFile(storedFileName: string, bytes: Buffer) {
   );
 }
 
+async function deleteStoredFile(storedFileName: string) {
+  await getPersistence().deleteFileBytes(safeStoredFileName(storedFileName));
+}
+
 async function seedUser(input: {
   id: string;
   email: string;
@@ -516,23 +520,74 @@ export function updateCustomerSites(
   });
 }
 
-export function updateMachineSite(machineId: string, siteId: string | null) {
+export function updateMachine(
+  machineId: string,
+  patch: { name?: string; siteId?: string | null },
+) {
   return withLock(async () => {
     const db = await readDatabase();
     const index = db.machines.findIndex((machine) => machine.id === machineId);
     if (index < 0) {
       return { error: "not-found" as const };
     }
-    if (siteId && !(db.sites ?? []).some((site) => site.id === siteId)) {
-      return { error: "bad-site" as const };
+    if (patch.siteId !== undefined && patch.siteId) {
+      if (!(db.sites ?? []).some((site) => site.id === patch.siteId)) {
+        return { error: "bad-site" as const };
+      }
     }
+    if (patch.name !== undefined) {
+      const trimmed = patch.name.trim();
+      if (!trimmed) {
+        return { error: "bad-name" as const };
+      }
+    }
+
     const machines = db.machines.slice();
     const current = machines[index];
-    machines[index] = siteId
-      ? { ...current, siteId }
-      : { ...current, siteId: undefined };
+    let next = current;
+    if (patch.siteId !== undefined) {
+      next =
+        patch.siteId
+          ? { ...next, siteId: patch.siteId }
+          : { ...next, siteId: undefined };
+    }
+    if (patch.name !== undefined) {
+      next = { ...next, name: patch.name.trim() };
+    }
+    machines[index] = next;
     await writeDatabase({ ...db, machines });
-    return { machine: machines[index] };
+    return { machine: next };
+  });
+}
+
+export function updateMachineSite(machineId: string, siteId: string | null) {
+  return updateMachine(machineId, { siteId });
+}
+
+export function deleteMachine(machineId: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const index = db.machines.findIndex((machine) => machine.id === machineId);
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const machine = db.machines[index];
+    const machines = db.machines.filter((row) => row.id !== machineId);
+    const users = db.users.map((user) => {
+      if (!user.machineIds?.includes(machineId)) {
+        return user;
+      }
+      return {
+        ...user,
+        machineIds: user.machineIds.filter((id) => id !== machineId),
+      };
+    });
+    const machineViews = (db.machineViews ?? []).filter(
+      (view) => view.machineId !== machineId,
+    );
+    await writeDatabase({ ...db, machines, users, machineViews });
+    await deleteStoredFile(machine.storedFileName);
+    return { ok: true as const };
   });
 }
 
@@ -611,6 +666,7 @@ export function replaceMachinePack(
       return { error: "not-found" as const };
     }
     const current = db.machines[index];
+    const previousFileName = current.storedFileName;
     const machines = db.machines.slice();
     machines[index] = {
       ...current,
@@ -623,6 +679,9 @@ export function replaceMachinePack(
       revisedAt: new Date().toISOString(),
     };
     await writeDatabase({ ...db, machines });
+    if (previousFileName !== input.storedFileName) {
+      await deleteStoredFile(previousFileName);
+    }
     return { machine: machines[index] };
   });
 }
