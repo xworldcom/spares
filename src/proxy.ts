@@ -11,5 +11,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const proxyConfig = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip /api so large multipart fallbacks are not cloned into the proxy buffer.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
 };

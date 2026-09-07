@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "./auth/password.ts";
+import { prepareModelBytes } from "./gltf.ts";
 import {
   filesDir,
   getPersistence,
@@ -162,7 +163,10 @@ function logStoreKind() {
 }
 
 async function persistFile(storedFileName: string, bytes: Buffer) {
-  await getPersistence().writeFileBytes(safeStoredFileName(storedFileName), bytes);
+  await getPersistence().writeFileBytes(
+    safeStoredFileName(storedFileName),
+    prepareModelBytes(bytes),
+  );
 }
 
 async function seedUser(input: {

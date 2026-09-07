@@ -30,7 +30,9 @@ export function loadGltfWithCredentials(src: string): Promise<GLTF> {
     })
     .catch((error: unknown) => {
       cache.delete(src);
-      throw error;
+      throw error instanceof Error
+        ? error
+        : new Error("The 3D model could not be parsed.");
     });
 
   cache.set(src, promise);

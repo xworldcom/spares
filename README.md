@@ -136,6 +136,20 @@ Vercel `/tmp` is per-instance. Without Blob, a quote created on one function ins
 
 Empty Blob store auto-seeds Hardware fixture, Palletizer, and the seed users the first time an API route runs.
 
+### Large GLB packs
+
+Staff Upload pack sends the 3D file **straight to Vercel Blob** (private, same `spares/files/…` path the viewer already reads). The create/replace request only carries the machine name, plant, and parts list — so a ~49 MB SolidWorks export no longer dies with `Request failed (413)` at the Next/Vercel body limit.
+
+| Path | What succeeds | Hard ceiling |
+| --- | --- | --- |
+| Preview with Blob (`BLOB_READ_WRITE_TOKEN`) | GLB packs **up to 256 MB** | Token `maximumSizeInBytes` = 256 MB. Larger files get a plain-English error. |
+| Local `npm run dev` without Blob | Multipart through the API | Next/Vercel practical cap **100 MB** (`proxyClientMaxBodySize`). |
+| Over the ceiling | Upload is refused before join | “This model is N MB. Staff packs can be up to 256 MB.” |
+
+256 MB is a Vercel-practical ceiling: the join step still reads the stored GLB in the function to extract mesh names. Blob itself can take much larger objects; raising this later means streaming the JSON chunk instead of buffering the whole file.
+
+The 3D viewer still loads the model through `GET /api/machines/:id/file` (session cookie). Very large assemblies may be slow to open even after a successful upload.
+
 ## API (T1.2, stacked from #7)
 
 The UI calls these routes with `credentials: "include"`:
@@ -144,7 +158,9 @@ The UI calls these routes with `credentials: "include"`:
 - `POST /api/auth/logout`
 - `GET /api/auth/me` → `{ user }`
 - `POST /api/staff/customers` — staff creates customer accounts
-- `POST /api/machines` — multipart `name`, `model`, `partsList`
+- `POST /api/machines` — staff pack create. On Preview (Blob attached) the GLB is uploaded client → private Blob, then this route receives `name`, `partsList`, `storedFileName`, and optional `siteId`. Multipart `model` is the local fallback.
+- `POST /api/machines/model-upload` — staff-only Vercel Blob client-token endpoint for the GLB
+- `POST /api/machines/:id/pack` — same pack payload as create, replaces the model + join
 - `GET /api/machines` → `{ machines: [{ id, name }] }`
 - `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
 - `GET /api/machines/:id/file` — session cookie required; this is the viewer `src`

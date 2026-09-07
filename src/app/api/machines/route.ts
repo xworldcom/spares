@@ -1,18 +1,21 @@
-import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { requireRole, requireUser } from "@/lib/auth";
-import { extractMeshNames } from "@/lib/gltf";
 import { error, json } from "@/lib/http";
+import { machineFileUrl, toMachineDetail, toMachineSummary } from "@/lib/machines";
 import {
-  isModelFilename,
-  machineFileUrl,
-  modelExtension,
-  toMachineDetail,
-  toMachineSummary,
-} from "@/lib/machines";
-import { joinParts, parsePartsList } from "@/lib/parts";
+  isPackFormError,
+  joinPackFiles,
+  readPackForm,
+} from "@/lib/pack-upload";
 import { canAccessMachine } from "@/lib/access";
-import { createMachine, listMachines, listSites, saveMachineFile } from "@/lib/store";
+import {
+  createMachine,
+  listMachines,
+  listSites,
+  saveMachineFile,
+} from "@/lib/store";
+
+export const maxDuration = 120;
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser();
@@ -42,63 +45,35 @@ export async function POST(request: Request) {
     return error("Expected multipart/form-data", 400);
   }
 
-  const nameValue = form.get("name");
-  const name = typeof nameValue === "string" ? nameValue.trim() : "";
-  if (!name) {
-    return error("Machine name is required", 400);
+  const pack = await readPackForm(form);
+  if (isPackFormError(pack)) {
+    return error(pack.error, pack.status);
   }
 
-  const model = form.get("model");
-  if (!(model instanceof File) || model.size === 0) {
-    return error("A GLB or GLTF model file is required", 400);
-  }
-  if (!isModelFilename(model.name)) {
-    return error("Model must be a .glb or .gltf file", 400);
-  }
-
-  const partsList = form.get("partsList");
-  if (!(partsList instanceof File) || partsList.size === 0) {
-    return error("A parts list CSV or JSON file is required", 400);
+  const joined = joinPackFiles({
+    modelBytes: pack.modelBytes,
+    modelFileName: pack.originalFileName,
+    partsText: pack.partsText,
+    partsListName: pack.partsListName,
+  });
+  if ("error" in joined) {
+    return error(joined.error, joined.status);
   }
 
-  const modelBytes = Buffer.from(await model.arrayBuffer());
-  const partsText = await partsList.text();
+  await saveMachineFile(pack.storedFileName, pack.modelBytes);
 
-  let listRows;
-  try {
-    listRows = parsePartsList(partsText, partsList.name);
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : "Invalid parts list";
-    return error(message, 400);
-  }
-
-  let meshNames: string[];
-  try {
-    meshNames = extractMeshNames(modelBytes, model.name);
-  } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : "Could not read mesh names from the 3D file";
-    return error(message, 400);
-  }
-
-  const { parts, unmatched } = joinParts(listRows, meshNames);
-  const storedFileName = `${randomUUID()}${modelExtension(model.name)}`;
-  await saveMachineFile(storedFileName, modelBytes);
-
-  const siteValue = form.get("siteId");
-  const siteId = typeof siteValue === "string" && siteValue.trim() ? siteValue.trim() : undefined;
   const sites = await listSites();
-  if (siteId && !sites.some((site) => site.id === siteId)) {
+  if (pack.siteId && !sites.some((site) => site.id === pack.siteId)) {
     return error("Choose a valid plant", 400);
   }
 
   const machine = await createMachine({
-    name,
-    storedFileName,
-    originalFileName: model.name,
-    parts,
-    unmatched,
-    siteId,
+    name: pack.name,
+    storedFileName: pack.storedFileName,
+    originalFileName: pack.originalFileName,
+    parts: joined.parts,
+    unmatched: joined.unmatched,
+    siteId: pack.siteId,
   });
 
   return json(

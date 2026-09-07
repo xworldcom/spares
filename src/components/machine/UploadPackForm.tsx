@@ -8,6 +8,7 @@ import { listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import { replaceMachinePack, uploadMachinePack } from "@/lib/api/machines";
 import type { MachineDetail, PartsListRow, Site } from "@/lib/api/types";
+import { formatMegabytes } from "@/lib/pack-limits";
 import { emptyPartsRow, partsListToJsonFile } from "@/lib/parts-list";
 import { parsePartsList } from "@/lib/parts";
 
@@ -58,6 +59,7 @@ function FileDrop({
       {file ? (
         <span className="mt-2 block truncate font-mono text-[13px] text-neutral-700">
           {file.name}
+          <span className="text-neutral-500"> · {formatMegabytes(file.size)} MB</span>
         </span>
       ) : null}
       <input
@@ -270,7 +272,7 @@ export function UploadPackForm() {
           <FileDrop
             id="model-file"
             label="GLB or GLTF"
-            hint="Save As glTF/GLB from the assembly. Pump-1 joins to Pump. Sample from a real SW assembly: public/placeholders/arm."
+            hint="Save As glTF/GLB from the assembly. Pump-1 joins to Pump. Packs up to 256 MB. Sample from a real SW assembly: public/placeholders/arm."
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             file={model}
             onFile={setModel}
@@ -432,7 +434,7 @@ export function UploadPackForm() {
           disabled={submitting}
           className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-60 sm:w-auto sm:px-5"
         >
-          {submitting ? "Joining pack…" : replaceId ? "Replace pack" : "Upload pack"}
+          {submitting ? "Uploading pack…" : replaceId ? "Replace pack" : "Upload pack"}
         </button>
       </form>
 
