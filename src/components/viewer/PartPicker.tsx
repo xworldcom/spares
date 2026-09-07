@@ -2,7 +2,15 @@
 
 import { Bounds, Grid, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Material, Object3D } from "three";
 import { Box3, Color, Matrix4, Mesh, MeshStandardMaterial, Vector3 } from "three";
 import {
@@ -18,7 +26,10 @@ import {
   resolvePick,
 } from "./resolvePick";
 import type { PartPickerProps, UnmatchedMesh, ViewerPart } from "./types";
-import { useCredentialedGLTF } from "./useCredentialedGLTF";
+import {
+  loadGltfWithCredentials,
+  useCredentialedGLTF,
+} from "./useCredentialedGLTF";
 
 const NAMED_HIGHLIGHT = new Color("#38bdf8");
 const UNMATCHED_HIGHLIGHT = new Color("#f59e0b");
@@ -212,6 +223,14 @@ function LoadedModel({
       if (!isMesh(object)) {
         return;
       }
+      if (!object.material) {
+        object.material = new MeshStandardMaterial({
+          color: "#c8d0d8",
+          metalness: 0.12,
+          roughness: 0.68,
+        });
+        return;
+      }
       object.material = Array.isArray(object.material)
         ? object.material.map((material) => material.clone())
         : object.material.clone();
@@ -307,16 +326,19 @@ function LoadedModel({
   }
 
   return (
-    <primitive
-      object={scene}
-      onClick={handleClick}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      onPointerOver={handlePointerOver}
-      onPointerOut={() => onHover(null)}
-    />
+    <>
+      <ExpandCameraFar object={scene} />
+      <primitive
+        object={scene}
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerOver={handlePointerOver}
+        onPointerOut={() => onHover(null)}
+      />
+    </>
   );
 }
 
@@ -418,6 +440,52 @@ function CaptureBridge({
   return null;
 }
 
+function modelLoadMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    if (/failed to load model/i.test(error.message)) {
+      return "The 3D file could not be downloaded. Check your connection and try again.";
+    }
+    return `The 3D model could not be shown. ${error.message}`;
+  }
+  return "The 3D model could not be shown. The file may be too large or not a valid GLB.";
+}
+
+function ViewerStatus({
+  children,
+  role = "status",
+}: {
+  children: ReactNode;
+  role?: "status" | "alert";
+}) {
+  return (
+    <div
+      role={role}
+      className="absolute inset-0 z-10 flex items-center justify-center bg-[#1c232c]/82 px-6 text-center"
+    >
+      <p className="max-w-sm text-sm leading-relaxed text-[#e8eef6]">{children}</p>
+    </div>
+  );
+}
+
+function ExpandCameraFar({ object }: { object: Object3D }) {
+  const { camera } = useThree();
+  useLayoutEffect(() => {
+    box.setFromObject(object);
+    if (box.isEmpty()) {
+      return;
+    }
+    const size = box.getSize(localCenter).length();
+    const dist = camera.position.distanceTo(box.getCenter(worldCenter));
+    const needed = Math.max(size, dist) * 8;
+    if (Number.isFinite(needed) && needed > camera.far) {
+      camera.far = needed;
+      camera.near = Math.min(camera.near, Math.max(needed / 100_000, 0.01));
+      camera.updateProjectionMatrix();
+    }
+  }, [camera, object]);
+  return null;
+}
+
 function ViewerCanvas({
   src,
   parts,
@@ -440,11 +508,45 @@ function ViewerCanvas({
   onCaptureReady?: (capture: (partId: string) => string | null) => void;
 }) {
   const [hovered, setHovered] = useState<ViewerPart | UnmatchedMesh | null>(null);
+  const [load, setLoad] = useState<{
+    status: "loading" | "ready" | "error";
+    message?: string;
+  }>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoad({ status: "loading" });
+    loadGltfWithCredentials(src)
+      .then(() => {
+        if (!cancelled) {
+          setLoad({ status: "ready" });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setLoad({ status: "error", message: modelLoadMessage(error) });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
 
   return (
+    <>
+      {load.status === "loading" ? (
+        <ViewerStatus>
+          Loading the 3D model… Large packs can take a minute.
+        </ViewerStatus>
+      ) : null}
+      {load.status === "error" ? (
+        <ViewerStatus role="alert">
+          {load.message ?? "The 3D model could not be shown."}
+        </ViewerStatus>
+      ) : null}
     <Canvas
-      camera={{ position: [2.8, 1.9, 2.5], fov: 40, near: 0.1, far: 80 }}
-      dpr={[1, 2]}
+      camera={{ position: [2.8, 1.9, 2.5], fov: 40, near: 0.05, far: 8000 }}
+      dpr={[1, 1.5]}
       gl={{ antialias: true, preserveDrawingBuffer: true }}
       onPointerMissed={() => onPick(null)}
       style={{ touchAction: "none" }}
@@ -457,8 +559,9 @@ function ViewerCanvas({
       <directionalLight position={[-3.5, 2.4, -4]} intensity={0.42} />
       <directionalLight position={[0, 6, -2]} intensity={0.28} />
       <StudioGround />
-      <Suspense fallback={null}>
-        <Bounds fit margin={1.3}>
+      {load.status === "ready" ? (
+        <Suspense fallback={null}>
+        <Bounds fit clip observe margin={1.3}>
           <LoadedModel
             src={src}
             parts={parts}
@@ -472,7 +575,8 @@ function ViewerCanvas({
             onHover={setHovered}
           />
         </Bounds>
-      </Suspense>
+        </Suspense>
+      ) : null}
       <OrbitControls
         makeDefault
         enableDamping
@@ -481,6 +585,7 @@ function ViewerCanvas({
         enableZoom
       />
     </Canvas>
+    </>
   );
 }
 
@@ -537,7 +642,10 @@ export function PartPicker({
   }
 
   return (
-    <div className={className} style={{ height: "100%", minHeight: 0 }}>
+    <div
+      className={`relative ${className ?? ""}`}
+      style={{ height: "100%", minHeight: 0 }}
+    >
       <ViewerCanvas
         src={src}
         parts={parts}

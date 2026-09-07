@@ -87,4 +87,38 @@ describe("joinParts", () => {
       ["Cover"],
     );
   });
+
+  it("keeps distinct part numbers that look like instance suffixes", () => {
+    const rows = ["01", "02", "03"].map((suffix) => ({
+      partNumber: `PN-FRAME-RAIL-${suffix}`,
+      name: `Frame rail ${suffix}`,
+      meshName: `PN-FRAME-RAIL-${suffix}`,
+      qty: 1,
+    }));
+    const { parts, unmatched } = joinParts(
+      rows,
+      rows.map((row) => row.meshName),
+    );
+    assert.deepEqual(
+      parts.map((part) => part.id),
+      ["PN-FRAME-RAIL-01", "PN-FRAME-RAIL-02", "PN-FRAME-RAIL-03"],
+    );
+    assert.deepEqual(
+      parts.map((part) => part.meshName),
+      ["PN-FRAME-RAIL-01", "PN-FRAME-RAIL-02", "PN-FRAME-RAIL-03"],
+    );
+    assert.equal(unmatched.length, 0);
+  });
+
+  it("does not let fuzzy matching steal exact-named siblings", () => {
+    const { parts } = joinParts(
+      [
+        { partNumber: "PN-FRAME-RAIL-01", name: "Rail 1", qty: 1 },
+        { partNumber: "PN-FRAME-RAIL-02", name: "Rail 2", qty: 1 },
+        { partNumber: "PN-FRAME-RAIL-03", name: "Rail 3", qty: 1 },
+      ],
+      ["PN-FRAME-RAIL-01", "PN-FRAME-RAIL-02", "PN-FRAME-RAIL-03"],
+    );
+    assert.equal(parts.length, 3);
+  });
 });

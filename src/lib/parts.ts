@@ -1,5 +1,60 @@
-import { cadKeys } from "./cad-name.ts";
+import { cadKeys, cleanCadName } from "./cad-name.ts";
 import type { Part, PartsListRow, UnmatchedPart } from "@/types";
+
+function labelAliases(label: string) {
+  const trimmed = label.trim();
+  const cleaned = cleanCadName(trimmed);
+  const aliases = [trimmed.toLowerCase()];
+  if (cleaned && cleaned.toLowerCase() !== aliases[0]) {
+    aliases.push(cleaned.toLowerCase());
+  }
+  return aliases;
+}
+
+function findExactUnusedMesh(
+  unused: Set<string>,
+  labels: Array<string | undefined>,
+) {
+  const targets = new Set<string>();
+  for (const label of labels) {
+    if (!label?.trim()) {
+      continue;
+    }
+    for (const alias of labelAliases(label)) {
+      targets.add(alias);
+    }
+  }
+  if (targets.size === 0) {
+    return null;
+  }
+  for (const meshName of unused) {
+    if (labelAliases(meshName).some((alias) => targets.has(alias))) {
+      return meshName;
+    }
+  }
+  return null;
+}
+
+function reservedExactMeshNames(
+  listRows: PartsListRow[],
+  current: PartsListRow,
+) {
+  const reserved = new Set<string>();
+  for (const row of listRows) {
+    if (row === current) {
+      continue;
+    }
+    for (const label of [row.meshName, row.partNumber]) {
+      if (!label?.trim()) {
+        continue;
+      }
+      for (const alias of labelAliases(label)) {
+        reserved.add(alias);
+      }
+    }
+  }
+  return reserved;
+}
 
 function parseDelimited(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
@@ -285,14 +340,24 @@ export function joinParts(
   const unmatched: UnmatchedPart[] = [];
 
   function takeMeshes(row: PartsListRow): string | null {
+    const exact = findExactUnusedMesh(unused, [row.meshName, row.partNumber]);
+    if (exact) {
+      unused.delete(exact);
+      return exact;
+    }
+
     const rowKeys = new Set(
       [row.meshName, row.partNumber, row.name].flatMap((value) => cadKeys(value)),
     );
     if (rowKeys.size === 0) {
       return null;
     }
+    const reserved = reservedExactMeshNames(listRows, row);
     const hits = meshNames.filter((meshName) => {
       if (!unused.has(meshName)) {
+        return false;
+      }
+      if (labelAliases(meshName).some((alias) => reserved.has(alias))) {
         return false;
       }
       return cadKeys(meshName).some((key) => rowKeys.has(key));
