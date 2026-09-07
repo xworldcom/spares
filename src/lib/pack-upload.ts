@@ -6,6 +6,7 @@ import {
   packOverLimitMessage,
   storedFileNameFromUploadPath,
 } from "./pack-limits.ts";
+import { refuseMultipartModelInForm } from "./model-upload-policy.ts";
 import { joinParts, parsePartsList } from "./parts.ts";
 import { isModelFilename, modelExtension } from "./machines.ts";
 import { readStoredFile } from "./store.ts";
@@ -101,6 +102,10 @@ export async function readPackForm(
   } else if (model instanceof File && model.size > 0) {
     if (!isModelFilename(model.name)) {
       return { error: "Model must be a .glb or .gltf file", status: 400 };
+    }
+    const multipartRefused = refuseMultipartModelInForm(model.size);
+    if (multipartRefused) {
+      return multipartRefused;
     }
     if (model.size > CLIENT_PACK_MAX_BYTES) {
       return {

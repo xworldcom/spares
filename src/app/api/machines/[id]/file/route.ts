@@ -1,15 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import { error } from "@/lib/http";
-import { modelContentType } from "@/lib/machines";
-import { modelPublicUrl } from "@/lib/model-url";
-import {
-  modelExistsInS3,
-  modelProxyRefusedMessage,
-  selectModelStoreKind,
-} from "@/lib/model-storage";
-import { MODEL_PROXY_MAX_BYTES } from "@/lib/pack-limits";
+import { resolveMachineFileServe } from "@/lib/model-file-serve";
 import { canAccessMachine } from "@/lib/access";
-import { getMachine, listSites, readStoredFile } from "@/lib/store";
+import { getMachine, listSites } from "@/lib/store";
 
 export async function GET(
   request: Request,
@@ -26,27 +19,23 @@ export async function GET(
     return error("Machine not found", 404);
   }
 
-  const publicUrl = modelPublicUrl(machine.storedFileName);
-  if (publicUrl && (await modelExistsInS3(machine.storedFileName))) {
-    return Response.redirect(publicUrl, 307);
+  const result = await resolveMachineFileServe({
+    storedFileName: machine.storedFileName,
+    originalFileName: machine.originalFileName,
+  });
+
+  if (result.kind === "redirect") {
+    return Response.redirect(result.url, 307);
+  }
+  if (result.kind === "error") {
+    return error(result.message, result.status);
   }
 
-  try {
-    const bytes = await readStoredFile(machine.storedFileName);
-    if (
-      selectModelStoreKind() === "s3" &&
-      bytes.length > MODEL_PROXY_MAX_BYTES
-    ) {
-      return error(modelProxyRefusedMessage(bytes.length), 413);
-    }
-    return new Response(new Uint8Array(bytes), {
-      headers: {
-        "Content-Type": modelContentType(machine.originalFileName),
-        "Content-Disposition": `inline; filename="${machine.originalFileName}"`,
-        "Cache-Control": "private, no-store",
-      },
-    });
-  } catch {
-    return error("Model file is missing", 404);
-  }
+  return new Response(new Uint8Array(result.bytes), {
+    headers: {
+      "Content-Type": result.contentType,
+      "Content-Disposition": `inline; filename="${result.originalFileName}"`,
+      "Cache-Control": "private, no-store",
+    },
+  });
 }
