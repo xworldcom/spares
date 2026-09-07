@@ -1,3 +1,14 @@
+import {
+  CLIENT_PACK_MAX_BYTES,
+  MULTIPART_PACK_MAX_BYTES,
+  machineBlobPathname,
+  multipartTooLargeMessage,
+  packOverLimitMessage,
+  platform413Message,
+  storedFileNameFromUploadPath,
+} from "../pack-limits.ts";
+import { modelContentType, modelExtension } from "../machines.ts";
+import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
 import type {
   MachineDetail,
@@ -6,6 +17,8 @@ import type {
   Part,
   Role,
 } from "./types";
+
+const MODEL_UPLOAD = "/api/machines/model-upload";
 
 function normalizePart(part: Part): Part {
   return {
@@ -94,38 +107,133 @@ export async function updateMachineSite(machineId: string, siteId: string | null
   return normalizeMachine(data, "staff");
 }
 
+function assertModelSize(file: File) {
+  if (file.size > CLIENT_PACK_MAX_BYTES) {
+    throw new ApiError(packOverLimitMessage(file.size, CLIENT_PACK_MAX_BYTES), 413);
+  }
+}
+
+async function clientModelUploadAvailable() {
+  try {
+    return await apiFetch<{ clientUpload: boolean; maxBytes: number }>(
+      MODEL_UPLOAD,
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function uploadModelToBlob(file: File) {
+  const storedFileName = `${crypto.randomUUID()}${modelExtension(file.name)}`;
+  const { upload } = await import("@vercel/blob/client");
+  const blob = await upload(machineBlobPathname(storedFileName), file, {
+    access: "private",
+    handleUploadUrl: MODEL_UPLOAD,
+    multipart: file.size > 4 * 1024 * 1024,
+    contentType: modelContentType(file.name),
+  });
+  return storedFileNameFromUploadPath(blob.pathname);
+}
+
+function postPackForm(
+  path: string,
+  input: {
+    name: string;
+    partsList: File;
+    siteId?: string;
+    model?: File;
+    storedFileName?: string;
+    originalFileName?: string;
+  },
+) {
+  const form = new FormData();
+  form.set("name", input.name);
+  form.set("partsList", input.partsList);
+  if (input.siteId) {
+    form.set("siteId", input.siteId);
+  }
+  if (input.storedFileName) {
+    form.set("storedFileName", input.storedFileName);
+    form.set("originalFileName", input.originalFileName ?? input.storedFileName);
+  } else if (input.model) {
+    form.set("model", input.model);
+  }
+  return apiFetch<MachineDetail>(path, { method: "POST", body: form });
+}
+
+async function uploadOrReplacePack(
+  path: string,
+  input: {
+    name: string;
+    model: File;
+    partsList: File;
+    siteId?: string;
+  },
+) {
+  assertModelSize(input.model);
+
+  const availability = await clientModelUploadAvailable();
+  if (availability?.clientUpload) {
+    try {
+      const storedFileName = await uploadModelToBlob(input.model);
+      const data = await postPackForm(path, {
+        name: input.name,
+        partsList: input.partsList,
+        siteId: input.siteId,
+        storedFileName,
+        originalFileName: input.model.name,
+      });
+      return normalizeMachine(data, "staff");
+    } catch (cause) {
+      if (isApiError(cause)) {
+        throw cause;
+      }
+      const message = errorMessage(
+        cause,
+        "Could not upload the 3D model to storage. Try again, or use a smaller GLB.",
+      );
+      if (/maximum|too large|size/i.test(message)) {
+        throw new ApiError(
+          packOverLimitMessage(input.model.size, CLIENT_PACK_MAX_BYTES),
+          413,
+        );
+      }
+      throw new ApiError(message, 0);
+    }
+  }
+
+  if (input.model.size > MULTIPART_PACK_MAX_BYTES) {
+    throw new ApiError(multipartTooLargeMessage(), 413);
+  }
+
+  try {
+    const data = await postPackForm(path, {
+      name: input.name,
+      partsList: input.partsList,
+      siteId: input.siteId,
+      model: input.model,
+    });
+    return normalizeMachine(data, "staff");
+  } catch (cause) {
+    if (isApiError(cause) && cause.status === 413) {
+      throw new ApiError(platform413Message(), 413);
+    }
+    throw cause;
+  }
+}
+
 export async function uploadMachinePack(input: {
   name: string;
   model: File;
   partsList: File;
   siteId?: string;
 }): Promise<MachineDetail> {
-  const form = new FormData();
-  form.set("name", input.name);
-  form.set("model", input.model);
-  form.set("partsList", input.partsList);
-  if (input.siteId) {
-    form.set("siteId", input.siteId);
-  }
-
-  const data = await apiFetch<MachineDetail>("/api/machines", {
-    method: "POST",
-    body: form,
-  });
-  return normalizeMachine(data, "staff");
+  return uploadOrReplacePack("/api/machines", input);
 }
 
 export async function replaceMachinePack(
   machineId: string,
   input: { name: string; model: File; partsList: File },
 ): Promise<MachineDetail> {
-  const form = new FormData();
-  form.set("name", input.name);
-  form.set("model", input.model);
-  form.set("partsList", input.partsList);
-  const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}/pack`, {
-    method: "POST",
-    body: form,
-  });
-  return normalizeMachine(data, "staff");
+  return uploadOrReplacePack(`/api/machines/${machineId}/pack`, input);
 }

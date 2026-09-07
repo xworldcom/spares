@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { BLOB_DB_PATH, BLOB_FILES_PREFIX } from "./blob-paths.ts";
 
 export type StoreKind = "fs" | "blob" | "memory";
 
@@ -10,9 +11,6 @@ export type Persistence = {
   readFileBytes(name: string): Promise<Buffer | null>;
   writeFileBytes(name: string, bytes: Buffer): Promise<void>;
 };
-
-const BLOB_DB_PATH = "spares/db.json";
-const BLOB_FILES_PREFIX = "spares/files/";
 
 let override: Persistence | null = null;
 let ephemeralWarned = false;
