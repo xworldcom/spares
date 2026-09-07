@@ -279,34 +279,27 @@ export function mergeQuoteItems(
   return { ok: true, items: next };
 }
 
-function normalizeItem(item: QuoteItem & { unitPrice?: number }): QuoteItem {
+function normalizeItem(item: QuoteItem & Record<string, unknown>): QuoteItem {
   const qty =
     typeof item.qty === "number" && item.qty >= 1 ? Math.floor(item.qty) : 1;
   const next: QuoteItem = { id: item.id, qty };
   if (typeof item.name === "string" && item.name.trim()) {
     next.name = item.name.trim();
   }
-  const sell =
-    typeof item.sellPrice === "number" && Number.isFinite(item.sellPrice)
-      ? item.sellPrice
-      : typeof item.unitPrice === "number" && Number.isFinite(item.unitPrice)
-        ? item.unitPrice
-        : undefined;
+  const sell = readSellFromRaw(item);
   if (sell !== undefined) {
     next.sellPrice = Math.round(Math.max(0, sell) * 100) / 100;
   }
-  if (typeof item.supplierCost === "number" && Number.isFinite(item.supplierCost)) {
-    next.supplierCost = Math.round(Math.max(0, item.supplierCost) * 100) / 100;
+  const supplierCost = asMoney(item.supplierCost);
+  if (supplierCost !== undefined && supplierCost !== null) {
+    next.supplierCost = supplierCost;
   }
   if (typeof item.supplier === "string" && item.supplier.trim()) {
     next.supplier = item.supplier.trim();
   }
-  if (
-    typeof item.leadTimeDays === "number" &&
-    Number.isInteger(item.leadTimeDays) &&
-    item.leadTimeDays >= 0
-  ) {
-    next.leadTimeDays = item.leadTimeDays;
+  const leadTimeDays = readLeadDaysFromRaw(item);
+  if (leadTimeDays !== undefined) {
+    next.leadTimeDays = leadTimeDays;
   }
   if (typeof item.note === "string" && item.note.trim()) {
     next.note = item.note.trim();
@@ -336,11 +329,40 @@ export function pricesVisibleToCustomer(status: QuoteStatus) {
   return PRICE_VISIBLE.has(status);
 }
 
+function readSellFromRaw(item: Record<string, unknown>): number | undefined {
+  const candidates = [
+    item.sellPrice,
+    item.unitPrice,
+    item.unit_price,
+    item.price,
+    item.sell,
+  ];
+  for (const value of candidates) {
+    const money = asMoney(value);
+    if (money !== undefined && money !== null) {
+      return money;
+    }
+  }
+  return undefined;
+}
+
+function readLeadDaysFromRaw(item: Record<string, unknown>): number | undefined {
+  const candidates = [item.leadTimeDays, item.lead_time_days, item.leadDays];
+  for (const value of candidates) {
+    const days = asDays(value);
+    if (days !== undefined && days !== null) {
+      return days;
+    }
+  }
+  return undefined;
+}
+
+export function hasSellPrice(item: QuoteItem) {
+  return typeof item.sellPrice === "number" && Number.isFinite(item.sellPrice) && item.sellPrice > 0;
+}
+
 export function quotePricingComplete(items: QuoteItem[]) {
-  return (
-    items.length > 0 &&
-    items.every((item) => typeof item.sellPrice === "number" && item.sellPrice >= 0)
-  );
+  return items.length > 0 && items.every(hasSellPrice);
 }
 
 export function trackingVisible(status: QuoteStatus) {
@@ -827,10 +849,10 @@ export function statusActivityText(status: QuoteStatus) {
 }
 
 export function lineSellTotal(item: QuoteItem) {
-  if (typeof item.sellPrice !== "number") {
+  if (!hasSellPrice(item)) {
     return undefined;
   }
-  return Math.round(item.sellPrice * item.qty * 100) / 100;
+  return Math.round(item.sellPrice! * item.qty * 100) / 100;
 }
 
 export function quoteSellTotal(items: QuoteItem[]) {

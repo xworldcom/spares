@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { formatMoney, lineSellTotal, quoteSellTotal } from "@/lib/quotes";
+import { formatMoney, hasSellPrice, lineSellTotal, quoteSellTotal } from "@/lib/quotes";
 import {
   parseEditableQty,
   qtyDraftIsComplete,
@@ -269,9 +269,7 @@ export function QuoteLines({
                     <div>
                       <dt className="spares-muted text-xs">Sell</dt>
                       <dd className="tabular-nums">
-                        {item.sellPrice !== undefined
-                          ? formatMoney(item.sellPrice)
-                          : "—"}
+                        {hasSellPrice(item) ? formatMoney(item.sellPrice!) : "—"}
                       </dd>
                     </div>
                     <div>
