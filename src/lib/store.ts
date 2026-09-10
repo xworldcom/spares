@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "./auth/password.ts";
-import { prepareModelBytes } from "./gltf.ts";
+import { extractMeshNames, prepareModelBytes } from "./gltf.ts";
+import {
+  applyStaffPartEdit,
+  knownMeshNames,
+  type StaffPartEdit,
+} from "./staff-catalog.ts";
 import {
   filesDir,
   getPersistence,
@@ -522,7 +527,7 @@ export function updateCustomerSites(
 
 export function updateMachine(
   machineId: string,
-  patch: { name?: string; siteId?: string | null },
+  patch: { name?: string; siteId?: string | null; part?: StaffPartEdit },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -553,6 +558,35 @@ export function updateMachine(
     }
     if (patch.name !== undefined) {
       next = { ...next, name: patch.name.trim() };
+    }
+    if (patch.part) {
+      let meshNames = knownMeshNames(next.parts, next.unmatched);
+      try {
+        const bytes = await getPersistence().readFileBytes(
+          safeStoredFileName(next.storedFileName),
+        );
+        if (bytes?.length) {
+          meshNames = extractMeshNames(bytes, next.originalFileName);
+        }
+      } catch {
+        // Keep names reconstructed from the stored catalog.
+      }
+      const edited = applyStaffPartEdit({
+        parts: next.parts,
+        unmatched: next.unmatched,
+        meshNames,
+        edit: patch.part,
+      });
+      if ("error" in edited) {
+        return { error: "bad-part" as const, message: edited.error };
+      }
+      next = {
+        ...next,
+        parts: edited.parts,
+        unmatched: edited.unmatched,
+        version: (next.version ?? 1) + 1,
+        revisedAt: new Date().toISOString(),
+      };
     }
     machines[index] = next;
     await writeDatabase({ ...db, machines });
