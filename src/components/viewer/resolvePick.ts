@@ -1,15 +1,6 @@
-import { cadKeys } from "@/lib/cad-name";
+import { cadKeys, isIgnoredCadNodeName } from "@/lib/cad-name";
 import type { Object3D } from "three";
 import type { ViewerPart } from "./types";
-
-const IGNORED_NAMES = new Set([
-  "",
-  "Scene",
-  "SceneRoot",
-  "RootNode",
-  "AuxScene",
-  "Root",
-]);
 
 export function buildPartIndex(
   parts: ViewerPart[],
@@ -54,7 +45,7 @@ export function resolvePick(
 
   while (current) {
     const name = current.name?.trim();
-    if (name && !IGNORED_NAMES.has(name)) {
+    if (name && !isIgnoredCadNodeName(name)) {
       const part = lookupPart(name, partsByName);
       if (part) {
         return { part };
@@ -84,7 +75,7 @@ export function meshMatchesSelection(
   let current: Object3D | null = object;
   while (current) {
     const name = current.name?.trim();
-    if (name && !IGNORED_NAMES.has(name)) {
+    if (name && !isIgnoredCadNodeName(name)) {
       if ("id" in selected && (name === selected.meshName || name === selected.id)) {
         return true;
       }

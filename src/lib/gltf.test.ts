@@ -131,6 +131,24 @@ describe("extractMeshNames GLB chunks", () => {
     assert.equal(isGlb(text), false);
     assert.deepEqual(extractMeshNames(text, "cell.gltf").sort(), ["Pump", "Pump-1"]);
   });
+
+  it("includes SolidWorks component parents of Body1 mesh nodes", () => {
+    const glb = encodeGlb({
+      nodes: [
+        { name: "Scene", children: [1, 3] },
+        { name: "PN-100-1", children: [2] },
+        { name: "Body1", mesh: 0 },
+        { name: "PN-100-2", children: [4] },
+        { name: "Body1", mesh: 1 },
+      ],
+      meshes: [{ name: "Body1" }, { name: "Body1" }],
+    });
+    const names = extractMeshNames(glb, "cell.glb");
+    assert.ok(names.includes("PN-100-1"));
+    assert.ok(names.includes("PN-100-2"));
+    assert.ok(names.includes("Body1"));
+    assert.equal(names.includes("Scene"), false);
+  });
 });
 
 describe("normalizeGlb", () => {

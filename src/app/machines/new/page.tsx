@@ -9,12 +9,8 @@ export default function UploadPackPage() {
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Upload pack</h1>
           <p className="spares-muted mt-1 text-sm">
-            Drop a GLB and a Total ETO CSV. Instance names like Pump-1 join
-            without renaming. Optional SolidWorks macro:{" "}
-            <a className="underline" href="/export/spares-pack.bas">
-              spares-pack.bas
-            </a>
-            .
+            Add a GLB and parts list for a machine. SolidWorks? Start with the
+            macro below.
           </p>
         </div>
         <Suspense>

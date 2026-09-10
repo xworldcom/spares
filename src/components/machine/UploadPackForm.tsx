@@ -14,6 +14,54 @@ import { parsePartsList } from "@/lib/parts";
 
 type ListMode = "file" | "rows";
 
+const SPARES_MACRO_URL = "/export/spares-pack.bas";
+const SPARES_EXPORT_README_URL = "/export/README.md";
+
+function SolidWorksExportCard() {
+  return (
+    <section className="space-y-3 rounded-[24px] bg-white p-5">
+      <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+        From SolidWorks
+      </p>
+      <div className="rounded-[22px] bg-[#f4f5f7] px-4 py-5 ring-1 ring-black/8">
+        <span className="block text-sm font-medium text-neutral-950">
+          Publish to Spares macro
+        </span>
+        <ol className="spares-muted mt-2 list-decimal space-y-1 pl-4 text-sm leading-relaxed">
+          <li>
+            Download the macro and add it once in SolidWorks (
+            <span className="text-neutral-700">Tools → Macro</span>).
+          </li>
+          <li>
+            Open your saved assembly and run it — you get a GLB and a parts
+            list with <span className="font-mono text-[13px]">meshName</span>{" "}
+            already matched to each node.
+          </li>
+          <li>
+            Drop those two files in the zones below. Parts join on upload —
+            no manual mesh wiring.
+          </li>
+        </ol>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <a
+            href={SPARES_MACRO_URL}
+            download="spares-pack.bas"
+            className="inline-flex h-11 items-center rounded-full bg-[#0b0d10] px-4 text-sm font-semibold text-[#fff]"
+          >
+            Download macro
+          </a>
+          <a
+            href={SPARES_EXPORT_README_URL}
+            className="text-sm font-medium text-neutral-700 underline underline-offset-2"
+          >
+            More detail
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FileDrop({
   id,
   label,
@@ -302,6 +350,8 @@ export function UploadPackForm() {
           )}
         </section>
 
+        <SolidWorksExportCard />
+
         <section className="space-y-3 rounded-[24px] bg-white p-5">
           <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
             2 · 3D model
@@ -309,7 +359,7 @@ export function UploadPackForm() {
           <FileDrop
             id="model-file"
             label="GLB or GLTF"
-            hint="Save As glTF/GLB from the assembly. Pump-1 joins to Pump. Packs up to 256 MB. Sample from a real SW assembly: public/placeholders/arm."
+            hint="From the macro, or Save As glTF Binary from SolidWorks. Packs up to 256 MB."
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             file={model}
             onFile={setModel}
@@ -321,8 +371,10 @@ export function UploadPackForm() {
             3 · Parts list
           </p>
           <p className="spares-muted text-sm leading-relaxed">
-            CSV, TSV, or JSON from the BOM. Columns can be Part Number /
-            Description / Qty — we join those names to meshes in the model.
+            CSV, TSV, or JSON from the macro or your BOM. Part numbers and{" "}
+            <span className="font-mono text-[13px]">meshName</span> join to
+            nodes in the model automatically. A GLB with no matching list does
+            not create parts.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -350,7 +402,7 @@ export function UploadPackForm() {
               <FileDrop
                 id="parts-file"
                 label="BOM or parts list"
-                hint="CSV, TSV, or JSON. Headers like Part Number, Description, Quantity, Mesh Name all work."
+                hint="JSON or CSV from the macro, or any list with part number and name columns."
                 accept=".csv,.tsv,.txt,.json,text/csv,text/tab-separated-values,application/json"
                 file={partsListFile}
                 onFile={setPartsListFile}
