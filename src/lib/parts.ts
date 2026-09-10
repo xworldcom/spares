@@ -1,4 +1,4 @@
-import { cadKeys, cleanCadName } from "./cad-name.ts";
+import { cadKeys, cleanCadName, sanitizePackMeshName } from "./cad-name.ts";
 import type { Part, PartsListRow, UnmatchedPart } from "@/types";
 
 function labelAliases(label: string) {
@@ -7,6 +7,10 @@ function labelAliases(label: string) {
   const aliases = [trimmed.toLowerCase()];
   if (cleaned && cleaned.toLowerCase() !== aliases[0]) {
     aliases.push(cleaned.toLowerCase());
+  }
+  const sanitized = sanitizePackMeshName(cleaned || trimmed);
+  if (sanitized && sanitized.toLowerCase() !== aliases[0]) {
+    aliases.push(sanitized.toLowerCase());
   }
   return aliases;
 }
@@ -339,10 +343,32 @@ export function joinParts(
   const parts: Part[] = [];
   const unmatched: UnmatchedPart[] = [];
 
+  function consumeInstanceSiblings(row: PartsListRow) {
+    const rowKeys = new Set(
+      [row.meshName, row.partNumber].flatMap((value) => cadKeys(value)),
+    );
+    if (rowKeys.size === 0) {
+      return;
+    }
+    const reserved = reservedExactMeshNames(listRows, row);
+    for (const meshName of meshNames) {
+      if (!unused.has(meshName)) {
+        continue;
+      }
+      if (labelAliases(meshName).some((alias) => reserved.has(alias))) {
+        continue;
+      }
+      if (cadKeys(meshName).some((key) => rowKeys.has(key))) {
+        unused.delete(meshName);
+      }
+    }
+  }
+
   function takeMeshes(row: PartsListRow): string | null {
     const exact = findExactUnusedMesh(unused, [row.meshName, row.partNumber]);
     if (exact) {
       unused.delete(exact);
+      consumeInstanceSiblings(row);
       return exact;
     }
 
@@ -374,18 +400,23 @@ export function joinParts(
   for (const row of listRows) {
     const meshName = takeMeshes(row);
     if (meshName) {
-      parts.push({
-        id: row.partNumber,
-        name: row.name,
-        meshName,
-        qty: row.qty,
-        ...(row.material ? { material: row.material } : {}),
-        ...(row.vendor ? { vendor: row.vendor } : {}),
-        ...(row.weight ? { weight: row.weight } : {}),
-        ...(row.category ? { category: row.category } : {}),
-        ...(row.replaces ? { replaces: row.replaces } : {}),
-        ...(row.stock ? { stock: row.stock } : {}),
-      });
+      const existing = parts.find((part) => part.id === row.partNumber);
+      if (existing) {
+        existing.qty += row.qty;
+      } else {
+        parts.push({
+          id: row.partNumber,
+          name: row.name,
+          meshName,
+          qty: row.qty,
+          ...(row.material ? { material: row.material } : {}),
+          ...(row.vendor ? { vendor: row.vendor } : {}),
+          ...(row.weight ? { weight: row.weight } : {}),
+          ...(row.category ? { category: row.category } : {}),
+          ...(row.replaces ? { replaces: row.replaces } : {}),
+          ...(row.stock ? { stock: row.stock } : {}),
+        });
+      }
     } else {
       unmatched.push({
         source: "list",

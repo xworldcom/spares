@@ -1,9 +1,12 @@
+import { isIgnoredCadNodeName } from "./cad-name.ts";
+
 const GLB_MAGIC = 0x46546c67;
 const JSON_CHUNK = 0x4e4f534a;
 
 type GltfNode = {
   name?: string;
   mesh?: number;
+  children?: number[];
 };
 
 type GltfMesh = {
@@ -195,30 +198,51 @@ function parseGlbJson(bytes: Buffer): unknown {
   return parseLeadingJson(jsonChunk.data);
 }
 
+function addJoinName(names: Set<string>, name: string | undefined) {
+  const trimmed = name?.trim();
+  if (!trimmed || isIgnoredCadNodeName(trimmed)) {
+    return;
+  }
+  names.add(trimmed);
+}
+
+/**
+ * Join keys for pack ingest. SolidWorks glTF often names the component on a
+ * parent node (no mesh) and puts Body1 on the drawable child — include those
+ * ancestors so the macro's meshName can match. Scene/root labels are skipped.
+ * Unmatched names are never turned into parts; that still requires a list row.
+ */
 function namesFromGltf(json: unknown): string[] {
   if (!json || typeof json !== "object") {
     return [];
   }
 
   const root = json as GltfRoot;
+  const nodes = root.nodes ?? [];
   const names = new Set<string>();
+  const parentOf = new Map<number, number>();
 
-  for (const node of root.nodes ?? []) {
-    if (node.mesh === undefined) {
-      continue;
+  nodes.forEach((node, index) => {
+    for (const child of node.children ?? []) {
+      parentOf.set(child, index);
     }
-    const name = node.name?.trim();
-    if (name) {
-      names.add(name);
-    }
-  }
+  });
 
   for (const mesh of root.meshes ?? []) {
-    const name = mesh.name?.trim();
-    if (name) {
-      names.add(name);
-    }
+    addJoinName(names, mesh.name);
   }
+
+  nodes.forEach((node, index) => {
+    if (node.mesh === undefined) {
+      return;
+    }
+    addJoinName(names, node.name);
+    let parent = parentOf.get(index);
+    while (parent !== undefined) {
+      addJoinName(names, nodes[parent]?.name);
+      parent = parentOf.get(parent);
+    }
+  });
 
   return [...names];
 }

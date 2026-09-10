@@ -121,4 +121,49 @@ describe("joinParts", () => {
     );
     assert.equal(parts.length, 3);
   });
+
+  it("consumes SolidWorks instance meshes for one aggregated BOM row", () => {
+    const { parts, unmatched } = joinParts(
+      [
+        {
+          partNumber: "PN-100",
+          name: "Pump",
+          meshName: "PN-100-1",
+          qty: 2,
+        },
+      ],
+      ["PN-100-1", "PN-100-2", "Body1"],
+    );
+    assert.equal(parts.length, 1);
+    assert.equal(parts[0]?.id, "PN-100");
+    assert.equal(parts[0]?.meshName, "PN-100-1");
+    assert.equal(parts[0]?.qty, 2);
+    assert.deepEqual(unmatched, [{ source: "model", meshName: "Body1" }]);
+  });
+
+  it("merges instance list rows that share a part number", () => {
+    const { parts, unmatched } = joinParts(
+      [
+        { partNumber: "PN-100", name: "Pump", meshName: "PN-100-1", qty: 1 },
+        { partNumber: "PN-100", name: "Pump", meshName: "PN-100-2", qty: 1 },
+      ],
+      ["PN-100-1", "PN-100-2"],
+    );
+    assert.equal(parts.length, 1);
+    assert.equal(parts[0]?.qty, 2);
+    assert.equal(unmatched.length, 0);
+  });
+
+  it("does not promote unmatched GLB meshes into parts", () => {
+    const { parts, unmatched } = joinParts(
+      [{ partNumber: "PN-100", name: "Pump", qty: 1 }],
+      ["Osaka", "Lantern-1", "Bike"],
+    );
+    assert.equal(parts.length, 0);
+    assert.deepEqual(
+      unmatched.filter((row) => row.source === "model").map((row) => row.meshName),
+      ["Osaka", "Lantern-1", "Bike"],
+    );
+    assert.equal(unmatched.some((row) => row.source === "list" && row.id === "PN-100"), true);
+  });
 });
