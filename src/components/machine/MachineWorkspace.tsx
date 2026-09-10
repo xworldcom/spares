@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
+import { StaffPartsReview } from "@/components/machine/StaffPartsReview";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
@@ -14,7 +15,8 @@ import { LoadingState } from "@/components/states/LoadingState";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
 import { viewerNeedsReset } from "@/components/viewer/assemblyView";
-import { getMachine } from "@/lib/api/machines";
+import { getMachine, updateMachinePart } from "@/lib/api/machines";
+import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import { quoteAddFeedback } from "@/lib/ui/quote-feedback";
@@ -51,6 +53,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [quoteBadgePulse, setQuoteBadgePulse] = useState(false);
   const [held, setHeld] = useState(false);
   const [view, setView] = useState<"model" | "list">("model");
+  const [suggestedMesh, setSuggestedMesh] = useState<string | null>(null);
+  const [savingPart, setSavingPart] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -88,6 +93,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         setHiddenIds([]);
         setIsolatedId(null);
         setExplode(0);
+        setSuggestedMesh(null);
+        setSaveError(null);
         setError(null);
         setNotFound(false);
         setLoading(false);
@@ -130,6 +137,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       if (target.closest("[data-parts-bom]")) {
         return;
       }
+      if (target.closest("[data-staff-parts]")) {
+        return;
+      }
+      if (target.closest("[data-staff-edit]")) {
+        return;
+      }
       if (target.closest("[data-quote-tray]")) {
         return;
       }
@@ -151,8 +164,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
   const src = machine?.fileUrl ?? "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
-  const showUnmatched =
-    user?.role === "staff" && machine?.unmatched !== undefined;
   const tray = useMemo(() => {
     if (!isCustomer) {
       return null;
@@ -263,6 +274,33 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
   }
 
+  async function saveStaffPart(edit: {
+    key: string;
+    partNumber: string;
+    name: string;
+    meshName: string;
+    qty: number;
+  }) {
+    setSavingPart(true);
+    setSaveError(null);
+    try {
+      const next = await updateMachinePart(machineId, edit);
+      setMachine(next);
+      const part = next.parts.find((item) => item.id === edit.partNumber) ?? null;
+      setSelectedPart(part);
+      setSuggestedMesh(null);
+      const row = staffCatalogRows(next.parts, next.unmatched ?? []).find(
+        (item) => item.partNumber === edit.partNumber,
+      );
+      return row?.key;
+    } catch (cause: unknown) {
+      setSaveError(errorMessage(cause, "Could not save that part."));
+      return;
+    } finally {
+      setSavingPart(false);
+    }
+  }
+
   const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
 
   const viewerBlock = (
@@ -290,6 +328,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
             onSelect={setSelectedPart}
+            onUnmatchedSelect={
+              isCustomer
+                ? undefined
+                : (mesh) => {
+                    if (mesh?.meshName) {
+                      setSuggestedMesh(mesh.meshName);
+                    }
+                  }
+            }
             onLongPress={(part) => {
               setSelectedPart(part);
               setHeld(true);
@@ -309,30 +356,40 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         {view === "list" && !staffSplitView ? (
           <section
             data-parts-bom=""
-            className="absolute inset-0 z-[15] overflow-y-auto bg-[#f4f5f7] px-4 pb-8"
+            className={`absolute inset-0 z-[15] bg-[#f4f5f7] ${
+              isCustomer ? "overflow-y-auto px-4 pb-8" : "flex flex-col"
+            }`}
             style={{ paddingTop: "4.35rem" }}
           >
-            <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
-              {machine.name}
-            </p>
-            <PartsBom
-              parts={joinedParts}
-              selectedPartId={selectedPart?.id ?? null}
-              onSelect={(part) => {
-                setSelectedPart(part);
-                setView("model");
-              }}
-              showAdd={isCustomer}
-              onAdd={addPart}
-              searchable
-            />
-            {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
-              <p className="spares-muted mt-3 text-sm">
-                {machine.unmatched?.length} extra mesh
-                {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the
-                model are not on this list.
-              </p>
-            ) : null}
+            {isCustomer ? (
+              <>
+                <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+                  {machine.name}
+                </p>
+                <PartsBom
+                  parts={joinedParts}
+                  selectedPartId={selectedPart?.id ?? null}
+                  onSelect={(part) => {
+                    setSelectedPart(part);
+                    setView("model");
+                  }}
+                  showAdd
+                  onAdd={addPart}
+                  searchable
+                />
+              </>
+            ) : (
+              <StaffPartsReview
+                machine={machine}
+                selectedPartId={selectedPart?.id ?? null}
+                suggestedMeshName={suggestedMesh}
+                onSuggestedMeshUsed={() => setSuggestedMesh(null)}
+                onSelectPart={setSelectedPart}
+                onSave={saveStaffPart}
+                saving={savingPart}
+                saveError={saveError}
+              />
+            )}
           </section>
         ) : null}
         {view === "model" ? (
@@ -488,24 +545,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   const staffPartsPanel = (
     <aside className="machine-bom" data-parts-bom="">
-      <div className="machine-bom-scroll">
-        <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
-          {machine.name}
-        </p>
-        <PartsBom
-          parts={joinedParts}
-          selectedPartId={selectedPart?.id ?? null}
-          onSelect={setSelectedPart}
-          searchable
-        />
-        {showUnmatched && (machine.unmatched?.length ?? 0) > 0 ? (
-          <p className="spares-muted mt-3 text-sm">
-            {machine.unmatched?.length} extra mesh
-            {(machine.unmatched?.length ?? 0) === 1 ? "" : "es"} in the model are
-            not on this list.
-          </p>
-        ) : null}
-      </div>
+      <StaffPartsReview
+        machine={machine}
+        selectedPartId={selectedPart?.id ?? null}
+        suggestedMeshName={suggestedMesh}
+        onSuggestedMeshUsed={() => setSuggestedMesh(null)}
+        onSelectPart={setSelectedPart}
+        onSave={saveStaffPart}
+        saving={savingPart}
+        saveError={saveError}
+      />
     </aside>
   );
 

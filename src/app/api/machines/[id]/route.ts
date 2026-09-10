@@ -3,6 +3,7 @@ import { canAccessMachine } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail } from "@/lib/machines";
+import { parseStaffPartEdit, type StaffPartEdit } from "@/lib/staff-catalog";
 import {
   deleteMachine,
   getMachine,
@@ -47,6 +48,7 @@ export async function GET(
 type PatchBody = {
   siteId?: unknown;
   name?: unknown;
+  part?: unknown;
 };
 
 export async function PATCH(
@@ -66,11 +68,12 @@ export async function PATCH(
 
   const hasSiteId = "siteId" in body;
   const hasName = "name" in body;
-  if (!hasSiteId && !hasName) {
-    return error("Send a name or plant to update", 400);
+  const hasPart = "part" in body;
+  if (!hasSiteId && !hasName && !hasPart) {
+    return error("Send a name, plant, or part to update", 400);
   }
 
-  const patch: { name?: string; siteId?: string | null } = {};
+  const patch: { name?: string; siteId?: string | null; part?: StaffPartEdit } = {};
   if (hasSiteId) {
     patch.siteId =
       body.siteId === null || body.siteId === ""
@@ -88,6 +91,13 @@ export async function PATCH(
     }
     patch.name = body.name;
   }
+  if (hasPart) {
+    const parsed = parseStaffPartEdit(body.part);
+    if ("error" in parsed) {
+      return error(parsed.error, 400);
+    }
+    patch.part = parsed;
+  }
 
   const updated = await updateMachine(id, patch);
   if ("error" in updated) {
@@ -96,6 +106,9 @@ export async function PATCH(
     }
     if (updated.error === "bad-name") {
       return error("Enter a machine name", 400);
+    }
+    if (updated.error === "bad-part") {
+      return error(updated.message, 400);
     }
     return error("Machine not found", 404);
   }

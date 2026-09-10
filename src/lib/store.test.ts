@@ -12,13 +12,16 @@ import {
 } from "./persistence.ts";
 import {
   appendQuoteActivity,
+  createMachine,
   createQuote,
+  getMachine,
   getQuote,
   listMachines,
   readStoredFile,
   resetStoreMemoryForTests,
   saveMachineFile,
   seedEmptyMachineCatalogForTests,
+  updateMachine,
 } from "./store.ts";
 
 async function isolatedDataDir() {
@@ -159,5 +162,58 @@ describe("durable store survives a process hop", () => {
     const again = await getQuote(quote.id);
     assert.equal(again?.activities.at(-1)?.text, "Need this on Friday.");
     assert.equal((await readStoredFile("po-remote.pdf")).toString(), "PO bytes");
+  });
+});
+
+describe("staff part join edits", () => {
+  after(() => {
+    resetStoreMemoryForTests();
+    setPersistenceForTests(null);
+    delete process.env.SPARES_DATA_DIR;
+  });
+
+  it("saves a mesh assignment and keeps other joined parts pickable", async () => {
+    await isolatedDataDir();
+
+    const created = await createMachine({
+      name: "Staff QA cell",
+      storedFileName: "qa-cell.glb",
+      originalFileName: "qa-cell.glb",
+      parts: [
+        { id: "PN-FRAME-1000", name: "Frame weldment", meshName: "PN-FRAME-1000", qty: 1 },
+        { id: "PN-ROLL-2104", name: "Drive roller", meshName: "PN-ROLL-2104", qty: 2 },
+      ],
+      unmatched: [
+        { source: "list", id: "PN-BELT-4402", name: "Conveyor belt", qty: 1 },
+        { source: "model", meshName: "PN-GRD-5503" },
+      ],
+    });
+
+    const updated = await updateMachine(created.id, {
+      part: {
+        key: "list:PN-BELT-4402",
+        partNumber: "PN-BELT-4402",
+        name: "Conveyor belt",
+        meshName: "PN-GRD-5503",
+        qty: 1,
+      },
+    });
+    assert.equal("error" in updated, false);
+    if ("error" in updated) {
+      return;
+    }
+
+    const belt = updated.machine.parts.find((part) => part.id === "PN-BELT-4402");
+    assert.equal(belt?.meshName, "PN-GRD-5503");
+    assert.equal(updated.machine.parts.some((part) => part.id === "PN-FRAME-1000"), true);
+    assert.equal(
+      updated.machine.unmatched.some((row) => row.source === "list"),
+      false,
+    );
+
+    resetStoreMemoryForTests();
+    const again = await getMachine(created.id);
+    assert.equal(again?.parts.find((part) => part.id === "PN-BELT-4402")?.meshName, "PN-GRD-5503");
+    assert.equal(again?.parts.find((part) => part.id === "PN-ROLL-2104")?.qty, 2);
   });
 });
