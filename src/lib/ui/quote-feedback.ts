@@ -12,12 +12,20 @@ export type QuoteTargetKind = "badge" | "count" | "handle";
 export const QUOTE_BADGE_BOUNCE_MS = 420;
 export const QUOTE_BADGE_BOUNCE_REDUCED_MS = 280;
 
-/** Calm Apple-style scale on the real count badge. */
+/** Scale on the filled Quote chip badge. */
 export const QUOTE_BADGE_BOUNCE_KEYFRAMES = [
   { transform: "scale(1)" },
-  { transform: "scale(1.22)", offset: 0.35 },
+  { transform: "scale(1.28)", offset: 0.35 },
   { transform: "scale(0.94)", offset: 0.65 },
   { transform: "scale(1)" },
+] as const;
+
+/** Peek/dock "N items" copy: scale plus a brief accent highlight. */
+export const QUOTE_COUNT_BOUNCE_KEYFRAMES = [
+  { transform: "scale(1)", color: "#4b4f57" },
+  { transform: "scale(1.12)", color: "#0a84ff", offset: 0.35 },
+  { transform: "scale(0.98)", color: "#0a84ff", offset: 0.65 },
+  { transform: "scale(1)", color: "#4b4f57" },
 ] as const;
 
 /** No motion: a brief brightness tick so the count still confirms. */
@@ -115,15 +123,15 @@ export function bounceQuoteCount(
 ): void {
   if (typeof el.animate === "function") {
     const reduced = prefersReducedMotion(motion ?? defaultReducedMotionMedia());
-    el.animate(
-      reduced
-        ? [...QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES]
-        : [...QUOTE_BADGE_BOUNCE_KEYFRAMES],
-      {
-        duration: reduced ? QUOTE_BADGE_BOUNCE_REDUCED_MS : QUOTE_BADGE_BOUNCE_MS,
-        easing: "ease-out",
-      },
-    );
+    const motionFrames = reduced
+      ? QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES
+      : el.dataset.quoteTarget === "count"
+        ? QUOTE_COUNT_BOUNCE_KEYFRAMES
+        : QUOTE_BADGE_BOUNCE_KEYFRAMES;
+    el.animate([...motionFrames], {
+      duration: reduced ? QUOTE_BADGE_BOUNCE_REDUCED_MS : QUOTE_BADGE_BOUNCE_MS,
+      easing: "ease-out",
+    });
     return;
   }
   el.classList.remove("quote-badge-bounce");

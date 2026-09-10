@@ -78,13 +78,12 @@ function QuoteTrayForm({
           <h2 className="text-[21px] leading-tight font-semibold tracking-tight text-neutral-950">
             Quote
           </h2>
-          <p
-            data-quote-target="count"
-            className="spares-muted mt-0.5 text-sm"
-          >
-            {lines.length === 0
-              ? "Add a part to get started."
-              : `${count} ${count === 1 ? "item" : "items"}`}
+          <p className="spares-muted mt-0.5 text-sm">
+            <span data-quote-target="count" className="inline-block origin-left">
+              {lines.length === 0
+                ? "Add a part to get started."
+                : `${count} ${count === 1 ? "item" : "items"}`}
+            </span>
           </p>
         </div>
         {onClose ? (

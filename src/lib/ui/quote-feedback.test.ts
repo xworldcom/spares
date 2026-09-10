@@ -5,6 +5,7 @@ import {
   QUOTE_BADGE_BOUNCE_MS,
   QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES,
   QUOTE_BADGE_BOUNCE_REDUCED_MS,
+  QUOTE_COUNT_BOUNCE_KEYFRAMES,
   boxOnscreen,
   bounceQuoteCount,
   pickQuoteAddTarget,
@@ -114,6 +115,10 @@ describe("bounce keyframes", () => {
     assert.equal(first.transform, "scale(1)");
     assert.equal(last.transform, "scale(1)");
     assert.ok(QUOTE_BADGE_BOUNCE_MS >= 300 && QUOTE_BADGE_BOUNCE_MS <= 500);
+    const countLast = QUOTE_COUNT_BOUNCE_KEYFRAMES[QUOTE_COUNT_BOUNCE_KEYFRAMES.length - 1];
+    assert.equal(QUOTE_COUNT_BOUNCE_KEYFRAMES[0].transform, "scale(1)");
+    assert.equal(countLast.transform, "scale(1)");
+    assert.equal(countLast.color, "#4b4f57");
   });
 
   it("uses filter, not transform, when motion is reduced", () => {
@@ -129,6 +134,7 @@ describe("bounceQuoteCount", () => {
   it("plays WAAPI on the real node and leaves no leftover class", () => {
     const frames: unknown[] = [];
     const el = {
+      dataset: { quoteTarget: "badge" },
       animate(keyframes: unknown) {
         frames.push(keyframes);
         return {};
@@ -148,9 +154,24 @@ describe("bounceQuoteCount", () => {
     assert.deepEqual(frames[0], [...QUOTE_BADGE_BOUNCE_KEYFRAMES]);
   });
 
+  it("highlights peek/dock count copy instead of only scaling a badge", () => {
+    const frames: unknown[] = [];
+    const el = {
+      dataset: { quoteTarget: "count" },
+      animate(keyframes: unknown) {
+        frames.push(keyframes);
+        return {};
+      },
+    } as unknown as HTMLElement;
+
+    bounceQuoteCount(el, { matches: false });
+    assert.deepEqual(frames[0], [...QUOTE_COUNT_BOUNCE_KEYFRAMES]);
+  });
+
   it("skips the scale bounce when the user prefers reduced motion", () => {
     const seen: Array<{ frames: unknown; duration: number }> = [];
     const el = {
+      dataset: { quoteTarget: "count" },
       animate(keyframes: unknown, options: { duration: number }) {
         seen.push({ frames: keyframes, duration: options.duration });
         return {};

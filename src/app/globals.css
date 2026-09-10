@@ -531,7 +531,7 @@ html.spares-embed .spares-app-stage {
     transform: scale(1);
   }
   35% {
-    transform: scale(1.22);
+    transform: scale(1.28);
   }
   65% {
     transform: scale(0.94);
@@ -551,4 +551,12 @@ html.spares-embed .spares-app-stage {
 .quote-badge-bounce {
   transform-origin: center;
   animation: quote-badge-bounce 0.42s ease-out;
+}
+
+[data-quote-target="count"] {
+  transform-origin: left center;
+}
+
+[data-quote-target="badge"] {
+  transform-origin: center;
 }
