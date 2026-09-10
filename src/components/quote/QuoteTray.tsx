@@ -12,6 +12,10 @@ import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
 import { quoteHref } from "@/lib/quotes";
+import {
+  initialQuoteSheetSnap,
+  type QuoteSheetSnap,
+} from "@/lib/ui/quote-sheet";
 
 export type TrayLine = {
   part: Part;
@@ -19,7 +23,7 @@ export type TrayLine = {
   thumb?: string;
 };
 
-type Sheet = "peek" | "full" | "out";
+type Sheet = QuoteSheetSnap;
 
 export const SHEET_EASE_MS = 420;
 const DRAG_SLOP = 8;
@@ -232,7 +236,9 @@ export function QuoteTray({
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [sentHref, setSentHref] = useState<string | undefined>();
-  const [sheet, setSheet] = useState<Sheet>(open ? "full" : "out");
+  const [sheet, setSheet] = useState<Sheet>(() =>
+    initialQuoteSheetSnap(open, isDesktopStage()),
+  );
   const [dragging, setDragging] = useState(false);
   const card = useRef<HTMLElement>(null);
   const drag = useRef({
@@ -267,7 +273,7 @@ export function QuoteTray({
         if (current !== "out") {
           return current;
         }
-        return isDesktopStage() ? "full" : "peek";
+        return initialQuoteSheetSnap(true, isDesktopStage());
       });
       paintDrag(0);
       setDragging(false);
