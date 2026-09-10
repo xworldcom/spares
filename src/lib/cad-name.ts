@@ -1,5 +1,34 @@
 /** SolidWorks / ETO node names → a key we can join on without renaming CAD. */
 
+export const IGNORED_CAD_NODE_NAMES = new Set([
+  "",
+  "Scene",
+  "SceneRoot",
+  "RootNode",
+  "AuxScene",
+  "Root",
+]);
+
+export function isIgnoredCadNodeName(name: string | undefined) {
+  const trimmed = name?.trim() ?? "";
+  return trimmed === "" || IGNORED_CAD_NODE_NAMES.has(trimmed);
+}
+
+/** Same rules as `SanitizeMeshName` in `public/export/spares-pack.bas`. */
+export function sanitizePackMeshName(value: string) {
+  let out = "";
+  for (const ch of value) {
+    if (/[A-Za-z0-9._-]/.test(ch)) {
+      out += ch;
+    } else if (ch === " " || ch === "/" || ch === "\\" || ch === ":") {
+      if (out.length > 0 && !out.endsWith("-")) {
+        out += "-";
+      }
+    }
+  }
+  return out.replace(/--/g, "-").trim();
+}
+
 export function cleanCadName(name: string) {
   return name
     .trim()
@@ -26,6 +55,10 @@ export function cadKeys(name: string | undefined): string[] {
   const keys = [cleaned.toLowerCase()];
   if (stripped && stripped.toLowerCase() !== keys[0]) {
     keys.push(stripped.toLowerCase());
+  }
+  const sanitized = sanitizePackMeshName(cleaned);
+  if (sanitized && sanitized.toLowerCase() !== keys[0]) {
+    keys.push(sanitized.toLowerCase());
   }
   return keys;
 }

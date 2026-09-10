@@ -42,6 +42,92 @@ describe("joinPackFiles", () => {
       assert.equal(joined.status, 400);
     }
   });
+
+  it("joins a SolidWorks-style pack: parent component nodes + instance meshName", () => {
+    const gltf = Buffer.from(
+      JSON.stringify({
+        nodes: [
+          { name: "Scene", children: [1, 3, 5] },
+          { name: "PN-100-1", children: [2] },
+          { name: "Body1", mesh: 0 },
+          { name: "PN-100-2", children: [4] },
+          { name: "Body1", mesh: 1 },
+          { name: "PN-200-1", children: [6] },
+          { name: "Body1", mesh: 2 },
+        ],
+        meshes: [{ name: "Body1" }, { name: "Body1" }, { name: "Cover" }],
+      }),
+      "utf8",
+    );
+    const partsText = JSON.stringify([
+      {
+        partNumber: "PN-100",
+        name: "Pump",
+        meshName: "PN-100-1",
+        qty: 2,
+      },
+      {
+        partNumber: "PN-200",
+        name: "Cover",
+        meshName: "PN-200-1",
+        qty: 1,
+      },
+    ]);
+    const joined = joinPackFiles({
+      modelBytes: gltf,
+      modelFileName: "cell.gltf",
+      partsText,
+      partsListName: "cell-spares-parts.json",
+    });
+    assert.ok(!("error" in joined));
+    if ("error" in joined) {
+      return;
+    }
+    assert.deepEqual(
+      joined.parts.map((part) => ({ id: part.id, qty: part.qty, meshName: part.meshName })),
+      [
+        { id: "PN-100", qty: 2, meshName: "PN-100-1" },
+        { id: "PN-200", qty: 1, meshName: "PN-200-1" },
+      ],
+    );
+    assert.equal(
+      joined.unmatched.some((row) => row.source === "list"),
+      false,
+    );
+    assert.ok(
+      joined.unmatched.every(
+        (row) => row.source === "model" && (row.meshName === "Body1" || row.meshName === "Cover"),
+      ),
+    );
+  });
+
+  it("does not invent parts from a bare GLB with no matching list rows", () => {
+    const gltf = Buffer.from(
+      JSON.stringify({
+        nodes: [
+          { name: "Osaka", mesh: 0 },
+          { name: "Lantern", mesh: 1 },
+        ],
+        meshes: [{ name: "Osaka" }, { name: "Lantern" }],
+      }),
+      "utf8",
+    );
+    const joined = joinPackFiles({
+      modelBytes: gltf,
+      modelFileName: "tokyo.gltf",
+      partsText: JSON.stringify([
+        { partNumber: "PN-100", name: "Pump", meshName: "PN-100-1", qty: 1 },
+      ]),
+      partsListName: "unrelated-parts.json",
+    });
+    assert.ok(!("error" in joined));
+    if ("error" in joined) {
+      return;
+    }
+    assert.equal(joined.parts.length, 0);
+    assert.ok(joined.unmatched.some((row) => row.source === "model" && row.meshName === "Osaka"));
+    assert.ok(joined.unmatched.some((row) => row.source === "list" && row.id === "PN-100"));
+  });
 });
 
 describe("readPackForm stored Blob path", () => {

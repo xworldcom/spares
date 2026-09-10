@@ -124,6 +124,23 @@ export async function updateMachineName(machineId: string, name: string) {
   return normalizeMachine(data, "staff");
 }
 
+export async function updateMachinePart(
+  machineId: string,
+  part: {
+    key: string;
+    partNumber: string;
+    name: string;
+    meshName: string;
+    qty: number;
+  },
+) {
+  const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ part }),
+  });
+  return normalizeMachine(data, "staff");
+}
+
 export async function deleteMachine(machineId: string) {
   await apiFetch<{ ok: true }>(`/api/machines/${machineId}`, {
     method: "DELETE",
