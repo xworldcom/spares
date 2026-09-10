@@ -32,8 +32,15 @@ function SolidWorksExportCard() {
             Download the macro and add it once in SolidWorks (
             <span className="text-neutral-700">Tools → Macro</span>).
           </li>
-          <li>Open your saved assembly and run it — you get a GLB and parts list.</li>
-          <li>Drop those two files in the zones below.</li>
+          <li>
+            Open your saved assembly and run it — you get a GLB and a parts
+            list with <span className="font-mono text-[13px]">meshName</span>{" "}
+            already matched to each node.
+          </li>
+          <li>
+            Drop those two files in the zones below. Parts join on upload —
+            no manual mesh wiring.
+          </li>
         </ol>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <a
@@ -364,8 +371,10 @@ export function UploadPackForm() {
             3 · Parts list
           </p>
           <p className="spares-muted text-sm leading-relaxed">
-            CSV, TSV, or JSON from the macro or your BOM. Part numbers join to
-            meshes in the model.
+            CSV, TSV, or JSON from the macro or your BOM. Part numbers and{" "}
+            <span className="font-mono text-[13px]">meshName</span> join to
+            nodes in the model automatically. A GLB with no matching list does
+            not create parts.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button

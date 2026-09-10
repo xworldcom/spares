@@ -1,7 +1,8 @@
 ' Spares pack export for SolidWorks assemblies.
 ' Tools → Macro → New, paste this module, run main on the open assembly.
-' Writes parts JSON + CSV next to the assembly, renames components for GLB mesh
-' join, and attempts a GLB export when the installed SolidWorks build supports it.
+' Writes parts JSON + CSV next to the assembly, renames leaf parts to
+' PartNumber-1 / PartNumber-2 so GLB node names match meshName, and attempts
+' a GLB export when the installed SolidWorks build supports it.
 
 Option Explicit
 
@@ -100,8 +101,13 @@ End Function
 ' ---- property + part-number resolution ----
 
 Private Function GetCustomProp(ByVal doc As SldWorks.ModelDoc2, ByVal propName As String) As String
+    Dim cfg As String
     On Error Resume Next
     GetCustomProp = TrimAll(doc.GetCustomInfoValue("", propName))
+    If Len(GetCustomProp) = 0 Then
+        cfg = doc.ConfigurationManager.ActiveConfiguration.Name
+        GetCustomProp = TrimAll(doc.GetCustomInfoValue(cfg, propName))
+    End If
     On Error GoTo 0
 End Function
 
@@ -220,21 +226,70 @@ Private Function ResolveVendor(ByVal child As SldWorks.ModelDoc2) As String
         GetCustomProp(child, "Mfr"))
 End Function
 
-Private Function MakeUniqueName(ByVal baseName As String, ByRef used As Object) As String
-    Dim candidate As String
+' SolidWorks Name2 / glTF nodes use PartNumber-1, PartNumber-2, ...
+Private Function NextInstanceMeshName(ByVal partNumber As String, ByRef used As Object, ByRef counts As Object) As String
     Dim n As Long
-    candidate = baseName
-    If Len(candidate) = 0 Then
-        candidate = "Part"
+    Dim candidate As String
+    If Len(partNumber) = 0 Then
+        partNumber = "Part"
     End If
-    If Not used.Exists(candidate) Then
-        used.Add candidate, 1
-        MakeUniqueName = candidate
+    If counts.Exists(partNumber) Then
+        n = CLng(counts(partNumber)) + 1
+    Else
+        n = 1
+    End If
+    Do
+        candidate = partNumber & "-" & CStr(n)
+        If Not used.Exists(candidate) Then
+            Exit Do
+        End If
+        n = n + 1
+    Loop
+    counts(partNumber) = n
+    used.Add candidate, 1
+    NextInstanceMeshName = candidate
+End Function
+
+Private Function SkipComponent(ByVal comp As SldWorks.Component2) As Boolean
+    Dim envelope As Boolean
+    On Error Resume Next
+    If comp.IsSuppressed Then
+        SkipComponent = True
         Exit Function
     End If
-    n = CLng(used(candidate)) + 1
-    used(candidate) = n
-    MakeUniqueName = candidate & "-" & CStr(n)
+    envelope = comp.IsEnvelope
+    If Err.Number = 0 And envelope Then
+        SkipComponent = True
+        Exit Function
+    End If
+    Err.Clear
+    On Error GoTo 0
+    SkipComponent = False
+End Function
+
+Private Function IsAssemblyDoc(ByVal child As SldWorks.ModelDoc2) As Boolean
+    On Error Resume Next
+    If child Is Nothing Then
+        IsAssemblyDoc = False
+        Exit Function
+    End If
+    IsAssemblyDoc = (child.GetType = swDocASSEMBLY)
+    On Error GoTo 0
+End Function
+
+Private Function ApplyComponentName(ByVal comp As SldWorks.Component2, ByVal desired As String) As String
+    Dim actual As String
+    On Error Resume Next
+    If comp.Name2 <> desired Then
+        comp.Name2 = desired
+    End If
+    actual = TrimAll(comp.Name2)
+    On Error GoTo 0
+    If Len(actual) > 0 Then
+        ApplyComponentName = actual
+    Else
+        ApplyComponentName = desired
+    End If
 End Function
 
 ' ---- manifest rows ----
@@ -246,6 +301,35 @@ Private Type SparesPartRow
     qty As Long
     vendor As String
 End Type
+
+Private Sub CollapseRowsByPartNumber(ByRef rows() As SparesPartRow, ByRef count As Long)
+    Dim collapsed() As SparesPartRow
+    Dim n As Long
+    Dim i As Long
+    Dim seen As Object
+    Dim idx As Long
+    If count < 1 Then Exit Sub
+    Set seen = CreateObject("Scripting.Dictionary")
+    seen.CompareMode = 1
+    n = 0
+    For i = 1 To count
+        If seen.Exists(rows(i).partNumber) Then
+            idx = CLng(seen(rows(i).partNumber))
+            collapsed(idx).qty = collapsed(idx).qty + rows(i).qty
+        Else
+            n = n + 1
+            If n = 1 Then
+                ReDim collapsed(1 To 1)
+            Else
+                ReDim Preserve collapsed(1 To n)
+            End If
+            collapsed(n) = rows(i)
+            seen.Add rows(i).partNumber, n
+        End If
+    Next i
+    rows = collapsed
+    count = n
+End Sub
 
 Private Function AppendRow(ByRef rows() As SparesPartRow, ByRef count As Long, ByVal row As SparesPartRow) As Long
     count = count + 1
@@ -369,6 +453,7 @@ Sub main()
     Dim csvPath As String
     Dim glbPath As String
     Dim usedNames As Object
+    Dim instanceCounts As Object
     Dim rows() As SparesPartRow
     Dim row As SparesPartRow
     Dim rowCount As Long
@@ -396,7 +481,11 @@ Sub main()
     End If
 
     Set swAssy = swModel
-    comps = swAssy.GetComponents(True)
+    On Error Resume Next
+    Call swAssy.ResolveAllLightWeightComponents(True)
+    On Error GoTo 0
+    ' False = every component, including parts inside subassemblies.
+    comps = swAssy.GetComponents(False)
     If IsEmpty(comps) Then
         swApp.SendMsgToUser2 "This assembly has no components.", swMbWarning, swMbOk
         Exit Sub
@@ -404,24 +493,27 @@ Sub main()
 
     Set usedNames = CreateObject("Scripting.Dictionary")
     usedNames.CompareMode = 1 ' TextCompare
+    Set instanceCounts = CreateObject("Scripting.Dictionary")
+    instanceCounts.CompareMode = 1
     rowCount = 0
     renamed = 0
 
     For i = 0 To UBound(comps)
         Set comp = comps(i)
         If comp Is Nothing Then GoTo NextComp
-        If comp.IsSuppressed Then GoTo NextComp
-        If comp.IsHidden(False) Then GoTo NextComp
+        If SkipComponent(comp) Then GoTo NextComp
 
         Set child = comp.GetModelDoc2
+        If IsAssemblyDoc(child) Then GoTo NextComp
+
         partNumber = ResolvePartNumber(comp, child)
         If Len(partNumber) = 0 Then GoTo NextComp
 
-        meshName = MakeUniqueName(partNumber, usedNames)
+        meshName = NextInstanceMeshName(partNumber, usedNames, instanceCounts)
         If comp.Name2 <> meshName Then
-            comp.Name2 = meshName
             renamed = renamed + 1
         End If
+        meshName = ApplyComponentName(comp, meshName)
 
         row.partNumber = partNumber
         row.name = ResolveDescription(comp, child, partNumber)
@@ -433,10 +525,11 @@ NextComp:
     Next i
 
     If rowCount = 0 Then
-        swApp.SendMsgToUser2 "No unsuppressed components with a part number were found.", swMbWarning, swMbOk
+        swApp.SendMsgToUser2 "No unsuppressed parts with a part number were found.", swMbWarning, swMbOk
         Exit Sub
     End If
 
+    CollapseRowsByPartNumber rows, rowCount
     SortRows rows, rowCount
     swModel.ForceRebuild3 False
 
@@ -458,7 +551,7 @@ NextComp:
     glbOk = TryExportGlb(swModel, glbPath)
 
     msg = "Spares pack ready in:" & vbCrLf & outFolder & vbCrLf & vbCrLf
-    msg = msg & "Parts list (" & CStr(rowCount) & " components, " & CStr(renamed) & " renamed):" & vbCrLf
+    msg = msg & "Parts list (" & CStr(rowCount) & " part numbers, " & CStr(renamed) & " instances renamed):" & vbCrLf
     msg = msg & "  " & baseName & OUTPUT_JSON_SUFFIX & vbCrLf
     msg = msg & "  " & baseName & OUTPUT_CSV_SUFFIX & vbCrLf & vbCrLf
     If glbOk Then

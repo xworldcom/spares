@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { cadKeys, stripCadInstance } from "./cad-name.ts";
+import { cadKeys, sanitizePackMeshName, stripCadInstance } from "./cad-name.ts";
 
 describe("cad names", () => {
   it("drops SolidWorks instance suffixes but keeps the part number", () => {
@@ -13,5 +13,10 @@ describe("cad names", () => {
   it("matches a raw instance name to the catalog number", () => {
     assert.ok(cadKeys("PN-FRAME-1000-1").includes("pn-frame-1000"));
     assert.ok(cadKeys("Gearmotor^Default<1>").includes("gearmotor"));
+  });
+
+  it("sanitizes mesh names the same way the SolidWorks macro does", () => {
+    assert.equal(sanitizePackMeshName("PN ROLL/2104"), "PN-ROLL-2104");
+    assert.equal(sanitizePackMeshName("91280A340.sldprt"), "91280A340.sldprt");
   });
 });
