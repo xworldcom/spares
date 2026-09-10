@@ -1,10 +1,148 @@
 let dingContext: AudioContext | null = null;
 
+export type QuoteBox = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+export type QuoteTargetKind = "badge" | "count" | "handle";
+
+export const QUOTE_BADGE_BOUNCE_MS = 420;
+export const QUOTE_BADGE_BOUNCE_REDUCED_MS = 280;
+
+/** Calm Apple-style scale on the real count badge. */
+export const QUOTE_BADGE_BOUNCE_KEYFRAMES = [
+  { transform: "scale(1)" },
+  { transform: "scale(1.22)", offset: 0.35 },
+  { transform: "scale(0.94)", offset: 0.65 },
+  { transform: "scale(1)" },
+] as const;
+
+/** No motion: a brief brightness tick so the count still confirms. */
+export const QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES = [
+  { filter: "brightness(1)" },
+  { filter: "brightness(1.16)", offset: 0.4 },
+  { filter: "brightness(1)" },
+] as const;
+
+export function prefersReducedMotion(
+  media: { matches: boolean } | null | undefined = defaultReducedMotionMedia(),
+): boolean {
+  return Boolean(media?.matches);
+}
+
+function defaultReducedMotionMedia(): { matches: boolean } | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)");
+}
+
+export function boxOnscreen(
+  box: QuoteBox,
+  viewport: { width: number; height: number },
+): boolean {
+  if (box.width < 2 || box.height < 2) {
+    return false;
+  }
+  return (
+    box.left < viewport.width &&
+    box.top < viewport.height &&
+    box.left + box.width > 0 &&
+    box.top + box.height > 0
+  );
+}
+
+export function rankQuoteTarget(kind: string | undefined): number {
+  if (kind === "badge") {
+    return 0;
+  }
+  if (kind === "count") {
+    return 1;
+  }
+  if (kind === "handle") {
+    return 2;
+  }
+  return 3;
+}
+
+export function pickQuoteAddTarget<T extends { kind: string; box: QuoteBox }>(
+  targets: readonly T[],
+  viewport: { width: number; height: number },
+): T | null {
+  let best: T | null = null;
+  let bestRank = 99;
+  for (const target of targets) {
+    if (!boxOnscreen(target.box, viewport)) {
+      continue;
+    }
+    const rank = rankQuoteTarget(target.kind);
+    if (rank < bestRank) {
+      best = target;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
+export function queryQuoteAddTarget(
+  root: ParentNode | null | undefined = typeof document === "undefined" ? null : document,
+  viewport: { width: number; height: number } | null = typeof window === "undefined"
+    ? null
+    : { width: window.innerWidth, height: window.innerHeight },
+): HTMLElement | null {
+  if (!root || !viewport) {
+    return null;
+  }
+  const nodes = [...root.querySelectorAll<HTMLElement>("[data-quote-target]")];
+  const picked = pickQuoteAddTarget(
+    nodes.map((el) => ({
+      el,
+      kind: el.dataset.quoteTarget ?? "",
+      box: el.getBoundingClientRect(),
+    })),
+    viewport,
+  );
+  return picked?.el ?? null;
+}
+
+/** Bounce the real quote-count node. WAAPI first; CSS class if animate() is missing. */
+export function bounceQuoteCount(
+  el: HTMLElement,
+  motion?: { matches: boolean } | null,
+): void {
+  if (typeof el.animate === "function") {
+    const reduced = prefersReducedMotion(motion ?? defaultReducedMotionMedia());
+    el.animate(
+      reduced
+        ? [...QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES]
+        : [...QUOTE_BADGE_BOUNCE_KEYFRAMES],
+      {
+        duration: reduced ? QUOTE_BADGE_BOUNCE_REDUCED_MS : QUOTE_BADGE_BOUNCE_MS,
+        easing: "ease-out",
+      },
+    );
+    return;
+  }
+  el.classList.remove("quote-badge-bounce");
+  const stop = (event: AnimationEvent) => {
+    if (event.target !== el) {
+      return;
+    }
+    el.classList.remove("quote-badge-bounce");
+    el.removeEventListener("animationend", stop);
+  };
+  el.addEventListener("animationend", stop);
+  el.classList.add("quote-badge-bounce");
+}
+
 function softDing() {
   if (typeof window === "undefined") {
     return;
   }
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (prefersReducedMotion()) {
     return;
   }
   try {
@@ -33,4 +171,13 @@ export function quoteAddFeedback() {
     navigator.vibrate(12);
   }
   softDing();
+}
+
+/** Haptic/ding (if the browser allows) plus a bounce on the visible count. */
+export function playQuoteAddMotion() {
+  quoteAddFeedback();
+  const target = queryQuoteAddTarget();
+  if (target) {
+    bounceQuoteCount(target);
+  }
 }

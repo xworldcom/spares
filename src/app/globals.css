@@ -520,32 +520,35 @@ html.spares-embed .spares-app-stage {
     transition: none;
   }
 
-  .quote-badge-pulse {
-    animation: none;
-  }
-
-  .quote-badge-pulse.btn-accent {
-    filter: brightness(1.15);
-  }
-
-  p.quote-badge-pulse {
-    color: #0a84ff;
+  .quote-badge-bounce {
+    animation: quote-badge-bounce-calm 0.28s ease-out;
   }
 }
 
-@keyframes quote-badge-pulse {
+@keyframes quote-badge-bounce {
   0%,
   100% {
     transform: scale(1);
   }
   35% {
-    transform: scale(1.2);
+    transform: scale(1.22);
   }
   65% {
     transform: scale(0.94);
   }
 }
 
-.quote-badge-pulse {
-  animation: quote-badge-pulse 0.45s ease-out;
+@keyframes quote-badge-bounce-calm {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.16);
+  }
+}
+
+.quote-badge-bounce {
+  transform-origin: center;
+  animation: quote-badge-bounce 0.42s ease-out;
 }
