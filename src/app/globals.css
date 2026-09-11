@@ -194,7 +194,7 @@
   color: var(--spares-ink);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
-  --peek-h: 6.75rem;
+  --peek-h: 7.85rem;
   --sheet-y: max(0px, calc(100% - var(--peek-h)));
   --drag: 0px;
   transform: translate3d(0, calc(var(--sheet-y) + var(--drag)), 0);
@@ -689,11 +689,14 @@ html.spares-embed .spares-app-stage {
 
 .quote-count {
   display: inline-block;
-  padding: 0.12em 0.45em;
-  margin-left: -0.45em;
+  padding: 0.15em 0.5em;
+  margin-left: -0.5em;
   border-radius: 999px;
   transform-origin: left center;
   will-change: transform, background-color;
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--spares-muted);
 }
 
 .quote-count-tick {
@@ -702,7 +705,8 @@ html.spares-embed .spares-app-stage {
 
 .quote-count-num {
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.15em;
 }
 
 [data-quote-target="count"] {
