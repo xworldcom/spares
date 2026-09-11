@@ -4,7 +4,11 @@ import {
   canAccessCareMachine,
   canManageCare,
   careHref,
+  hubCareHref,
+  hubTicketHref,
+  hubTicketsHref,
   isManualCategory,
+  machineTicketsHref,
   isManualFilename,
   isTicketStatus,
   manualContentType,
@@ -74,6 +78,12 @@ describe("care tickets", () => {
     assert.equal(careHref("m1"), "/machines/m1/care");
     assert.equal(careHref("m1", "manuals"), "/machines/m1/care/manuals");
     assert.equal(ticketHref("m1", "t1"), "/machines/m1/care/tickets/t1");
+    assert.equal(hubCareHref(), "/care");
+    assert.equal(hubCareHref("tickets"), "/care/tickets");
+    assert.equal(hubTicketsHref(), "/care/tickets");
+    assert.equal(hubTicketHref("t1"), "/care/tickets/t1");
+    assert.equal(machineTicketsHref("m1"), "/machines/m1/care/tickets");
+    assert.equal(machineTicketsHref("m1", "t1"), "/machines/m1/care/tickets/t1");
   });
 
   it("marks unread from lastReadAt", () => {

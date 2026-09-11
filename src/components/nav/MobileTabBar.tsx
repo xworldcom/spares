@@ -20,6 +20,19 @@ function MachinesIcon({ active }: { active: boolean }) {
   );
 }
 
+function CareIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
+      <path
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.7}
+        d="M12 3.5 4.5 7.25v9.5L12 20.5l7.5-3.75v-9.5L12 3.5zm0 2.2 5.2 2.6L12 10.9 6.8 8.3 12 5.7z"
+      />
+    </svg>
+  );
+}
+
 function QuotesIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
@@ -99,19 +112,18 @@ export function MobileTabBar() {
   const pathname = usePathname();
   const [moreForPath, setMoreForPath] = useState<string | null>(null);
 
-  const customerHrefs = ["/machines", "/quotes"] as const;
+  const customerHrefs = ["/machines", "/care", "/quotes"] as const;
   const staffHrefs = [
     "/machines",
     "/machines/new",
+    "/care",
     "/staff/customers",
     "/staff/quotes",
-    "/staff/tickets",
     "/staff/bugs",
   ] as const;
   const moreActive =
     user?.role === "staff" &&
     (isNavActive(pathname, "/staff/customers", staffHrefs) ||
-      isNavActive(pathname, "/staff/tickets", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs));
   const moreOpen = moreForPath === pathname;
 
@@ -142,12 +154,6 @@ export function MobileTabBar() {
               Customers
             </Link>
             <Link
-              href="/staff/tickets"
-              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-            >
-              Service tickets
-            </Link>
-            <Link
               href="/staff/bugs"
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
@@ -169,6 +175,9 @@ export function MobileTabBar() {
               </TabLink>
               <TabLink href="/machines/new" hrefs={staffHrefs} label="Upload">
                 <UploadIcon active={isNavActive(pathname, "/machines/new", staffHrefs)} />
+              </TabLink>
+              <TabLink href="/care" hrefs={staffHrefs} label="Care">
+                <CareIcon active={isNavActive(pathname, "/care", staffHrefs)} />
               </TabLink>
               <TabLink
                 href="/staff/quotes"
@@ -196,6 +205,9 @@ export function MobileTabBar() {
             <>
               <TabLink href="/machines" hrefs={customerHrefs} label="Machines">
                 <MachinesIcon active={isNavActive(pathname, "/machines", customerHrefs)} />
+              </TabLink>
+              <TabLink href="/care" hrefs={customerHrefs} label="Care">
+                <CareIcon active={isNavActive(pathname, "/care", customerHrefs)} />
               </TabLink>
               <TabLink
                 href="/quotes"

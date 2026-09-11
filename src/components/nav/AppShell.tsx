@@ -10,13 +10,13 @@ import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isNavActive } from "@/lib/nav-active";
 
-const CUSTOMER_NAV_HREFS = ["/machines", "/quotes"] as const;
+const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes"] as const;
 const STAFF_NAV_HREFS = [
   "/machines",
   "/machines/new",
+  "/care",
   "/staff/customers",
   "/staff/quotes",
-  "/staff/tickets",
   "/staff/bugs",
 ] as const;
 
@@ -160,6 +160,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink href="/machines" hrefs={navHrefs}>
                 Machines
               </NavLink>
+              <NavLink href="/care" hrefs={navHrefs}>
+                Care
+              </NavLink>
               {user.role === "staff" ? (
                 <>
                   <NavLink href="/machines/new" hrefs={navHrefs}>
@@ -173,9 +176,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     hrefs={navHrefs}
                     unreadCount={unreadCount}
                   />
-                  <NavLink href="/staff/tickets" hrefs={navHrefs}>
-                    Tickets
-                  </NavLink>
                   <NavLink href="/staff/bugs" hrefs={navHrefs}>
                     Bug reports
                   </NavLink>

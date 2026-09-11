@@ -9,7 +9,7 @@ import { LoadingState } from "@/components/states/LoadingState";
 import { formatDay } from "@/components/quote/quote-format";
 import { getCareOverview } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
-import { careHref, ticketHref } from "@/lib/care";
+import { careHref, machineTicketsHref } from "@/lib/care";
 import { siteLabel } from "@/lib/access";
 import type { CareOverview, ServiceTicket } from "@/types";
 
@@ -113,7 +113,7 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
             {recent.map((ticket) => (
               <li key={ticket.id}>
                 <Link
-                  href={ticketHref(machineId, ticket.id)}
+                  href={machineTicketsHref(machineId, ticket.id)}
                   className="care-row"
                 >
                   <div className="min-w-0 flex-1">

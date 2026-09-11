@@ -19,9 +19,15 @@ import type { ServiceTicket, TicketStatus } from "@/types";
 export function TicketDetail({
   machineId,
   ticketId,
+  backHref,
+  embedded = false,
+  onUpdated,
 }: {
   machineId: string;
   ticketId: string;
+  backHref?: string;
+  embedded?: boolean;
+  onUpdated?: () => void;
 }) {
   const { user } = useAuth();
   const [ticket, setTicket] = useState<ServiceTicket | null>(null);
@@ -59,6 +65,7 @@ export function TicketDetail({
     setError(null);
     try {
       setTicket(await updateTicketStatus(ticket.id, status));
+      onUpdated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not update status."));
     } finally {
@@ -74,6 +81,7 @@ export function TicketDetail({
     setError(null);
     try {
       setTicket(await postTicketActivity(ticket.id, text));
+      onUpdated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not send that note."));
       throw cause;
@@ -99,11 +107,15 @@ export function TicketDetail({
     return <LoadingState label="Loading ticket…" />;
   }
 
+  const ticketsBack = backHref ?? careHref(machineId, "tickets");
+
   return (
     <div className="care-stack">
-      <Link href={careHref(machineId, "tickets")} className="care-back">
-        <span aria-hidden="true">‹</span> Tickets
-      </Link>
+      {!embedded ? (
+        <Link href={ticketsBack} className="care-back">
+          <span aria-hidden="true">‹</span> Tickets
+        </Link>
+      ) : null}
       <div>
         <p className="care-kicker">Ticket {ticket.number}</p>
         <h2 className="text-[28px] font-semibold tracking-tight">{ticket.title}</h2>

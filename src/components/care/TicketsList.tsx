@@ -10,11 +10,15 @@ export function TicketsList({
   emptyTitle,
   emptyMessage,
   showMachine = false,
+  selectedId,
+  hrefFor,
 }: {
   tickets: ServiceTicket[];
   emptyTitle: string;
   emptyMessage: string;
   showMachine?: boolean;
+  selectedId?: string;
+  hrefFor?: (ticket: ServiceTicket) => string;
 }) {
   if (tickets.length === 0) {
     return <EmptyState title={emptyTitle} message={emptyMessage} />;
@@ -25,8 +29,11 @@ export function TicketsList({
       {tickets.map((ticket) => (
         <li key={ticket.id}>
           <Link
-            href={ticketHref(ticket.machineId, ticket.id)}
-            className="care-row"
+            href={hrefFor ? hrefFor(ticket) : ticketHref(ticket.machineId, ticket.id)}
+            aria-current={selectedId === ticket.id ? "true" : undefined}
+            className={
+              selectedId === ticket.id ? "care-row is-selected" : "care-row"
+            }
           >
             {ticket.unread ? (
               <span
