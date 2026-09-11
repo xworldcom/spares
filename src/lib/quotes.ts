@@ -66,6 +66,11 @@ export function quotePipelineIndex(status: QuoteStatus): number {
   return QUOTE_PIPELINE.indexOf(status as QuotePipelineStep);
 }
 
+/** True once `status` is this pipeline step or a later one. Cancelled never qualifies. */
+export function quoteHasReached(status: QuoteStatus, step: QuotePipelineStep): boolean {
+  return quotePipelineIndex(status) >= QUOTE_PIPELINE.indexOf(step);
+}
+
 export function quoteStepState(
   status: QuoteStatus,
   step: QuotePipelineStep,
@@ -400,6 +405,26 @@ export function canUploadPo(status: QuoteStatus) {
   return PO_ELIGIBLE.has(status);
 }
 
+/** Invoice UI and invoiceNumber belong after PO is received — not while awaiting a PO. */
+export function invoiceVisible(status: QuoteStatus) {
+  return quoteHasReached(status, "po_received");
+}
+
+export function quotePoNextStep(status: QuoteStatus, role: Role): string | null {
+  if (status === "cancelled") {
+    return null;
+  }
+  if (!canUploadPo(status)) {
+    return "PO number and PDF upload open after this quote is issued.";
+  }
+  if (!invoiceVisible(status)) {
+    return role === "staff"
+      ? "Waiting for the customer PO. Invoice opens after PO is received."
+      : "Add your PO number and PDF to proceed.";
+  }
+  return null;
+}
+
 export function pricesVisibleToCustomer(status: QuoteStatus) {
   return PRICE_VISIBLE.has(status);
 }
@@ -708,7 +733,7 @@ export function toPublicQuote(
   if (quote.poUploadedAt) {
     publicQuote.poUploadedAt = quote.poUploadedAt;
   }
-  if (quote.invoiceNumber) {
+  if (quote.invoiceNumber && invoiceVisible(quote.status)) {
     publicQuote.invoiceNumber = quote.invoiceNumber;
   }
   return publicQuote;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatWhen } from "@/components/quote/quote-format";
-import { canUploadPo } from "@/lib/quotes";
+import { canUploadPo, invoiceVisible, quotePoNextStep } from "@/lib/quotes";
 import { quotePoUrl } from "@/lib/api/quotes";
 import type { Quote, Role } from "@/types";
 
@@ -22,16 +22,13 @@ export function QuotePoPanel({
   const [poNumber, setPoNumber] = useState(quote.poNumber ?? "");
   const [file, setFile] = useState<File | null>(null);
   const allowed = canUploadPo(quote.status);
+  const nextStep = quotePoNextStep(quote.status, role);
   const downloadHref = quote.hasPoFile ? quotePoUrl(String(quote.number)) : null;
 
   return (
     <section className="spares-surface rounded-[24px] p-5">
       <h2 className="text-[19px] font-semibold tracking-tight">Purchase order</h2>
-      {!allowed ? (
-        <p className="spares-muted mt-2 text-sm">
-          PO number and PDF upload open after this quote is issued.
-        </p>
-      ) : null}
+      {nextStep ? <p className="spares-muted mt-2 text-sm">{nextStep}</p> : null}
 
       {quote.poNumber || quote.hasPoFile ? (
         <p className="mt-3 text-sm">
@@ -99,7 +96,7 @@ export function QuotePoPanel({
         </form>
       ) : null}
 
-      {role === "staff" && !quote.hasPoFile && allowed ? (
+      {role === "staff" && !quote.hasPoFile && allowed && invoiceVisible(quote.status) ? (
         <p className="spares-muted mt-3 text-sm">Waiting for the customer PDF.</p>
       ) : null}
     </section>

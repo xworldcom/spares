@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/quotes";
 import {
   canEditTracking,
+  invoiceVisible,
   pricesVisibleToCustomer,
   quotePricingComplete,
   quoteTitle,
@@ -309,41 +310,45 @@ export function QuoteWorkspace({
         }}
       />
 
-      <section className="spares-surface rounded-[24px] px-5 py-4">
-        <h2 className="text-[19px] font-semibold tracking-tight">Invoice</h2>
-        {role === "staff" ? (
-          <form
-            className="mt-3 flex flex-col gap-2 sm:flex-row"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const data = new FormData(event.currentTarget);
-              const invoiceNumber = String(data.get("invoice") ?? "").trim();
-              void run(
-                () => updateQuote(String(quote.number), { invoiceNumber }),
-                "Invoice saved.",
-              );
-            }}
-          >
-            <input
-              name="invoice"
-              defaultValue={quote.invoiceNumber ?? ""}
-              placeholder="INV-1042"
-              className="spares-field h-12 flex-1 rounded-2xl border-0 px-4 text-[16px] outline-none"
-            />
-            <button
-              type="submit"
-              disabled={busy}
-              className="btn-primary inline-flex h-12 items-center justify-center rounded-full px-4 text-sm font-semibold"
+      {invoiceVisible(quote.status) ? (
+        <section className="spares-surface rounded-[24px] px-5 py-4">
+          <h2 className="text-[19px] font-semibold tracking-tight">Invoice</h2>
+          {role === "staff" ? (
+            <form
+              className="mt-3 flex flex-col gap-2 sm:flex-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const data = new FormData(event.currentTarget);
+                const invoiceNumber = String(data.get("invoice") ?? "").trim();
+                void run(
+                  () => updateQuote(String(quote.number), { invoiceNumber }),
+                  "Invoice saved.",
+                );
+              }}
             >
-              Save
-            </button>
-          </form>
-        ) : (
-          <p className="mt-2 text-sm">
-            {quote.invoiceNumber ?? "Invoice number appears here when issued."}
-          </p>
-        )}
-      </section>
+              <input
+                name="invoice"
+                defaultValue={quote.invoiceNumber ?? ""}
+                placeholder="INV-1042"
+                className="spares-field h-12 flex-1 rounded-2xl border-0 px-4 text-[16px] outline-none"
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn-primary inline-flex h-12 items-center justify-center rounded-full px-4 text-sm font-semibold"
+              >
+                Save
+              </button>
+            </form>
+          ) : (
+            <p className="mt-2 text-sm">
+              {quote.invoiceNumber ?? "Invoice number appears here when issued."}
+            </p>
+          )}
+        </section>
+      ) : (
+        <p className="spares-muted text-sm">Invoice opens after PO is received.</p>
+      )}
 
       {role === "staff" || quote.shipments.length > 0 || canEditTracking(quote.status) ? (
         <QuoteTrackingPanel
