@@ -8,7 +8,15 @@ const OWNER = "xworldcom";
 const REPO = "spares";
 
 export function githubToken() {
-  return (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "").trim();
+  // Prefer a scoped PAT stored only in Vercel env. GITHUB_TOKEN is last-resort
+  // fallback for an already-configured Preview — do not copy a cloud-agent token.
+  return (
+    process.env.SPARES_GITHUB_TOKEN ||
+    process.env.BUG_REPORT_GITHUB_TOKEN ||
+    process.env.GH_TOKEN ||
+    process.env.GITHUB_TOKEN ||
+    ""
+  ).trim();
 }
 
 type GithubJson<T> = {

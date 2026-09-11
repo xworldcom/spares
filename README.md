@@ -120,7 +120,8 @@ npm run build
 
 Optional (from T1.2, plus T3 durable store):
 
-- `AUTH_SECRET` — signs the httpOnly session cookie. A local non-production default is used when unset.
+- `AUTH_SECRET` — signs the httpOnly session cookie. **Required on Vercel** (Preview and Production). A local-only development default is used when unset off Vercel. Never commit this value.
+- `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — optional scoped PAT for staff bug-report GitHub issues (`issues:write`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks.
 - `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
 - `BLOB_READ_WRITE_TOKEN` — **required on Vercel Preview** when S3/R2 is not configured. Quotes, activity, PO PDFs, tracking, users, and machine metadata live in a private Vercel Blob store (`spares/db.json`). Local `npm run dev` does not need this; it keeps using `./data`.
 - **S3-compatible object storage (preferred for GLB files)** — keeps large model binaries off Vercel origin transfer. Set all of:
@@ -129,7 +130,7 @@ Optional (from T1.2, plus T3 durable store):
   - `S3_BUCKET` — bucket name
   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
   - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base, e.g. `https://models.preview.example.com` (no trailing slash). When set, the viewer loads GLBs from this permanent URL instead of presigned URLs.
-  - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, one hour).
+  - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, hard-capped at one hour). Presigned PUT tickets for staff uploads expire in 15 minutes.
 
 ### Tess: wire Cloudflare R2 for model files (recommended)
 

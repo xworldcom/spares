@@ -39,6 +39,21 @@ export function allowRateLimit(
   return true;
 }
 
+export const LOGIN_RATE_LIMIT = 8;
+export const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+
+export function allowLoginAttempt(request: Request, email: string) {
+  const ip = clientIp(request);
+  const normalized = email.trim().toLowerCase() || "missing";
+  const ipOk = allowRateLimit(`login:ip:${ip}`, LOGIN_RATE_LIMIT, LOGIN_RATE_WINDOW_MS);
+  const emailOk = allowRateLimit(
+    `login:email:${normalized}`,
+    LOGIN_RATE_LIMIT,
+    LOGIN_RATE_WINDOW_MS,
+  );
+  return ipOk && emailOk;
+}
+
 export function resetRateLimit() {
   hits.clear();
 }

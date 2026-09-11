@@ -4,6 +4,15 @@ import { promisify } from "node:util";
 const scryptAsync = promisify(scrypt);
 const KEY_LENGTH = 64;
 
+export const MIN_PASSWORD_LENGTH = 10;
+
+export function passwordPolicyError(password: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+  }
+  return null;
+}
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const hash = (await scryptAsync(password, salt, KEY_LENGTH)) as Buffer;
