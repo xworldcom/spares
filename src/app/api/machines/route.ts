@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
   if ("error" in auth) {
     return auth.error;
   }
-  const heal = request.nextUrl.searchParams.get("heal") === "1";
+  const heal =
+    auth.user.role === "staff" && request.nextUrl.searchParams.get("heal") === "1";
   const [machines, sites] = await Promise.all([listMachines({ heal }), listSites()]);
   const visible = machines.filter((machine) =>
     canAccessMachine(auth.user, machine, sites),

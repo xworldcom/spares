@@ -12,7 +12,6 @@ import {
   createBugReport,
   listBugReports,
 } from "@/lib/store";
-import type { Role } from "@/types";
 
 type CreateBugBody = {
   description?: unknown;
@@ -27,10 +26,6 @@ type CreateBugBody = {
 const MAX_DESCRIPTION = 8000;
 const MAX_LOG = 32_000;
 const MAX_SCREENSHOT = Math.floor(2 * 1024 * 1024);
-
-function asRole(value: unknown): Role | undefined {
-  return value === "staff" || value === "customer" ? value : undefined;
-}
 
 function clip(value: string, max: number) {
   return value.length > max ? value.slice(0, max) : value;
@@ -79,12 +74,10 @@ export async function POST(request: Request) {
   }
 
   const sessionUser = await getCurrentUser();
-  const userEmail =
-    sessionUser?.email ??
-    (typeof body.userEmail === "string" && body.userEmail.trim()
-      ? body.userEmail.trim()
-      : undefined);
-  const userRole = sessionUser?.role ?? asRole(body.userRole);
+  // Ignore client-supplied identity. Spoofing staff/customer on an open POST
+  // would otherwise land in GitHub issues and the staff inbox.
+  const userEmail = sessionUser?.email;
+  const userRole = sessionUser?.role;
   const pathValue =
     typeof body.path === "string" && body.path.trim() ? body.path.trim() : "/";
   const userAgent =

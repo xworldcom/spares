@@ -26,12 +26,30 @@ export function s3PublicBaseUrl() {
   return base ? base.replace(/\/$/, "") : null;
 }
 
-/** Default lifetime for presigned GET URLs returned in machine `fileUrl`. */
-export function modelDownloadUrlTtlSeconds() {
-  const raw = process.env.S3_SIGNED_URL_TTL_SECONDS?.trim();
+export const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
+export const MAX_SIGNED_URL_TTL_SECONDS = 3600;
+export const DEFAULT_UPLOAD_URL_TTL_SECONDS = 900;
+
+function clampTtlSeconds(raw: string | undefined, fallback: number) {
   if (!raw) {
-    return 3600;
+    return fallback;
   }
   const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3600;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.min(parsed, MAX_SIGNED_URL_TTL_SECONDS);
+}
+
+/** Lifetime for presigned GET URLs returned in machine `fileUrl`. Capped at one hour. */
+export function modelDownloadUrlTtlSeconds() {
+  return clampTtlSeconds(
+    process.env.S3_SIGNED_URL_TTL_SECONDS,
+    DEFAULT_SIGNED_URL_TTL_SECONDS,
+  );
+}
+
+/** Lifetime for staff presigned PUT tickets. Short so a leaked ticket expires. */
+export function modelUploadUrlTtlSeconds() {
+  return DEFAULT_UPLOAD_URL_TTL_SECONDS;
 }
