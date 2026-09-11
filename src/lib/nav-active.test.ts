@@ -7,6 +7,7 @@ const staffHrefs = [
   "/machines/new",
   "/staff/customers",
   "/staff/quotes",
+  "/staff/tickets",
   "/staff/bugs",
 ] as const;
 
@@ -25,10 +26,13 @@ describe("nav active state", () => {
 
   it("keeps Machines active on a machine page, not Upload", () => {
     assert.deepEqual(actives("/machines/palletizer"), ["/machines"]);
+    assert.deepEqual(actives("/machines/palletizer/care"), ["/machines"]);
+    assert.deepEqual(actives("/machines/palletizer/care/tickets"), ["/machines"]);
   });
 
   it("highlights only the matching staff route", () => {
     assert.deepEqual(actives("/staff/quotes"), ["/staff/quotes"]);
+    assert.deepEqual(actives("/staff/tickets"), ["/staff/tickets"]);
     assert.deepEqual(actives("/staff/customers"), ["/staff/customers"]);
     assert.deepEqual(actives("/staff/bugs"), ["/staff/bugs"]);
   });

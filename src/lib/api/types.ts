@@ -1,4 +1,14 @@
-import type { BugReport, MachineSummary, PublicUser, Quote, Site } from "@/types";
+import type {
+  BugReport,
+  CareOverview,
+  MachineSummary,
+  MachineUsage,
+  PublicMachineManual,
+  PublicUser,
+  Quote,
+  ServiceTicket,
+  Site,
+} from "@/types";
 
 export type {
   BugReport,
@@ -44,11 +54,43 @@ export type QuoteResponse = {
 };
 
 export type {
+  CareOverview,
+  MachineManual,
+  MachineUsage,
+  ManualCategory,
+  PublicMachineManual,
   QuoteActivity,
   QuoteShipment,
   QuoteStatus,
+  ServiceTicket,
+  TicketStatus,
   TrackingCarrier,
 } from "@/types";
+
+export type CareOverviewResponse = {
+  overview: CareOverview;
+  recentTickets: ServiceTicket[];
+};
+
+export type ManualsListResponse = {
+  manuals: PublicMachineManual[];
+};
+
+export type ManualResponse = {
+  manual: PublicMachineManual;
+};
+
+export type TicketsListResponse = {
+  tickets: ServiceTicket[];
+};
+
+export type TicketResponse = {
+  ticket: ServiceTicket;
+};
+
+export type UsageResponse = {
+  usage: MachineUsage | null;
+};
 
 export type BugReportsListResponse = {
   reports: BugReport[];

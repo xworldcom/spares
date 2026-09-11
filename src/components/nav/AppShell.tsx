@@ -16,6 +16,7 @@ const STAFF_NAV_HREFS = [
   "/machines/new",
   "/staff/customers",
   "/staff/quotes",
+  "/staff/tickets",
   "/staff/bugs",
 ] as const;
 
@@ -125,15 +126,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="spares-header sticky top-0 z-[60] shrink-0 backdrop-blur-md">
         <div className="spares-header-inner mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4">
           {machineStage ? (
-            <Link
-              href="/machines"
-              className="inline-flex h-11 min-w-0 shrink items-center gap-1 px-2 text-[15px] font-semibold tracking-tight"
-            >
-              <span aria-hidden="true" className="spares-muted text-lg leading-none">
-                ‹
-              </span>
-              <span className="truncate">Machines</span>
-            </Link>
+            <div className="flex min-w-0 items-center gap-1">
+              <Link
+                href="/machines"
+                className="inline-flex h-11 min-w-0 shrink items-center gap-1 px-2 text-[15px] font-semibold tracking-tight"
+              >
+                <span aria-hidden="true" className="spares-muted text-lg leading-none">
+                  ‹
+                </span>
+                <span className="truncate">Machines</span>
+              </Link>
+              <Link
+                href={`${pathname}/care`}
+                className="spares-muted inline-flex h-11 items-center px-2 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)]"
+              >
+                Care
+              </Link>
+            </div>
           ) : (
             <Link
               href="/"
@@ -164,6 +173,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     hrefs={navHrefs}
                     unreadCount={unreadCount}
                   />
+                  <NavLink href="/staff/tickets" hrefs={navHrefs}>
+                    Tickets
+                  </NavLink>
                   <NavLink href="/staff/bugs" hrefs={navHrefs}>
                     Bug reports
                   </NavLink>

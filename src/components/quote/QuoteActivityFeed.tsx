@@ -34,12 +34,16 @@ export function QuoteActivityFeed({
   selfEmail,
   busy,
   onSend,
+  title = "Conversation",
+  subtitle = "Notes with the other party. Status stays on the timeline.",
 }: {
   activities: QuoteActivity[];
   role: Role;
   selfEmail: string;
   busy: boolean;
   onSend: (text: string) => Promise<void>;
+  title?: string;
+  subtitle?: string;
 }) {
   const [text, setText] = useState("");
   const scrollerRef = useRef<HTMLOListElement>(null);
@@ -74,8 +78,8 @@ export function QuoteActivityFeed({
   return (
     <section className="imsg-card">
       <header className="imsg-header">
-        <h2>Conversation</h2>
-        <p>Notes with the other party. Status stays on the timeline.</p>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
       </header>
       <ol ref={scrollerRef} className="imsg-thread">
         {activities.length === 0 ? (

@@ -12,16 +12,25 @@ import {
 } from "./persistence.ts";
 import {
   appendQuoteActivity,
+  appendTicketActivity,
   createMachine,
+  createManual,
   createQuote,
+  createTicket,
+  deleteMachine,
   getMachine,
+  getMachineUsage,
   getQuote,
   listMachines,
+  listManuals,
+  listTickets,
   readStoredFile,
   resetStoreMemoryForTests,
   saveMachineFile,
   seedEmptyMachineCatalogForTests,
   updateMachine,
+  updateMachineUsage,
+  updateTicketStatus,
 } from "./store.ts";
 
 async function isolatedDataDir() {
@@ -215,5 +224,95 @@ describe("staff part join edits", () => {
     const again = await getMachine(created.id);
     assert.equal(again?.parts.find((part) => part.id === "PN-BELT-4402")?.meshName, "PN-GRD-5503");
     assert.equal(again?.parts.find((part) => part.id === "PN-ROLL-2104")?.qty, 2);
+  });
+});
+
+describe("machine care store", () => {
+  after(() => {
+    resetStoreMemoryForTests();
+    setPersistenceForTests(null);
+    delete process.env.SPARES_DATA_DIR;
+    delete process.env.VERCEL;
+  });
+
+  it("persists manuals, tickets, and usage across a memory reset", async () => {
+    await isolatedDataDir();
+    const created = await createMachine({
+      name: "Care cell",
+      storedFileName: "care-cell.glb",
+      originalFileName: "care-cell.glb",
+      parts: [{ id: "PN-1", name: "Frame", meshName: "PN-1", qty: 1 }],
+      unmatched: [],
+    });
+
+    const manual = await createManual({
+      machineId: created.id,
+      title: "Operator guide",
+      category: "operator",
+      storedFileName: "operator-guide.pdf",
+      originalFileName: "Operator guide.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 12,
+      uploadedByEmail: "staff@spares.local",
+      bytes: Buffer.from("%PDF-1.4 care"),
+    });
+    assert.equal("error" in manual, false);
+    if ("error" in manual) {
+      return;
+    }
+
+    const ticket = await createTicket({
+      machineId: created.id,
+      title: "Belt slip",
+      customerId: "user-customer",
+      customerEmail: "customer@spares.local",
+      actor: {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
+      note: "Started after the last changeover.",
+    });
+    assert.equal("error" in ticket, false);
+    if ("error" in ticket) {
+      return;
+    }
+    await updateTicketStatus(ticket.ticket.id, "in_progress", {
+      id: "user-staff",
+      email: "staff@spares.local",
+      role: "staff",
+    });
+    await appendTicketActivity(ticket.ticket.id, {
+      id: "user-staff",
+      email: "staff@spares.local",
+      role: "staff",
+    }, "On site Friday.");
+
+    const usage = await updateMachineUsage(
+      created.id,
+      { hours: 1240, cycles: 88000, lastServiceAt: "2026-09-01", notes: "Greased rails" },
+      "staff@spares.local",
+    );
+    assert.equal("error" in usage, false);
+
+    resetStoreMemoryForTests();
+
+    const manuals = await listManuals(created.id);
+    assert.equal(manuals[0]?.title, "Operator guide");
+    assert.equal((await readStoredFile("operator-guide.pdf")).toString(), "%PDF-1.4 care");
+
+    const tickets = await listTickets(created.id);
+    assert.equal(tickets[0]?.status, "in_progress");
+    assert.equal(tickets[0]?.activities.at(-1)?.text, "On site Friday.");
+
+    const again = await getMachineUsage(created.id);
+    assert.equal(again?.hours, 1240);
+    assert.equal(again?.history[0]?.summary.includes("hours"), true);
+
+    await deleteMachine(created.id);
+    resetStoreMemoryForTests();
+    assert.equal((await listManuals(created.id)).length, 0);
+    assert.equal((await listTickets(created.id)).length, 0);
+    assert.equal(await getMachineUsage(created.id), null);
   });
 });
