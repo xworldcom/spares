@@ -419,7 +419,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 type="button"
                 onClick={() => setView("model")}
                 className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                  view === "model" ? "" : "chrome-quiet"
+                  view === "model" ? "bg-white/12" : "chrome-quiet"
                 }`}
               >
                 3D
@@ -428,7 +428,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 type="button"
                 onClick={() => setView("list")}
                 className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                  view === "list" ? "" : "chrome-quiet"
+                  view === "list" ? "bg-white/12" : "chrome-quiet"
                 }`}
               >
                 List
