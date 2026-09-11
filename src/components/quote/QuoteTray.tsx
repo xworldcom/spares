@@ -57,7 +57,6 @@ function QuoteTrayForm({
   sent,
   sentHref,
   onClose,
-  countPulse,
 }: {
   lines: TrayLine[];
   note: string;
@@ -70,7 +69,6 @@ function QuoteTrayForm({
   sent: boolean;
   sentHref?: string;
   onClose?: () => void;
-  countPulse?: boolean;
 }) {
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
   return (
@@ -80,14 +78,16 @@ function QuoteTrayForm({
           <h2 className="text-[21px] leading-tight font-semibold tracking-tight text-neutral-950">
             Quote
           </h2>
-          <p
-            className={`spares-muted mt-0.5 text-sm${
-              countPulse ? " quote-badge-pulse" : ""
-            }`}
-          >
-            {lines.length === 0
-              ? "Add a part to get started."
-              : `${count} ${count === 1 ? "item" : "items"}`}
+          <p className="spares-muted mt-0.5 text-sm">
+            <span
+              key="quote-add-count"
+              data-quote-target="count"
+              className="quote-count-target"
+            >
+              {lines.length === 0
+                ? "Add a part to get started."
+                : `${count} ${count === 1 ? "item" : "items"}`}
+            </span>
           </p>
         </div>
         {onClose ? (
@@ -286,18 +286,6 @@ export function QuoteTray({
     setDraggingClass(false);
   }, [open]);
 
-  const prevCount = useRef(count);
-  const [countPulse, setCountPulse] = useState(false);
-  useEffect(() => {
-    if (count > prevCount.current) {
-      setCountPulse(true);
-      const timer = window.setTimeout(() => setCountPulse(false), 480);
-      prevCount.current = count;
-      return () => window.clearTimeout(timer);
-    }
-    prevCount.current = count;
-  }, [count]);
-
   async function handleSubmit() {
     setError(null);
     setSent(false);
@@ -341,7 +329,6 @@ export function QuoteTray({
     error,
     sent,
     sentHref,
-    countPulse,
   };
 
   function dismiss() {
@@ -513,9 +500,9 @@ export function QuoteTray({
       >
         Quote
         <span
-          className={`btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums${
-            countPulse ? " quote-badge-pulse" : ""
-          }`}
+          key="quote-add-badge"
+          data-quote-target="badge"
+          className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums"
         >
           {count}
         </span>
@@ -538,6 +525,7 @@ export function QuoteTray({
       <button
         type="button"
         className="quote-sheet-handle"
+        data-quote-target="handle"
         aria-label={sheet === "full" ? "Hide quote" : "Show quote"}
         onClick={() => {
           if (drag.current.moved) {

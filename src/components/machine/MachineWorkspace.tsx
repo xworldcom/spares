@@ -19,7 +19,10 @@ import { getMachine, updateMachinePart } from "@/lib/api/machines";
 import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
-import { quoteAddFeedback } from "@/lib/ui/quote-feedback";
+import {
+  bounceVisibleQuoteCount,
+  quoteAddFeedback,
+} from "@/lib/ui/quote-feedback";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#1c232c";
@@ -50,7 +53,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [lines, setLines] = useState<TrayLine[]>([]);
   const [trayOpen, setTrayOpen] = useState(false);
   const [quoteChip, setQuoteChip] = useState(true);
-  const [quoteBadgePulse, setQuoteBadgePulse] = useState(false);
   const [held, setHeld] = useState(false);
   const [view, setView] = useState<"model" | "list">("model");
   const [suggestedMesh, setSuggestedMesh] = useState<string | null>(null);
@@ -63,6 +65,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const customerTrayInViewer = isCustomer && !desktopStage;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
+  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
+  const prevQuoteCount = useRef(0);
+
+  useEffect(() => {
+    if (!isCustomer) {
+      prevQuoteCount.current = quoteCount;
+      return;
+    }
+    if (quoteCount > prevQuoteCount.current) {
+      prevQuoteCount.current = quoteCount;
+      const frame = window.requestAnimationFrame(() => {
+        bounceVisibleQuoteCount();
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+    prevQuoteCount.current = quoteCount;
+  }, [isCustomer, quoteCount]);
 
   useEffect(() => {
     if (!isCustomer || typeof window === "undefined") {
@@ -259,8 +278,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     });
     if (added) {
       quoteAddFeedback();
-      setQuoteBadgePulse(true);
-      window.setTimeout(() => setQuoteBadgePulse(false), 480);
     }
   }
 
@@ -300,8 +317,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       setSavingPart(false);
     }
   }
-
-  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
 
   const viewerBlock = (
     <div
@@ -501,9 +516,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             >
               Quote
               <span
-                className={`btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums${
-                  quoteBadgePulse ? " quote-badge-pulse" : ""
-                }`}
+                key="quote-add-badge"
+                data-quote-target="badge"
+                className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums"
               >
                 {quoteCount}
               </span>
