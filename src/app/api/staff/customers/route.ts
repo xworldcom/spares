@@ -1,4 +1,4 @@
-import { hashPassword, requireRole } from "@/lib/auth";
+import { hashPassword, passwordPolicyError, requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { createCustomer, listCustomers, listSites } from "@/lib/store";
@@ -33,6 +33,10 @@ export async function POST(request: Request) {
   const password = typeof body.password === "string" ? body.password : "";
   if (!email || !password) {
     return error("Email and password are required", 400);
+  }
+  const policy = passwordPolicyError(password);
+  if (policy) {
+    return error(policy, 400);
   }
 
   const siteIds = Array.isArray(body.siteIds)

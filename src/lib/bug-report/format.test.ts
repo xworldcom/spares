@@ -23,6 +23,16 @@ describe("stripSecrets", () => {
     );
     assert.equal(stripSecrets("password: hunter2"), "password=[redacted]");
   });
+
+  it("redacts tokens, bearer headers, and protection-bypass query keys", () => {
+    assert.match(stripSecrets("GITHUB_TOKEN=ghs_example"), /GITHUB_TOKEN=\[redacted\]/);
+    assert.equal(stripSecrets("Bearer abc.def.ghi"), "Bearer [redacted]");
+    assert.match(stripSecrets("Authorization: Bearer abc.def.ghi"), /\[redacted\]/);
+    assert.equal(
+      stripSecrets("https://preview.example/_?x-vercel-protection-bypass=not-a-real-token"),
+      "https://preview.example/_?x-vercel-protection-bypass=[redacted]",
+    );
+  });
 });
 
 describe("bugReportTitle", () => {
