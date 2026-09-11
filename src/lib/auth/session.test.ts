@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { signSession, verifySession } from "./session-token.ts";
+import { sessionSecret, signSession, verifySession } from "./session-token.ts";
 
 describe("session cookie payload", () => {
   it("signs email so a remapped user id can still resolve", () => {
@@ -19,5 +19,26 @@ describe("session cookie payload", () => {
     ).toString("base64url");
     assert.equal(verifySession(`${tampered}.${signature}`), null);
     assert.equal(verifySession(`${payload}.not-a-signature`), null);
+  });
+
+  it("refuses the local development secret on Vercel", () => {
+    const previousVercel = process.env.VERCEL;
+    const previousSecret = process.env.AUTH_SECRET;
+    process.env.VERCEL = "1";
+    delete process.env.AUTH_SECRET;
+    try {
+      assert.throws(() => sessionSecret(), /AUTH_SECRET must be set/);
+    } finally {
+      if (previousVercel === undefined) {
+        delete process.env.VERCEL;
+      } else {
+        process.env.VERCEL = previousVercel;
+      }
+      if (previousSecret === undefined) {
+        delete process.env.AUTH_SECRET;
+      } else {
+        process.env.AUTH_SECRET = previousSecret;
+      }
+    }
   });
 });

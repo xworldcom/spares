@@ -12,7 +12,7 @@ import {
 } from "@/lib/pack-limits";
 import { isModelFilename, modelExtension } from "@/lib/machines";
 import { createModelUploadUrl } from "@/lib/model-storage";
-import { isS3Configured } from "@/lib/s3-config";
+import { isS3Configured, modelUploadUrlTtlSeconds } from "@/lib/s3-config";
 import { randomUUID } from "node:crypto";
 
 export const maxDuration = 60;
@@ -60,7 +60,10 @@ export async function POST(request: Request) {
 
     const storedFileName = `${randomUUID()}${modelExtension(originalFileName)}`;
     try {
-      const { uploadUrl } = await createModelUploadUrl(storedFileName);
+      const { uploadUrl } = await createModelUploadUrl(
+        storedFileName,
+        modelUploadUrlTtlSeconds(),
+      );
       return json({ uploadUrl, storedFileName, method: "PUT" });
     } catch (cause) {
       const message =

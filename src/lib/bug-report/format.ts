@@ -1,13 +1,17 @@
 const PASSWORD_JSON =
-  /("(?:password|passwd|pass|secret|token|authorization)"\s*:\s*")([^"]*)(")/gi;
-const PASSWORD_QUERY = /([?&](?:password|passwd|pass|secret|token)=)([^&]*)/gi;
-const PASSWORD_PAIR = /\b(password|passwd|pass|secret)\s*[:=]\s*[^\s&]+/gi;
+  /("(?:password|passwd|pass|secret|token|authorization|auth_secret|github_token|s3_secret_access_key|blob_read_write_token|x-vercel-protection-bypass)"\s*:\s*")([^"]*)(")/gi;
+const PASSWORD_QUERY =
+  /([?&](?:password|passwd|pass|secret|token|authorization|x-vercel-protection-bypass|x-vercel-set-bypass-cookie)=)([^&]*)/gi;
+const PASSWORD_PAIR =
+  /\b(password|passwd|pass|secret|token|authorization|AUTH_SECRET|GITHUB_TOKEN|SPARES_GITHUB_TOKEN|S3_SECRET_ACCESS_KEY|BLOB_READ_WRITE_TOKEN|x-vercel-protection-bypass)\s*[:=]\s*[^\s&]+/gi;
+const BEARER = /\bBearer\s+[A-Za-z0-9._\-+=/]+/gi;
 
 export function stripSecrets(value: string) {
   return value
     .replace(PASSWORD_JSON, "$1[redacted]$3")
     .replace(PASSWORD_QUERY, "$1[redacted]")
-    .replace(PASSWORD_PAIR, "$1=[redacted]");
+    .replace(PASSWORD_PAIR, "$1=[redacted]")
+    .replace(BEARER, "Bearer [redacted]");
 }
 
 export function bugReportTitle(description: string) {

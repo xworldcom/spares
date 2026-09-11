@@ -93,11 +93,13 @@ export function CreateCustomerForm({
             name="password"
             type="password"
             required
+            minLength={10}
             autoComplete="new-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
           />
+          <p className="spares-muted mt-1.5 text-sm">At least 10 characters.</p>
         </div>
         <div>
           <label htmlFor="customer-site" className="block text-sm font-medium">

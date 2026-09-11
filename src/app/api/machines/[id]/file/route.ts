@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { safeDownloadFilename } from "@/lib/download-filename";
 import { error } from "@/lib/http";
 import { resolveMachineFileServe } from "@/lib/model-file-serve";
 import { canAccessMachine } from "@/lib/access";
@@ -34,7 +35,7 @@ export async function GET(
   return new Response(new Uint8Array(result.bytes), {
     headers: {
       "Content-Type": result.contentType,
-      "Content-Disposition": `inline; filename="${result.originalFileName}"`,
+      "Content-Disposition": `inline; filename="${safeDownloadFilename(result.originalFileName, "model.glb")}"`,
       "Cache-Control": "private, no-store",
     },
   });

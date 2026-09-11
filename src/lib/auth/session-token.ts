@@ -9,8 +9,19 @@ export type SessionPayload = {
   exp: number;
 };
 
-function secret() {
-  return process.env.AUTH_SECRET ?? "spares-not-live-local-secret";
+const LOCAL_DEV_SECRET = "spares-not-live-local-secret";
+
+export function sessionSecret() {
+  const value = process.env.AUTH_SECRET?.trim();
+  if (value && value !== LOCAL_DEV_SECRET) {
+    return value;
+  }
+  if (process.env.VERCEL) {
+    throw new Error(
+      "AUTH_SECRET must be set to a long random value on Vercel. Do not use the local development default.",
+    );
+  }
+  return LOCAL_DEV_SECRET;
 }
 
 export function sessionCookieOptions(maxAge: number) {
@@ -18,7 +29,7 @@ export function sessionCookieOptions(maxAge: number) {
     httpOnly: true,
     sameSite: "lax" as const,
     path: "/",
-    secure: process.env.NODE_ENV === "production",
+    secure: Boolean(process.env.VERCEL) || process.env.NODE_ENV === "production",
     maxAge,
   };
 }
@@ -31,7 +42,7 @@ export function signSession(userId: string, email?: string) {
       ...(email ? { email: email.trim().toLowerCase() } : {}),
     } satisfies SessionPayload),
   ).toString("base64url");
-  const signature = createHmac("sha256", secret()).update(payload).digest("base64url");
+  const signature = createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 }
 
@@ -41,7 +52,7 @@ export function verifySession(token: string): SessionPayload | null {
     return null;
   }
 
-  const expected = createHmac("sha256", secret()).update(payload).digest("base64url");
+  const expected = createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
   const actual = Buffer.from(signature);
   const expectedBuf = Buffer.from(expected);
   if (actual.length !== expectedBuf.length || !timingSafeEqual(actual, expectedBuf)) {
