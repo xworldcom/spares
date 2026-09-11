@@ -4,6 +4,7 @@ import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
 import {
   canEditTracking,
   canUploadPo,
+  invoiceVisible,
   isQuoteStatus,
   mergeQuoteItems,
   parseQuoteItems,
@@ -132,6 +133,13 @@ export async function PATCH(
 
   if (status === "shipped" && shipments.length === 0) {
     return error("Add a tracking number to mark this quote shipped", 400);
+  }
+
+  if (typeof body.invoiceNumber === "string") {
+    const invoiceAt = status ?? access.quote.status;
+    if (!invoiceVisible(invoiceAt)) {
+      return error("Invoice opens after PO is received", 400);
+    }
   }
 
   const next = await mutateQuote(access.quote.id, (quote) => {

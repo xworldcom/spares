@@ -4,6 +4,7 @@ import {
   assignMissingQuoteNumbers,
   canEditTracking,
   canUploadPo,
+  invoiceVisible,
   isQuoteUnreadForUser,
   itemsForRole,
   mergeQuoteItems,
@@ -13,6 +14,8 @@ import {
   pricesVisibleToCustomer,
   quoteItemsEqual,
   quotePricingComplete,
+  quoteHasReached,
+  quotePoNextStep,
   quoteStatusCaption,
   quoteStepState,
   shippedActivityText,
@@ -173,6 +176,42 @@ describe("status and visibility", () => {
     assert.equal(quoteStatusCaption("quoted", "staff"), "Quoted. Waiting for a PO.");
     assert.equal(quoteStatusCaption("cancelled"), "This quote was cancelled.");
   });
+
+  it("shows invoice only after PO is received, using the existing pipeline", () => {
+    assert.equal(quoteHasReached("quoted", "po_received"), false);
+    assert.equal(quoteHasReached("po_received", "po_received"), true);
+    assert.equal(quoteHasReached("confirmed", "po_received"), true);
+    assert.equal(quoteHasReached("cancelled", "po_received"), false);
+
+    assert.equal(invoiceVisible("requested"), false);
+    assert.equal(invoiceVisible("in_review"), false);
+    assert.equal(invoiceVisible("pricing"), false);
+    assert.equal(invoiceVisible("quoted"), false);
+    assert.equal(invoiceVisible("po_received"), true);
+    assert.equal(invoiceVisible("confirmed"), true);
+    assert.equal(invoiceVisible("ordered"), true);
+    assert.equal(invoiceVisible("shipped"), true);
+    assert.equal(invoiceVisible("delivered"), true);
+    assert.equal(invoiceVisible("closed"), true);
+    assert.equal(invoiceVisible("cancelled"), false);
+  });
+
+  it("names the PO as the next step while invoice is still closed", () => {
+    assert.equal(
+      quotePoNextStep("pricing", "staff"),
+      "PO number and PDF upload open after this quote is issued.",
+    );
+    assert.equal(
+      quotePoNextStep("quoted", "staff"),
+      "Waiting for the customer PO. Invoice opens after PO is received.",
+    );
+    assert.equal(
+      quotePoNextStep("quoted", "customer"),
+      "Add your PO number and PDF to proceed.",
+    );
+    assert.equal(quotePoNextStep("po_received", "staff"), null);
+    assert.equal(quotePoNextStep("cancelled", "staff"), null);
+  });
 });
 
 describe("parseShipments", () => {
@@ -270,6 +309,30 @@ describe("role-aware items and unread", () => {
     assert.equal(publicQuote.items[0]?.sellPrice, 20);
     assert.equal(publicQuote.items[0]?.supplierCost, undefined);
     assert.equal(publicQuote.customerEmail, "c@example.test");
+  });
+
+  it("omits invoiceNumber from the public quote until PO is received", () => {
+    const withInvoice = {
+      ...record,
+      status: "quoted" as const,
+      invoiceNumber: "INV-1042",
+    };
+    const quoted = toPublicQuote(withInvoice, {
+      id: "cust-1",
+      email: "c@example.test",
+      role: "customer",
+    });
+    assert.equal(quoted.invoiceNumber, undefined);
+
+    const afterPo = toPublicQuote(
+      { ...withInvoice, status: "po_received" },
+      {
+        id: "cust-1",
+        email: "c@example.test",
+        role: "customer",
+      },
+    );
+    assert.equal(afterPo.invoiceNumber, "INV-1042");
   });
 });
 
