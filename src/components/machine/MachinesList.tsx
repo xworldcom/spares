@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { CatalogSearch } from "@/components/catalog/CatalogSearch";
+import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
+import { MachineGlyph } from "@/components/catalog/CatalogGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { LoadingState } from "@/components/states/LoadingState";
 import { listSites } from "@/lib/api/auth";
 import { listMachines, deleteMachine, updateMachineName, updateMachineSite } from "@/lib/api/machines";
 import { errorMessage, isUnauthorized } from "@/lib/api/errors";
 import type { MachineSummary, Site } from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
+import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -22,15 +25,24 @@ async function loadMachines(heal: boolean): Promise<MachineSummary[]> {
   return listMachines({ heal: true });
 }
 
+function machinePlant(machine: MachineSummary, role?: string) {
+  if (machine.company && machine.siteName) {
+    return siteLabel({ company: machine.company, name: machine.siteName });
+  }
+  return role === "staff" ? "No plant — hidden from customers" : "";
+}
+
 export function MachinesList() {
   const { user, refresh } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
+  const [menuId, setMenuId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MachineSummary | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -60,6 +72,17 @@ export function MachinesList() {
     };
   }, [user?.role]);
 
+  const filtered = useMemo(() => {
+    return machines.filter((machine) =>
+      catalogQueryMatch(query, [
+        machine.name,
+        machine.company,
+        machine.siteName,
+        machinePlant(machine, user?.role),
+      ]),
+    );
+  }, [machines, query, user?.role]);
+
   async function onAssign(machineId: string, siteId: string) {
     setSavingId(machineId);
     try {
@@ -87,6 +110,7 @@ export function MachinesList() {
   function startRename(machine: MachineSummary) {
     setEditingNameId(machine.id);
     setNameDraft(machine.name);
+    setMenuId(machine.id);
     setError(null);
   }
 
@@ -138,6 +162,7 @@ export function MachinesList() {
       await deleteMachine(deleteTarget.id);
       setMachines((rows) => rows.filter((row) => row.id !== deleteTarget.id));
       setDeleteTarget(null);
+      setMenuId(null);
       setError(null);
     } catch (cause) {
       setError(errorMessage(cause, "Could not delete that machine."));
@@ -177,10 +202,17 @@ export function MachinesList() {
   }
 
   if (loading) {
-    return <LoadingState label="Loading machines…" />;
+    return (
+      <div className="catalog-stack">
+        <p className="sr-only" aria-live="polite">
+          Loading machines…
+        </p>
+        <CatalogSkeleton variant="machine" count={4} />
+      </div>
+    );
   }
 
-  if (error) {
+  if (error && machines.length === 0) {
     return (
       <ErrorState
         title="Failed to load machines"
@@ -192,52 +224,39 @@ export function MachinesList() {
     );
   }
 
-  if (machines.length === 0) {
-    return (
-      <EmptyState
-        title="No machines yet"
-        message={
-          user?.role === "staff"
-            ? "Upload a pack (3D file + ETO-shaped parts list) to create the first machine."
-            : "No machine packs are available yet. Ask staff to upload one, or try again if this page just opened."
-        }
-        action={
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void retry();
-              }}
-              className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-            >
-              Try again
-            </button>
-            {user?.role === "staff" ? (
-              <Link
-                href="/machines/new"
-                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
-              >
-                Upload pack
-              </Link>
-            ) : null}
-          </div>
-        }
-      />
-    );
-  }
+  const staff = user?.role === "staff";
 
   return (
-    <>
+    <div className="catalog-stack">
+      <div className="catalog-toolbar">
+        <CatalogSearch
+          id="machine-search"
+          label="Search machines"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search name or plant"
+        />
+        <p className="catalog-count">
+          {filtered.length} {filtered.length === 1 ? "machine" : "machines"}
+        </p>
+        {staff ? (
+          <Link href="/machines/new" className="btn-primary catalog-toolbar-action">
+            Upload pack
+          </Link>
+        ) : null}
+      </div>
+
       {error ? (
-        <p className="spares-alert mb-4 rounded-[20px] px-4 py-3 text-sm" role="alert">
+        <p className="spares-alert rounded-[20px] px-4 py-3 text-sm" role="alert">
           {error}
         </p>
       ) : null}
+
       {deleteTarget ? (
         <div
           role="dialog"
           aria-labelledby="delete-machine-title"
-          className="spares-alert mb-4 rounded-[24px] p-5"
+          className="spares-alert rounded-[24px] p-5"
         >
           <p id="delete-machine-title" className="spares-alert-title text-[17px] font-semibold">
             Delete {deleteTarget.name}?
@@ -268,118 +287,171 @@ export function MachinesList() {
           </div>
         </div>
       ) : null}
-      <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
-      {machines.map((machine) => (
-        <li key={machine.id}>
-          <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 flex-1">
-              {user?.role === "staff" && editingNameId === machine.id ? (
-                <div className="space-y-2">
-                  <label className="sr-only" htmlFor={`machine-name-${machine.id}`}>
-                    Machine name
-                  </label>
-                  <input
-                    id={`machine-name-${machine.id}`}
-                    value={nameDraft}
-                    disabled={savingId === machine.id}
-                    onChange={(event) => setNameDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void saveRename(machine.id);
-                      }
-                      if (event.key === "Escape") {
-                        cancelRename();
-                      }
-                    }}
-                    onBlur={() => {
-                      void saveRename(machine.id);
-                    }}
-                    className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={cancelRename}
-                    className="spares-muted text-sm font-medium"
-                  >
-                    Cancel rename
-                  </button>
-                </div>
-              ) : (
-                <Link href={`/machines/${machine.id}`} className="block min-w-0">
-                  <span className="block truncate text-[17px] font-medium tracking-tight">
-                    {machine.name}
-                  </span>
-                  <span className="spares-muted mt-0.5 block truncate text-[13px]">
-                    {machine.company && machine.siteName
-                      ? siteLabel({ company: machine.company, name: machine.siteName })
-                      : user?.role === "staff"
-                        ? "No plant — customers cannot see this"
-                        : ""}
-                    {machine.version && machine.version > 1
-                      ? ` · v${machine.version}`
-                      : ""}
-                  </span>
-                </Link>
-              )}
-            </div>
-            {user?.role === "staff" ? (
-              <div className="flex w-full max-w-xs shrink-0 flex-col gap-2 sm:w-56">
-                <select
-                  value={machine.siteId ?? ""}
-                  disabled={savingId === machine.id}
-                  onChange={(event) => {
-                    void onAssign(machine.id, event.target.value);
+
+      {machines.length === 0 ? (
+        <div className="catalog-empty">
+          <MachineGlyph />
+          <EmptyState
+            title="No machines yet"
+            message={
+              staff
+                ? "Upload a pack (3D file + ETO-shaped parts list) to create the first machine."
+                : "No machine packs are available yet. Ask staff to upload one, or try again if this page just opened."
+            }
+            action={
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void retry();
                   }}
-                  className="spares-field h-11 w-full max-w-xs shrink-0 rounded-2xl border-0 px-3 text-[15px] outline-none sm:w-56"
-                  aria-label={`Plant for ${machine.name}`}
+                  className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
                 >
-                  <option value="">No plant</option>
-                  {sites.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {siteLabel(site)}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium">
-                  {editingNameId === machine.id ? null : (
+                  Try again
+                </button>
+                {staff ? (
+                  <Link
+                    href="/machines/new"
+                    className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
+                  >
+                    Upload pack
+                  </Link>
+                ) : null}
+              </div>
+            }
+          />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="catalog-empty">
+          <EmptyState
+            title="No matches"
+            message="Try a different machine name or plant."
+          />
+        </div>
+      ) : (
+        <ul className="catalog-machine-grid">
+          {filtered.map((machine) => {
+            const open = menuId === machine.id;
+            const renaming = editingNameId === machine.id;
+            const plant = machinePlant(machine, user?.role);
+            return (
+              <li key={machine.id} className="catalog-machine-card" data-open={open ? "true" : "false"}>
+                <div className="catalog-machine-main">
+                  {renaming ? (
+                    <>
+                      <MachineGlyph />
+                      <div className="catalog-machine-copy">
+                        <label className="sr-only" htmlFor={`machine-name-${machine.id}`}>
+                          Machine name
+                        </label>
+                        <input
+                          id={`machine-name-${machine.id}`}
+                          value={nameDraft}
+                          disabled={savingId === machine.id}
+                          onChange={(event) => setNameDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void saveRename(machine.id);
+                            }
+                            if (event.key === "Escape") {
+                              cancelRename();
+                            }
+                          }}
+                          onBlur={() => {
+                            void saveRename(machine.id);
+                          }}
+                          className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={cancelRename}
+                          className="spares-muted text-sm font-medium"
+                        >
+                          Cancel rename
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <Link href={`/machines/${machine.id}`} className="catalog-machine-hit">
+                      <MachineGlyph />
+                      <div className="catalog-machine-copy">
+                        <span className="catalog-machine-name">{machine.name}</span>
+                        <span className="catalog-machine-meta">
+                          {plant}
+                          {machine.version && machine.version > 1 ? ` · v${machine.version}` : ""}
+                        </span>
+                      </div>
+                      {staff ? null : (
+                        <span className="catalog-chevron" aria-hidden="true">
+                          ›
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                  {staff ? (
                     <button
                       type="button"
-                      onClick={() => startRename(machine)}
-                      className="spares-muted"
+                      className="catalog-overflow"
+                      aria-expanded={open}
+                      aria-controls={`machine-actions-${machine.id}`}
+                      aria-label={`Actions for ${machine.name}`}
+                      onClick={() => {
+                        setMenuId(open ? null : machine.id);
+                      }}
                     >
-                      Rename
+                      ⋯
                     </button>
-                  )}
-                  <Link
-                    href={`/machines/new?replace=${machine.id}`}
-                    className="spares-muted"
-                  >
-                    Replace pack
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteTarget(machine);
-                      setError(null);
-                    }}
-                    className="text-[var(--spares-danger)]"
-                  >
-                    Delete
-                  </button>
+                  ) : null}
                 </div>
-              </div>
-            ) : (
-              <span className="spares-muted text-lg" aria-hidden="true">
-                ›
-              </span>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
-    </>
+                {staff && open ? (
+                  <div id={`machine-actions-${machine.id}`} className="catalog-machine-actions">
+                    <label className="catalog-action-label">
+                      Plant
+                      <select
+                        value={machine.siteId ?? ""}
+                        disabled={savingId === machine.id}
+                        onChange={(event) => {
+                          void onAssign(machine.id, event.target.value);
+                        }}
+                        className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
+                        aria-label={`Plant for ${machine.name}`}
+                      >
+                        <option value="">No plant</option>
+                        {sites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {siteLabel(site)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="catalog-action-row">
+                      {renaming ? null : (
+                        <button type="button" onClick={() => startRename(machine)}>
+                          Rename
+                        </button>
+                      )}
+                      <Link href={`/machines/new?replace=${machine.id}`}>Replace pack</Link>
+                      <button
+                        type="button"
+                        className="catalog-action-danger"
+                        onClick={() => {
+                          setDeleteTarget(machine);
+                          setError(null);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }

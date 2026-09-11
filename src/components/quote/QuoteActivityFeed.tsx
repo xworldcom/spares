@@ -1,42 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatWhen } from "@/components/quote/quote-format";
-import { initialsFromEmail, isHumanComment } from "@/lib/ui/initials";
+import { initialsFromEmail } from "@/lib/ui/initials";
+import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
+import { displayNameFromEmail } from "@/lib/ui/display-name";
 import type { QuoteActivity, Role } from "@/types";
 
-function actorLabel(
-  activity: QuoteActivity,
-  role: Role,
-  selfEmail: string,
-) {
+function actorLabel(activity: QuoteActivity, role: Role, selfEmail: string) {
   if (activity.actorEmail === selfEmail && activity.actorRole === role) {
     return "You";
   }
   if (role === "customer") {
     return "Spares";
   }
-  return activity.actorEmail;
+  return displayNameFromEmail(activity.actorEmail);
 }
 
-function InitialsAvatar({
-  email,
-  own,
-}: {
-  email: string;
-  own: boolean;
-}) {
-  const initials = initialsFromEmail(email);
+function OtherAvatar({ email }: { email: string }) {
   return (
     <span
-      aria-label={`${initials} avatar`}
-      className={
-        own
-          ? "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0a84ff] text-[12px] font-semibold tracking-wide text-white"
-          : "btn-soft inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold tracking-wide"
-      }
+      aria-hidden="true"
+      className="imsg-avatar"
     >
-      {initials}
+      {initialsFromEmail(email)}
     </span>
   );
 }
@@ -55,48 +42,83 @@ export function QuoteActivityFeed({
   onSend: (text: string) => Promise<void>;
 }) {
   const [text, setText] = useState("");
+  const scrollerRef = useRef<HTMLOListElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const self = { email: selfEmail, role };
+
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (root) {
+      root.scrollTop = root.scrollHeight;
+    }
+  }, [activities]);
+
+  useEffect(() => {
+    const node = inputRef.current;
+    if (!node) {
+      return;
+    }
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
+  }, [text]);
+
+  async function submit() {
+    const next = text.trim();
+    if (!next || busy) {
+      return;
+    }
+    await onSend(next);
+    setText("");
+  }
 
   return (
-    <section className="spares-surface rounded-[24px] p-5">
-      <h2 className="text-[19px] font-semibold tracking-tight">Activity</h2>
-      <ol className="mt-4 space-y-3">
+    <section className="imsg-card">
+      <header className="imsg-header">
+        <h2>Conversation</h2>
+        <p>Notes with the other party. Status stays on the timeline.</p>
+      </header>
+      <ol ref={scrollerRef} className="imsg-thread">
         {activities.length === 0 ? (
-          <li className="spares-muted text-sm">No activity yet.</li>
+          <li className="imsg-empty">No messages yet. Status changes will land here as quiet chips.</li>
         ) : (
-          activities.map((activity) => {
-            const human = isHumanComment(activity);
-            const own =
-              activity.actorEmail === selfEmail && activity.actorRole === role;
+          activities.map((activity, index) => {
+            const lane = activityLane(activity, self);
+            if (lane === "system") {
+              return (
+                <li key={activity.id} className="imsg-system">
+                  <span className="imsg-chip">
+                    {activity.text}
+                    <span className="imsg-chip-when">{formatWhen(activity.at)}</span>
+                  </span>
+                </li>
+              );
+            }
+
+            const prev = activities[index - 1];
+            const next = activities[index + 1];
+            const stacked = sameMessageAuthor(activity, prev);
+            const lastInStack = !sameMessageAuthor(activity, next);
+            const own = lane === "own";
+            const label = actorLabel(activity, role, selfEmail);
+
             return (
               <li
                 key={activity.id}
-                className={
-                  human
-                    ? "spares-field flex gap-3 rounded-[18px] px-3 py-3"
-                    : "rounded-[18px] px-1 py-2"
-                }
+                className={own ? "imsg-row imsg-own" : "imsg-row imsg-other"}
+                data-stacked={stacked ? "true" : "false"}
+                data-end={lastInStack ? "true" : "false"}
               >
-                {human ? <InitialsAvatar email={activity.actorEmail} own={own} /> : null}
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={
-                      human
-                        ? "spares-muted text-xs font-medium"
-                        : "spares-muted text-xs font-medium"
-                    }
-                  >
-                    {actorLabel(activity, role, selfEmail)}
-                    <span className="font-normal"> · {formatWhen(activity.at)}</span>
-                  </p>
-                  <p
-                    className={
-                      human
-                        ? "mt-1 whitespace-pre-wrap text-[15px]"
-                        : "spares-muted mt-0.5 whitespace-pre-wrap text-[14px]"
-                    }
-                  >
-                    {activity.text}
-                  </p>
+                {!own ? (
+                  lastInStack ? <OtherAvatar email={activity.actorEmail} /> : <span className="imsg-avatar-spacer" aria-hidden="true" />
+                ) : null}
+                <div className="imsg-stack">
+                  {!own && !stacked ? (
+                    <p className="imsg-meta">{label}</p>
+                  ) : null}
+                  <p className="imsg-bubble">{activity.text}</p>
+                  {lastInStack ? (
+                    <p className="imsg-when">{formatWhen(activity.at)}</p>
+                  ) : null}
                 </div>
               </li>
             );
@@ -104,30 +126,33 @@ export function QuoteActivityFeed({
         )}
       </ol>
       <form
-        className="mt-4 space-y-2"
+        className="imsg-composer"
         onSubmit={(event) => {
           event.preventDefault();
-          const next = text.trim();
-          if (!next) {
-            return;
-          }
-          void onSend(next).then(() => setText(""));
+          void submit();
         }}
       >
-        <label className="block text-sm font-medium">
-          Message
+        <label className="imsg-composer-field">
+          <span className="sr-only">Message</span>
           <textarea
-            rows={3}
+            ref={inputRef}
+            rows={1}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            className="spares-field mt-1.5 w-full resize-none rounded-2xl border-0 px-3 py-2.5 text-[16px] outline-none"
-            placeholder="Write a note…"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void submit();
+              }
+            }}
+            className="imsg-input"
+            placeholder="Message"
           />
         </label>
         <button
           type="submit"
           disabled={busy || !text.trim()}
-          className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[15px] font-semibold disabled:opacity-30"
+          className="imsg-send"
         >
           Send
         </button>

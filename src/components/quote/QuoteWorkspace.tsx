@@ -382,16 +382,16 @@ export function QuoteWorkspace({
         onSend={sendActivity}
       />
 
-      {role === "staff" ? (
+      {role === "staff" && (statusDirty || itemsDirty) ? (
         <div
-          className="sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
+          className="quote-staff-apply sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
           style={{
             bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px))",
           }}
         >
           <button
             type="button"
-            disabled={busy || (!statusDirty && !itemsDirty)}
+            disabled={busy}
             onClick={() => applyStaffAction()}
             className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-30"
           >

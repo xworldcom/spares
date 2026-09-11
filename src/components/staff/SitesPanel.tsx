@@ -17,6 +17,7 @@ export function SitesPanel({
   const [company, setCompany] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function SitesPanel({
       await createSite(company, name);
       setCompany("");
       setName("");
+      setAdding(false);
       const next = await listSites();
       setSites(next);
       onChange?.();
@@ -63,30 +65,32 @@ export function SitesPanel({
   }
 
   return (
-    <section className="spares-surface space-y-3 rounded-[24px] p-5">
-      <div>
-        <h2 className="text-[19px] font-semibold tracking-tight">Plants</h2>
-        <p className="spares-muted mt-1 text-sm">
-          A plant is a company plus a location. People and machines both point
-          here. Corporate users pick All plants for their company.
-        </p>
+    <section className="catalog-plants">
+      <div className="catalog-plants-head">
+        <div>
+          <h2>Plants</h2>
+          <p>Company plus location. People and machines both point here.</p>
+        </div>
+        <button
+          type="button"
+          className="btn-soft catalog-plants-add"
+          aria-expanded={adding}
+          onClick={() => setAdding((open) => !open)}
+        >
+          {adding ? "Close" : "Add plant"}
+        </button>
       </div>
       {sites.length === 0 ? (
         <p className="spares-muted text-sm">No plants yet.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="catalog-plant-groups">
           {[...grouped.entries()].map(([companyName, rows]) => (
             <li key={companyName}>
-              <p className="text-[13px] font-semibold tracking-tight">
-                {companyName}
-              </p>
-              <ul className="mt-1 space-y-1">
+              <p className="catalog-plant-company">{companyName}</p>
+              <ul className="catalog-plant-chips">
                 {rows.map((site) => (
-                  <li key={site.id} className="text-sm">
+                  <li key={site.id} className="catalog-plant-chip" title={siteLabel(site)}>
                     {site.name}
-                    <span className="spares-muted ml-2 text-[12px]">
-                      {siteLabel(site)}
-                    </span>
                   </li>
                 ))}
               </ul>
@@ -94,40 +98,42 @@ export function SitesPanel({
           ))}
         </ul>
       )}
-      <form
-        onSubmit={(event) => {
-          void handleSubmit(event);
-        }}
-        className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
-      >
-        <label className="block text-sm font-medium">
-          Company
-          <input
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
-            required
-            placeholder="Cargill"
-            className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-          />
-        </label>
-        <label className="block text-sm font-medium">
-          Plant
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            placeholder="Fort Worth"
-            className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="btn-soft mt-auto inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold disabled:opacity-60"
+      {adding ? (
+        <form
+          onSubmit={(event) => {
+            void handleSubmit(event);
+          }}
+          className="catalog-plants-form"
         >
-          {submitting ? "Adding…" : "Add plant"}
-        </button>
-      </form>
+          <label className="block text-sm font-medium">
+            Company
+            <input
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              required
+              placeholder="Cargill"
+              className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Plant
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              placeholder="Fort Worth"
+              className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="btn-primary mt-auto inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold disabled:opacity-60"
+          >
+            {submitting ? "Adding…" : "Save plant"}
+          </button>
+        </form>
+      ) : null}
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}

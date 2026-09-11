@@ -8,8 +8,10 @@ import { accessOptions, parseAccessValue } from "@/lib/access";
 
 export function CreateCustomerForm({
   onCreated,
+  onCancel,
 }: {
   onCreated?: () => void;
+  onCancel?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,58 +62,61 @@ export function CreateCustomerForm({
       onSubmit={(event) => {
         void handleSubmit(event);
       }}
-      className="spares-surface max-w-md space-y-4 rounded-[24px] p-5"
+      className="catalog-create"
     >
-      <div>
-        <label htmlFor="customer-email" className="block text-sm font-medium">
-          Customer email
-        </label>
-        <input
-          id="customer-email"
-          name="email"
-          type="email"
-          required
-          autoComplete="off"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
-        />
+      <div className="catalog-create-copy">
+        <h2>New customer</h2>
+        <p>They use the same login screen. Give a plant, or all plants at their company.</p>
       </div>
-      <div>
-        <label htmlFor="customer-password" className="block text-sm font-medium">
-          Temporary password
-        </label>
-        <input
-          id="customer-password"
-          name="password"
-          type="password"
-          required
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
-        />
-      </div>
-      <div>
-        <label htmlFor="customer-site" className="block text-sm font-medium">
-          Access
-        </label>
-        <select
-          id="customer-site"
-          value={siteId}
-          onChange={(event) => setSiteId(event.target.value)}
-          className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
-        >
-          <option value="">No access</option>
-          {accessOptions(sites).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <p className="spares-muted mt-1.5 text-sm">
-          One plant, or All plants at that company for corporate users.
-        </p>
+      <div className="catalog-create-grid">
+        <div>
+          <label htmlFor="customer-email" className="block text-sm font-medium">
+            Email
+          </label>
+          <input
+            id="customer-email"
+            name="email"
+            type="email"
+            required
+            autoComplete="off"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          />
+        </div>
+        <div>
+          <label htmlFor="customer-password" className="block text-sm font-medium">
+            Temporary password
+          </label>
+          <input
+            id="customer-password"
+            name="password"
+            type="password"
+            required
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          />
+        </div>
+        <div>
+          <label htmlFor="customer-site" className="block text-sm font-medium">
+            Access
+          </label>
+          <select
+            id="customer-site"
+            value={siteId}
+            onChange={(event) => setSiteId(event.target.value)}
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          >
+            <option value="">No access</option>
+            {accessOptions(sites).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
@@ -124,13 +129,24 @@ export function CreateCustomerForm({
           screen.
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-60 sm:w-auto sm:px-5"
-      >
-        {submitting ? "Creating…" : "Create customer"}
-      </button>
+      <div className="catalog-create-actions">
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-soft inline-flex h-12 items-center justify-center rounded-full px-5 text-[15px] font-semibold"
+          >
+            Cancel
+          </button>
+        ) : null}
+        <button
+          type="submit"
+          disabled={submitting}
+          className="btn-primary inline-flex h-12 items-center justify-center rounded-full px-5 text-[16px] font-semibold disabled:opacity-60"
+        >
+          {submitting ? "Creating…" : "Create customer"}
+        </button>
+      </div>
     </form>
   );
 }
