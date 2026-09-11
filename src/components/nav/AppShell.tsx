@@ -36,8 +36,8 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       className={
         active
-          ? "btn-primary inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium"
-          : "inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:bg-neutral-200/70 hover:text-neutral-950"
+          ? "inline-flex h-11 items-center px-3 text-sm font-semibold tracking-tight"
+          : "spares-muted inline-flex h-11 items-center px-3 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)]"
       }
     >
       {children}
@@ -60,7 +60,7 @@ function QuotesNavLink({
         Quotes
       </NavLink>
       {unreadCount > 0 ? (
-        <span className="absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0a84ff] px-1 text-[10px] font-semibold text-white">
+        <span className="btn-accent absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
           {unreadCount > 9 ? "9+" : unreadCount}
         </span>
       ) : null}
@@ -113,21 +113,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={
-        machineStage
-          ? "spares-app spares-app-stage flex min-h-dvh flex-col bg-[#f4f5f7] text-[#0b0d10]"
-          : showTabs
-            ? "spares-app spares-app-tabs min-h-dvh bg-[#f4f5f7] text-[#0b0d10]"
-            : "spares-app min-h-dvh bg-[#f4f5f7] text-[#0b0d10]"
+        onLogin
+          ? "spares-app spares-app-login min-h-dvh"
+          : machineStage
+            ? "spares-app spares-app-stage flex min-h-dvh flex-col"
+            : showTabs
+              ? "spares-app spares-app-tabs min-h-dvh"
+              : "spares-app min-h-dvh"
       }
     >
-      <header className="spares-header sticky top-0 z-[60] shrink-0 bg-[#f4f5f7]/94 backdrop-blur-md">
+      <header className="spares-header sticky top-0 z-[60] shrink-0 backdrop-blur-md">
         <div className="spares-header-inner mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4">
           {machineStage ? (
             <Link
               href="/machines"
-              className="inline-flex h-11 min-w-0 shrink items-center gap-1 rounded-full px-2 text-[15px] font-semibold tracking-tight"
+              className="inline-flex h-11 min-w-0 shrink items-center gap-1 px-2 text-[15px] font-semibold tracking-tight"
             >
-              <span aria-hidden="true" className="text-lg leading-none text-neutral-400">
+              <span aria-hidden="true" className="spares-muted text-lg leading-none">
                 ‹
               </span>
               <span className="truncate">Machines</span>
@@ -135,7 +137,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : (
             <Link
               href="/"
-              className="relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[15px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-['']"
+              className="relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[16px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-['']"
             >
               Spares
             </Link>
@@ -179,7 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-            <p className="spares-muted hidden text-[11px] font-medium tracking-[0.14em] uppercase sm:block">
+            <p className="spares-muted hidden text-[11px] font-medium tracking-[0.2em] uppercase sm:block">
               Private
             </p>
             <BugReportControl />
@@ -189,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => {
                   void handleLogout();
                 }}
-                className="inline-flex h-11 items-center rounded-full px-3 text-sm font-medium text-neutral-800 transition-colors duration-200 hover:bg-neutral-200/80"
+                className="spares-muted inline-flex h-11 items-center px-3 text-sm font-medium transition-colors duration-200 hover:text-[var(--spares-ink)]"
               >
                 Sign out
               </button>

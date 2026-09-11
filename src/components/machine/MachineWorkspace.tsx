@@ -25,7 +25,7 @@ import {
 } from "@/lib/ui/quote-feedback";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
-const VIEWER_STAGE = "#1c232c";
+const VIEWER_STAGE = "#12161c";
 
 function ExpandIcon() {
   return (
@@ -359,15 +359,21 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             className={`absolute inset-0 ${view === "list" ? "invisible" : ""}`}
           />
         ) : (
-          <EmptyState
-            title="No model"
-            message="This machine pack does not have a GLB or GLTF file to display."
-          />
+          <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
+            <div>
+              <p className="text-[18px] font-semibold tracking-tight text-[var(--spares-on-chip)]">
+                No model
+              </p>
+              <p className="chrome-quiet mt-2 max-w-sm text-[14px] leading-relaxed">
+                This pack does not have a GLB or GLTF file to display.
+              </p>
+            </div>
+          </div>
         )}
         {view === "list" && !staffSplitView ? (
           <section
             data-parts-bom=""
-            className={`absolute inset-0 z-[15] bg-[#f4f5f7] ${
+            className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
               isCustomer ? "overflow-y-auto px-4 pb-8" : "flex flex-col"
             }`}
             style={{ paddingTop: "4.35rem" }}
@@ -422,12 +428,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
           {showViewToggle ? (
-            <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full p-1">
+            <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
               <button
                 type="button"
                 onClick={() => setView("model")}
                 className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                  view === "model" ? "btn-primary" : "text-neutral-600"
+                  view === "model" ? "" : "chrome-quiet"
                 }`}
               >
                 3D
@@ -436,7 +442,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 type="button"
                 onClick={() => setView("list")}
                 className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                  view === "list" ? "btn-primary" : "text-neutral-600"
+                  view === "list" ? "" : "chrome-quiet"
                 }`}
               >
                 List
@@ -445,7 +451,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           ) : null}
           {(showViewToggle && view === "model") || staffSplitView ? (
             <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
-              <span className="hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
+              <span className="chrome-quiet hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
                 Explode
               </span>
               <input

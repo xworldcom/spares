@@ -1,3 +1,5 @@
+import { SPARES_TONES } from "./contrast.ts";
+
 let dingContext: AudioContext | null = null;
 
 export type QuoteBox = {
@@ -22,10 +24,10 @@ export const QUOTE_BADGE_BOUNCE_KEYFRAMES = [
 
 /** Peek/dock "N items" copy: scale plus a brief accent highlight. */
 export const QUOTE_COUNT_BOUNCE_KEYFRAMES = [
-  { transform: "scale(1)", color: "#4b4f57" },
-  { transform: "scale(1.12)", color: "#0a84ff", offset: 0.35 },
-  { transform: "scale(0.98)", color: "#0a84ff", offset: 0.65 },
-  { transform: "scale(1)", color: "#4b4f57" },
+  { transform: "scale(1)", color: SPARES_TONES.muted },
+  { transform: "scale(1.12)", color: SPARES_TONES.accent, offset: 0.35 },
+  { transform: "scale(0.98)", color: SPARES_TONES.accent, offset: 0.65 },
+  { transform: "scale(1)", color: SPARES_TONES.muted },
 ] as const;
 
 /** No motion: a brief brightness tick so the count still confirms. */

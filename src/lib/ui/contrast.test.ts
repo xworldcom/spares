@@ -24,9 +24,13 @@ describe("customer action tokens", () => {
     assert.ok(contrastRatio(SPARES_TONES.onDanger, SPARES_TONES.danger) >= AA_NORMAL);
   });
 
-  it("keeps viewer chrome chips readable on the dark stage", () => {
+  it("keeps dark-glass viewer chrome readable on the stage", () => {
     assert.ok(contrastRatio(SPARES_TONES.onChip, SPARES_TONES.chip) >= AA_NORMAL);
-    assert.ok(contrastRatio(SPARES_TONES.chip, SPARES_TONES.stage) >= AA_LARGE);
+    assert.ok(contrastRatio(SPARES_TONES.onChip, SPARES_TONES.stage) >= AA_NORMAL);
+  });
+
+  it("keeps login type readable on the dark entry surface", () => {
+    assert.ok(contrastRatio(SPARES_TONES.onLogin, SPARES_TONES.login) >= AA_NORMAL);
   });
 
   it("keeps light chrome marks readable on the stage and lifted shade", () => {

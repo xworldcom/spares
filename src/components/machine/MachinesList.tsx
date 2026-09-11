@@ -268,7 +268,7 @@ export function MachinesList() {
           </div>
         </div>
       ) : null}
-      <ul className="divide-y divide-neutral-200/80 overflow-hidden rounded-[24px] bg-white">
+      <ul className="spares-surface divide-y divide-black/6 overflow-hidden rounded-[24px]">
       {machines.map((machine) => (
         <li key={machine.id}>
           <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -295,7 +295,7 @@ export function MachinesList() {
                     onBlur={() => {
                       void saveRename(machine.id);
                     }}
-                    className="h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none"
+                    className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
                     autoFocus
                   />
                   <button
@@ -333,7 +333,7 @@ export function MachinesList() {
                   onChange={(event) => {
                     void onAssign(machine.id, event.target.value);
                   }}
-                  className="h-11 w-full max-w-xs shrink-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[15px] outline-none sm:w-56"
+                  className="spares-field h-11 w-full max-w-xs shrink-0 rounded-2xl border-0 px-3 text-[15px] outline-none sm:w-56"
                   aria-label={`Plant for ${machine.name}`}
                 >
                   <option value="">No plant</option>

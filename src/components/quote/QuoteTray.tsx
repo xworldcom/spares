@@ -75,13 +75,13 @@ function QuoteTrayForm({
     <div className="quote-sheet-form flex min-h-0 flex-1 flex-col px-5 pb-5">
       <div className="quote-sheet-grab flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-[21px] leading-tight font-semibold tracking-tight text-neutral-950">
+          <h2 className="text-[22px] leading-tight font-semibold tracking-tight">
             Quote
           </h2>
           <p className="spares-muted mt-0.5 text-sm">
             <span data-quote-target="count" className="inline-block origin-left">
               {lines.length === 0
-                ? "Add a part to get started."
+                ? "Tap a part on the machine."
                 : `${count} ${count === 1 ? "item" : "items"}`}
             </span>
           </p>
@@ -90,7 +90,7 @@ function QuoteTrayForm({
           <button
             type="button"
             data-no-drag=""
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10]"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full"
             aria-label="Hide quote"
             onClick={onClose}
           >
@@ -99,14 +99,21 @@ function QuoteTrayForm({
         ) : null}
       </div>
 
-      <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
+      {lines.length === 0 ? (
+        <div className="quote-sheet-empty mt-8 min-h-0 flex-1">
+          <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
+            Nothing here yet. Select a named part, then add it.
+          </p>
+        </div>
+      ) : (
+      <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
         {lines.map((line) => (
           <li
             key={line.part.id}
-            className="tray-line rounded-[18px] bg-[#f4f5f7] px-3 py-3"
+            className="tray-line spares-field rounded-[18px] px-3 py-3"
           >
             <div className="flex items-start gap-3">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#1c232c]">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--spares-stage)]">
                 {line.thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -121,7 +128,7 @@ function QuoteTrayForm({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium text-neutral-950">
+                <p className="truncate text-[15px] font-medium">
                   {line.part.name}
                 </p>
                 <p className="spares-muted truncate font-mono text-xs">{line.part.id}</p>
@@ -137,18 +144,18 @@ function QuoteTrayForm({
                 aria-label={`Decrease ${line.part.name}`}
                 disabled={line.qty <= 1}
                 onClick={() => onQty(line.part.id, Math.max(1, line.qty - 1))}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-medium text-[#0b0d10] disabled:opacity-30"
+                className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium disabled:opacity-30"
               >
                 −
               </button>
-              <span className="min-w-8 text-center text-[17px] tabular-nums text-neutral-950">
+              <span className="min-w-8 text-center text-[17px] tabular-nums">
                 {line.qty}
               </span>
               <button
                 type="button"
                 aria-label={`Increase ${line.part.name}`}
                 onClick={() => onQty(line.part.id, line.qty + 1)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-medium text-[#0b0d10]"
+                className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium"
               >
                 +
               </button>
@@ -163,17 +170,20 @@ function QuoteTrayForm({
           </li>
         ))}
       </ul>
+      )}
 
-      <label className="mt-3 block text-sm font-medium text-neutral-700">
+      {lines.length > 0 ? (
+      <label className="mt-3 block text-sm font-medium text-[var(--spares-muted)]">
         Note
         <textarea
           rows={2}
           value={note}
           onChange={(event) => onNote(event.target.value)}
-          className="mt-1.5 w-full resize-none rounded-2xl border-0 bg-[#f4f5f7] px-3 py-2.5 text-[16px] outline-none"
+          className="spares-field mt-1.5 w-full resize-none rounded-2xl border-0 px-3 py-2.5 text-[16px] outline-none"
           placeholder="Optional — site, serial, need-by…"
         />
       </label>
+      ) : null}
 
       {error ? (
         <p className="mt-2 text-sm text-red-600" role="alert">
@@ -194,14 +204,16 @@ function QuoteTrayForm({
         </p>
       ) : null}
 
-      <button
-        type="button"
-        disabled={submitting || lines.length === 0}
-        onClick={onSubmit}
-        className="btn-accent mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-30"
-      >
-        {submitting ? "Sending…" : "Request quote"}
-      </button>
+      {lines.length > 0 ? (
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={onSubmit}
+          className="btn-accent mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-30"
+        >
+          {submitting ? "Sending…" : "Request quote"}
+        </button>
+      ) : null}
     </div>
   );
 }

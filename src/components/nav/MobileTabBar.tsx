@@ -79,13 +79,13 @@ function TabLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
-        active ? "text-[#0b0d10]" : "text-neutral-500"
+        active ? "text-[var(--spares-ink)]" : "text-[var(--spares-muted)]"
       }`}
     >
       {children}
       <span>{label}</span>
       {badge && badge > 0 ? (
-        <span className="absolute top-0.5 right-[calc(50%-1.35rem)] inline-flex min-w-4 items-center justify-center rounded-full bg-[#0a84ff] px-1 text-[9px] font-semibold text-white">
+        <span className="btn-accent absolute top-0.5 right-[calc(50%-1.35rem)] inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-semibold">
           {badge > 9 ? "9+" : badge}
         </span>
       ) : null}
@@ -128,7 +128,7 @@ export function MobileTabBar() {
             onClick={() => setMoreForPath(null)}
           />
           <div
-            className="absolute inset-x-3 rounded-[24px] bg-white p-2 shadow-[0_16px_40px_rgba(15,18,22,0.18)]"
+            className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(12,13,15,0.14)]"
             style={{
               bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom) + 0.5rem)",
             }}
@@ -151,7 +151,7 @@ export function MobileTabBar() {
 
       <nav
         aria-label="Primary"
-        className="spares-tabbar fixed inset-x-0 bottom-0 z-[56] border-t border-black/6 bg-[#f4f5f7]/94 backdrop-blur-md lg:hidden"
+        className="spares-tabbar fixed inset-x-0 bottom-0 z-[56] border-t border-black/5 backdrop-blur-md lg:hidden"
       >
         <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1">
           {user.role === "staff" ? (
@@ -177,7 +177,7 @@ export function MobileTabBar() {
                   setMoreForPath((current) => (current === pathname ? null : pathname))
                 }
                 className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
-                  moreActive || moreOpen ? "text-[#0b0d10]" : "text-neutral-500"
+                  moreActive || moreOpen ? "text-[var(--spares-ink)]" : "text-[var(--spares-muted)]"
                 }`}
               >
                 <MoreIcon active={moreActive || moreOpen} />

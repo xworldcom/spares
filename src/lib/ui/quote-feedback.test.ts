@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { SPARES_TONES } from "./contrast.ts";
 import {
   QUOTE_BADGE_BOUNCE_KEYFRAMES,
   QUOTE_BADGE_BOUNCE_MS,
@@ -157,7 +158,7 @@ describe("bounce keyframes", () => {
     const countLast = QUOTE_COUNT_BOUNCE_KEYFRAMES[QUOTE_COUNT_BOUNCE_KEYFRAMES.length - 1];
     assert.equal(QUOTE_COUNT_BOUNCE_KEYFRAMES[0].transform, "scale(1)");
     assert.equal(countLast.transform, "scale(1)");
-    assert.equal(countLast.color, "#4b4f57");
+    assert.equal(countLast.color, SPARES_TONES.muted);
   });
 
   it("uses filter, not transform, when motion is reduced", () => {

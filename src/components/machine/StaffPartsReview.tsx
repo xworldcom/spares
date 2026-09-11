@@ -178,7 +178,7 @@ export function StaffPartsReview({
   return (
     <div data-staff-parts="" className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-3">
-        <p className="truncate text-[15px] font-semibold text-neutral-950">
+        <p className="truncate text-[15px] font-semibold tracking-tight">
           {machine.name}
         </p>
         <p className="spares-muted mt-1 text-[13px]">{summaryText(counts)}</p>
@@ -190,7 +190,7 @@ export function StaffPartsReview({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search parts"
-            className="h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/8"
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
           />
         </label>
 
@@ -201,7 +201,7 @@ export function StaffPartsReview({
         ) : filtered.length === 0 ? (
           <p className="mt-4 text-sm text-neutral-500">No parts match that search.</p>
         ) : (
-          <ul data-parts-bom="" className="mt-3 overflow-hidden rounded-[22px] bg-white">
+          <ul data-parts-bom="" className="spares-surface mt-3 overflow-hidden rounded-[22px]">
             {filtered.map((row) => {
               const selected = row.key === selectedKey;
               return (
@@ -211,7 +211,7 @@ export function StaffPartsReview({
                     onPointerDown={() => selectRow(row)}
                     onClick={() => selectRow(row)}
                     className={`flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left ${
-                      selected ? "row-on-ink" : "text-neutral-800"
+                      selected ? "row-on-ink" : ""
                     }`}
                   >
                     <span className="min-w-0 flex-1">
@@ -263,7 +263,7 @@ export function StaffPartsReview({
                 ? "Tap a mesh to link it to this part, then save."
                 : "Read-only until you select a part."}
             </p>
-            <ul className="mt-2 overflow-hidden rounded-[22px] bg-white">
+            <ul className="spares-surface mt-2 overflow-hidden rounded-[22px]">
               {extras.map((name) => {
                 const active = meshName === name && Boolean(selectedRow);
                 return (
@@ -294,7 +294,7 @@ export function StaffPartsReview({
       {selectedRow ? (
         <form
           data-staff-edit=""
-          className="shrink-0 border-t border-black/6 bg-white/90 px-4 py-3"
+          className="spares-surface shrink-0 border-t border-black/6 px-4 py-3"
           onSubmit={(event) => {
             event.preventDefault();
             void save();
@@ -312,7 +312,7 @@ export function StaffPartsReview({
                     partNumber: event.target.value,
                   }))
                 }
-                className="mt-1 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 font-mono text-[15px] outline-none"
+                className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 font-mono text-[15px] outline-none"
               />
             </label>
             <label className="col-span-2 block text-xs font-medium text-neutral-500">
@@ -322,7 +322,7 @@ export function StaffPartsReview({
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, name: event.target.value }))
                 }
-                className="mt-1 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none"
+                className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
               />
             </label>
             <label className="block text-xs font-medium text-neutral-500">
@@ -337,7 +337,7 @@ export function StaffPartsReview({
                     qty: Number(event.target.value) || 1,
                   }))
                 }
-                className="mt-1 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] tabular-nums outline-none"
+                className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[16px] tabular-nums outline-none"
               />
             </label>
             <label className="block text-xs font-medium text-neutral-500">
@@ -345,7 +345,7 @@ export function StaffPartsReview({
               <input
                 value={meshName}
                 onChange={(event) => setMeshName(event.target.value)}
-                className="mt-1 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 font-mono text-[15px] outline-none"
+                className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 font-mono text-[15px] outline-none"
               />
             </label>
           </div>
