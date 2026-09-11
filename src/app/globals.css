@@ -1516,7 +1516,7 @@ html.spares-embed .spares-app-stage {
 }
 
 .catalog-skeleton-machine {
-  min-height: 10.5rem;
+  min-height: 8.5rem;
 }
 
 .catalog-skeleton-person {
@@ -1562,49 +1562,34 @@ html.spares-embed .spares-app-stage {
 
 @media (min-width: 768px) {
   .catalog-machine-card {
-    min-height: 15rem;
-    position: relative;
+    min-height: 8.75rem;
   }
 
   .catalog-machine-main {
-    min-height: 15rem;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
+    min-height: 8.75rem;
     gap: 1.15rem;
-    padding: 1.25rem 1.25rem 1.3rem;
-  }
-
-  .catalog-machine-copy {
-    margin-top: auto;
+    padding: 1.2rem 1.15rem 1.2rem 1.25rem;
   }
 
   .catalog-glyph-machine {
-    width: 4.35rem;
-    height: 4.35rem;
-    border-radius: 1.25rem;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 1.2rem;
   }
 
   .catalog-glyph-machine svg {
-    width: 2.35rem;
-    height: 2.35rem;
+    width: 2.4rem;
+    height: 2.4rem;
   }
 
   .catalog-machine-name {
     white-space: normal;
-    font-size: 1.55rem;
+    font-size: 1.45rem;
   }
 
   .catalog-machine-meta {
     white-space: normal;
     font-size: 14px;
-  }
-
-  .catalog-overflow,
-  .catalog-chevron {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
   }
 
   .catalog-machine-actions {
