@@ -60,7 +60,7 @@ export function CreateCustomerForm({
       onSubmit={(event) => {
         void handleSubmit(event);
       }}
-      className="max-w-md space-y-4 rounded-[24px] bg-white p-5"
+      className="spares-surface max-w-md space-y-4 rounded-[24px] p-5"
     >
       <div>
         <label htmlFor="customer-email" className="block text-sm font-medium">
@@ -74,7 +74,7 @@ export function CreateCustomerForm({
           autoComplete="off"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
+          className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
         />
       </div>
       <div>
@@ -89,7 +89,7 @@ export function CreateCustomerForm({
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
+          className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
         />
       </div>
       <div>
@@ -100,7 +100,7 @@ export function CreateCustomerForm({
           id="customer-site"
           value={siteId}
           onChange={(event) => setSiteId(event.target.value)}
-          className="mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
+          className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
         >
           <option value="">No access</option>
           {accessOptions(sites).map((option) => (
@@ -114,12 +114,12 @@ export function CreateCustomerForm({
         </p>
       </div>
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}
       {createdEmail ? (
-        <p className="text-sm text-green-800" role="status">
+        <p className="text-sm text-[#8ee0a8]" role="status">
           Created customer {createdEmail}. They can sign in on the same login
           screen.
         </p>

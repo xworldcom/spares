@@ -7,6 +7,8 @@ import {
   QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES,
   QUOTE_BADGE_BOUNCE_REDUCED_MS,
   QUOTE_COUNT_BOUNCE_KEYFRAMES,
+  QUOTE_COUNT_BOUNCE_MS,
+  afterNextPaint,
   boxOnscreen,
   bounceQuoteCount,
   pickQuoteAddTarget,
@@ -33,12 +35,12 @@ describe("prefersReducedMotion", () => {
 describe("quote add target", () => {
   const viewport = { width: 768, height: 1024 };
 
-  it("ranks the count badge ahead of sheet copy or the peek handle", () => {
-    assert.equal(rankQuoteTarget("badge"), 0);
-    assert.equal(rankQuoteTarget("count"), 1);
+  it("ranks the peek count ahead of the chrome badge or handle", () => {
+    assert.equal(rankQuoteTarget("count"), 0);
+    assert.equal(rankQuoteTarget("badge"), 1);
     assert.equal(rankQuoteTarget("handle"), 2);
-    assert.ok(rankQuoteTarget("badge") < rankQuoteTarget("count"));
-    assert.ok(rankQuoteTarget("count") < rankQuoteTarget("handle"));
+    assert.ok(rankQuoteTarget("count") < rankQuoteTarget("badge"));
+    assert.ok(rankQuoteTarget("badge") < rankQuoteTarget("handle"));
   });
 
   it("ignores off-screen and zero-size boxes", () => {
@@ -60,7 +62,7 @@ describe("quote add target", () => {
     );
   });
 
-  it("picks the visible badge over a visible count label", () => {
+  it("picks the visible peek count over a visible chrome badge", () => {
     const picked = pickQuoteAddTarget(
       [
         {
@@ -78,7 +80,7 @@ describe("quote add target", () => {
       ],
       viewport,
     );
-    assert.equal(picked?.kind, "badge");
+    assert.equal(picked?.kind, "count");
   });
 
   it("falls back to the peek count when the chrome badge is off-screen", () => {
@@ -120,14 +122,42 @@ describe("bounce keyframes", () => {
     assert.equal(QUOTE_COUNT_BOUNCE_KEYFRAMES[0].transform, "scale(1)");
     assert.equal(countLast.transform, "scale(1)");
     assert.equal(countLast.color, SPARES_TONES.muted);
+    assert.ok(
+      Number.parseFloat(QUOTE_COUNT_BOUNCE_KEYFRAMES[1].transform.replace(/scale\(|\)/g, "")) >=
+        1.24,
+    );
+    assert.ok("backgroundColor" in QUOTE_COUNT_BOUNCE_KEYFRAMES[1]);
   });
 
   it("uses filter, not transform, when motion is reduced", () => {
     for (const frame of QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES) {
       assert.ok("filter" in frame);
+      assert.ok("backgroundColor" in frame);
       assert.equal("transform" in frame, false);
     }
     assert.ok(QUOTE_BADGE_BOUNCE_REDUCED_MS < QUOTE_BADGE_BOUNCE_MS);
+    assert.ok(QUOTE_COUNT_BOUNCE_MS >= QUOTE_BADGE_BOUNCE_MS);
+  });
+
+  it("runs the callback after two animation frames", () => {
+    const frames: Array<() => void> = [];
+    const previous = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      frames.push(() => cb(0));
+      return frames.length;
+    }) as typeof requestAnimationFrame;
+    let ran = false;
+    afterNextPaint(() => {
+      ran = true;
+    });
+    assert.equal(ran, false);
+    assert.equal(frames.length, 1);
+    frames[0]();
+    assert.equal(ran, false);
+    assert.equal(frames.length, 2);
+    frames[1]();
+    assert.equal(ran, true);
+    globalThis.requestAnimationFrame = previous;
   });
 });
 
@@ -156,17 +186,18 @@ describe("bounceQuoteCount", () => {
   });
 
   it("highlights peek/dock count copy instead of only scaling a badge", () => {
-    const frames: unknown[] = [];
+    const seen: Array<{ frames: unknown; duration: number }> = [];
     const el = {
       dataset: { quoteTarget: "count" },
-      animate(keyframes: unknown) {
-        frames.push(keyframes);
+      animate(keyframes: unknown, options: { duration: number }) {
+        seen.push({ frames: keyframes, duration: options.duration });
         return {};
       },
     } as unknown as HTMLElement;
 
     bounceQuoteCount(el, { matches: false });
-    assert.deepEqual(frames[0], [...QUOTE_COUNT_BOUNCE_KEYFRAMES]);
+    assert.deepEqual(seen[0].frames, [...QUOTE_COUNT_BOUNCE_KEYFRAMES]);
+    assert.equal(seen[0].duration, QUOTE_COUNT_BOUNCE_MS);
   });
 
   it("skips the scale bounce when the user prefers reduced motion", () => {
@@ -185,13 +216,44 @@ describe("bounceQuoteCount", () => {
     assert.equal(seen[0].duration, QUOTE_BADGE_BOUNCE_REDUCED_MS);
   });
 
+  it("falls back to the count CSS tick when WAAPI is missing", () => {
+    const classes = new Set<string>();
+    const listeners: Array<(event: AnimationEvent) => void> = [];
+    const el = {
+      dataset: { quoteTarget: "count" },
+      classList: {
+        remove(...names: string[]) {
+          for (const name of names) {
+            classes.delete(name);
+          }
+        },
+        add(name: string) {
+          classes.add(name);
+        },
+      },
+      addEventListener(_name: string, handler: (event: AnimationEvent) => void) {
+        listeners.push(handler);
+      },
+      removeEventListener() {
+        listeners.length = 0;
+      },
+    } as unknown as HTMLElement;
+
+    bounceQuoteCount(el);
+    assert.deepEqual([...classes], ["quote-count-tick"]);
+    listeners[0]({ target: el } as unknown as AnimationEvent);
+    assert.deepEqual([...classes], []);
+  });
+
   it("falls back to the CSS bounce class when WAAPI is missing", () => {
     const classes = new Set<string>();
     const listeners: Array<(event: AnimationEvent) => void> = [];
     const el = {
       classList: {
-        remove(name: string) {
-          classes.delete(name);
+        remove(...names: string[]) {
+          for (const name of names) {
+            classes.delete(name);
+          }
         },
         add(name: string) {
           classes.add(name);

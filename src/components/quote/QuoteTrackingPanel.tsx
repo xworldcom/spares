@@ -4,7 +4,7 @@ import { TRACKING_CARRIERS, canEditTracking, trackingVisible } from "@/lib/quote
 import type { Quote, QuoteShipment, Role, TrackingCarrier } from "@/types";
 
 const inputClass =
-  "h-11 w-full min-w-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none";
+  "spares-field h-11 w-full min-w-0 rounded-2xl border-0 px-3 text-[16px] outline-none";
 
 function emptyShipment(): QuoteShipment {
   return { id: `draft-${Date.now()}`, trackingNumber: "" };
@@ -38,7 +38,7 @@ export function QuoteTrackingPanel({
   }
 
   return (
-    <section className="rounded-[24px] bg-white p-5">
+    <section className="spares-surface rounded-[24px] p-5">
       <h2 className="text-[19px] font-semibold tracking-tight">Tracking</h2>
       {quote.status === "shipped" || quote.shipments.length > 0 ? (
         <p className="spares-muted mt-1 text-sm">
@@ -52,7 +52,7 @@ export function QuoteTrackingPanel({
 
       <ul className="mt-4 space-y-3">
         {rows.map((row, index) => (
-          <li key={row.id} className="rounded-[18px] bg-[#f4f5f7] p-3">
+          <li key={row.id} className="spares-field rounded-[18px] p-3">
             {editable ? (
               <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]">
                 <select

@@ -13,6 +13,10 @@ import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
 import { quoteHref } from "@/lib/quotes";
 import {
+  afterNextPaint,
+  bounceQuoteCount,
+} from "@/lib/ui/quote-feedback";
+import {
   initialQuoteSheetSnap,
   type QuoteSheetSnap,
 } from "@/lib/ui/quote-sheet";
@@ -79,10 +83,17 @@ function QuoteTrayForm({
             Quote
           </h2>
           <p className="spares-muted mt-0.5 text-sm">
-            <span data-quote-target="count" className="inline-block origin-left">
-              {lines.length === 0
-                ? "Tap a part on the machine."
-                : `${count} ${count === 1 ? "item" : "items"}`}
+            <span data-quote-target="count" className="quote-count">
+              {lines.length === 0 ? (
+                "Tap a part on the machine."
+              ) : (
+                <>
+                  <span key={count} className="quote-count-num">
+                    {count}
+                  </span>
+                  {` ${count === 1 ? "item" : "items"}`}
+                </>
+              )}
             </span>
           </p>
         </div>
@@ -191,7 +202,7 @@ function QuoteTrayForm({
         </p>
       ) : null}
       {sent ? (
-        <p className="mt-2 text-sm text-neutral-500" role="status">
+        <p className="spares-muted mt-2 text-sm" role="status">
           Quote sent.
           {sentHref ? (
             <>
@@ -260,6 +271,24 @@ export function QuoteTray({
   });
 
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
+  const prevCount = useRef(count);
+
+  useEffect(() => {
+    const increased = count > prevCount.current;
+    prevCount.current = count;
+    if (!increased) {
+      return;
+    }
+    const node = card.current?.querySelector<HTMLElement>(
+      '[data-quote-target="count"]',
+    );
+    if (!node) {
+      return;
+    }
+    afterNextPaint(() => {
+      bounceQuoteCount(node);
+    });
+  }, [count]);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);

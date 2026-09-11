@@ -92,7 +92,7 @@ export function PartsBom({
 
   if (parts.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="spares-muted text-sm">
         No parts are listed on this machine yet.
       </p>
     );
@@ -140,7 +140,7 @@ export function PartsBom({
         </div>
       ) : null}
       {filtered.length === 0 ? (
-        <p className="text-sm text-neutral-500">No parts match that search.</p>
+        <p className="spares-muted text-sm">No parts match that search.</p>
       ) : (
         <ul data-parts-bom="" className="spares-surface overflow-hidden rounded-[22px]">
           {filtered.map((part) => {
@@ -149,7 +149,7 @@ export function PartsBom({
               <li key={part.id}>
                 <div
                   className={`flex min-h-14 w-full items-center gap-3 px-4 py-2 ${
-                    selected ? "row-on-ink" : "text-neutral-800"
+                    selected ? "row-on-ink" : ""
                   }`}
                 >
                   <PartRowSelectButton
@@ -165,7 +165,7 @@ export function PartsBom({
                         onAdd(part);
                       }}
                       className={`${
-                        selected ? "bg-white text-[#0b0d10]" : "btn-accent"
+                        selected ? "btn-primary" : "btn-accent"
                       } inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold`}
                     >
                       Add

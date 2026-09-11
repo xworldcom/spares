@@ -1,79 +1,108 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   QUOTE_PIPELINE,
   QUOTE_STATUS_LABELS,
+  QUOTE_STATUS_SHORT,
+  quoteStatusCaption,
+  quoteStepState,
 } from "@/lib/quotes";
-import type { QuoteStatus } from "@/types";
+import type { QuoteStatus, Role } from "@/types";
 
 export function QuoteStatusStrip({
   status,
   editable,
   pending,
+  role = "customer",
   onChange,
 }: {
   status: QuoteStatus;
   editable: boolean;
   pending?: boolean;
+  role?: Role;
   onChange?: (status: QuoteStatus) => void;
 }) {
-  const currentIndex =
-    status === "cancelled"
-      ? -1
-      : QUOTE_PIPELINE.indexOf(status as (typeof QUOTE_PIPELINE)[number]);
+  const cancelled = status === "cancelled";
+  const trackRef = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const current = trackRef.current?.querySelector<HTMLElement>(
+      '[data-state="current"]',
+    );
+    current?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [status]);
 
   return (
-    <div className="space-y-3">
-      <p className="text-[15px] font-semibold tracking-tight sm:hidden">
-        {QUOTE_STATUS_LABELS[status]}
-      </p>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        {QUOTE_PIPELINE.map((step, index) => {
-          const current = status === step;
-          const past = status !== "cancelled" && index < currentIndex;
-          const className = current
-            ? "btn-primary rounded-full px-3 text-[13px] font-semibold sm:px-3.5 sm:text-sm"
-            : past
-              ? "btn-soft rounded-full px-3 text-[13px] font-medium sm:px-3.5 sm:text-sm"
-              : "rounded-full bg-white px-3 text-[13px] font-medium text-neutral-500 sm:px-3.5 sm:text-sm";
+    <div className="quote-progress" data-cancelled={cancelled || undefined}>
+      <ol
+        ref={trackRef}
+        className="quote-progress-track"
+        aria-label="Quote progress"
+      >
+        {QUOTE_PIPELINE.map((step) => {
+          const state = quoteStepState(status, step);
+          const label = QUOTE_STATUS_LABELS[step];
+          const className = `quote-progress-step quote-progress-${state}`;
+          const inner = (
+            <>
+              <span className="quote-progress-rail" aria-hidden="true" />
+              <span className="quote-progress-dot" aria-hidden="true">
+                {state === "done" ? "✓" : ""}
+              </span>
+              <span className="quote-progress-label quote-progress-label-short">
+                {QUOTE_STATUS_SHORT[step]}
+              </span>
+              <span className="quote-progress-label quote-progress-label-full">
+                {label}
+              </span>
+            </>
+          );
           if (editable && onChange) {
             return (
-              <button
-                key={step}
-                type="button"
-                disabled={pending}
-                onClick={() => onChange(step)}
-                className={`inline-flex h-11 min-w-0 items-center justify-center ${className} disabled:opacity-100`}
-              >
-                {QUOTE_STATUS_LABELS[step]}
-              </button>
+              <li key={step} className="contents">
+                <button
+                  type="button"
+                  disabled={pending}
+                  aria-current={state === "current" ? "step" : undefined}
+                  aria-label={label}
+                  data-state={state}
+                  onClick={() => onChange(step)}
+                  className={className}
+                >
+                  {inner}
+                </button>
+              </li>
             );
           }
           return (
-            <span
+            <li
               key={step}
-              className={`inline-flex h-11 min-w-0 items-center justify-center ${className}`}
+              data-state={state}
+              aria-current={state === "current" ? "step" : undefined}
+              className={className}
             >
-              {QUOTE_STATUS_LABELS[step]}
-            </span>
+              {inner}
+            </li>
           );
         })}
-      </div>
+      </ol>
+      <p className="quote-progress-caption">{quoteStatusCaption(status, role)}</p>
       {editable && onChange ? (
         <button
           type="button"
-          disabled={pending || status === "cancelled"}
+          disabled={pending || cancelled}
           onClick={() => onChange("cancelled")}
           className={
-            status === "cancelled"
+            cancelled
               ? "btn-danger inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-              : "inline-flex h-11 items-center rounded-full px-4 text-sm font-medium text-[#7f1d1d]"
+              : "inline-flex h-11 items-center rounded-full px-4 text-sm font-medium text-[var(--spares-danger)]"
           }
         >
-          {status === "cancelled" ? "Cancelled" : "Cancel quote"}
+          {cancelled ? "Cancelled" : "Cancel quote"}
         </button>
-      ) : status === "cancelled" ? (
-        <p className="text-sm font-medium text-[#7f1d1d]">Cancelled</p>
+      ) : cancelled ? (
+        <p className="text-sm font-medium text-[var(--spares-danger)]">Cancelled</p>
       ) : null}
     </div>
   );

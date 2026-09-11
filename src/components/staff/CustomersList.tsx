@@ -95,22 +95,22 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
   }
 
   return (
-    <section className="space-y-3 rounded-[24px] bg-white p-5">
+    <section className="spares-surface space-y-3 rounded-[24px] p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <h2 className="text-[19px] font-semibold tracking-tight">Accounts</h2>
-        <label className="block min-w-0 flex-1 text-sm font-medium text-neutral-700 sm:max-w-xs">
+        <label className="block min-w-0 flex-1 text-sm font-medium sm:max-w-xs">
           Search
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Email or plant"
-            className="mt-1.5 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none"
+            className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
           />
         </label>
       </div>
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}
@@ -127,7 +127,7 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[28rem] text-left text-sm">
             <thead>
-              <tr className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
+              <tr className="spares-muted text-xs font-medium tracking-wide uppercase">
                 <th className="pb-2 font-medium">Email</th>
                 <th className="pb-2 font-medium">Access</th>
               </tr>
@@ -136,8 +136,8 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
               {filtered.map((row) => {
                 const current = accessValue(row);
                 return (
-                  <tr key={row.id} className="border-t border-black/6">
-                    <td className="py-3 font-medium text-neutral-950">
+                  <tr key={row.id} className="border-t border-white/8">
+                    <td className="py-3 font-medium">
                       {row.email}
                     </td>
                     <td className="py-3">
@@ -147,7 +147,7 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
                         onChange={(event) => {
                           void onAssign(row.id, event.target.value);
                         }}
-                        className="h-11 w-full max-w-xs rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[15px] outline-none"
+                        className="spares-field h-11 w-full max-w-xs rounded-2xl border-0 px-3 text-[15px] outline-none"
                         aria-label={`Plant for ${row.email}`}
                       >
                         <option value="">No access — hidden from models</option>

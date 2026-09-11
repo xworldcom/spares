@@ -195,11 +195,11 @@ export function StaffPartsReview({
         </label>
 
         {rows.length === 0 ? (
-          <p className="mt-4 text-sm text-neutral-500">
+          <p className="spares-muted mt-4 text-sm">
             No parts are listed on this machine yet.
           </p>
         ) : filtered.length === 0 ? (
-          <p className="mt-4 text-sm text-neutral-500">No parts match that search.</p>
+          <p className="spares-muted mt-4 text-sm">No parts match that search.</p>
         ) : (
           <ul data-parts-bom="" className="spares-surface mt-3 overflow-hidden rounded-[22px]">
             {filtered.map((row) => {
@@ -254,7 +254,7 @@ export function StaffPartsReview({
           <section className="mt-5" aria-labelledby="extra-meshes-heading">
             <h2
               id="extra-meshes-heading"
-              className="text-[13px] font-medium text-neutral-800"
+              className="text-[13px] font-medium"
             >
               In the model, not on the list
             </h2>
@@ -273,13 +273,13 @@ export function StaffPartsReview({
                         type="button"
                         onClick={() => setMeshName(name)}
                         className={`flex min-h-12 w-full items-center px-4 py-2 text-left font-mono text-[13px] ${
-                          active ? "row-on-ink" : "text-neutral-700"
+                          active ? "row-on-ink" : ""
                         }`}
                       >
                         {name}
                       </button>
                     ) : (
-                      <p className="flex min-h-12 items-center px-4 py-2 font-mono text-[13px] text-neutral-700">
+                      <p className="flex min-h-12 items-center px-4 py-2 font-mono text-[13px]">
                         {name}
                       </p>
                     )}
@@ -294,15 +294,15 @@ export function StaffPartsReview({
       {selectedRow ? (
         <form
           data-staff-edit=""
-          className="spares-surface shrink-0 border-t border-black/6 px-4 py-3"
+          className="spares-surface shrink-0 border-t border-white/8 px-4 py-3"
           onSubmit={(event) => {
             event.preventDefault();
             void save();
           }}
         >
-          <p className="mb-2 text-[13px] font-medium text-neutral-800">Edit part</p>
+          <p className="mb-2 text-[13px] font-medium">Edit part</p>
           <div className="grid grid-cols-2 gap-2">
-            <label className="col-span-2 block text-xs font-medium text-neutral-500">
+            <label className="spares-muted col-span-2 block text-xs font-medium">
               Part number
               <input
                 value={draft.partNumber}
@@ -315,7 +315,7 @@ export function StaffPartsReview({
                 className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 font-mono text-[15px] outline-none"
               />
             </label>
-            <label className="col-span-2 block text-xs font-medium text-neutral-500">
+            <label className="spares-muted col-span-2 block text-xs font-medium">
               Name
               <input
                 value={draft.name}
@@ -325,7 +325,7 @@ export function StaffPartsReview({
                 className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
               />
             </label>
-            <label className="block text-xs font-medium text-neutral-500">
+            <label className="spares-muted block text-xs font-medium">
               Qty
               <input
                 type="number"
@@ -340,7 +340,7 @@ export function StaffPartsReview({
                 className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[16px] tabular-nums outline-none"
               />
             </label>
-            <label className="block text-xs font-medium text-neutral-500">
+            <label className="spares-muted block text-xs font-medium">
               Mesh name
               <input
                 value={meshName}
@@ -350,7 +350,7 @@ export function StaffPartsReview({
             </label>
           </div>
           {localError || saveError ? (
-            <p className="mt-2 text-sm text-red-700" role="alert">
+            <p className="mt-2 text-sm text-[#f0c4c0]" role="alert">
               {localError ?? saveError}
             </p>
           ) : null}

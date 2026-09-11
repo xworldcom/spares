@@ -18,7 +18,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block text-xs font-medium text-neutral-500">
+    <label className="spares-muted block text-xs font-medium">
       {label}
       <div className="mt-1">{children}</div>
     </label>
@@ -26,7 +26,7 @@ function Field({
 }
 
 const inputClass =
-  "h-11 w-full min-w-0 rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none";
+  "spares-field h-11 w-full min-w-0 rounded-2xl border-0 px-3 text-[16px] outline-none";
 
 function selectQtyInput(input: HTMLInputElement) {
   input.select();
@@ -57,7 +57,7 @@ function QtyField({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium text-neutral-500">
+      <label htmlFor={id} className="spares-muted block text-xs font-medium">
         Qty
       </label>
       <div className="mt-1">
@@ -157,7 +157,7 @@ export function QuoteLines({
         return (
           <article
             key={item.id}
-            className="rounded-[22px] bg-white px-4 py-4"
+            className="spares-surface rounded-[22px] px-4 py-4"
           >
             <p className="text-[17px] font-medium tracking-tight">
               {item.name ?? "Part"}

@@ -87,7 +87,7 @@ export function QuotesList({ role }: { role: Role }) {
   }
 
   return (
-    <ul className="spares-surface divide-y divide-black/6 overflow-hidden rounded-[24px]">
+    <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
       {quotes.map((quote) => {
         const lines = quote.items.length;
         const title = quote.machineName ?? "Machine";
@@ -95,7 +95,7 @@ export function QuotesList({ role }: { role: Role }) {
           <li key={quote.id}>
             <Link
               href={quoteHref(role, quote)}
-              className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-neutral-50 sm:items-center"
+              className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-white/4 sm:items-center"
             >
               {quote.unread ? (
                 <span
@@ -108,7 +108,7 @@ export function QuotesList({ role }: { role: Role }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[17px] font-medium tracking-tight">
                   Quote {quote.number}
-                  <span className="font-normal text-neutral-500"> · {title}</span>
+                  <span className="spares-muted font-normal"> · {title}</span>
                 </p>
                 <p className="spares-muted mt-0.5 truncate text-sm">
                   {formatDay(quote.createdAt)}
@@ -122,7 +122,7 @@ export function QuotesList({ role }: { role: Role }) {
               <span className="hidden shrink-0 sm:inline-flex">
                 <QuoteStatusChip status={quote.status} current />
               </span>
-              <span className="hidden text-lg text-neutral-300 sm:inline" aria-hidden="true">
+              <span className="spares-muted hidden text-lg sm:inline" aria-hidden="true">
                 ›
               </span>
             </Link>

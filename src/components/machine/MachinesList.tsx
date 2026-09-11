@@ -229,7 +229,7 @@ export function MachinesList() {
   return (
     <>
       {error ? (
-        <p className="mb-4 rounded-[20px] bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <p className="spares-alert mb-4 rounded-[20px] px-4 py-3 text-sm" role="alert">
           {error}
         </p>
       ) : null}
@@ -237,12 +237,12 @@ export function MachinesList() {
         <div
           role="dialog"
           aria-labelledby="delete-machine-title"
-          className="mb-4 rounded-[24px] border border-red-200 bg-red-50 p-5"
+          className="spares-alert mb-4 rounded-[24px] p-5"
         >
-          <p id="delete-machine-title" className="text-[17px] font-semibold text-red-950">
+          <p id="delete-machine-title" className="spares-alert-title text-[17px] font-semibold">
             Delete {deleteTarget.name}?
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-red-900/80">
+          <p className="mt-1 text-sm leading-relaxed text-[#f0c4c0]/80">
             This removes the machine from the list and deletes its stored 3D file.
             Customers will no longer see it. This cannot be undone.
           </p>
@@ -261,14 +261,14 @@ export function MachinesList() {
                 void confirmDelete();
               }}
               disabled={deletingId === deleteTarget.id}
-              className="inline-flex h-11 items-center rounded-full bg-red-700 px-4 text-sm font-semibold text-white disabled:opacity-60"
+              className="btn-danger inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-60"
             >
               {deletingId === deleteTarget.id ? "Deleting…" : "Delete machine"}
             </button>
           </div>
         </div>
       ) : null}
-      <ul className="spares-surface divide-y divide-black/6 overflow-hidden rounded-[24px]">
+      <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
       {machines.map((machine) => (
         <li key={machine.id}>
           <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -302,14 +302,14 @@ export function MachinesList() {
                     type="button"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={cancelRename}
-                    className="text-sm font-medium text-neutral-600"
+                    className="spares-muted text-sm font-medium"
                   >
                     Cancel rename
                   </button>
                 </div>
               ) : (
                 <Link href={`/machines/${machine.id}`} className="block min-w-0">
-                  <span className="block truncate text-[17px] font-medium tracking-tight text-neutral-950">
+                  <span className="block truncate text-[17px] font-medium tracking-tight">
                     {machine.name}
                   </span>
                   <span className="spares-muted mt-0.5 block truncate text-[13px]">
@@ -348,14 +348,14 @@ export function MachinesList() {
                     <button
                       type="button"
                       onClick={() => startRename(machine)}
-                      className="text-neutral-700"
+                      className="spares-muted"
                     >
                       Rename
                     </button>
                   )}
                   <Link
                     href={`/machines/new?replace=${machine.id}`}
-                    className="text-neutral-700"
+                    className="spares-muted"
                   >
                     Replace pack
                   </Link>
@@ -365,14 +365,14 @@ export function MachinesList() {
                       setDeleteTarget(machine);
                       setError(null);
                     }}
-                    className="text-red-700"
+                    className="text-[var(--spares-danger)]"
                   >
                     Delete
                   </button>
                 </div>
               </div>
             ) : (
-              <span className="text-lg text-neutral-300" aria-hidden="true">
+              <span className="spares-muted text-lg" aria-hidden="true">
                 ›
               </span>
             )}

@@ -13,6 +13,8 @@ import {
   pricesVisibleToCustomer,
   quoteItemsEqual,
   quotePricingComplete,
+  quoteStatusCaption,
+  quoteStepState,
   shippedActivityText,
   toPublicQuote,
 } from "./quotes.ts";
@@ -155,6 +157,21 @@ describe("status and visibility", () => {
     assert.equal(canEditTracking("ordered"), true);
     assert.equal(canEditTracking("shipped"), true);
     assert.equal(canEditTracking("delivered"), false);
+  });
+
+  it("maps pipeline steps without inventing a second state machine", () => {
+    assert.equal(quoteStepState("requested", "requested"), "current");
+    assert.equal(quoteStepState("pricing", "requested"), "done");
+    assert.equal(quoteStepState("pricing", "quoted"), "todo");
+    assert.equal(quoteStepState("confirmed", "confirmed"), "current");
+    assert.equal(quoteStepState("cancelled", "quoted"), "todo");
+  });
+
+  it("writes a calm caption for the current quote status", () => {
+    assert.equal(quoteStatusCaption("pricing", "customer"), "Staff is pricing…");
+    assert.equal(quoteStatusCaption("quoted", "customer"), "Waiting for your PO");
+    assert.equal(quoteStatusCaption("quoted", "staff"), "Quoted. Waiting for a PO.");
+    assert.equal(quoteStatusCaption("cancelled"), "This quote was cancelled.");
   });
 });
 

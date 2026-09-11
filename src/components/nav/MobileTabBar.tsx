@@ -128,7 +128,7 @@ export function MobileTabBar() {
             onClick={() => setMoreForPath(null)}
           />
           <div
-            className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(12,13,15,0.14)]"
+            className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
             style={{
               bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom) + 0.5rem)",
             }}
@@ -151,7 +151,7 @@ export function MobileTabBar() {
 
       <nav
         aria-label="Primary"
-        className="spares-tabbar fixed inset-x-0 bottom-0 z-[56] border-t border-black/5 backdrop-blur-md lg:hidden"
+        className="spares-tabbar fixed inset-x-0 bottom-0 z-[56] border-t border-white/8 backdrop-blur-md lg:hidden"
       >
         <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1">
           {user.role === "staff" ? (

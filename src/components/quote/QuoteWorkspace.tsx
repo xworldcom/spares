@@ -234,6 +234,7 @@ export function QuoteWorkspace({
         status={displayStatus}
         editable={role === "staff"}
         pending={busy}
+        role={role}
         onChange={(status: QuoteStatus) => {
           setError(null);
           setPendingStatus(status);
@@ -251,19 +252,19 @@ export function QuoteWorkspace({
       ) : null}
 
       {role === "staff" && statusDirty && pendingStatus === "quoted" && !quotePricingComplete(items) ? (
-        <p className="text-sm text-amber-800" role="status">
+        <p className="text-sm text-[#e8c27a]" role="status">
           Enter a sell price above zero on every line before quoting, or confirm to apply
           anyway.
         </p>
       ) : null}
 
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p className="text-sm text-neutral-600" role="status">
+        <p className="spares-muted text-sm" role="status">
           {notice}
         </p>
       ) : null}
@@ -308,7 +309,7 @@ export function QuoteWorkspace({
         }}
       />
 
-      <section className="rounded-[24px] bg-white px-5 py-4">
+      <section className="spares-surface rounded-[24px] px-5 py-4">
         <h2 className="text-[19px] font-semibold tracking-tight">Invoice</h2>
         {role === "staff" ? (
           <form
@@ -327,7 +328,7 @@ export function QuoteWorkspace({
               name="invoice"
               defaultValue={quote.invoiceNumber ?? ""}
               placeholder="INV-1042"
-              className="h-12 flex-1 rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none"
+              className="spares-field h-12 flex-1 rounded-2xl border-0 px-4 text-[16px] outline-none"
             />
             <button
               type="submit"
@@ -338,7 +339,7 @@ export function QuoteWorkspace({
             </button>
           </form>
         ) : (
-          <p className="mt-2 text-sm text-neutral-800">
+          <p className="mt-2 text-sm">
             {quote.invoiceNumber ?? "Invoice number appears here when issued."}
           </p>
         )}
@@ -378,7 +379,7 @@ export function QuoteWorkspace({
 
       {role === "staff" ? (
         <div
-          className="sticky z-20 -mx-4 border-t border-black/6 bg-[#f4f5f7]/94 px-4 py-3 backdrop-blur-md sm:hidden"
+          className="sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
           style={{
             bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px))",
           }}
