@@ -9,30 +9,61 @@ export type QuoteBox = {
 
 export type QuoteTargetKind = "badge" | "count" | "handle";
 
-export const QUOTE_BADGE_BOUNCE_MS = 420;
-export const QUOTE_BADGE_BOUNCE_REDUCED_MS = 280;
+export const QUOTE_BADGE_BOUNCE_MS = 560;
+export const QUOTE_BADGE_BOUNCE_REDUCED_MS = 360;
+export const QUOTE_BOUNCING_ATTR = "data-quote-bouncing";
 
-/** Scale on the filled Quote chip badge. */
+const ACCENT_PILL = "rgba(10, 132, 255, 0.22)";
+const ACCENT_GLOW = "0 0 0 6px rgba(10, 132, 255, 0.22)";
+const ACCENT_REST = "0 0 0 0 rgba(10, 132, 255, 0)";
+
+/** Scale + glow on the filled Quote chip badge. */
 export const QUOTE_BADGE_BOUNCE_KEYFRAMES = [
-  { transform: "scale(1)" },
-  { transform: "scale(1.28)", offset: 0.35 },
-  { transform: "scale(0.94)", offset: 0.65 },
-  { transform: "scale(1)" },
+  { transform: "scale(1)", boxShadow: ACCENT_REST },
+  { transform: "scale(1.32)", boxShadow: ACCENT_GLOW, offset: 0.4 },
+  { transform: "scale(0.96)", boxShadow: "0 0 0 3px rgba(10, 132, 255, 0.12)", offset: 0.72 },
+  { transform: "scale(1)", boxShadow: ACCENT_REST },
 ] as const;
 
-/** Peek/dock "N items" copy: scale plus a brief accent highlight. */
+/** Peek/dock "N items": scale plus a background pill so QA can see it. */
 export const QUOTE_COUNT_BOUNCE_KEYFRAMES = [
-  { transform: "scale(1)", color: "#4b4f57" },
-  { transform: "scale(1.12)", color: "#0a84ff", offset: 0.35 },
-  { transform: "scale(0.98)", color: "#0a84ff", offset: 0.65 },
-  { transform: "scale(1)", color: "#4b4f57" },
+  {
+    transform: "scale(1)",
+    color: "#4b4f57",
+    backgroundColor: "rgba(10, 132, 255, 0)",
+    boxShadow: ACCENT_REST,
+  },
+  {
+    transform: "scale(1.28)",
+    color: "#0a84ff",
+    backgroundColor: ACCENT_PILL,
+    boxShadow: ACCENT_GLOW,
+    offset: 0.4,
+  },
+  {
+    transform: "scale(1.06)",
+    color: "#0a84ff",
+    backgroundColor: "rgba(10, 132, 255, 0.14)",
+    boxShadow: "0 0 0 3px rgba(10, 132, 255, 0.12)",
+    offset: 0.72,
+  },
+  {
+    transform: "scale(1)",
+    color: "#4b4f57",
+    backgroundColor: "rgba(10, 132, 255, 0)",
+    boxShadow: ACCENT_REST,
+  },
 ] as const;
 
-/** No motion: a brief brightness tick so the count still confirms. */
+/** No motion: a background/brightness tick, still obvious. */
 export const QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES = [
-  { filter: "brightness(1)" },
-  { filter: "brightness(1.16)", offset: 0.4 },
-  { filter: "brightness(1)" },
+  { filter: "brightness(1)", backgroundColor: "rgba(10, 132, 255, 0)" },
+  {
+    filter: "brightness(1.22)",
+    backgroundColor: ACCENT_PILL,
+    offset: 0.4,
+  },
+  { filter: "brightness(1)", backgroundColor: "rgba(10, 132, 255, 0)" },
 ] as const;
 
 export function prefersReducedMotion(
@@ -170,11 +201,24 @@ export function bounceVisibleQuoteCount() {
   }
 }
 
+function markQuoteBouncing(el: HTMLElement, on: boolean) {
+  if (on) {
+    el.setAttribute(QUOTE_BOUNCING_ATTR, "");
+    return;
+  }
+  el.removeAttribute(QUOTE_BOUNCING_ATTR);
+}
+
 /** Bounce the real quote-count node. WAAPI first; CSS class if animate() is missing. */
 export function bounceQuoteCount(
   el: HTMLElement,
   motion?: { matches: boolean } | null,
 ): void {
+  markQuoteBouncing(el, true);
+  const clear = () => {
+    markQuoteBouncing(el, false);
+  };
+
   if (typeof el.animate === "function") {
     const reduced = prefersReducedMotion(motion ?? defaultReducedMotionMedia());
     const motionFrames = reduced
@@ -182,10 +226,12 @@ export function bounceQuoteCount(
       : el.dataset.quoteTarget === "count"
         ? QUOTE_COUNT_BOUNCE_KEYFRAMES
         : QUOTE_BADGE_BOUNCE_KEYFRAMES;
-    el.animate([...motionFrames], {
+    const animation = el.animate([...motionFrames], {
       duration: reduced ? QUOTE_BADGE_BOUNCE_REDUCED_MS : QUOTE_BADGE_BOUNCE_MS,
       easing: "ease-out",
     });
+    animation.onfinish = clear;
+    animation.oncancel = clear;
     return;
   }
   el.classList.remove("quote-badge-bounce");
@@ -195,6 +241,7 @@ export function bounceQuoteCount(
     }
     el.classList.remove("quote-badge-bounce");
     el.removeEventListener("animationend", stop);
+    clear();
   };
   el.addEventListener("animationend", stop);
   el.classList.add("quote-badge-bounce");

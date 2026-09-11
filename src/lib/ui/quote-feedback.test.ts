@@ -5,6 +5,7 @@ import {
   QUOTE_BADGE_BOUNCE_MS,
   QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES,
   QUOTE_BADGE_BOUNCE_REDUCED_MS,
+  QUOTE_BOUNCING_ATTR,
   QUOTE_COUNT_BOUNCE_KEYFRAMES,
   boxOnscreen,
   bounceQuoteCount,
@@ -153,16 +154,19 @@ describe("bounce keyframes", () => {
     const last = QUOTE_BADGE_BOUNCE_KEYFRAMES[QUOTE_BADGE_BOUNCE_KEYFRAMES.length - 1];
     assert.equal(first.transform, "scale(1)");
     assert.equal(last.transform, "scale(1)");
-    assert.ok(QUOTE_BADGE_BOUNCE_MS >= 300 && QUOTE_BADGE_BOUNCE_MS <= 500);
+    assert.ok(QUOTE_BADGE_BOUNCE_MS >= 500 && QUOTE_BADGE_BOUNCE_MS <= 600);
     const countLast = QUOTE_COUNT_BOUNCE_KEYFRAMES[QUOTE_COUNT_BOUNCE_KEYFRAMES.length - 1];
     assert.equal(QUOTE_COUNT_BOUNCE_KEYFRAMES[0].transform, "scale(1)");
     assert.equal(countLast.transform, "scale(1)");
     assert.equal(countLast.color, "#4b4f57");
+    assert.ok("backgroundColor" in QUOTE_COUNT_BOUNCE_KEYFRAMES[1]);
+    assert.ok("boxShadow" in QUOTE_COUNT_BOUNCE_KEYFRAMES[1]);
   });
 
-  it("uses filter, not transform, when motion is reduced", () => {
+  it("uses filter and a background tick, not transform, when motion is reduced", () => {
     for (const frame of QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES) {
       assert.ok("filter" in frame);
+      assert.ok("backgroundColor" in frame);
       assert.equal("transform" in frame, false);
     }
     assert.ok(QUOTE_BADGE_BOUNCE_REDUCED_MS < QUOTE_BADGE_BOUNCE_MS);
@@ -174,6 +178,8 @@ describe("bounceQuoteCount", () => {
     const frames: unknown[] = [];
     const el = {
       dataset: { quoteTarget: "badge" },
+      setAttribute() {},
+      removeAttribute() {},
       animate(keyframes: unknown) {
         frames.push(keyframes);
         return {};
@@ -197,6 +203,8 @@ describe("bounceQuoteCount", () => {
     const frames: unknown[] = [];
     const el = {
       dataset: { quoteTarget: "count" },
+      setAttribute() {},
+      removeAttribute() {},
       animate(keyframes: unknown) {
         frames.push(keyframes);
         return {};
@@ -211,6 +219,8 @@ describe("bounceQuoteCount", () => {
     const seen: Array<{ frames: unknown; duration: number }> = [];
     const el = {
       dataset: { quoteTarget: "count" },
+      setAttribute() {},
+      removeAttribute() {},
       animate(keyframes: unknown, options: { duration: number }) {
         seen.push({ frames: keyframes, duration: options.duration });
         return {};
@@ -226,6 +236,7 @@ describe("bounceQuoteCount", () => {
   it("falls back to the CSS bounce class when WAAPI is missing", () => {
     const classes = new Set<string>();
     const listeners: Array<(event: AnimationEvent) => void> = [];
+    const attrs = new Set<string>();
     const el = {
       classList: {
         remove(name: string) {
@@ -234,6 +245,12 @@ describe("bounceQuoteCount", () => {
         add(name: string) {
           classes.add(name);
         },
+      },
+      setAttribute(name: string) {
+        attrs.add(name);
+      },
+      removeAttribute(name: string) {
+        attrs.delete(name);
       },
       addEventListener(_name: string, handler: (event: AnimationEvent) => void) {
         listeners.push(handler);
@@ -245,9 +262,39 @@ describe("bounceQuoteCount", () => {
 
     bounceQuoteCount(el);
     assert.deepEqual([...classes], ["quote-badge-bounce"]);
+    assert.equal(attrs.has(QUOTE_BOUNCING_ATTR), true);
     assert.equal(listeners.length, 1);
     listeners[0]({ target: el } as unknown as AnimationEvent);
     assert.deepEqual([...classes], []);
+    assert.equal(attrs.has(QUOTE_BOUNCING_ATTR), false);
+  });
+
+  it("sets data-quote-bouncing for QA while WAAPI is playing", () => {
+    const attrs = new Set<string>();
+    let finish: (() => void) | undefined;
+    const el = {
+      dataset: { quoteTarget: "count" },
+      setAttribute(name: string) {
+        attrs.add(name);
+      },
+      removeAttribute(name: string) {
+        attrs.delete(name);
+      },
+      animate() {
+        return {
+          set onfinish(fn: () => void) {
+            finish = fn;
+          },
+          set oncancel(_fn: () => void) {},
+        };
+      },
+    } as unknown as HTMLElement;
+
+    bounceQuoteCount(el, { matches: false });
+    assert.equal(attrs.has(QUOTE_BOUNCING_ATTR), true);
+    assert.ok(finish);
+    finish?.();
+    assert.equal(attrs.has(QUOTE_BOUNCING_ATTR), false);
   });
 });
 

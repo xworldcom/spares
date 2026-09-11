@@ -74,7 +74,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       return;
     }
     if (quoteCount > prevQuoteCount.current) {
-      bounceVisibleQuoteCount();
+      prevQuoteCount.current = quoteCount;
+      const frame = window.requestAnimationFrame(() => {
+        bounceVisibleQuoteCount();
+      });
+      return () => window.cancelAnimationFrame(frame);
     }
     prevQuoteCount.current = quoteCount;
   }, [isCustomer, quoteCount]);
@@ -512,6 +516,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             >
               Quote
               <span
+                key="quote-add-badge"
                 data-quote-target="badge"
                 className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums"
               >

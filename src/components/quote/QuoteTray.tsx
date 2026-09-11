@@ -79,7 +79,11 @@ function QuoteTrayForm({
             Quote
           </h2>
           <p className="spares-muted mt-0.5 text-sm">
-            <span data-quote-target="count" className="inline-block origin-left">
+            <span
+              key="quote-add-count"
+              data-quote-target="count"
+              className="quote-count-target"
+            >
               {lines.length === 0
                 ? "Add a part to get started."
                 : `${count} ${count === 1 ? "item" : "items"}`}
@@ -496,6 +500,7 @@ export function QuoteTray({
       >
         Quote
         <span
+          key="quote-add-badge"
           data-quote-target="badge"
           className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums"
         >
