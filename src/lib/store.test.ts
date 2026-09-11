@@ -21,6 +21,7 @@ import {
   getMachine,
   getMachineUsage,
   getQuote,
+  getTicket,
   listMachines,
   listManuals,
   listTickets,
@@ -314,5 +315,61 @@ describe("machine care store", () => {
     assert.equal((await listManuals(created.id)).length, 0);
     assert.equal((await listTickets(created.id)).length, 0);
     assert.equal(await getMachineUsage(created.id), null);
+  });
+
+  it("keeps tickets on the staff queue after a remote catalog heal", async () => {
+    delete process.env.SPARES_DATA_DIR;
+    process.env.VERCEL = "1";
+    const remote = createMemoryPersistence();
+    setPersistenceForTests(remote);
+    resetStoreMemoryForTests();
+
+    const created = await createMachine({
+      name: "Remote care cell",
+      storedFileName: "remote-care.glb",
+      originalFileName: "remote-care.glb",
+      parts: [{ id: "PN-1", name: "Frame", meshName: "PN-1", qty: 1 }],
+      unmatched: [],
+    });
+    const opened = await createTicket({
+      machineId: created.id,
+      title: "Guard rattles",
+      customerId: "user-customer",
+      customerEmail: "customer@spares.local",
+      actor: {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
+      note: "After washdown.",
+    });
+    assert.equal("error" in opened, false);
+    if ("error" in opened) {
+      return;
+    }
+
+    const stale = JSON.parse((await remote.readDatabaseJson()) ?? "{}") as {
+      tickets?: unknown;
+    };
+    delete stale.tickets;
+    await remote.writeDatabaseJson(JSON.stringify(stale));
+    resetStoreMemoryForTests();
+
+    const queued = await listTickets();
+    const byMachine = await listTickets(created.id);
+    const detail = await getTicket(opened.ticket.id);
+    assert.equal(queued.some((ticket) => ticket.id === opened.ticket.id), true);
+    assert.equal(byMachine.some((ticket) => ticket.id === opened.ticket.id), true);
+    assert.equal(detail?.title, "Guard rattles");
+    assert.equal(detail?.id, opened.ticket.id);
+
+    seedEmptyMachineCatalogForTests(seedUsers);
+    await listMachines({ heal: true });
+    resetStoreMemoryForTests();
+    assert.equal(
+      (await listTickets()).some((ticket) => ticket.id === opened.ticket.id),
+      true,
+    );
+    assert.equal((await getTicket(opened.ticket.id))?.number, opened.ticket.number);
   });
 });

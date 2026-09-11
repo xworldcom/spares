@@ -171,12 +171,89 @@ type Database = {
   machineUsage?: StoredUsage[];
 };
 
-function careCollections(db: Database) {
+type CareStore = {
+  manuals: StoredManual[];
+  tickets: StoredTicket[];
+  machineUsage: StoredUsage[];
+};
+
+function emptyCare(): CareStore {
+  return { manuals: [], tickets: [], machineUsage: [] };
+}
+
+function careCollections(db: Pick<Database, "manuals" | "tickets" | "machineUsage">): CareStore {
   return {
     manuals: db.manuals ?? [],
     tickets: db.tickets ?? [],
     machineUsage: db.machineUsage ?? [],
   };
+}
+
+function applyCare(db: Database, care: CareStore): Database {
+  return {
+    ...db,
+    manuals: care.manuals,
+    tickets: care.tickets,
+    machineUsage: care.machineUsage,
+  };
+}
+
+function unionById<T extends { id: string }>(...lists: readonly T[][]): T[] {
+  const map = new Map<string, T>();
+  for (const list of lists) {
+    for (const row of list) {
+      map.set(row.id, row);
+    }
+  }
+  return [...map.values()];
+}
+
+function unionUsage(...lists: readonly StoredUsage[][]): StoredUsage[] {
+  const map = new Map<string, StoredUsage>();
+  for (const list of lists) {
+    for (const row of list) {
+      const previous = map.get(row.machineId);
+      if (!previous || (row.updatedAt ?? "") >= (previous.updatedAt ?? "")) {
+        map.set(row.machineId, row);
+      }
+    }
+  }
+  return [...map.values()];
+}
+
+function unionCare(...stores: readonly CareStore[]): CareStore {
+  return {
+    manuals: unionById(...stores.map((store) => store.manuals)),
+    tickets: unionById(...stores.map((store) => store.tickets)),
+    machineUsage: unionUsage(...stores.map((store) => store.machineUsage)),
+  };
+}
+
+function parseCareJson(raw: string | null): CareStore | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<CareStore>;
+    return {
+      manuals: parsed.manuals ?? [],
+      tickets: parsed.tickets ?? [],
+      machineUsage: parsed.machineUsage ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function readCareStore(): Promise<CareStore> {
+  return parseCareJson(await getPersistence().readCareJson()) ?? emptyCare();
+}
+
+async function overlayPersistedCare(db: Database): Promise<Database> {
+  return applyCare(
+    db,
+    unionCare(careCollections(db), await readCareStore(), memory ? careCollections(memory) : emptyCare()),
+  );
 }
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -387,12 +464,13 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
       persistFile,
     );
   }
-  if (catalogChanged(db, next)) {
-    await writeDatabase(next);
-    return next;
+  const kept = await overlayPersistedCare(next);
+  if (catalogChanged(db, kept)) {
+    await writeCatalogHeal(kept);
+    return kept;
   }
-  memory = next;
-  return next;
+  memory = kept;
+  return kept;
 }
 
 function parseDatabase(
@@ -434,15 +512,19 @@ async function readDatabase(): Promise<Database> {
   const raw = await getPersistence().readDatabaseJson();
   const loaded = raw ? parseDatabase(raw) : null;
   if (!loaded) {
-    const seeded = await withFixtureMachines(await seedDatabase());
+    const seeded = await overlayPersistedCare(
+      await withFixtureMachines(await seedDatabase()),
+    );
     await writeDatabase(seeded);
     return seeded;
   }
 
   const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
-  const next = ensureSites(
-    await withFixtureMachines(
-      await ensureExtraCustomers(stabilizeSeedUsers({ ...loaded.db, quotes })),
+  const next = await overlayPersistedCare(
+    ensureSites(
+      await withFixtureMachines(
+        await ensureExtraCustomers(stabilizeSeedUsers({ ...loaded.db, quotes })),
+      ),
     ),
   );
   const usersRemapped =
@@ -454,16 +536,31 @@ async function readDatabase(): Promise<Database> {
     usersRemapped ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0)
   ) {
-    await writeDatabase(next);
+    await writeCatalogHeal(next);
     return next;
   }
   memory = next;
   return next;
 }
 
+async function writeCareStore(care: CareStore) {
+  await getPersistence().writeCareJson(JSON.stringify(care, null, 2));
+}
+
 async function writeDatabase(next: Database) {
-  memory = next;
-  await getPersistence().writeDatabaseJson(JSON.stringify(next, null, 2));
+  const normalized = applyCare(next, careCollections(next));
+  memory = normalized;
+  await Promise.all([
+    getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
+    writeCareStore(careCollections(normalized)),
+  ]);
+}
+
+/** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
+async function writeCatalogHeal(next: Database) {
+  const kept = await overlayPersistedCare(next);
+  memory = kept;
+  await getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2));
 }
 
 function normalizeEmail(email: string) {
@@ -1091,6 +1188,9 @@ function findTicketInList(tickets: StoredTicket[], idOrNumber: string) {
   const byId = tickets.find((ticket) => ticket.id === idOrNumber);
   if (byId) {
     return byId;
+  }
+  if (!/^\d+$/.test(idOrNumber)) {
+    return null;
   }
   const number = Number.parseInt(idOrNumber, 10);
   if (!Number.isFinite(number) || number < 1) {

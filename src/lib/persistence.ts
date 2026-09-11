@@ -1,6 +1,6 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { BLOB_DB_PATH, BLOB_FILES_PREFIX } from "./blob-paths.ts";
+import { BLOB_CARE_PATH, BLOB_DB_PATH, BLOB_FILES_PREFIX } from "./blob-paths.ts";
 
 export type StoreKind = "fs" | "blob" | "memory";
 
@@ -8,6 +8,8 @@ export type Persistence = {
   kind: StoreKind;
   readDatabaseJson(): Promise<string | null>;
   writeDatabaseJson(json: string): Promise<void>;
+  readCareJson(): Promise<string | null>;
+  writeCareJson(json: string): Promise<void>;
   readFileBytes(name: string): Promise<Buffer | null>;
   writeFileBytes(name: string, bytes: Buffer): Promise<void>;
   deleteFileBytes(name: string): Promise<void>;
@@ -40,6 +42,7 @@ export function filesDir() {
 
 export function createMemoryPersistence(): Persistence {
   let json: string | null = null;
+  let careJson: string | null = null;
   const files = new Map<string, Buffer>();
   return {
     kind: "memory",
@@ -48,6 +51,12 @@ export function createMemoryPersistence(): Persistence {
     },
     async writeDatabaseJson(next) {
       json = next;
+    },
+    async readCareJson() {
+      return careJson;
+    },
+    async writeCareJson(next) {
+      careJson = next;
     },
     async readFileBytes(name) {
       const bytes = files.get(safeStoredFileName(name));
@@ -111,6 +120,7 @@ function warnEphemeral() {
 
 function fsPersistence(root: string): Persistence {
   const dbFile = path.join(root, "db.json");
+  const careFile = path.join(root, "care.json");
   const filesRoot = path.join(root, "files");
   return {
     kind: "fs",
@@ -124,6 +134,17 @@ function fsPersistence(root: string): Persistence {
     async writeDatabaseJson(json) {
       await mkdir(filesRoot, { recursive: true });
       await writeFile(dbFile, json);
+    },
+    async readCareJson() {
+      try {
+        return await readFile(careFile, "utf8");
+      } catch {
+        return null;
+      }
+    },
+    async writeCareJson(json) {
+      await mkdir(filesRoot, { recursive: true });
+      await writeFile(careFile, json);
     },
     async readFileBytes(name) {
       try {
@@ -160,6 +181,20 @@ function blobPersistence(): Persistence {
         addRandomSuffix: false,
         allowOverwrite: true,
         // Blob CDN minimum is 60s; every read uses useCache: false.
+        cacheControlMaxAge: 60,
+        contentType: "application/json",
+      });
+    },
+    async readCareJson() {
+      const bytes = await readBlob(BLOB_CARE_PATH);
+      return bytes ? bytes.toString("utf8") : null;
+    },
+    async writeCareJson(json) {
+      const { put } = await import("@vercel/blob");
+      await put(BLOB_CARE_PATH, json, {
+        access: "private",
+        addRandomSuffix: false,
+        allowOverwrite: true,
         cacheControlMaxAge: 60,
         contentType: "application/json",
       });
