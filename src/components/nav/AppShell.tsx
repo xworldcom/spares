@@ -206,7 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {logoutError ? (
-          <p className="px-4 py-2 text-sm text-red-700" role="alert">
+          <p className="px-4 py-2 text-sm text-[#f0c4c0]" role="alert">
             {logoutError}
           </p>
         ) : null}

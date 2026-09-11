@@ -7,24 +7,25 @@
   --spares-tabbar: calc(4.15rem + env(safe-area-inset-bottom, 0px));
   --spares-accent: #0a84ff;
   --spares-on-accent: #ffffff;
-  --spares-ink: #111214;
-  --spares-on-ink: #f3efe6;
-  --spares-paper: #e8e4dc;
-  --spares-on-paper: #111214;
-  --spares-muted: #534f48;
-  --spares-danger: #7f1d1d;
+  --spares-ink: #eceae4;
+  --spares-on-ink: #0c0d0f;
+  --spares-paper: #0c0d0f;
+  --spares-on-paper: #eceae4;
+  --spares-muted: #a8a49c;
+  --spares-danger: #c23b3b;
   --spares-on-danger: #ffffff;
-  --spares-soft: #ddd8ce;
-  --spares-lift: #f4f1ea;
+  --spares-soft: #1c1f26;
+  --spares-lift: #16181d;
   --spares-stage: #12161c;
   --spares-chip: #1a2028;
-  --spares-on-chip: #f3efe6;
+  --spares-on-chip: #eceae4;
   --spares-login: #0c0d0f;
-  --spares-on-login: #f3efe6;
+  --spares-on-login: #eceae4;
+  --spares-line: rgba(236, 234, 228, 0.08);
   --spares-tray: 22.5rem;
   --sheet-ease: cubic-bezier(0.32, 0.72, 0, 1);
   --sheet-duration: 0.42s;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 /*
@@ -74,7 +75,7 @@
 }
 
 .chrome-quiet {
-  color: rgba(243, 239, 230, 0.62);
+  color: rgba(236, 234, 228, 0.62);
 }
 
 .spares-surface {
@@ -96,11 +97,11 @@
 
 .spares-app-login .spares-muted,
 .login-page .spares-muted {
-  color: rgba(243, 239, 230, 0.62);
+  color: rgba(236, 234, 228, 0.62);
 }
 
 .login-kicker {
-  color: rgba(243, 239, 230, 0.48);
+  color: rgba(236, 234, 228, 0.48);
 }
 
 .login-input {
@@ -113,16 +114,16 @@
   background: #181a1e;
   padding: 0 1rem;
   color: var(--spares-on-login);
-  box-shadow: inset 0 0 0 1px rgba(243, 239, 230, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.08);
 }
 
 .login-input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 1px rgba(243, 239, 230, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.28);
 }
 
 .login-label {
-  color: rgba(243, 239, 230, 0.62);
+  color: rgba(236, 234, 228, 0.62);
 }
 
 .login-submit {
@@ -149,7 +150,7 @@
 }
 
 .row-on-ink .row-on-ink-muted {
-  color: rgba(243, 239, 230, 0.68);
+  color: rgba(12, 13, 15, 0.62);
 }
 
 .spares-muted {
@@ -165,7 +166,7 @@
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(17, 18, 20, 0.18);
+  background: rgba(236, 234, 228, 0.22);
   position: relative;
   touch-action: none;
   cursor: grab;
@@ -191,9 +192,9 @@
   height: calc(100% - 0.35rem);
   background: var(--spares-lift);
   color: var(--spares-ink);
-  box-shadow: 0 -12px 40px rgba(12, 13, 15, 0.16);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
-  --peek-h: 6.75rem;
+  --peek-h: 7.85rem;
   --sheet-y: max(0px, calc(100% - var(--peek-h)));
   --drag: 0px;
   transform: translate3d(0, calc(var(--sheet-y) + var(--drag)), 0);
@@ -247,7 +248,7 @@
     --sheet-x: 0px;
     transform: translate3d(var(--sheet-x), 0, 0);
     touch-action: manipulation;
-    box-shadow: 0 18px 48px rgba(12, 13, 15, 0.14);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
   }
 
   .quote-sheet.is-peek,
@@ -291,7 +292,7 @@
     height: 100%;
     min-height: 0;
     border-radius: 28px;
-    box-shadow: 0 18px 48px rgba(12, 13, 15, 0.14);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
   }
 
   .quote-tray-dock .quote-sheet.is-out {
@@ -455,7 +456,7 @@ html.spares-embed .spares-app-stage {
     position: absolute;
     inset: 1.1rem 2px;
     border-radius: 999px;
-    background: #c5c9d0;
+    background: rgba(236, 234, 228, 0.22);
     transition: background var(--spares-duration) var(--spares-ease);
   }
 
@@ -475,7 +476,7 @@ html.spares-embed .spares-app-stage {
     text-rendering: optimizeLegibility;
     background: var(--spares-paper);
     color: var(--spares-ink);
-    color-scheme: light;
+    color-scheme: dark;
     overflow-x: clip;
   }
 
@@ -568,7 +569,7 @@ html.spares-embed .spares-app-stage {
 .explode-slider::-webkit-slider-runnable-track {
   height: 3px;
   border-radius: 999px;
-  background: rgba(243, 239, 230, 0.28);
+  background: rgba(236, 234, 228, 0.28);
 }
 
 .explode-slider::-webkit-slider-thumb {
@@ -584,7 +585,7 @@ html.spares-embed .spares-app-stage {
 .explode-slider::-moz-range-track {
   height: 3px;
   border-radius: 999px;
-  background: rgba(243, 239, 230, 0.28);
+  background: rgba(236, 234, 228, 0.28);
 }
 
 .explode-slider::-moz-range-thumb {
@@ -595,14 +596,34 @@ html.spares-embed .spares-app-stage {
   background: var(--spares-on-chip);
 }
 
+.spares-alert {
+  border: 1px solid rgba(194, 59, 59, 0.35);
+  background: rgba(194, 59, 59, 0.14);
+  color: #f0c4c0;
+}
+
+.spares-alert-title {
+  color: #f7d4d1;
+}
+
+.spares-tabbar {
+  border-color: var(--spares-line);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .quote-sheet,
-  .machine-stage-grid {
+  .machine-stage-grid,
+  .quote-progress-current .quote-progress-dot {
     transition: none;
+    animation: none;
   }
 
   .quote-badge-bounce {
     animation: quote-badge-bounce-calm 0.28s ease-out;
+  }
+
+  .quote-count-tick {
+    animation: quote-count-tick-calm 0.32s ease-out;
   }
 }
 
@@ -623,9 +644,41 @@ html.spares-embed .spares-app-stage {
   0%,
   100% {
     filter: brightness(1);
+    background-color: transparent;
   }
   40% {
-    filter: brightness(1.16);
+    filter: brightness(1.22);
+    background-color: rgba(10, 132, 255, 0.28);
+  }
+}
+
+@keyframes quote-count-tick {
+  0%,
+  100% {
+    transform: scale(1);
+    background-color: rgba(10, 132, 255, 0);
+    color: inherit;
+  }
+  32% {
+    transform: scale(1.28);
+    background-color: rgba(10, 132, 255, 0.36);
+    color: #ffffff;
+  }
+  62% {
+    transform: scale(0.96);
+    background-color: rgba(10, 132, 255, 0.18);
+  }
+}
+
+@keyframes quote-count-tick-calm {
+  0%,
+  100% {
+    filter: brightness(1);
+    background-color: rgba(10, 132, 255, 0);
+  }
+  40% {
+    filter: brightness(1.28);
+    background-color: rgba(10, 132, 255, 0.4);
   }
 }
 
@@ -634,10 +687,195 @@ html.spares-embed .spares-app-stage {
   animation: quote-badge-bounce 0.42s ease-out;
 }
 
+.quote-count {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  margin-left: -0.5em;
+  border-radius: 999px;
+  transform-origin: left center;
+  will-change: transform, background-color;
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--spares-muted);
+}
+
+.quote-count-tick {
+  animation: quote-count-tick 0.48s ease-out;
+}
+
+.quote-count-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.15em;
+}
+
 [data-quote-target="count"] {
   transform-origin: left center;
 }
 
 [data-quote-target="badge"] {
   transform-origin: center;
+}
+
+.quote-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.quote-progress-track {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 0;
+  padding: 0.15rem 0 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.quote-progress-track::-webkit-scrollbar {
+  display: none;
+}
+
+.quote-progress-step {
+  position: relative;
+  display: flex;
+  min-height: 2.75rem;
+  min-width: 3.4rem;
+  flex: 1 0 3.4rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+}
+
+.quote-progress-step:disabled {
+  opacity: 1;
+}
+
+.quote-progress-rail {
+  position: absolute;
+  top: 0.68rem;
+  left: calc(50% + 0.7rem);
+  right: calc(-50% + 0.7rem);
+  height: 1px;
+  background: rgba(236, 234, 228, 0.12);
+  pointer-events: none;
+}
+
+.quote-progress-track > :last-child .quote-progress-rail {
+  display: none;
+}
+
+.quote-progress-step[data-state="done"] .quote-progress-rail {
+  background: color-mix(in srgb, var(--spares-accent) 55%, transparent);
+}
+
+.quote-progress-dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  height: 1.35rem;
+  width: 1.35rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--spares-soft);
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.1);
+  color: transparent;
+  font-size: 0;
+}
+
+.quote-progress-step[data-state="done"] .quote-progress-dot {
+  background: color-mix(in srgb, var(--spares-accent) 78%, #0c0d0f);
+  box-shadow: none;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.quote-progress-step[data-state="current"] .quote-progress-dot {
+  height: 1.55rem;
+  width: 1.55rem;
+  background: var(--spares-accent);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.18);
+  animation: quote-progress-pulse 1.8s ease-out infinite;
+}
+
+.quote-progress-label {
+  max-width: 4.6rem;
+  color: var(--spares-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.quote-progress-label-full {
+  display: none;
+}
+
+.quote-progress-step[data-state="current"] .quote-progress-label {
+  color: var(--spares-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.quote-progress-step[data-state="done"] .quote-progress-label {
+  color: color-mix(in srgb, var(--spares-ink) 78%, var(--spares-muted));
+}
+
+.quote-progress-caption {
+  color: var(--spares-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.quote-progress[data-cancelled="true"] .quote-progress-step {
+  opacity: 0.45;
+}
+
+@keyframes quote-progress-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.16);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(10, 132, 255, 0.08);
+  }
+}
+
+@media (min-width: 640px) {
+  .quote-progress-step {
+    min-width: 4.6rem;
+    flex-basis: 4.6rem;
+  }
+
+  .quote-progress-label-short {
+    display: none;
+  }
+
+  .quote-progress-label-full {
+    display: block;
+    max-width: 5.6rem;
+    font-size: 12px;
+  }
+
+  .quote-progress-step[data-state="current"] .quote-progress-label-full {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-progress-step[data-state="current"] .quote-progress-dot {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.28);
+  }
 }

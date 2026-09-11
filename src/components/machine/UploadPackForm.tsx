@@ -19,18 +19,18 @@ const SPARES_EXPORT_README_URL = "/export/README.md";
 
 function SolidWorksExportCard() {
   return (
-    <section className="space-y-3 rounded-[24px] bg-white p-5">
-      <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+    <section className="spares-surface space-y-3 rounded-[24px] p-5">
+      <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
         From SolidWorks
       </p>
-      <div className="rounded-[22px] bg-[#f4f5f7] px-4 py-5 ring-1 ring-black/8">
-        <span className="block text-sm font-medium text-neutral-950">
+      <div className="spares-field rounded-[22px] px-4 py-5 ring-1 ring-white/8">
+        <span className="block text-sm font-medium">
           Publish to Spares macro
         </span>
         <ol className="spares-muted mt-2 list-decimal space-y-1 pl-4 text-sm leading-relaxed">
           <li>
             Download the macro and add it once in SolidWorks (
-            <span className="text-neutral-700">Tools → Macro</span>).
+            <span>Tools → Macro</span>).
           </li>
           <li>
             Open your saved assembly and run it — you get a GLB and a parts
@@ -46,13 +46,13 @@ function SolidWorksExportCard() {
           <a
             href={SPARES_MACRO_URL}
             download="spares-pack.bas"
-            className="inline-flex h-11 items-center rounded-full bg-[#0b0d10] px-4 text-sm font-semibold text-[#fff]"
+            className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
           >
             Download macro
           </a>
           <a
             href={SPARES_EXPORT_README_URL}
-            className="text-sm font-medium text-neutral-700 underline underline-offset-2"
+            className="spares-muted text-sm font-medium underline underline-offset-2"
           >
             More detail
           </a>
@@ -95,19 +95,19 @@ function FileDrop({
           onFile(next);
         }
       }}
-      className={`block cursor-pointer rounded-[22px] px-4 py-5 ring-1 ring-black/8 ${
-        over ? "bg-[#eceef2]" : "bg-[#f4f5f7]"
+      className={`block cursor-pointer rounded-[22px] px-4 py-5 ring-1 ring-white/8 ${
+        over ? "bg-[var(--spares-lift)]" : "spares-field"
       }`}
     >
-      <span className="block text-sm font-medium text-neutral-950">{label}</span>
+      <span className="block text-sm font-medium">{label}</span>
       <span className="spares-muted mt-1 block text-sm leading-relaxed">{hint}</span>
-      <span className="mt-3 inline-flex h-11 items-center rounded-full bg-[#0b0d10] px-4 text-sm font-semibold text-[#fff]">
+      <span className="btn-primary mt-3 inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold">
         {file ? "Replace file" : "Choose file"}
       </span>
       {file ? (
-        <span className="mt-2 block truncate font-mono text-[13px] text-neutral-700">
+        <span className="mt-2 block truncate font-mono text-[13px]">
           {file.name}
-          <span className="text-neutral-500"> · {formatMegabytes(file.size)} MB</span>
+          <span className="spares-muted"> · {formatMegabytes(file.size)} MB</span>
         </span>
       ) : null}
       <input
@@ -290,7 +290,7 @@ export function UploadPackForm() {
   }
 
   const fieldClass =
-    "mt-1.5 h-12 w-full rounded-2xl border-0 bg-[#f4f5f7] px-4 text-[16px] outline-none";
+    "spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none";
 
   return (
     <div className="space-y-6">
@@ -300,14 +300,14 @@ export function UploadPackForm() {
         }}
         className="space-y-4"
       >
-        <section className="space-y-4 rounded-[24px] bg-white p-5">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+        <section className="spares-surface space-y-4 rounded-[24px] p-5">
+          <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
             1 · {replaceId ? "Machine details" : "Where it lives"}
           </p>
           {replaceId ? (
-            <p className="text-sm leading-relaxed text-neutral-700">
+            <p className="spares-muted text-sm leading-relaxed">
               Replacing the pack for{" "}
-              <span className="font-medium text-neutral-950">
+              <span className="font-medium text-[var(--spares-ink)]">
                 {replaceName ?? "this machine"}
               </span>
               . Upload a new GLB and parts list. Change the plant from the machines
@@ -352,8 +352,8 @@ export function UploadPackForm() {
 
         <SolidWorksExportCard />
 
-        <section className="space-y-3 rounded-[24px] bg-white p-5">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+        <section className="spares-surface space-y-3 rounded-[24px] p-5">
+          <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
             2 · 3D model
           </p>
           <FileDrop
@@ -366,8 +366,8 @@ export function UploadPackForm() {
           />
         </section>
 
-        <section className="space-y-3 rounded-[24px] bg-white p-5">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+        <section className="spares-surface space-y-3 rounded-[24px] p-5">
+          <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
             3 · Parts list
           </p>
           <p className="spares-muted text-sm leading-relaxed">
@@ -408,13 +408,13 @@ export function UploadPackForm() {
                 onFile={setPartsListFile}
               />
               {previewError ? (
-                <p className="text-sm text-red-700" role="alert">
+                <p className="text-sm text-[#f0c4c0]" role="alert">
                   {previewError}
                 </p>
               ) : null}
               {previewRows.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px] bg-[#f4f5f7] px-3 py-3">
-                  <p className="text-[13px] font-medium text-neutral-800">
+                <div className="spares-field overflow-x-auto rounded-[18px] px-3 py-3">
+                  <p className="text-[13px] font-medium">
                     {previewRows.length} part
                     {previewRows.length === 1 ? "" : "s"} ready to join
                   </p>
@@ -425,12 +425,12 @@ export function UploadPackForm() {
                         className="flex justify-between gap-3 text-[13px]"
                       >
                         <span className="min-w-0 truncate">
-                          <span className="font-mono text-neutral-700">
+                          <span className="font-mono">
                             {row.partNumber}
                           </span>
-                          <span className="text-neutral-500"> · {row.name}</span>
+                          <span className="spares-muted"> · {row.name}</span>
                         </span>
-                        <span className="shrink-0 tabular-nums text-neutral-500">
+                        <span className="spares-muted shrink-0 tabular-nums">
                           ×{row.qty}
                         </span>
                       </li>
@@ -449,9 +449,9 @@ export function UploadPackForm() {
               {rows.map((row, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-2 gap-2 rounded-[20px] bg-[#f4f5f7] p-3"
+                  className="spares-field grid grid-cols-2 gap-2 rounded-[20px] p-3"
                 >
-                  <label className="col-span-2 block text-xs font-medium text-neutral-500">
+                  <label className="spares-muted col-span-2 block text-xs font-medium">
                     Part number
                     <input
                       aria-label={`Part number ${index + 1}`}
@@ -459,10 +459,10 @@ export function UploadPackForm() {
                       onChange={(event) =>
                         updateRow(index, { partNumber: event.target.value })
                       }
-                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 font-mono text-[15px] outline-none"
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-[var(--spares-paper)] px-3 font-mono text-[15px] outline-none"
                     />
                   </label>
-                  <label className="col-span-2 block text-xs font-medium text-neutral-500">
+                  <label className="spares-muted col-span-2 block text-xs font-medium">
                     Name
                     <input
                       aria-label={`Name ${index + 1}`}
@@ -470,10 +470,10 @@ export function UploadPackForm() {
                       onChange={(event) =>
                         updateRow(index, { name: event.target.value })
                       }
-                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 text-[16px] outline-none"
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-[var(--spares-paper)] px-3 text-[16px] outline-none"
                     />
                   </label>
-                  <label className="block text-xs font-medium text-neutral-500">
+                  <label className="spares-muted block text-xs font-medium">
                     Qty
                     <input
                       aria-label={`Qty ${index + 1}`}
@@ -485,10 +485,10 @@ export function UploadPackForm() {
                           qty: Number(event.target.value) || 1,
                         })
                       }
-                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 text-[16px] tabular-nums outline-none"
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-[var(--spares-paper)] px-3 text-[16px] tabular-nums outline-none"
                     />
                   </label>
-                  <label className="block text-xs font-medium text-neutral-500">
+                  <label className="spares-muted block text-xs font-medium">
                     Mesh name
                     <input
                       aria-label={`Mesh name ${index + 1}`}
@@ -496,7 +496,7 @@ export function UploadPackForm() {
                       onChange={(event) =>
                         updateRow(index, { meshName: event.target.value })
                       }
-                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-white px-3 font-mono text-[15px] outline-none"
+                      className="mt-1 h-11 w-full rounded-2xl border-0 bg-[var(--spares-paper)] px-3 font-mono text-[15px] outline-none"
                     />
                   </label>
                 </div>
@@ -513,7 +513,7 @@ export function UploadPackForm() {
         </section>
 
         {error ? (
-          <p className="text-sm text-red-700" role="alert">
+          <p className="text-sm text-[#f0c4c0]" role="alert">
             {error}
           </p>
         ) : null}
@@ -528,8 +528,8 @@ export function UploadPackForm() {
       </form>
 
       {result ? (
-        <div className="space-y-3 rounded-[24px] bg-white p-5">
-          <p className="text-[17px] font-semibold text-neutral-900">
+        <div className="spares-surface space-y-3 rounded-[24px] p-5">
+          <p className="text-[17px] font-semibold">
             {replaceId ? "Pack replaced" : "Pack uploaded"}: {result.name}
           </p>
           <p className="spares-muted text-sm">

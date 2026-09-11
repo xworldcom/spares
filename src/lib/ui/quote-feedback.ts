@@ -12,7 +12,11 @@ export type QuoteBox = {
 export type QuoteTargetKind = "badge" | "count" | "handle";
 
 export const QUOTE_BADGE_BOUNCE_MS = 420;
+export const QUOTE_COUNT_BOUNCE_MS = 480;
 export const QUOTE_BADGE_BOUNCE_REDUCED_MS = 280;
+export const QUOTE_COUNT_HIGHLIGHT = "rgba(10, 132, 255, 0.36)";
+export const QUOTE_COUNT_HIGHLIGHT_MID = "rgba(10, 132, 255, 0.18)";
+export const QUOTE_COUNT_HIGHLIGHT_OFF = "rgba(10, 132, 255, 0)";
 
 /** Scale on the filled Quote chip badge. */
 export const QUOTE_BADGE_BOUNCE_KEYFRAMES = [
@@ -22,19 +26,41 @@ export const QUOTE_BADGE_BOUNCE_KEYFRAMES = [
   { transform: "scale(1)" },
 ] as const;
 
-/** Peek/dock "N items" copy: scale plus a brief accent highlight. */
+/** Peek/dock "N items" copy: strong scale plus an accent pill. */
 export const QUOTE_COUNT_BOUNCE_KEYFRAMES = [
-  { transform: "scale(1)", color: SPARES_TONES.muted },
-  { transform: "scale(1.12)", color: SPARES_TONES.accent, offset: 0.35 },
-  { transform: "scale(0.98)", color: SPARES_TONES.accent, offset: 0.65 },
-  { transform: "scale(1)", color: SPARES_TONES.muted },
+  {
+    transform: "scale(1)",
+    backgroundColor: QUOTE_COUNT_HIGHLIGHT_OFF,
+    color: SPARES_TONES.muted,
+  },
+  {
+    transform: "scale(1.28)",
+    backgroundColor: QUOTE_COUNT_HIGHLIGHT,
+    color: "#ffffff",
+    offset: 0.32,
+  },
+  {
+    transform: "scale(0.96)",
+    backgroundColor: QUOTE_COUNT_HIGHLIGHT_MID,
+    color: "#ffffff",
+    offset: 0.62,
+  },
+  {
+    transform: "scale(1)",
+    backgroundColor: QUOTE_COUNT_HIGHLIGHT_OFF,
+    color: SPARES_TONES.muted,
+  },
 ] as const;
 
-/** No motion: a brief brightness tick so the count still confirms. */
+/** No motion: a brief brightness + background tick so the count still confirms. */
 export const QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES = [
-  { filter: "brightness(1)" },
-  { filter: "brightness(1.16)", offset: 0.4 },
-  { filter: "brightness(1)" },
+  { filter: "brightness(1)", backgroundColor: QUOTE_COUNT_HIGHLIGHT_OFF },
+  {
+    filter: "brightness(1.28)",
+    backgroundColor: QUOTE_COUNT_HIGHLIGHT,
+    offset: 0.4,
+  },
+  { filter: "brightness(1)", backgroundColor: QUOTE_COUNT_HIGHLIGHT_OFF },
 ] as const;
 
 export function prefersReducedMotion(
@@ -66,10 +92,10 @@ export function boxOnscreen(
 }
 
 export function rankQuoteTarget(kind: string | undefined): number {
-  if (kind === "badge") {
+  if (kind === "count") {
     return 0;
   }
-  if (kind === "count") {
+  if (kind === "badge") {
     return 1;
   }
   if (kind === "handle") {
@@ -118,34 +144,55 @@ export function queryQuoteAddTarget(
   return picked?.el ?? null;
 }
 
+export function afterNextPaint(run: () => void): void {
+  if (typeof requestAnimationFrame !== "function") {
+    run();
+    return;
+  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(run);
+  });
+}
+
 /** Bounce the real quote-count node. WAAPI first; CSS class if animate() is missing. */
 export function bounceQuoteCount(
   el: HTMLElement,
   motion?: { matches: boolean } | null,
 ): void {
+  const isCount = el.dataset?.quoteTarget === "count";
+  if (typeof el.getAnimations === "function") {
+    for (const running of el.getAnimations()) {
+      running.cancel();
+    }
+  }
   if (typeof el.animate === "function") {
     const reduced = prefersReducedMotion(motion ?? defaultReducedMotionMedia());
     const motionFrames = reduced
       ? QUOTE_BADGE_BOUNCE_REDUCED_KEYFRAMES
-      : el.dataset.quoteTarget === "count"
+      : isCount
         ? QUOTE_COUNT_BOUNCE_KEYFRAMES
         : QUOTE_BADGE_BOUNCE_KEYFRAMES;
     el.animate([...motionFrames], {
-      duration: reduced ? QUOTE_BADGE_BOUNCE_REDUCED_MS : QUOTE_BADGE_BOUNCE_MS,
+      duration: reduced
+        ? QUOTE_BADGE_BOUNCE_REDUCED_MS
+        : isCount
+          ? QUOTE_COUNT_BOUNCE_MS
+          : QUOTE_BADGE_BOUNCE_MS,
       easing: "ease-out",
     });
     return;
   }
-  el.classList.remove("quote-badge-bounce");
+  const cssClass = isCount ? "quote-count-tick" : "quote-badge-bounce";
+  el.classList.remove("quote-badge-bounce", "quote-count-tick");
   const stop = (event: AnimationEvent) => {
     if (event.target !== el) {
       return;
     }
-    el.classList.remove("quote-badge-bounce");
+    el.classList.remove("quote-badge-bounce", "quote-count-tick");
     el.removeEventListener("animationend", stop);
   };
   el.addEventListener("animationend", stop);
-  el.classList.add("quote-badge-bounce");
+  el.classList.add(cssClass);
 }
 
 function softDing() {
@@ -183,11 +230,13 @@ export function quoteAddFeedback() {
   softDing();
 }
 
-/** Haptic/ding (if the browser allows) plus a bounce on the visible count. */
+/** Haptic/ding now; bounce the painted count (or badge) after commit. */
 export function playQuoteAddMotion() {
   quoteAddFeedback();
-  const target = queryQuoteAddTarget();
-  if (target) {
-    bounceQuoteCount(target);
-  }
+  afterNextPaint(() => {
+    const target = queryQuoteAddTarget();
+    if (target) {
+      bounceQuoteCount(target);
+    }
+  });
 }

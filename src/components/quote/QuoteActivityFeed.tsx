@@ -33,7 +33,7 @@ function InitialsAvatar({
       className={
         own
           ? "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0a84ff] text-[12px] font-semibold tracking-wide text-white"
-          : "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#0b0d10] text-[12px] font-semibold tracking-wide text-white"
+          : "btn-soft inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold tracking-wide"
       }
     >
       {initials}
@@ -57,7 +57,7 @@ export function QuoteActivityFeed({
   const [text, setText] = useState("");
 
   return (
-    <section className="rounded-[24px] bg-white p-5">
+    <section className="spares-surface rounded-[24px] p-5">
       <h2 className="text-[19px] font-semibold tracking-tight">Activity</h2>
       <ol className="mt-4 space-y-3">
         {activities.length === 0 ? (
@@ -72,7 +72,7 @@ export function QuoteActivityFeed({
                 key={activity.id}
                 className={
                   human
-                    ? "flex gap-3 rounded-[18px] bg-[#f4f5f7] px-3 py-3"
+                    ? "spares-field flex gap-3 rounded-[18px] px-3 py-3"
                     : "rounded-[18px] px-1 py-2"
                 }
               >
@@ -81,8 +81,8 @@ export function QuoteActivityFeed({
                   <p
                     className={
                       human
-                        ? "text-xs font-medium text-neutral-500"
-                        : "text-xs font-medium text-neutral-400"
+                        ? "spares-muted text-xs font-medium"
+                        : "spares-muted text-xs font-medium"
                     }
                   >
                     {actorLabel(activity, role, selfEmail)}
@@ -91,8 +91,8 @@ export function QuoteActivityFeed({
                   <p
                     className={
                       human
-                        ? "mt-1 whitespace-pre-wrap text-[15px] text-neutral-950"
-                        : "mt-0.5 whitespace-pre-wrap text-[14px] text-neutral-500"
+                        ? "mt-1 whitespace-pre-wrap text-[15px]"
+                        : "spares-muted mt-0.5 whitespace-pre-wrap text-[14px]"
                     }
                   >
                     {activity.text}
@@ -114,13 +114,13 @@ export function QuoteActivityFeed({
           void onSend(next).then(() => setText(""));
         }}
       >
-        <label className="block text-sm font-medium text-neutral-700">
+        <label className="block text-sm font-medium">
           Message
           <textarea
             rows={3}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            className="mt-1.5 w-full resize-none rounded-2xl border-0 bg-[#f4f5f7] px-3 py-2.5 text-[16px] outline-none"
+            className="spares-field mt-1.5 w-full resize-none rounded-2xl border-0 px-3 py-2.5 text-[16px] outline-none"
             placeholder="Write a note…"
           />
         </label>

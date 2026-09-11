@@ -63,7 +63,7 @@ export function SitesPanel({
   }
 
   return (
-    <section className="space-y-3 rounded-[24px] bg-white p-5">
+    <section className="spares-surface space-y-3 rounded-[24px] p-5">
       <div>
         <h2 className="text-[19px] font-semibold tracking-tight">Plants</h2>
         <p className="spares-muted mt-1 text-sm">
@@ -72,17 +72,17 @@ export function SitesPanel({
         </p>
       </div>
       {sites.length === 0 ? (
-        <p className="text-sm text-neutral-500">No plants yet.</p>
+        <p className="spares-muted text-sm">No plants yet.</p>
       ) : (
         <ul className="space-y-3">
           {[...grouped.entries()].map(([companyName, rows]) => (
             <li key={companyName}>
-              <p className="text-[13px] font-semibold tracking-tight text-neutral-950">
+              <p className="text-[13px] font-semibold tracking-tight">
                 {companyName}
               </p>
               <ul className="mt-1 space-y-1">
                 {rows.map((site) => (
-                  <li key={site.id} className="text-sm text-neutral-600">
+                  <li key={site.id} className="text-sm">
                     {site.name}
                     <span className="spares-muted ml-2 text-[12px]">
                       {siteLabel(site)}
@@ -107,7 +107,7 @@ export function SitesPanel({
             onChange={(event) => setCompany(event.target.value)}
             required
             placeholder="Cargill"
-            className="mt-1.5 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none"
+            className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
           />
         </label>
         <label className="block text-sm font-medium">
@@ -117,7 +117,7 @@ export function SitesPanel({
             onChange={(event) => setName(event.target.value)}
             required
             placeholder="Fort Worth"
-            className="mt-1.5 h-11 w-full rounded-2xl border-0 bg-[#f4f5f7] px-3 text-[16px] outline-none"
+            className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
           />
         </label>
         <button
@@ -129,7 +129,7 @@ export function SitesPanel({
         </button>
       </form>
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}

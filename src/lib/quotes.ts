@@ -43,6 +43,81 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   cancelled: "Cancelled",
 };
 
+export const QUOTE_STATUS_SHORT: Record<QuoteStatus, string> = {
+  requested: "Request",
+  in_review: "Review",
+  pricing: "Pricing",
+  quoted: "Quoted",
+  po_received: "PO",
+  confirmed: "Confirm",
+  ordered: "Order",
+  shipped: "Ship",
+  delivered: "Deliver",
+  closed: "Closed",
+  cancelled: "Cancel",
+};
+
+export type QuotePipelineStep = (typeof QUOTE_PIPELINE)[number];
+
+export function quotePipelineIndex(status: QuoteStatus): number {
+  if (status === "cancelled") {
+    return -1;
+  }
+  return QUOTE_PIPELINE.indexOf(status as QuotePipelineStep);
+}
+
+export function quoteStepState(
+  status: QuoteStatus,
+  step: QuotePipelineStep,
+): "done" | "current" | "todo" {
+  const current = quotePipelineIndex(status);
+  const index = QUOTE_PIPELINE.indexOf(step);
+  if (current < 0) {
+    return "todo";
+  }
+  if (index < current) {
+    return "done";
+  }
+  if (index === current) {
+    return "current";
+  }
+  return "todo";
+}
+
+export function quoteStatusCaption(status: QuoteStatus, role: Role = "customer"): string {
+  if (status === "cancelled") {
+    return "This quote was cancelled.";
+  }
+  if (role === "staff") {
+    const staff: Record<QuotePipelineStep, string> = {
+      requested: "New request — start review.",
+      in_review: "Reviewing this request.",
+      pricing: "Staff is pricing…",
+      quoted: "Quoted. Waiting for a PO.",
+      po_received: "PO received — confirm to proceed.",
+      confirmed: "Confirmed.",
+      ordered: "Order placed.",
+      shipped: "Shipped.",
+      delivered: "Delivered.",
+      closed: "Closed.",
+    };
+    return staff[status as QuotePipelineStep] ?? QUOTE_STATUS_LABELS[status];
+  }
+  const customer: Record<QuotePipelineStep, string> = {
+    requested: "Sent. Staff will review this request.",
+    in_review: "Staff is reviewing this request.",
+    pricing: "Staff is pricing…",
+    quoted: "Waiting for your PO",
+    po_received: "PO received. Confirming…",
+    confirmed: "Confirmed.",
+    ordered: "Order placed.",
+    shipped: "On the way.",
+    delivered: "Delivered.",
+    closed: "Closed.",
+  };
+  return customer[status as QuotePipelineStep] ?? QUOTE_STATUS_LABELS[status];
+}
+
 export const TRACKING_CARRIERS = [
   "UPS",
   "FedEx",

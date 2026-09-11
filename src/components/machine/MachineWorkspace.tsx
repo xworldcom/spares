@@ -366,7 +366,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           >
             {isCustomer ? (
               <>
-                <p className="mb-3 truncate text-[15px] font-semibold text-neutral-950">
+                <p className="mb-3 truncate text-[15px] font-semibold">
                   {machine.name}
                 </p>
                 <PartsBom

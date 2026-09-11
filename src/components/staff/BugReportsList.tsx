@@ -76,29 +76,29 @@ export function BugReportsList() {
       {reports.map((report) => (
         <li
           key={report.id}
-          className="overflow-hidden rounded-[24px] bg-white"
+          className="spares-surface overflow-hidden rounded-[24px]"
         >
           <div className="grid gap-4 p-4 md:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
-            <div className="overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+            <div className="spares-field overflow-hidden rounded-md border border-white/8">
               {report.screenshotUrl ? (
                 // Staff-only same-origin JPEG from the file store.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={report.screenshotUrl}
                   alt="Bug report screenshot"
-                  className="h-auto w-full bg-neutral-100 object-contain"
+                  className="spares-field h-auto w-full object-contain"
                 />
               ) : (
-                <p className="px-3 py-8 text-center text-xs text-neutral-500">
+                <p className="spares-muted px-3 py-8 text-center text-xs">
                   No screenshot
                 </p>
               )}
             </div>
             <div className="min-w-0 space-y-2">
-              <p className="text-sm whitespace-pre-wrap text-neutral-900">
+              <p className="text-sm whitespace-pre-wrap">
                 {report.description}
               </p>
-              <p className="text-xs text-neutral-500">
+              <p className="spares-muted text-xs">
                 {formatWhen(report.createdAt)}
                 {report.userEmail
                   ? ` · ${report.userEmail}${report.userRole ? ` (${report.userRole})` : ""}`
@@ -108,19 +108,19 @@ export function BugReportsList() {
               {report.githubIssueUrl ? (
                 <a
                   href={report.githubIssueUrl}
-                  className="text-xs text-neutral-700 underline"
+                  className="spares-muted text-xs underline"
                   target="_blank"
                   rel="noreferrer"
                 >
                   GitHub issue
                 </a>
               ) : (
-                <p className="text-xs text-neutral-500">Stored in-app only</p>
+                <p className="spares-muted text-xs">Stored in-app only</p>
               )}
               {report.logText ? (
-                <details className="text-xs text-neutral-600">
+                <details className="spares-muted text-xs">
                   <summary className="cursor-pointer select-none">Client log</summary>
-                  <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-neutral-50 p-2 whitespace-pre-wrap">
+                  <pre className="spares-field mt-2 max-h-48 overflow-auto rounded-md p-2 whitespace-pre-wrap">
                     {report.logText}
                   </pre>
                 </details>

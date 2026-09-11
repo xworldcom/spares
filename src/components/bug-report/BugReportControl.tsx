@@ -146,7 +146,7 @@ export function BugReportControl() {
       {status === "sent" && !open && ready
         ? createPortal(
             <p
-              className="pointer-events-none fixed z-[80] rounded-full bg-[#0b0d10] px-3 py-1.5 text-xs font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
+              className="btn-primary pointer-events-none fixed z-[80] rounded-full px-3 py-1.5 text-xs font-medium shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
               style={{
                 top: "calc(var(--spares-header) + 0.5rem)",
                 right: "max(0.75rem, env(safe-area-inset-right))",
@@ -161,7 +161,7 @@ export function BugReportControl() {
       {status === "error" && error && !open && ready
         ? createPortal(
             <p
-              className="pointer-events-none fixed z-[80] max-w-[14rem] rounded-2xl bg-white px-3 py-2 text-right text-xs text-red-800 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+              className="spares-alert pointer-events-none fixed z-[80] max-w-[14rem] rounded-2xl px-3 py-2 text-right text-xs shadow-[0_8px_24px_rgba(0,0,0,0.32)]"
               style={{
                 top: "calc(var(--spares-header) + 0.5rem)",
                 right: "max(0.75rem, env(safe-area-inset-right))",
@@ -180,13 +180,13 @@ export function BugReportControl() {
               data-bug-report=""
               role="dialog"
               aria-labelledby={titleId}
-              className="bug-report-sheet fixed z-[70] w-[min(22rem,calc(100vw-1.5rem))] rounded-[24px] border border-black/8 bg-white p-4 shadow-[0_16px_40px_rgba(15,18,22,0.16)]"
+              className="bug-report-sheet spares-surface fixed z-[70] w-[min(22rem,calc(100vw-1.5rem))] rounded-[24px] border border-white/8 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
               style={{
                 top: "max(4.75rem, calc(env(safe-area-inset-top) + 4rem))",
                 right: "max(0.75rem, env(safe-area-inset-right))",
               }}
             >
-              <p id={titleId} className="text-sm font-medium text-[#0b0d10]">
+              <p id={titleId} className="text-sm font-medium">
                 Report bug
               </p>
               <label htmlFor="bug-report-description" className="sr-only">
@@ -199,10 +199,10 @@ export function BugReportControl() {
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="What's going on?"
                 rows={4}
-                className="mt-2 w-full resize-none rounded-xl border-0 bg-[#f4f5f7] px-2.5 py-2 text-sm text-[#0b0d10] outline-none ring-1 ring-black/8"
+                className="spares-field mt-2 w-full resize-none rounded-xl border-0 px-2.5 py-2 text-sm outline-none ring-1 ring-white/8"
               />
               {error && status !== "error" ? (
-                <p className="mt-1.5 text-xs text-red-800" role="alert">
+                <p className="mt-1.5 text-xs text-[#f0c4c0]" role="alert">
                   {error}
                 </p>
               ) : null}
@@ -213,7 +213,7 @@ export function BugReportControl() {
                     setOpen(false);
                     setError(null);
                   }}
-                  className="inline-flex h-11 items-center rounded-full px-3 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
+                  className="spares-muted inline-flex h-11 items-center rounded-full px-3 text-sm font-medium hover:bg-white/5"
                 >
                   Cancel
                 </button>

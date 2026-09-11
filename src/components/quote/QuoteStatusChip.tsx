@@ -13,10 +13,10 @@ export function QuoteStatusChip({
     <span
       className={
         cancelled
-          ? "inline-flex h-8 items-center rounded-full bg-[#7f1d1d] px-3 text-xs font-semibold text-white"
+          ? "btn-danger inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold"
           : current
-            ? "inline-flex h-8 items-center rounded-full bg-[#0b0d10] px-3 text-xs font-semibold text-white"
-            : "inline-flex h-8 items-center rounded-full bg-[#eceef2] px-3 text-xs font-medium text-neutral-700"
+            ? "btn-primary inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold"
+            : "btn-soft inline-flex h-8 items-center rounded-full px-3 text-xs font-medium"
       }
     >
       {QUOTE_STATUS_LABELS[status]}

@@ -6,17 +6,20 @@ const AA_NORMAL = 4.5;
 const AA_LARGE = 3;
 
 describe("customer action tokens", () => {
-  it("uses light text on the ink primary fill", () => {
+  it("uses dark text on the light primary fill", () => {
     assert.ok(contrastRatio(SPARES_TONES.onInk, SPARES_TONES.ink) >= AA_NORMAL);
   });
 
-  it("uses dark text on paper and soft fills", () => {
+  it("uses light text on paper, lift, and soft fills", () => {
     assert.ok(contrastRatio(SPARES_TONES.onPaper, SPARES_TONES.paper) >= AA_NORMAL);
+    assert.ok(contrastRatio(SPARES_TONES.onPaper, SPARES_TONES.lift) >= AA_NORMAL);
     assert.ok(contrastRatio(SPARES_TONES.onPaper, SPARES_TONES.soft) >= AA_NORMAL);
   });
 
-  it("keeps muted labels readable on paper", () => {
+  it("keeps muted labels readable on paper and lifted cards", () => {
     assert.ok(contrastRatio(SPARES_TONES.muted, SPARES_TONES.paper) >= AA_NORMAL);
+    assert.ok(contrastRatio(SPARES_TONES.muted, SPARES_TONES.lift) >= AA_NORMAL);
+    assert.ok(contrastRatio(SPARES_TONES.muted, SPARES_TONES.soft) >= AA_NORMAL);
   });
 
   it("uses light text on accent and danger fills", () => {

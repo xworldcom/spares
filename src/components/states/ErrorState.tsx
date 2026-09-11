@@ -10,10 +10,10 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="rounded-lg border border-red-200 bg-red-50 px-4 py-5 text-red-950"
+      className="spares-alert rounded-lg px-4 py-5"
     >
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-sm text-red-800">{message}</p>
+      <p className="spares-alert-title text-sm font-semibold">{title}</p>
+      <p className="mt-1 text-sm text-[#f0c4c0]">{message}</p>
       {onRetry ? (
         <button
           type="button"
