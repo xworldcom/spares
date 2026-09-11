@@ -1,0 +1,197 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { NewTicketForm } from "@/components/care/NewTicketForm";
+import { TicketDetail } from "@/components/care/TicketDetail";
+import { TicketsList } from "@/components/care/TicketsList";
+import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import { EmptyState } from "@/components/states/EmptyState";
+import { ErrorState } from "@/components/states/ErrorState";
+import { LoadingState } from "@/components/states/LoadingState";
+import {
+  listAccessibleTickets,
+  listMachineTickets,
+} from "@/lib/api/care";
+import { errorMessage } from "@/lib/api/errors";
+import {
+  hubTicketHref,
+  machineTicketsHref,
+} from "@/lib/care";
+import type { ServiceTicket } from "@/types";
+
+type TicketsWorkspaceProps = {
+  scope: "hub" | "machine";
+  machineId?: string;
+  ticketId?: string;
+};
+
+function ticketHrefFor(scope: TicketsWorkspaceProps["scope"], ticket: ServiceTicket) {
+  if (scope === "hub") {
+    return hubTicketHref(ticket.id);
+  }
+  return machineTicketsHref(ticket.machineId, ticket.id);
+}
+
+function listHrefFor(scope: TicketsWorkspaceProps["scope"], machineId?: string) {
+  if (scope === "hub") {
+    return "/care/tickets";
+  }
+  return machineTicketsHref(machineId ?? "");
+}
+
+export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspaceProps) {
+  const router = useRouter();
+  const desktop = useDesktopStage();
+  const [tickets, setTickets] = useState<ServiceTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const listHref = listHrefFor(scope, machineId);
+  const showMachine = scope === "hub";
+
+  useEffect(() => {
+    let cancelled = false;
+    const load =
+      scope === "machine" && machineId
+        ? listMachineTickets(machineId)
+        : listAccessibleTickets();
+    load
+      .then((next) => {
+        if (cancelled) {
+          return;
+        }
+        setTickets(next);
+        setError(null);
+        setLoading(false);
+      })
+      .catch((cause: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setError(errorMessage(cause, "Could not load tickets."));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, machineId, reloadKey]);
+
+  function refresh() {
+    setReloadKey((key) => key + 1);
+  }
+
+  function onCreated(id: string, createdMachineId: string) {
+    setCreating(false);
+    const href =
+      scope === "hub"
+        ? hubTicketHref(id)
+        : machineTicketsHref(createdMachineId, id);
+    router.push(href);
+    refresh();
+  }
+
+  if (loading) {
+    return <LoadingState label="Loading tickets…" />;
+  }
+
+  if (error && tickets.length === 0) {
+    return (
+      <ErrorState
+        title="Failed to load tickets"
+        message={error}
+        onRetry={() => {
+          setLoading(true);
+          refresh();
+        }}
+      />
+    );
+  }
+
+  const showList = desktop || !ticketId;
+  const showDetail = desktop || Boolean(ticketId);
+  const selected = ticketId
+    ? tickets.find((ticket) => ticket.id === ticketId) ?? null
+    : null;
+
+  const listPanel = (
+    <div className="tickets-workspace-list">
+      <div className="tickets-workspace-toolbar">
+        <div>
+          <h2 className="text-[19px] font-semibold tracking-tight">Tickets</h2>
+          <p className="spares-muted mt-1 text-sm leading-relaxed">
+            {scope === "hub"
+              ? "Across every machine you can access."
+              : "Service history for this machine."}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary tickets-workspace-new"
+          aria-expanded={creating}
+          onClick={() => setCreating((open) => !open)}
+        >
+          {creating ? "Close" : "New ticket"}
+        </button>
+      </div>
+
+      {creating ? (
+        <NewTicketForm
+          machineId={scope === "machine" ? machineId : undefined}
+          onCreated={onCreated}
+          onCancel={() => setCreating(false)}
+        />
+      ) : null}
+
+      {tickets.length === 0 ? (
+        <EmptyState
+          title="No tickets yet"
+          message={
+            scope === "hub"
+              ? "Open a ticket when a machine needs service."
+              : "Open a ticket when this machine needs service."
+          }
+        />
+      ) : (
+        <TicketsList
+          tickets={tickets}
+          showMachine={showMachine}
+          selectedId={ticketId}
+          hrefFor={(ticket) => ticketHrefFor(scope, ticket)}
+          emptyTitle="No tickets yet"
+          emptyMessage="Open a ticket when something needs service."
+        />
+      )}
+    </div>
+  );
+
+  const detailPanel = ticketId ? (
+    <TicketDetail
+      machineId={selected?.machineId ?? machineId ?? ""}
+      ticketId={ticketId}
+      backHref={listHref}
+      embedded={desktop}
+      onUpdated={refresh}
+    />
+  ) : (
+    <div className="tickets-workspace-empty">
+      <EmptyState
+        title="Select a ticket"
+        message="Pick a ticket from the list to read notes and update status."
+      />
+    </div>
+  );
+
+  return (
+    <div
+      className="tickets-workspace"
+      data-tickets-layout={desktop ? "split" : ticketId ? "detail" : "list"}
+    >
+      {showList ? listPanel : null}
+      {showDetail ? (
+        <div className="tickets-workspace-detail">{detailPanel}</div>
+      ) : null}
+    </div>
+  );
+}

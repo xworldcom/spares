@@ -308,6 +308,18 @@ export function ticketHref(machineId: string, ticketId: string) {
   return `/machines/${machineId}/care/tickets/${ticketId}`;
 }
 
+export function hubTicketHref(ticketId: string) {
+  return `/care/tickets/${ticketId}`;
+}
+
+export function hubTicketsHref() {
+  return "/care/tickets";
+}
+
+export function hubCareHref(tab: "overview" | "tickets" = "overview") {
+  return tab === "tickets" ? "/care/tickets" : "/care";
+}
+
 export function careHref(
   machineId: string,
   tab: "overview" | "manuals" | "tickets" | "usage" = "overview",
@@ -316,6 +328,11 @@ export function careHref(
     return `/machines/${machineId}/care`;
   }
   return `/machines/${machineId}/care/${tab}`;
+}
+
+export function machineTicketsHref(machineId: string, ticketId?: string) {
+  const base = careHref(machineId, "tickets");
+  return ticketId ? `${base}/${ticketId}` : base;
 }
 
 export function actorOf(user: Pick<PublicUser, "id" | "email" | "role">) {

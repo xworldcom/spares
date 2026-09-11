@@ -1866,7 +1866,73 @@ html.spares-embed .spares-app-stage {
   min-height: 4rem;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.7rem 0;
+  padding: 0.7rem 1rem;
+}
+
+.care-row.is-selected {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tickets-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 24rem;
+}
+
+.tickets-workspace-list,
+.tickets-workspace-detail {
+  min-width: 0;
+}
+
+.tickets-workspace-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.tickets-workspace-new {
+  display: inline-flex;
+  height: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 1rem;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tickets-workspace-empty {
+  display: flex;
+  min-height: 16rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: 24px;
+  background: var(--spares-lift);
+}
+
+@media (min-width: 1024px) {
+  .tickets-workspace[data-tickets-layout="split"] {
+    display: grid;
+    grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-list,
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-detail {
+    max-height: calc(100dvh - 14rem);
+    overflow: auto;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-detail {
+    padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
 }
 
 .care-row-title {

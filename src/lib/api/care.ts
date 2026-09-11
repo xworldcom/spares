@@ -109,6 +109,11 @@ export async function listStaffTickets() {
   return data.tickets ?? [];
 }
 
+export async function listAccessibleTickets() {
+  const data = await apiFetch<TicketsListResponse>("/api/tickets");
+  return data.tickets ?? [];
+}
+
 export async function createTicket(
   machineId: string,
   input: { title: string; note?: string },

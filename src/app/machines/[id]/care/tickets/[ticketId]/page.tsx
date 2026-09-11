@@ -1,4 +1,4 @@
-import { TicketDetail } from "@/components/care/TicketDetail";
+import { TicketsWorkspace } from "@/components/care/TicketsWorkspace";
 
 export default async function CareTicketPage({
   params,
@@ -6,5 +6,5 @@ export default async function CareTicketPage({
   params: Promise<{ id: string; ticketId: string }>;
 }) {
   const { id, ticketId } = await params;
-  return <TicketDetail machineId={id} ticketId={ticketId} />;
+  return <TicketsWorkspace scope="machine" machineId={id} ticketId={ticketId} />;
 }

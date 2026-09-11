@@ -5,9 +5,9 @@ import { isNavActive } from "./nav-active.ts";
 const staffHrefs = [
   "/machines",
   "/machines/new",
+  "/care",
   "/staff/customers",
   "/staff/quotes",
-  "/staff/tickets",
   "/staff/bugs",
 ] as const;
 
@@ -32,9 +32,16 @@ describe("nav active state", () => {
 
   it("highlights only the matching staff route", () => {
     assert.deepEqual(actives("/staff/quotes"), ["/staff/quotes"]);
-    assert.deepEqual(actives("/staff/tickets"), ["/staff/tickets"]);
     assert.deepEqual(actives("/staff/customers"), ["/staff/customers"]);
     assert.deepEqual(actives("/staff/bugs"), ["/staff/bugs"]);
+  });
+
+  it("highlights Care on the hub and ticket workspace", () => {
+    const customerHrefs = ["/machines", "/care", "/quotes"] as const;
+    assert.equal(isNavActive("/care", "/care", customerHrefs), true);
+    assert.equal(isNavActive("/care/tickets", "/care", customerHrefs), true);
+    assert.equal(isNavActive("/care/tickets/t1", "/care", customerHrefs), true);
+    assert.equal(isNavActive("/machines/palletizer/care", "/care", customerHrefs), false);
   });
 
   it("highlights nothing on unrelated paths", () => {

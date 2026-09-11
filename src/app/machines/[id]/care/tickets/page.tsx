@@ -1,4 +1,4 @@
-import { TicketsPanel } from "@/components/care/TicketsPanel";
+import { TicketsWorkspace } from "@/components/care/TicketsWorkspace";
 
 export default async function CareTicketsPage({
   params,
@@ -6,5 +6,5 @@ export default async function CareTicketsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <TicketsPanel machineId={id} />;
+  return <TicketsWorkspace scope="machine" machineId={id} />;
 }
