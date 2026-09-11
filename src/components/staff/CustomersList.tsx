@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CatalogSearch } from "@/components/catalog/CatalogSearch";
+import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
+import { PersonGlyph } from "@/components/catalog/CatalogGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { LoadingState } from "@/components/states/LoadingState";
 import { accessLabel, accessOptions, accessValue, parseAccessValue, siteLabel } from "@/lib/access";
 import {
   listCustomers,
@@ -12,6 +14,8 @@ import {
 } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import type { PublicUser, Site } from "@/lib/api/types";
+import { catalogQueryMatch } from "@/lib/ui/catalog-query";
+import { displayNameFromEmail } from "@/lib/ui/display-name";
 
 export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
   const [customers, setCustomers] = useState<PublicUser[]>([]);
@@ -47,20 +51,15 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
   }, [reloadKey, retryKey]);
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return customers;
-    }
-    return customers.filter((row) => {
-      const hay = [
+    return customers.filter((row) =>
+      catalogQueryMatch(query, [
+        displayNameFromEmail(row.email),
         row.email,
         accessLabel(row),
         ...(row.sites ?? []).map((site) => siteLabel(site)),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(needle);
-    });
+        ...(row.companyAccess ?? []),
+      ]),
+    );
   }, [customers, query]);
 
   async function onAssign(userId: string, value: string) {
@@ -78,7 +77,14 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
   }
 
   if (loading) {
-    return <LoadingState label="Loading customers…" />;
+    return (
+      <section className="catalog-stack">
+        <p className="sr-only" aria-live="polite">
+          Loading customers…
+        </p>
+        <CatalogSkeleton variant="person" count={5} />
+      </section>
+    );
   }
 
   if (error && customers.length === 0) {
@@ -95,19 +101,18 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
   }
 
   return (
-    <section className="spares-surface space-y-3 rounded-[24px] p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="text-[19px] font-semibold tracking-tight">Accounts</h2>
-        <label className="block min-w-0 flex-1 text-sm font-medium sm:max-w-xs">
-          Search
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Email or plant"
-            className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-          />
-        </label>
+    <section className="catalog-stack">
+      <div className="catalog-toolbar">
+        <CatalogSearch
+          id="customer-search"
+          label="Search customers"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search name, email, or plant"
+        />
+        <p className="catalog-count">
+          {filtered.length} {filtered.length === 1 ? "account" : "accounts"}
+        </p>
       </div>
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
@@ -115,55 +120,63 @@ export function CustomersList({ reloadKey = 0 }: { reloadKey?: number }) {
         </p>
       ) : null}
       {filtered.length === 0 ? (
-        <EmptyState
-          title={customers.length === 0 ? "No customers yet" : "No matches"}
-          message={
-            customers.length === 0
-              ? "Create a customer account below. They use the same login screen."
-              : "Try a different email or plant."
-          }
-        />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead>
-              <tr className="spares-muted text-xs font-medium tracking-wide uppercase">
-                <th className="pb-2 font-medium">Email</th>
-                <th className="pb-2 font-medium">Access</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row) => {
-                const current = accessValue(row);
-                return (
-                  <tr key={row.id} className="border-t border-white/8">
-                    <td className="py-3 font-medium">
-                      {row.email}
-                    </td>
-                    <td className="py-3">
-                      <select
-                        value={current}
-                        disabled={savingId === row.id}
-                        onChange={(event) => {
-                          void onAssign(row.id, event.target.value);
-                        }}
-                        className="spares-field h-11 w-full max-w-xs rounded-2xl border-0 px-3 text-[15px] outline-none"
-                        aria-label={`Plant for ${row.email}`}
-                      >
-                        <option value="">No access — hidden from models</option>
-                        {accessOptions(sites).map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="catalog-empty">
+          <EmptyState
+            title={customers.length === 0 ? "No customers yet" : "No matches"}
+            message={
+              customers.length === 0
+                ? "Create a customer with New customer. They use the same login screen."
+                : "Try a different name, email, or plant."
+            }
+          />
         </div>
+      ) : (
+        <ul className="catalog-people-list">
+          <li className="catalog-people-head" aria-hidden="true">
+            <span>Customer</span>
+            <span>Contact</span>
+            <span>Plants</span>
+            <span>Access</span>
+          </li>
+          {filtered.map((row) => {
+            const current = accessValue(row);
+            const name = displayNameFromEmail(row.email);
+            const plants = accessLabel(row) || "No access";
+            return (
+              <li key={row.id} className="catalog-person-card">
+                <div className="catalog-person-who">
+                  <PersonGlyph email={row.email} />
+                  <div className="min-w-0">
+                    <p className="catalog-person-name">{name}</p>
+                    <p className="catalog-person-email catalog-person-email-mobile">{row.email}</p>
+                    <p className="catalog-person-plant-mobile">{plants}</p>
+                  </div>
+                </div>
+                <p className="catalog-person-email catalog-person-email-desktop">{row.email}</p>
+                <p className="catalog-person-plant-desktop">{plants}</p>
+                <label className="catalog-person-access">
+                  <span className="sr-only">Access for {row.email}</span>
+                  <select
+                    value={current}
+                    disabled={savingId === row.id}
+                    onChange={(event) => {
+                      void onAssign(row.id, event.target.value);
+                    }}
+                    className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
+                    aria-label={`Plant for ${row.email}`}
+                  >
+                    <option value="">No access — hidden from models</option>
+                    {accessOptions(sites).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );
