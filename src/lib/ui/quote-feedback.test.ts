@@ -8,6 +8,7 @@ import {
   QUOTE_COUNT_BOUNCE_KEYFRAMES,
   boxOnscreen,
   bounceQuoteCount,
+  isPaintedStyleChain,
   pickQuoteAddTarget,
   prefersReducedMotion,
   queryQuoteAddTarget,
@@ -32,12 +33,12 @@ describe("prefersReducedMotion", () => {
 describe("quote add target", () => {
   const viewport = { width: 768, height: 1024 };
 
-  it("ranks the count badge ahead of sheet copy or the peek handle", () => {
-    assert.equal(rankQuoteTarget("badge"), 0);
-    assert.equal(rankQuoteTarget("count"), 1);
+  it("ranks the peek count ahead of the chrome badge or handle", () => {
+    assert.equal(rankQuoteTarget("count"), 0);
+    assert.equal(rankQuoteTarget("badge"), 1);
     assert.equal(rankQuoteTarget("handle"), 2);
-    assert.ok(rankQuoteTarget("badge") < rankQuoteTarget("count"));
-    assert.ok(rankQuoteTarget("count") < rankQuoteTarget("handle"));
+    assert.ok(rankQuoteTarget("count") < rankQuoteTarget("badge"));
+    assert.ok(rankQuoteTarget("badge") < rankQuoteTarget("handle"));
   });
 
   it("ignores off-screen and zero-size boxes", () => {
@@ -59,20 +60,58 @@ describe("quote add target", () => {
     );
   });
 
-  it("picks the visible badge over a visible count label", () => {
+  it("picks the peek count when both a chrome badge and count exist", () => {
     const picked = pickQuoteAddTarget(
       [
-        {
-          kind: "count",
-          box: { left: 16, top: 900, width: 80, height: 18 },
-        },
         {
           kind: "badge",
           box: { left: 640, top: 20, width: 22, height: 18 },
         },
         {
+          kind: "count",
+          box: { left: 16, top: 900, width: 80, height: 18 },
+        },
+        {
           kind: "handle",
           box: { left: 360, top: 980, width: 48, height: 6 },
+        },
+      ],
+      viewport,
+    );
+    assert.equal(picked?.kind, "count");
+  });
+
+  it("ignores a badge that still has a box but is not painted (opacity 0 / hidden chip)", () => {
+    const picked = pickQuoteAddTarget(
+      [
+        {
+          kind: "badge",
+          box: { left: 640, top: 20, width: 22, height: 18 },
+          visible: false,
+        },
+        {
+          kind: "count",
+          box: { left: 16, top: 900, width: 80, height: 18 },
+          visible: true,
+        },
+      ],
+      viewport,
+    );
+    assert.equal(picked?.kind, "count");
+  });
+
+  it("falls back to the chrome badge when the tray count is not painted", () => {
+    const picked = pickQuoteAddTarget(
+      [
+        {
+          kind: "badge",
+          box: { left: 640, top: 20, width: 22, height: 18 },
+          visible: true,
+        },
+        {
+          kind: "count",
+          box: { left: 16, top: 900, width: 80, height: 18 },
+          visible: false,
         },
       ],
       viewport,
@@ -209,6 +248,30 @@ describe("bounceQuoteCount", () => {
     assert.equal(listeners.length, 1);
     listeners[0]({ target: el } as unknown as AnimationEvent);
     assert.deepEqual([...classes], []);
+  });
+});
+
+describe("painted style chain", () => {
+  it("treats opacity 0 or visibility hidden as not painted", () => {
+    assert.equal(
+      isPaintedStyleChain([
+        { display: "inline-block", visibility: "visible", opacity: 1 },
+      ]),
+      true,
+    );
+    assert.equal(
+      isPaintedStyleChain([
+        { display: "inline-block", visibility: "visible", opacity: 1 },
+        { display: "flex", visibility: "visible", opacity: 0 },
+      ]),
+      false,
+    );
+    assert.equal(
+      isPaintedStyleChain([
+        { display: "none", visibility: "visible", opacity: 1 },
+      ]),
+      false,
+    );
   });
 });
 

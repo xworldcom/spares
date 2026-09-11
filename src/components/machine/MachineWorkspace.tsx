@@ -19,7 +19,10 @@ import { getMachine, updateMachinePart } from "@/lib/api/machines";
 import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
-import { playQuoteAddMotion } from "@/lib/ui/quote-feedback";
+import {
+  bounceVisibleQuoteCount,
+  quoteAddFeedback,
+} from "@/lib/ui/quote-feedback";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#1c232c";
@@ -62,6 +65,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const customerTrayInViewer = isCustomer && !desktopStage;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
+  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
+  const prevQuoteCount = useRef(0);
+
+  useEffect(() => {
+    if (!isCustomer) {
+      prevQuoteCount.current = quoteCount;
+      return;
+    }
+    if (quoteCount > prevQuoteCount.current) {
+      bounceVisibleQuoteCount();
+    }
+    prevQuoteCount.current = quoteCount;
+  }, [isCustomer, quoteCount]);
 
   useEffect(() => {
     if (!isCustomer || typeof window === "undefined") {
@@ -257,7 +273,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       return [...current, { part, qty: 1, thumb }];
     });
     if (added) {
-      playQuoteAddMotion();
+      quoteAddFeedback();
     }
   }
 
@@ -297,8 +313,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       setSavingPart(false);
     }
   }
-
-  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
 
   const viewerBlock = (
     <div

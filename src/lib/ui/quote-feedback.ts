@@ -48,6 +48,12 @@ function defaultReducedMotionMedia(): { matches: boolean } | null {
   return window.matchMedia("(prefers-reduced-motion: reduce)");
 }
 
+export type PaintStyle = {
+  display: string;
+  visibility: string;
+  opacity: number;
+};
+
 export function boxOnscreen(
   box: QuoteBox,
   viewport: { width: number; height: number },
@@ -63,11 +69,46 @@ export function boxOnscreen(
   );
 }
 
+/** Hidden if any ancestor (or self) is display:none, visibility:hidden, or opacity 0. */
+export function isPaintedStyleChain(chain: readonly PaintStyle[]): boolean {
+  for (const style of chain) {
+    if (style.display === "none" || style.visibility === "hidden") {
+      return false;
+    }
+    if (!(style.opacity > 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function collectPaintChain(el: HTMLElement): PaintStyle[] {
+  const chain: PaintStyle[] = [];
+  let node: HTMLElement | null = el;
+  while (node) {
+    const style = getComputedStyle(node);
+    chain.push({
+      display: style.display,
+      visibility: style.visibility,
+      opacity: Number.parseFloat(style.opacity),
+    });
+    if (node === node.ownerDocument?.documentElement) {
+      break;
+    }
+    node = node.parentElement;
+  }
+  return chain;
+}
+
+/**
+ * Peek/dock "N items" first — that is what Kevin sees when the tray is open.
+ * Chrome Quote chip badge next. Handle last.
+ */
 export function rankQuoteTarget(kind: string | undefined): number {
-  if (kind === "badge") {
+  if (kind === "count") {
     return 0;
   }
-  if (kind === "count") {
+  if (kind === "badge") {
     return 1;
   }
   if (kind === "handle") {
@@ -76,13 +117,18 @@ export function rankQuoteTarget(kind: string | undefined): number {
   return 3;
 }
 
-export function pickQuoteAddTarget<T extends { kind: string; box: QuoteBox }>(
+export function pickQuoteAddTarget<
+  T extends { kind: string; box: QuoteBox; visible?: boolean },
+>(
   targets: readonly T[],
   viewport: { width: number; height: number },
 ): T | null {
   let best: T | null = null;
   let bestRank = 99;
   for (const target of targets) {
+    if (target.visible === false) {
+      continue;
+    }
     if (!boxOnscreen(target.box, viewport)) {
       continue;
     }
@@ -110,10 +156,18 @@ export function queryQuoteAddTarget(
       el,
       kind: el.dataset.quoteTarget ?? "",
       box: el.getBoundingClientRect(),
+      visible: isPaintedStyleChain(collectPaintChain(el)),
     })),
     viewport,
   );
   return picked?.el ?? null;
+}
+
+export function bounceVisibleQuoteCount() {
+  const target = queryQuoteAddTarget();
+  if (target) {
+    bounceQuoteCount(target);
+  }
 }
 
 /** Bounce the real quote-count node. WAAPI first; CSS class if animate() is missing. */
@@ -181,11 +235,8 @@ export function quoteAddFeedback() {
   softDing();
 }
 
-/** Haptic/ding (if the browser allows) plus a bounce on the visible count. */
+/** Haptic now. Bounce is scheduled by the workspace after the new count commits. */
 export function playQuoteAddMotion() {
   quoteAddFeedback();
-  const target = queryQuoteAddTarget();
-  if (target) {
-    bounceQuoteCount(target);
-  }
+  bounceVisibleQuoteCount();
 }
