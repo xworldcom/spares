@@ -127,12 +127,7 @@ export function MobileTabBar() {
             className="absolute inset-0 bg-black/25"
             onClick={() => setMoreForPath(null)}
           />
-          <div
-            className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
-            style={{
-              bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom) + 0.5rem)",
-            }}
-          >
+          <div className="spares-tabbar-more spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)]">
             <Link
               href="/staff/customers"
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
@@ -151,7 +146,7 @@ export function MobileTabBar() {
 
       <nav
         aria-label="Primary"
-        className="spares-tabbar fixed inset-x-0 bottom-0 z-[56] border-t border-white/8 backdrop-blur-md lg:hidden"
+        className="spares-tabbar fixed inset-x-0 z-[56] border-t border-white/8 backdrop-blur-md lg:hidden"
       >
         <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1">
           {user.role === "staff" ? (
