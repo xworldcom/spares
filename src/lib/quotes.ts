@@ -336,6 +336,13 @@ export function pricesVisibleToCustomer(status: QuoteStatus) {
   return PRICE_VISIBLE.has(status);
 }
 
+export function quotePricingComplete(items: QuoteItem[]) {
+  return (
+    items.length > 0 &&
+    items.every((item) => typeof item.sellPrice === "number" && item.sellPrice >= 0)
+  );
+}
+
 export function trackingVisible(status: QuoteStatus) {
   return TRACKING_VISIBLE.has(status);
 }
@@ -416,10 +423,11 @@ export function itemsForRole(
   role: Role,
   status: QuoteStatus,
 ): QuoteItem[] {
+  const normalized = items.map(normalizeItem);
   if (role === "staff") {
-    return items.map(normalizeItem);
+    return normalized;
   }
-  return items.map((item) => {
+  return normalized.map((item) => {
     const next: QuoteItem = { id: item.id, qty: item.qty };
     if (item.name) {
       next.name = item.name;

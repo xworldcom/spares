@@ -25,6 +25,7 @@ import {
 import {
   canEditTracking,
   pricesVisibleToCustomer,
+  quotePricingComplete,
   quoteTitle,
 } from "@/lib/quotes";
 import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role } from "@/types";
@@ -174,15 +175,28 @@ export function QuoteWorkspace({
       setError("Add a tracking number to mark this shipped.");
       return;
     }
+    if (statusDirty && pendingStatus === "quoted" && !quotePricingComplete(items)) {
+      const proceed = window.confirm(
+        "Some lines are missing sell prices. Customers will see quoted status with blank pricing until you fill them in. Apply anyway?",
+      );
+      if (!proceed) {
+        return;
+      }
+    }
     if (statusDirty && pendingStatus) {
+      const includeItems =
+        itemsDirty || pendingStatus === "quoted" || pendingStatus === "pricing";
       const patch =
         pendingStatus === "shipped"
           ? {
               status: pendingStatus,
               shipments: readyShipments,
-              ...(itemsDirty ? { items } : {}),
+              ...(includeItems ? { items } : {}),
             }
-          : { status: pendingStatus, ...(itemsDirty ? { items } : {}) };
+          : {
+              status: pendingStatus,
+              ...(includeItems ? { items } : {}),
+            };
       void run(
         () => updateQuote(String(quote.number), patch),
         pendingStatus === "shipped" ? "Marked shipped." : "Status updated.",
