@@ -60,8 +60,10 @@ describe("memory persistence", () => {
   it("round-trips json and bytes", async () => {
     const store = createMemoryPersistence();
     await store.writeDatabaseJson('{"ok":true}');
+    await store.writeCareJson('{"tickets":[]}');
     await store.writeFileBytes("part.glb", Buffer.from("glb"));
     assert.equal(await store.readDatabaseJson(), '{"ok":true}');
+    assert.equal(await store.readCareJson(), '{"tickets":[]}');
     assert.equal((await store.readFileBytes("part.glb"))?.toString(), "glb");
     assert.equal(await store.readFileBytes("missing.bin"), null);
     await store.deleteFileBytes("part.glb");

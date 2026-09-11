@@ -391,6 +391,14 @@ export function MachinesList() {
                       )}
                     </Link>
                   )}
+                  {!staff && !renaming ? (
+                    <Link
+                      href={`/machines/${machine.id}/care`}
+                      className="catalog-care-link"
+                    >
+                      Care
+                    </Link>
+                  ) : null}
                   {staff ? (
                     <button
                       type="button"
@@ -433,6 +441,7 @@ export function MachinesList() {
                           Rename
                         </button>
                       )}
+                      <Link href={`/machines/${machine.id}/care`}>Care</Link>
                       <Link href={`/machines/new?replace=${machine.id}`}>Replace pack</Link>
                       <button
                         type="button"

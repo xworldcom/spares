@@ -33,14 +33,27 @@ import {
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
 import { toPublicUser } from "./access.ts";
+import {
+  nextTicketNumber,
+  statusTicketText,
+  usageHistoryEntry,
+  usageSummary,
+} from "./care.ts";
+import { deleteManualFile, writeManualFile } from "./manual-storage.ts";
 import type {
+  MachineManual,
+  MachineUsage,
   MachineView,
+  ManualCategory,
   Part,
   QuoteActivity,
   QuoteItem,
   QuoteRecord,
   Role,
+  ServiceTicketRecord,
   Site,
+  TicketActivity,
+  TicketStatus,
   UnmatchedPart,
 } from "../types/index.ts";
 
@@ -142,6 +155,10 @@ export type StoredBugReport = {
   delivery: "github" | "store";
 };
 
+export type StoredManual = MachineManual;
+export type StoredTicket = ServiceTicketRecord;
+export type StoredUsage = MachineUsage;
+
 type Database = {
   users: StoredUser[];
   machines: StoredMachine[];
@@ -149,7 +166,95 @@ type Database = {
   bugReports: StoredBugReport[];
   sites: Site[];
   machineViews?: MachineView[];
+  manuals?: StoredManual[];
+  tickets?: StoredTicket[];
+  machineUsage?: StoredUsage[];
 };
+
+type CareStore = {
+  manuals: StoredManual[];
+  tickets: StoredTicket[];
+  machineUsage: StoredUsage[];
+};
+
+function emptyCare(): CareStore {
+  return { manuals: [], tickets: [], machineUsage: [] };
+}
+
+function careCollections(db: Pick<Database, "manuals" | "tickets" | "machineUsage">): CareStore {
+  return {
+    manuals: db.manuals ?? [],
+    tickets: db.tickets ?? [],
+    machineUsage: db.machineUsage ?? [],
+  };
+}
+
+function applyCare(db: Database, care: CareStore): Database {
+  return {
+    ...db,
+    manuals: care.manuals,
+    tickets: care.tickets,
+    machineUsage: care.machineUsage,
+  };
+}
+
+function unionById<T extends { id: string }>(...lists: readonly T[][]): T[] {
+  const map = new Map<string, T>();
+  for (const list of lists) {
+    for (const row of list) {
+      map.set(row.id, row);
+    }
+  }
+  return [...map.values()];
+}
+
+function unionUsage(...lists: readonly StoredUsage[][]): StoredUsage[] {
+  const map = new Map<string, StoredUsage>();
+  for (const list of lists) {
+    for (const row of list) {
+      const previous = map.get(row.machineId);
+      if (!previous || (row.updatedAt ?? "") >= (previous.updatedAt ?? "")) {
+        map.set(row.machineId, row);
+      }
+    }
+  }
+  return [...map.values()];
+}
+
+function unionCare(...stores: readonly CareStore[]): CareStore {
+  return {
+    manuals: unionById(...stores.map((store) => store.manuals)),
+    tickets: unionById(...stores.map((store) => store.tickets)),
+    machineUsage: unionUsage(...stores.map((store) => store.machineUsage)),
+  };
+}
+
+function parseCareJson(raw: string | null): CareStore | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<CareStore>;
+    return {
+      manuals: parsed.manuals ?? [],
+      tickets: parsed.tickets ?? [],
+      machineUsage: parsed.machineUsage ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function readCareStore(): Promise<CareStore> {
+  return parseCareJson(await getPersistence().readCareJson()) ?? emptyCare();
+}
+
+async function overlayPersistedCare(db: Database): Promise<Database> {
+  return applyCare(
+    db,
+    unionCare(careCollections(db), await readCareStore(), memory ? careCollections(memory) : emptyCare()),
+  );
+}
 
 let queue: Promise<unknown> = Promise.resolve();
 let memory: Database | null = null;
@@ -232,7 +337,16 @@ async function seedDatabase(): Promise<Database> {
     await seedUser(SEED_CUSTOMER),
     ...(await Promise.all(EXTRA_SEED_CUSTOMERS.map((row) => seedUser(row)))),
   ];
-  return { users, machines: [], quotes: [], bugReports: [], sites: [...SEED_SITES] };
+  return {
+    users,
+    machines: [],
+    quotes: [],
+    bugReports: [],
+    sites: [...SEED_SITES],
+    manuals: [],
+    tickets: [],
+    machineUsage: [],
+  };
 }
 
 async function ensureExtraCustomers(db: Database): Promise<Database> {
@@ -350,12 +464,13 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
       persistFile,
     );
   }
-  if (catalogChanged(db, next)) {
-    await writeDatabase(next);
-    return next;
+  const kept = await overlayPersistedCare(next);
+  if (catalogChanged(db, kept)) {
+    await writeCatalogHeal(kept);
+    return kept;
   }
-  memory = next;
-  return next;
+  memory = kept;
+  return kept;
 }
 
 function parseDatabase(
@@ -375,6 +490,9 @@ function parseDatabase(
         bugReports: parsed.bugReports ?? [],
         sites: parsed.sites ?? [],
         machineViews: parsed.machineViews ?? [],
+        manuals: parsed.manuals ?? [],
+        tickets: parsed.tickets ?? [],
+        machineUsage: parsed.machineUsage ?? [],
       },
       numbersAssigned: rawQuotes.some(
         (quote) => typeof quote.number !== "number" || quote.number < 1,
@@ -394,15 +512,19 @@ async function readDatabase(): Promise<Database> {
   const raw = await getPersistence().readDatabaseJson();
   const loaded = raw ? parseDatabase(raw) : null;
   if (!loaded) {
-    const seeded = await withFixtureMachines(await seedDatabase());
+    const seeded = await overlayPersistedCare(
+      await withFixtureMachines(await seedDatabase()),
+    );
     await writeDatabase(seeded);
     return seeded;
   }
 
   const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
-  const next = ensureSites(
-    await withFixtureMachines(
-      await ensureExtraCustomers(stabilizeSeedUsers({ ...loaded.db, quotes })),
+  const next = await overlayPersistedCare(
+    ensureSites(
+      await withFixtureMachines(
+        await ensureExtraCustomers(stabilizeSeedUsers({ ...loaded.db, quotes })),
+      ),
     ),
   );
   const usersRemapped =
@@ -414,16 +536,31 @@ async function readDatabase(): Promise<Database> {
     usersRemapped ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0)
   ) {
-    await writeDatabase(next);
+    await writeCatalogHeal(next);
     return next;
   }
   memory = next;
   return next;
 }
 
+async function writeCareStore(care: CareStore) {
+  await getPersistence().writeCareJson(JSON.stringify(care, null, 2));
+}
+
 async function writeDatabase(next: Database) {
-  memory = next;
-  await getPersistence().writeDatabaseJson(JSON.stringify(next, null, 2));
+  const normalized = applyCare(next, careCollections(next));
+  memory = normalized;
+  await Promise.all([
+    getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
+    writeCareStore(careCollections(normalized)),
+  ]);
+}
+
+/** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
+async function writeCatalogHeal(next: Database) {
+  const kept = await overlayPersistedCare(next);
+  memory = kept;
+  await getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2));
 }
 
 function normalizeEmail(email: string) {
@@ -651,8 +788,24 @@ export function deleteMachine(machineId: string) {
     const machineViews = (db.machineViews ?? []).filter(
       (view) => view.machineId !== machineId,
     );
-    await writeDatabase({ ...db, machines, users, machineViews });
+    const care = careCollections(db);
+    const removedManuals = care.manuals.filter((row) => row.machineId === machineId);
+    const manuals = care.manuals.filter((row) => row.machineId !== machineId);
+    const tickets = care.tickets.filter((row) => row.machineId !== machineId);
+    const machineUsage = care.machineUsage.filter((row) => row.machineId !== machineId);
+    await writeDatabase({
+      ...db,
+      machines,
+      users,
+      machineViews,
+      manuals,
+      tickets,
+      machineUsage,
+    });
     await deleteStoredFile(machine.storedFileName);
+    for (const manual of removedManuals) {
+      await deleteManualFile(manual.storedFileName);
+    }
     return { ok: true as const };
   });
 }
@@ -697,7 +850,17 @@ export function resetStoreMemoryForTests() {
 
 /** Test helper: simulate a warm instance that has users but no machines. */
 export function seedEmptyMachineCatalogForTests(users: StoredUser[]) {
-  memory = { users, machines: [], quotes: [], bugReports: [], sites: [], machineViews: [] };
+  memory = {
+    users,
+    machines: [],
+    quotes: [],
+    bugReports: [],
+    sites: [],
+    machineViews: [],
+    manuals: [],
+    tickets: [],
+    machineUsage: [],
+  };
 }
 
 export function createMachine(input: {
@@ -929,6 +1092,287 @@ export function markQuoteRead(idOrNumber: string, userId: string) {
 }
 
 export { newActivity as createQuoteActivity };
+
+function newTicketActivity(
+  actor: { email: string; role: Role },
+  kind: TicketActivity["kind"],
+  text: string,
+  at = new Date().toISOString(),
+): TicketActivity {
+  return {
+    id: randomUUID(),
+    at,
+    actorRole: actor.role,
+    actorEmail: actor.email,
+    kind,
+    text,
+  };
+}
+
+export function listManuals(machineId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return careCollections(db)
+      .manuals.filter((manual) => manual.machineId === machineId)
+      .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  });
+}
+
+export function getManual(machineId: string, manualId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return (
+      careCollections(db).manuals.find(
+        (manual) => manual.machineId === machineId && manual.id === manualId,
+      ) ?? null
+    );
+  });
+}
+
+export function createManual(input: {
+  machineId: string;
+  title: string;
+  category: ManualCategory;
+  storedFileName: string;
+  originalFileName: string;
+  contentType: string;
+  sizeBytes?: number;
+  uploadedByEmail: string;
+  bytes?: Buffer;
+}) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    if (!db.machines.some((machine) => machine.id === input.machineId)) {
+      return { error: "not-found" as const };
+    }
+    if (input.bytes?.length) {
+      await writeManualFile(input.storedFileName, input.bytes);
+    }
+    const now = new Date().toISOString();
+    const manual: StoredManual = {
+      id: randomUUID(),
+      machineId: input.machineId,
+      title: input.title,
+      category: input.category,
+      storedFileName: input.storedFileName,
+      originalFileName: input.originalFileName,
+      contentType: input.contentType,
+      sizeBytes: input.sizeBytes,
+      uploadedAt: now,
+      uploadedByEmail: input.uploadedByEmail,
+    };
+    const manuals = [manual, ...careCollections(db).manuals];
+    await writeDatabase({ ...db, ...careCollections(db), manuals });
+    return { manual };
+  });
+}
+
+export function listTickets(machineId?: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const tickets = careCollections(db).tickets.filter((ticket) =>
+      machineId ? ticket.machineId === machineId : true,
+    );
+    return tickets.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  });
+}
+
+export function getTicket(idOrNumber: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return findTicketInList(careCollections(db).tickets, idOrNumber);
+  });
+}
+
+function findTicketInList(tickets: StoredTicket[], idOrNumber: string) {
+  const byId = tickets.find((ticket) => ticket.id === idOrNumber);
+  if (byId) {
+    return byId;
+  }
+  if (!/^\d+$/.test(idOrNumber)) {
+    return null;
+  }
+  const number = Number.parseInt(idOrNumber, 10);
+  if (!Number.isFinite(number) || number < 1) {
+    return null;
+  }
+  return tickets.find((ticket) => ticket.number === number) ?? null;
+}
+
+export function createTicket(input: {
+  machineId: string;
+  title: string;
+  customerId: string;
+  customerEmail: string;
+  actor: { email: string; role: Role; id: string };
+  note?: string;
+}) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    if (!db.machines.some((machine) => machine.id === input.machineId)) {
+      return { error: "not-found" as const };
+    }
+    const now = new Date().toISOString();
+    const opened = newTicketActivity(
+      input.actor,
+      "status",
+      statusTicketText("open"),
+      now,
+    );
+    const activities = [opened];
+    if (input.note) {
+      activities.push(newTicketActivity(input.actor, "message", input.note, now));
+    }
+    const ticket: StoredTicket = {
+      id: randomUUID(),
+      number: nextTicketNumber(careCollections(db).tickets),
+      machineId: input.machineId,
+      title: input.title,
+      status: "open",
+      createdAt: now,
+      customerId: input.customerId,
+      customerEmail: input.customerEmail,
+      activities,
+      lastReadAt: { [input.actor.id]: now },
+    };
+    await writeDatabase({
+      ...db,
+      ...careCollections(db),
+      tickets: [ticket, ...careCollections(db).tickets],
+    });
+    return { ticket };
+  });
+}
+
+function mutateTicket(
+  idOrNumber: string,
+  fn: (ticket: StoredTicket) => StoredTicket,
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const current = findTicketInList(careCollections(db).tickets, idOrNumber);
+    if (!current) {
+      return null;
+    }
+    const next = fn(current);
+    const tickets = careCollections(db).tickets.map((ticket) =>
+      ticket.id === current.id ? next : ticket,
+    );
+    await writeDatabase({ ...db, ...careCollections(db), tickets });
+    return next;
+  });
+}
+
+export function updateTicketStatus(
+  idOrNumber: string,
+  status: TicketStatus,
+  actor: { email: string; role: Role; id: string },
+) {
+  return mutateTicket(idOrNumber, (ticket) => {
+    if (ticket.status === status) {
+      return ticket;
+    }
+    const activity = newTicketActivity(actor, "status", statusTicketText(status));
+    return {
+      ...ticket,
+      status,
+      activities: [...ticket.activities, activity],
+      lastReadAt: { ...ticket.lastReadAt, [actor.id]: activity.at },
+    };
+  });
+}
+
+export function appendTicketActivity(
+  idOrNumber: string,
+  actor: { email: string; role: Role; id: string },
+  text: string,
+) {
+  return mutateTicket(idOrNumber, (ticket) => {
+    const activity = newTicketActivity(actor, "message", text);
+    return {
+      ...ticket,
+      activities: [...ticket.activities, activity],
+      lastReadAt: { ...ticket.lastReadAt, [actor.id]: activity.at },
+    };
+  });
+}
+
+export function markTicketRead(idOrNumber: string, userId: string) {
+  const now = new Date().toISOString();
+  return mutateTicket(idOrNumber, (ticket) => ({
+    ...ticket,
+    lastReadAt: { ...ticket.lastReadAt, [userId]: now },
+  }));
+}
+
+export function getMachineUsage(machineId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return (
+      careCollections(db).machineUsage.find((row) => row.machineId === machineId) ??
+      null
+    );
+  });
+}
+
+function pickUsageField<T>(
+  incoming: T | null | undefined,
+  previous: T | undefined,
+): T | undefined {
+  if (incoming === null) {
+    return undefined;
+  }
+  if (incoming === undefined) {
+    return previous;
+  }
+  return incoming;
+}
+
+export function updateMachineUsage(
+  machineId: string,
+  patch: {
+    hours?: number | null;
+    cycles?: number | null;
+    lastServiceAt?: string | null;
+    notes?: string | null;
+  },
+  actorEmail: string,
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    if (!db.machines.some((machine) => machine.id === machineId)) {
+      return { error: "not-found" as const };
+    }
+    const now = new Date().toISOString();
+    const current =
+      careCollections(db).machineUsage.find((row) => row.machineId === machineId) ??
+      null;
+    const nextValues = {
+      hours: pickUsageField(patch.hours, current?.hours),
+      cycles: pickUsageField(patch.cycles, current?.cycles),
+      lastServiceAt: pickUsageField(patch.lastServiceAt, current?.lastServiceAt),
+      notes: pickUsageField(patch.notes, current?.notes),
+    };
+    const summary = usageSummary(current, nextValues);
+    const historyEntry = {
+      ...usageHistoryEntry(actorEmail, summary, now),
+      id: randomUUID(),
+    };
+    const next: StoredUsage = {
+      machineId,
+      ...nextValues,
+      updatedAt: now,
+      updatedByEmail: actorEmail,
+      history: [historyEntry, ...(current?.history ?? [])].slice(0, 50),
+    };
+    const machineUsage = [
+      next,
+      ...careCollections(db).machineUsage.filter((row) => row.machineId !== machineId),
+    ];
+    await writeDatabase({ ...db, ...careCollections(db), machineUsage });
+    return { usage: next };
+  });
+}
 
 export function listBugReports() {
   return withLock(async () => {

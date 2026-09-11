@@ -183,3 +183,101 @@ export type PartsListRow = {
   replaces?: string;
   stock?: string;
 };
+
+export type ManualCategory =
+  | "operator"
+  | "maintenance"
+  | "electrical"
+  | "mechanical"
+  | "hmi"
+  | "safety";
+
+export type MachineManual = {
+  id: string;
+  machineId: string;
+  title: string;
+  category: ManualCategory;
+  storedFileName: string;
+  originalFileName: string;
+  contentType: string;
+  sizeBytes?: number;
+  uploadedAt: string;
+  uploadedByEmail: string;
+};
+
+export type PublicMachineManual = MachineManual & {
+  fileUrl: string;
+};
+
+export type TicketStatus =
+  | "open"
+  | "in_progress"
+  | "waiting_on_customer"
+  | "resolved"
+  | "closed";
+
+export type TicketActivityKind = "message" | "status";
+
+export type TicketActivity = {
+  id: string;
+  at: string;
+  actorRole: Role;
+  actorEmail: string;
+  kind: TicketActivityKind;
+  text: string;
+};
+
+export type ServiceTicketRecord = {
+  id: string;
+  number: number;
+  machineId: string;
+  title: string;
+  status: TicketStatus;
+  createdAt: string;
+  customerId: string;
+  customerEmail: string;
+  activities: TicketActivity[];
+  lastReadAt: Record<string, string>;
+};
+
+export type ServiceTicket = {
+  id: string;
+  number: number;
+  machineId: string;
+  machineName?: string;
+  title: string;
+  status: TicketStatus;
+  createdAt: string;
+  customerEmail: string;
+  activities: TicketActivity[];
+  unread: boolean;
+};
+
+export type UsageHistoryEntry = {
+  id: string;
+  at: string;
+  actorEmail: string;
+  summary: string;
+};
+
+export type MachineUsage = {
+  machineId: string;
+  hours?: number;
+  cycles?: number;
+  lastServiceAt?: string;
+  notes?: string;
+  updatedAt: string;
+  updatedByEmail: string;
+  history: UsageHistoryEntry[];
+};
+
+export type CareOverview = {
+  machine: MachineSummary;
+  manuals: number;
+  ticketsOpen: number;
+  ticketsTotal: number;
+  usage?: Pick<
+    MachineUsage,
+    "hours" | "cycles" | "lastServiceAt" | "notes" | "updatedAt"
+  >;
+};
