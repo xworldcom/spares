@@ -54,7 +54,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
       method="post"
       action={LOGIN_ACTION}
       autoComplete="on"
-      className="login-form space-y-4"
+      className="login-form space-y-5"
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -65,7 +65,7 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
       }}
     >
       <div>
-        <label htmlFor="email" className="login-label block text-sm font-medium text-neutral-800">
+        <label htmlFor="email" className="login-label block text-[13px] font-medium">
           Email
         </label>
         <input
@@ -76,11 +76,11 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           autoComplete="username"
           required
           defaultValue=""
-          className="login-input mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/5"
+          className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
         />
       </div>
       <div>
-        <label htmlFor="password" className="login-label block text-sm font-medium text-neutral-800">
+        <label htmlFor="password" className="login-label block text-[13px] font-medium">
           Password
         </label>
         <input
@@ -91,11 +91,11 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           autoComplete="current-password"
           required
           defaultValue=""
-          className="login-input mt-1.5 h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/5"
+          className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
         />
       </div>
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0b4b0]" role="alert">
           {error}
         </p>
       ) : null}
@@ -103,14 +103,10 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
         type="submit"
         disabled={!hydrated || submitting}
         aria-disabled={!hydrated || submitting}
-        className="login-submit btn-primary inline-flex h-12 w-full items-center justify-center rounded-full text-[17px] font-semibold disabled:opacity-40"
+        className="login-submit mt-2 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-40"
       >
         {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
       </button>
-      <p className="spares-muted text-xs">
-        Staff and customers use the same screen. Accounts are created by staff —
-        there is no public signup.
-      </p>
     </form>
   );
 }

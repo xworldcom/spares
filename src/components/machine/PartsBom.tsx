@@ -109,7 +109,7 @@ export function PartsBom({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search name, number, vendor"
-              className="h-12 w-full rounded-2xl border-0 bg-white px-4 text-[16px] outline-none ring-1 ring-black/8"
+              className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             />
           </label>
           {categories.length > 0 ? (
@@ -142,7 +142,7 @@ export function PartsBom({
       {filtered.length === 0 ? (
         <p className="text-sm text-neutral-500">No parts match that search.</p>
       ) : (
-        <ul data-parts-bom="" className="overflow-hidden rounded-[22px] bg-white">
+        <ul data-parts-bom="" className="spares-surface overflow-hidden rounded-[22px]">
           {filtered.map((part) => {
             const selected = part.id === selectedPartId;
             return (

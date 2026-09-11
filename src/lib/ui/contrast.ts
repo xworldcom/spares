@@ -1,21 +1,24 @@
 /** Customer-facing action tokens. Light-on-dark or dark-on-light only. */
 
 export const SPARES_TONES = {
-  ink: "#0b0d10",
-  onInk: "#ffffff",
-  paper: "#f4f5f7",
-  onPaper: "#0b0d10",
+  ink: "#111214",
+  onInk: "#f3efe6",
+  paper: "#e8e4dc",
+  onPaper: "#111214",
+  lift: "#f4f1ea",
   accent: "#0a84ff",
   onAccent: "#ffffff",
-  muted: "#4b4f57",
+  muted: "#534f48",
   danger: "#7f1d1d",
   onDanger: "#ffffff",
-  soft: "#eceef2",
-  stage: "#0b0d10",
-  chrome: "#5a606c",
-  onChrome: "#ffffff",
-  chip: "#f4f5f7",
-  onChip: "#0b0d10",
+  soft: "#ddd8ce",
+  stage: "#12161c",
+  chrome: "#6b717a",
+  onChrome: "#f3efe6",
+  chip: "#1a2028",
+  onChip: "#f3efe6",
+  login: "#0c0d0f",
+  onLogin: "#f3efe6",
 } as const;
 
 function channel(value: number) {

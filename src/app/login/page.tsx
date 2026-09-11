@@ -10,17 +10,17 @@ export default async function LoginPage({
     next && next.startsWith("/") && !next.startsWith("//") ? next : "/machines";
 
   return (
-    <div className="login-page mx-auto flex min-h-[calc(100dvh-var(--spares-header)-3rem)] max-w-md flex-col justify-center">
-      <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
+    <div className="login-page mx-auto flex min-h-[calc(100dvh-var(--spares-header))] max-w-md flex-col justify-center px-1 pb-16">
+      <p className="login-kicker text-[11px] font-medium tracking-[0.22em] uppercase">
         Private
       </p>
-      <h1 className="mt-2 text-[32px] font-semibold tracking-tight">Sign in</h1>
-      <p className="spares-muted mt-2 text-[15px] leading-relaxed">
-        Staff and customers use this screen. Company emails (like @cargill.com)
-        are the plant login — this preview still uses the password staff set.
-        Cookie session. No public signup.
+      <h1 className="mt-5 text-[40px] leading-[1.05] font-semibold tracking-tight">
+        Sign in
+      </h1>
+      <p className="spares-muted mt-4 max-w-sm text-[16px] leading-relaxed">
+        Staff and plant accounts. Cookie session. No public signup.
       </p>
-      <div className="mt-8">
+      <div className="mt-10">
         <LoginForm nextPath={nextPath} />
       </div>
     </div>

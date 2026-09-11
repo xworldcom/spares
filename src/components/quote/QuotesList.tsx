@@ -87,7 +87,7 @@ export function QuotesList({ role }: { role: Role }) {
   }
 
   return (
-    <ul className="divide-y divide-neutral-200 overflow-hidden rounded-[24px] bg-white">
+    <ul className="spares-surface divide-y divide-black/6 overflow-hidden rounded-[24px]">
       {quotes.map((quote) => {
         const lines = quote.items.length;
         const title = quote.machineName ?? "Machine";

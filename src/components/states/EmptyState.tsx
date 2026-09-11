@@ -8,10 +8,10 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-neutral-300 bg-white px-4 py-8 text-center">
-      <p className="text-sm font-semibold text-neutral-900">{title}</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-neutral-600">{message}</p>
-      {action ? <div className="mt-4">{action}</div> : null}
+    <div className="px-1 py-10">
+      <p className="text-[22px] font-semibold tracking-tight">{title}</p>
+      <p className="spares-muted mt-2 max-w-md text-[15px] leading-relaxed">{message}</p>
+      {action ? <div className="mt-6">{action}</div> : null}
     </div>
   );
 }

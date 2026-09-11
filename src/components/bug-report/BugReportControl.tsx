@@ -138,7 +138,7 @@ export function BugReportControl() {
             setStatus("idle");
           }
         }}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#0b0d10] transition-colors duration-200 hover:bg-neutral-200/80"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full text-current transition-opacity duration-200 hover:opacity-70"
       >
         <ReportIcon />
       </button>

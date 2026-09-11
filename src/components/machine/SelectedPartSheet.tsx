@@ -80,7 +80,7 @@ export function SelectedPartSheet({
       className="pointer-events-none absolute top-[4.35rem] left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
     >
       <div
-        className={`pointer-events-auto rounded-2xl bg-white/92 px-2.5 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ring-black/8 backdrop-blur-md ${
+        className={`viewer-chrome-chip pointer-events-auto rounded-2xl px-3 py-2.5 ${
           held ? "scale-[1.02]" : "scale-100"
         } chrome-fade`}
         onPointerDown={(event) => {
@@ -89,14 +89,14 @@ export function SelectedPartSheet({
       >
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] leading-tight font-semibold tracking-tight text-[#0b0d10]">
+            <p className="truncate text-[13px] leading-tight font-semibold tracking-tight">
               {part.name}
             </p>
-            <p className="spares-muted truncate font-mono text-[11px]">
+            <p className="chrome-quiet truncate font-mono text-[11px]">
               {part.id}
             </p>
             {part.vendor || part.stock ? (
-              <p className="spares-muted truncate text-[11px]">
+              <p className="chrome-quiet truncate text-[11px]">
                 {[part.vendor, part.stock ? `stock ${part.stock}` : ""]
                   .filter(Boolean)
                   .join(" · ")}
@@ -116,16 +116,16 @@ export function SelectedPartSheet({
           <button
             type="button"
             onClick={() => setMore((current) => !current)}
-            className="inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-100"
+            className="chrome-quiet inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-medium hover:text-[var(--spares-on-chip)]"
             aria-expanded={more}
           >
             More
           </button>
         </div>
         {more ? (
-          <div className="mt-2 space-y-2 border-t border-black/6 pt-2">
+          <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
             {part.material || part.weight || part.replaces || part.category ? (
-              <p className="text-[12px] leading-snug text-neutral-600">
+              <p className="chrome-quiet text-[12px] leading-snug">
                 {[part.category, part.material, part.weight, part.replaces ? `replaces ${part.replaces}` : ""]
                   .filter(Boolean)
                   .join(" · ")}
@@ -136,7 +136,7 @@ export function SelectedPartSheet({
               type="button"
               {...activate(onHide)}
               disabled={!canAct}
-              className="btn-soft inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30"
+              className="inline-flex h-9 items-center rounded-full bg-white/8 px-3 text-[12px] font-medium disabled:opacity-30"
             >
               Hide
             </button>
@@ -145,7 +145,7 @@ export function SelectedPartSheet({
               {...activate(onIsolate)}
               disabled={!canAct}
               className={`${
-                isolated ? "btn-primary" : "btn-soft"
+                isolated ? "bg-[var(--spares-on-chip)] text-[var(--spares-chip)]" : "bg-white/8"
               } inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30`}
             >
               Only this
@@ -153,7 +153,7 @@ export function SelectedPartSheet({
             <button
               type="button"
               {...activate(onDismiss)}
-              className="inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium text-neutral-600 hover:bg-neutral-100"
+              className="chrome-quiet inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium hover:text-[var(--spares-on-chip)]"
             >
               Close
             </button>

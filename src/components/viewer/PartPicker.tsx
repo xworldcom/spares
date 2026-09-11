@@ -49,7 +49,7 @@ type ViewerGesture = {
   pointerId: number;
   pendingHit: PickHit;
 };
-const VIEWER_BG = "#1c232c";
+const VIEWER_BG = "#12161c";
 const box = new Box3();
 const localCenter = new Vector3();
 const worldCenter = new Vector3();
@@ -548,7 +548,7 @@ function ViewerStatus({
   return (
     <div
       role={role}
-      className="absolute inset-0 z-10 flex items-center justify-center bg-[#1c232c]/82 px-6 text-center"
+      className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--spares-stage)]/82 px-6 text-center"
     >
       <p className="max-w-sm text-sm leading-relaxed text-[#e8eef6]">{children}</p>
     </div>
