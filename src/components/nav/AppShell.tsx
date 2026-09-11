@@ -9,6 +9,11 @@ import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isNavActive } from "@/lib/nav-active";
+import {
+  scheduleVisualViewportSync,
+  subscribeVisualViewport,
+  syncVisualViewportBottom,
+} from "@/lib/ui/visual-viewport";
 
 const CUSTOMER_NAV_HREFS = ["/machines", "/quotes"] as const;
 const STAFF_NAV_HREFS = [
@@ -78,22 +83,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    function syncEmbed() {
+    function syncViewport() {
       const embedded = window.parent !== window;
       root.classList.toggle("spares-embed", embedded);
       const vv = window.visualViewport;
       const top = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
       root.style.setProperty("--embed-top", embedded ? `${top}px` : "0px");
+      syncVisualViewportBottom(root, window.innerHeight, vv);
     }
-    syncEmbed();
-    window.visualViewport?.addEventListener("resize", syncEmbed);
-    window.visualViewport?.addEventListener("scroll", syncEmbed);
-    window.addEventListener("resize", syncEmbed);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", syncEmbed);
-      window.visualViewport?.removeEventListener("scroll", syncEmbed);
-      window.removeEventListener("resize", syncEmbed);
-    };
+    return subscribeVisualViewport(() => {
+      scheduleVisualViewportSync(syncViewport);
+    }, window);
   }, []);
   const onLogin = pathname === "/login";
   const signedIn = status === "signed-in" && user;

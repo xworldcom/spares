@@ -383,12 +383,7 @@ export function QuoteWorkspace({
       />
 
       {role === "staff" && (statusDirty || itemsDirty) ? (
-        <div
-          className="quote-staff-apply sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
-          style={{
-            bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px))",
-          }}
-        >
+        <div className="quote-staff-apply border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden">
           <button
             type="button"
             disabled={busy}
