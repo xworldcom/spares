@@ -337,10 +337,10 @@ export function MachinesList() {
             return (
               <li key={machine.id} className="catalog-machine-card" data-open={open ? "true" : "false"}>
                 <div className="catalog-machine-main">
-                  <MachineGlyph />
-                  <div className="catalog-machine-copy">
-                    {renaming ? (
-                      <div className="space-y-2">
+                  {renaming ? (
+                    <>
+                      <MachineGlyph />
+                      <div className="catalog-machine-copy">
                         <label className="sr-only" htmlFor={`machine-name-${machine.id}`}>
                           Machine name
                         </label>
@@ -373,16 +373,24 @@ export function MachinesList() {
                           Cancel rename
                         </button>
                       </div>
-                    ) : (
-                      <Link href={`/machines/${machine.id}`} className="catalog-machine-link">
+                    </>
+                  ) : (
+                    <Link href={`/machines/${machine.id}`} className="catalog-machine-hit">
+                      <MachineGlyph />
+                      <div className="catalog-machine-copy">
                         <span className="catalog-machine-name">{machine.name}</span>
                         <span className="catalog-machine-meta">
                           {plant}
                           {machine.version && machine.version > 1 ? ` · v${machine.version}` : ""}
                         </span>
-                      </Link>
-                    )}
-                  </div>
+                      </div>
+                      {staff ? null : (
+                        <span className="catalog-chevron" aria-hidden="true">
+                          ›
+                        </span>
+                      )}
+                    </Link>
+                  )}
                   {staff ? (
                     <button
                       type="button"
@@ -396,11 +404,7 @@ export function MachinesList() {
                     >
                       ⋯
                     </button>
-                  ) : (
-                    <span className="catalog-chevron" aria-hidden="true">
-                      ›
-                    </span>
-                  )}
+                  ) : null}
                 </div>
                 {staff && open ? (
                   <div id={`machine-actions-${machine.id}`} className="catalog-machine-actions">

@@ -43,6 +43,7 @@ export function QuoteActivityFeed({
 }) {
   const [text, setText] = useState("");
   const scrollerRef = useRef<HTMLOListElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const self = { email: selfEmail, role };
 
   useEffect(() => {
@@ -51,6 +52,15 @@ export function QuoteActivityFeed({
       root.scrollTop = root.scrollHeight;
     }
   }, [activities]);
+
+  useEffect(() => {
+    const node = inputRef.current;
+    if (!node) {
+      return;
+    }
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
+  }, [text]);
 
   async function submit() {
     const next = text.trim();
@@ -96,6 +106,7 @@ export function QuoteActivityFeed({
                 key={activity.id}
                 className={own ? "imsg-row imsg-own" : "imsg-row imsg-other"}
                 data-stacked={stacked ? "true" : "false"}
+                data-end={lastInStack ? "true" : "false"}
               >
                 {!own ? (
                   lastInStack ? <OtherAvatar email={activity.actorEmail} /> : <span className="imsg-avatar-spacer" aria-hidden="true" />
@@ -124,6 +135,7 @@ export function QuoteActivityFeed({
         <label className="imsg-composer-field">
           <span className="sr-only">Message</span>
           <textarea
+            ref={inputRef}
             rows={1}
             value={text}
             onChange={(event) => setText(event.target.value)}
