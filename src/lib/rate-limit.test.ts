@@ -26,14 +26,17 @@ describe("allowRateLimit", () => {
 describe("allowLoginAttempt", () => {
   it("blocks a repeated email after the login limit", () => {
     resetRateLimit();
-    const request = new Request("http://localhost/api/auth/login", {
+    const requestA = new Request("http://localhost/api/auth/login", {
       headers: { "x-forwarded-for": "203.0.113.20" },
     });
+    const requestB = new Request("http://localhost/api/auth/login", {
+      headers: { "x-forwarded-for": "203.0.113.21" },
+    });
     for (let i = 0; i < LOGIN_RATE_LIMIT; i += 1) {
-      assert.equal(allowLoginAttempt(request, "staff@spares.local"), true);
+      assert.equal(allowLoginAttempt(requestA, "staff@spares.local"), true);
     }
-    assert.equal(allowLoginAttempt(request, "staff@spares.local"), false);
-    assert.equal(allowLoginAttempt(request, "customer@spares.local"), true);
+    assert.equal(allowLoginAttempt(requestA, "staff@spares.local"), false);
+    assert.equal(allowLoginAttempt(requestB, "customer@spares.local"), true);
   });
 });
 

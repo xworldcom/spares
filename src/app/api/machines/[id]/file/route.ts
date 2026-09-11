@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
-import { error, safeDownloadFilename } from "@/lib/http";
+import { safeDownloadFilename } from "@/lib/download-filename";
+import { error } from "@/lib/http";
 import { resolveMachineFileServe } from "@/lib/model-file-serve";
 import { canAccessMachine } from "@/lib/access";
 import { getMachine, listSites } from "@/lib/store";

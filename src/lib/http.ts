@@ -17,13 +17,6 @@ export function error(
   );
 }
 
-/** Filename for Content-Disposition. Strips path parts and header-breaking characters. */
-export function safeDownloadFilename(name: string, fallback = "download") {
-  const base = name.split(/[/\\]/).pop()?.trim() || fallback;
-  const cleaned = base.replace(/[\r\n\t"]/g, "_").slice(0, 180);
-  return cleaned || fallback;
-}
-
 export async function readJson<T>(request: Request): Promise<T | NextResponse> {
   try {
     return (await request.json()) as T;
