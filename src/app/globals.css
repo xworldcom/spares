@@ -1763,6 +1763,8 @@ html.spares-embed .spares-app-stage {
 
 .care-tabs {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   gap: 0.25rem;
   padding: 0.25rem;
   overflow-x: auto;
