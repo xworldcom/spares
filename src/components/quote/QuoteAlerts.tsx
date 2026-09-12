@@ -29,8 +29,8 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
     try {
       const data = await listQuotes();
       setUnreadCount(data.unreadCount);
-    } catch {
-      // Preview: leave the last known count if the list fails.
+    } catch (cause) {
+      console.warn("[spares] quote alerts refresh failed", cause);
     }
   }, [status, user]);
 
@@ -45,8 +45,8 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
           setUnreadCount(data.unreadCount);
         }
       })
-      .catch(() => {
-        // Preview: leave the last known count if the list fails.
+      .catch((cause) => {
+        console.warn("[spares] quote alerts load failed", cause);
       });
     return () => {
       cancelled = true;

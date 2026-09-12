@@ -58,6 +58,28 @@ const seedUsers = [
   },
 ];
 
+describe("owner staff bootstrap", () => {
+  after(() => {
+    resetStoreMemoryForTests();
+    setPersistenceForTests(null);
+    delete process.env.SPARES_DATA_DIR;
+    delete process.env.SPARES_OWNER_EMAIL;
+    delete process.env.SPARES_OWNER_PASSWORD;
+  });
+
+  it("upserts a staff owner from env on catalog read", async () => {
+    await isolatedDataDir();
+    process.env.SPARES_OWNER_EMAIL = "kevin@huzevka.com";
+    process.env.SPARES_OWNER_PASSWORD = "OwnerPreviewOnly1!";
+    const machines = await listMachines();
+    assert.ok(machines.length >= 0);
+    const { findUserByEmail } = await import("./store.ts");
+    const owner = await findUserByEmail("kevin@huzevka.com");
+    assert.ok(owner);
+    assert.equal(owner?.role, "staff");
+  });
+});
+
 describe("listMachines catalog heal", () => {
   after(() => {
     resetStoreMemoryForTests();
@@ -234,6 +256,7 @@ describe("machine care store", () => {
     setPersistenceForTests(null);
     delete process.env.SPARES_DATA_DIR;
     delete process.env.VERCEL;
+    delete process.env.SPARES_ALLOW_SEED;
   });
 
   it("persists manuals, tickets, and usage across a memory reset", async () => {
@@ -322,6 +345,17 @@ describe("machine care store", () => {
     process.env.VERCEL = "1";
     const remote = createMemoryPersistence();
     setPersistenceForTests(remote);
+    resetStoreMemoryForTests();
+    seedEmptyMachineCatalogForTests(seedUsers);
+    await remote.writeDatabaseJson(
+      JSON.stringify({
+        users: seedUsers,
+        machines: [],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+      }),
+    );
     resetStoreMemoryForTests();
 
     const created = await createMachine({

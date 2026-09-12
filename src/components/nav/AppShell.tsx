@@ -128,7 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     >
       <header className="spares-header sticky top-0 z-[60] shrink-0 backdrop-blur-md">
-        <div className="spares-header-inner mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4">
+        <div className="spares-header-inner mx-auto flex h-14 w-full max-w-none items-center gap-2 px-3 sm:px-4 lg:px-5">
           {machineStage ? (
             <div className="flex min-w-0 items-center gap-1">
               <Link
@@ -142,7 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
               <Link
                 href={`${pathname}/care`}
-                className="spares-muted inline-flex h-11 items-center px-2 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)]"
+                className="spares-muted inline-flex h-11 items-center px-2 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)] lg:hidden"
               >
                 Care
               </Link>
@@ -235,8 +235,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={
           machineStage
-            ? "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-0 pt-0 pb-0 sm:px-4 sm:pt-2 sm:pb-2"
-            : "mx-auto w-full max-w-6xl px-4 py-5 sm:py-8"
+            ? "mx-auto flex w-full min-h-0 max-w-none flex-1 flex-col px-0 pt-0 pb-0 sm:px-3 sm:pt-2 sm:pb-2 lg:px-4"
+            : "mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8"
         }
       >
         {children}

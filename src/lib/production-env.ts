@@ -6,6 +6,18 @@ export function isManagedRuntime() {
   return Boolean(process.env.VERCEL);
 }
 
+/** Demo fixtures and preview passwords — off on Vercel unless explicitly enabled. */
+export function isSeedAllowed() {
+  const flag = process.env.SPARES_ALLOW_SEED?.trim().toLowerCase();
+  if (flag === "true" || flag === "1") {
+    return true;
+  }
+  if (flag === "false" || flag === "0") {
+    return false;
+  }
+  return !isManagedRuntime();
+}
+
 /** Fail closed on Vercel when required secrets or object storage are missing. */
 export function assertManagedRuntimeEnv() {
   if (!isManagedRuntime()) {
@@ -16,6 +28,12 @@ export function assertManagedRuntimeEnv() {
   if (!authSecret || authSecret === LOCAL_DEV_SECRET) {
     throw new Error(
       "AUTH_SECRET must be set to a long random value on Vercel. Do not use the local development default.",
+    );
+  }
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN is required on Vercel. Attach a Vercel Blob store to this project — quotes, users, and machine metadata must not use ephemeral /tmp.",
     );
   }
 

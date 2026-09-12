@@ -97,7 +97,7 @@ npm run generate:hardware
 
 ## Private-preview seeds (Quinn)
 
-There is **no public signup**. Staff create customer accounts. These two users are **private-preview credentials only** — not production accounts. They are seeded automatically the first time the API store is created. **Do not show these passwords on the login screen.**
+There is **no public signup**. Staff create customer accounts. These two users are **private-preview credentials only** — not production accounts. They are seeded only when `SPARES_ALLOW_SEED=true` (Preview) or during local `npm run dev`. **Do not show these passwords on the login screen.**
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -121,15 +121,18 @@ npm run build
 Optional (from T1.2, plus T3 durable store):
 
 - `AUTH_SECRET` — signs the httpOnly session cookie. **Required on Vercel** (Preview and Production). A local-only development default is used when unset off Vercel. Never commit this value.
+- `BLOB_READ_WRITE_TOKEN` — **required on Vercel** (Preview and Production). Quotes, users, machine metadata, PO PDFs, and bug screenshots live in a private Vercel Blob store (`spares/db.json` + `spares/care.json`). The app fails closed on Vercel without this — no silent `/tmp` fallback. Local `npm run dev` does not need this; it keeps using `./data`.
+- `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo.
+- `SPARES_OWNER_PASSWORD` — sets/resets the owner staff password hash on each deploy when paired with `SPARES_OWNER_EMAIL`.
+- `SPARES_ALLOW_SEED` — set to `true` on **Preview only** to seed demo fixtures (`SparesStaff1!`, Hardware, Palletizer, extra customers). Leave unset/false on Production.
 - `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — optional scoped PAT for staff bug-report GitHub issues (`issues:write`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks.
 - `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
-- `BLOB_READ_WRITE_TOKEN` — **required on Vercel Preview** when S3/R2 is not configured. Quotes, activity, PO PDFs, tracking, users, and machine metadata live in a private Vercel Blob store (`spares/db.json`). Local `npm run dev` does not need this; it keeps using `./data`.
 - **S3-compatible object storage (preferred for GLB files)** — keeps large model binaries off Vercel origin transfer. Set all of:
   - `S3_ENDPOINT` — R2 endpoint, e.g. `https://<accountid>.r2.cloudflarestorage.com`
   - `S3_REGION` — use `auto` for Cloudflare R2
   - `S3_BUCKET` — bucket name
   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
-  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base, e.g. `https://models.preview.example.com` (no trailing slash). When set, the viewer loads GLBs from this permanent URL instead of presigned URLs.
+  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base for **local dev only**. On Vercel, machine models always use short-lived presigned GET URLs (or the credentialed `/file` proxy) so CAD stays private.
   - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, hard-capped at one hour). Presigned PUT tickets for staff uploads expire in 15 minutes.
 
 ### Tess: wire Cloudflare R2 for model files (recommended)
@@ -168,7 +171,7 @@ Vercel `/tmp` is per-instance. Without Blob **or** another durable store, a quot
 4. Confirm Preview env has `BLOB_READ_WRITE_TOKEN` and does **not** have `SPARES_DATA_DIR`.
 5. `DATABASE_URL` / Upstash Redis are **not** required for this pass. JSON records are stored as a private Blob object (`spares/db.json`) alongside files (`spares/files/...`). We can move JSON to Postgres later if the preview outgrows this.
 
-Empty Blob store auto-seeds Hardware fixture, Palletizer, and the seed users the first time an API route runs.
+With `SPARES_ALLOW_SEED=true`, an empty Blob store auto-seeds Hardware fixture, Palletizer, and the preview users the first time an API route runs.
 
 ### Large GLB packs
 

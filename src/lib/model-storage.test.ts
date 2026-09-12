@@ -84,7 +84,8 @@ describe("model public URLs", () => {
     );
   });
 
-  it("prefers the public CDN URL in machine file responses", async () => {
+  it("prefers the public CDN URL in machine file responses off Vercel", async () => {
+    delete process.env.VERCEL;
     process.env.S3_ENDPOINT = "https://example.r2.cloudflarestorage.com";
     process.env.S3_BUCKET = "spares-models";
     process.env.S3_ACCESS_KEY_ID = "key";
@@ -99,6 +100,26 @@ describe("model public URLs", () => {
       storedFileName: "abc.glb",
     });
     assert.equal(url, "https://cdn.example.test/spares/models/abc.glb");
+  });
+
+  it("uses presigned URLs on Vercel even when a public CDN base is set", async () => {
+    process.env.VERCEL = "1";
+    process.env.S3_ENDPOINT = "https://example.r2.cloudflarestorage.com";
+    process.env.S3_BUCKET = "spares-models";
+    process.env.S3_ACCESS_KEY_ID = "key";
+    process.env.S3_SECRET_ACCESS_KEY = "secret";
+    process.env.S3_PUBLIC_BASE_URL = "https://cdn.example.test/spares";
+    setTestS3Objects(
+      new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
+    );
+    const request = new Request("https://preview.example.test/api/machines/m1");
+    const url = await machineFileUrl(request, {
+      id: "m1",
+      storedFileName: "abc.glb",
+    });
+    const parsed = new URL(url);
+    assert.match(parsed.hostname, /cloudflarestorage\.com$/);
+    assert.ok(parsed.searchParams.has("X-Amz-Signature"));
   });
 
   it("returns a presigned R2 GET URL when S3 is configured without a public base", async () => {

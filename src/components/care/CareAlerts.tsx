@@ -29,8 +29,8 @@ export function CareAlertsProvider({ children }: { children: React.ReactNode }) 
     try {
       const data = await listAccessibleTickets();
       setUnreadCount(data.unreadCount);
-    } catch {
-      // Preview: leave the last known count if the list fails.
+    } catch (cause) {
+      console.warn("[spares] care alerts refresh failed", cause);
     }
   }, [status, user]);
 
@@ -45,8 +45,8 @@ export function CareAlertsProvider({ children }: { children: React.ReactNode }) 
           setUnreadCount(data.unreadCount);
         }
       })
-      .catch(() => {
-        // Preview: leave the last known count if the list fails.
+      .catch((cause) => {
+        console.warn("[spares] care alerts load failed", cause);
       });
     return () => {
       cancelled = true;

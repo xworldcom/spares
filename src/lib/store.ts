@@ -40,6 +40,7 @@ import {
   usageSummary,
 } from "./care.ts";
 import { deleteManualFile, writeManualFile } from "./manual-storage.ts";
+import { isSeedAllowed } from "./production-env.ts";
 import type {
   MachineManual,
   MachineUsage,
@@ -331,6 +332,19 @@ async function seedUser(input: {
   };
 }
 
+async function emptyDatabase(): Promise<Database> {
+  return {
+    users: [],
+    machines: [],
+    quotes: [],
+    bugReports: [],
+    sites: [],
+    manuals: [],
+    tickets: [],
+    machineUsage: [],
+  };
+}
+
 async function seedDatabase(): Promise<Database> {
   const users: StoredUser[] = [
     await seedUser(SEED_STAFF),
@@ -346,6 +360,47 @@ async function seedDatabase(): Promise<Database> {
     manuals: [],
     tickets: [],
     machineUsage: [],
+  };
+}
+
+function ownerStaffId(email: string) {
+  return `user-owner-${email.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`;
+}
+
+async function ensureOwnerStaff(db: Database): Promise<Database> {
+  const email = process.env.SPARES_OWNER_EMAIL?.trim().toLowerCase();
+  const password = process.env.SPARES_OWNER_PASSWORD;
+  if (!email || !password) {
+    return db;
+  }
+  const passwordHash = await hashPassword(password);
+  const index = db.users.findIndex(
+    (user) => normalizeEmail(user.email) === email,
+  );
+  if (index >= 0) {
+    const current = db.users[index];
+    if (current.role === "staff" && current.passwordHash === passwordHash) {
+      return db;
+    }
+    const users = db.users.slice();
+    users[index] = {
+      ...current,
+      role: "staff",
+      passwordHash,
+    };
+    return { ...db, users };
+  }
+  return {
+    ...db,
+    users: [
+      ...db.users,
+      {
+        id: ownerStaffId(email),
+        email,
+        passwordHash,
+        role: "staff",
+      },
+    ],
   };
 }
 
@@ -394,9 +449,11 @@ function stabilizeSeedUsers(db: Database): Database {
 
 function ensureSites(db: Database): Database {
   const have = new Map((db.sites ?? []).map((site) => [site.id, site]));
-  for (const site of SEED_SITES) {
-    if (!have.has(site.id)) {
-      have.set(site.id, site);
+  if (isSeedAllowed()) {
+    for (const site of SEED_SITES) {
+      if (!have.has(site.id)) {
+        have.set(site.id, site);
+      }
     }
   }
   const sites = [...have.values()].sort((a, b) =>
@@ -430,6 +487,9 @@ function ensureSites(db: Database): Database {
 }
 
 async function withFixtureMachines(db: Database): Promise<Database> {
+  if (!isSeedAllowed()) {
+    return db;
+  }
   const extras = await missingFixtureMachines(db.machines, persistFile);
   if (extras.length === 0) {
     return db;
@@ -450,14 +510,21 @@ function catalogChanged(before: Database, after: Database) {
  * Always re-run fixture + seed-user heal. A warm in-memory db with users but
  * empty machines must not stick around. Remote backends re-read every time.
  */
+async function stabilizeCatalogUsers(db: Database): Promise<Database> {
+  if (!isSeedAllowed()) {
+    return await ensureOwnerStaff(db);
+  }
+  return await ensureOwnerStaff(
+    await ensureExtraCustomers(stabilizeSeedUsers(db)),
+  );
+}
+
 async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Database> {
   const db = await readDatabase();
   const next = ensureSites(
-    await withFixtureMachines(
-      await ensureExtraCustomers(stabilizeSeedUsers(db)),
-    ),
+    await withFixtureMachines(await stabilizeCatalogUsers(db)),
   );
-  if (options?.restoreFiles) {
+  if (options?.restoreFiles && isSeedAllowed()) {
     await restoreMissingFixtureFiles(
       next.machines,
       async (name) => Boolean((await readModelFile(name))?.length),
@@ -512,8 +579,9 @@ async function readDatabase(): Promise<Database> {
   const raw = await getPersistence().readDatabaseJson();
   const loaded = raw ? parseDatabase(raw) : null;
   if (!loaded) {
+    const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
     const seeded = await overlayPersistedCare(
-      await withFixtureMachines(await seedDatabase()),
+      await withFixtureMachines(await ensureOwnerStaff(base)),
     );
     await writeDatabase(seeded);
     return seeded;
@@ -523,7 +591,7 @@ async function readDatabase(): Promise<Database> {
   const next = await overlayPersistedCare(
     ensureSites(
       await withFixtureMachines(
-        await ensureExtraCustomers(stabilizeSeedUsers({ ...loaded.db, quotes })),
+        await stabilizeCatalogUsers({ ...loaded.db, quotes }),
       ),
     ),
   );

@@ -21,7 +21,7 @@ export function CareHubFrame({ children }: { children: React.ReactNode }) {
   const current = tabFromPath(pathname);
 
   return (
-    <div className="care-page">
+    <div className="care-page care-page-wide">
       <header className="care-hero">
         <Link href="/machines" className="care-back">
           <span aria-hidden="true">‹</span> Machines

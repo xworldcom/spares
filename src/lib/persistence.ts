@@ -1,6 +1,7 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { BLOB_CARE_PATH, BLOB_DB_PATH, BLOB_FILES_PREFIX } from "./blob-paths.ts";
+import { isManagedRuntime } from "./production-env.ts";
 
 export type StoreKind = "fs" | "blob" | "memory";
 
@@ -16,7 +17,6 @@ export type Persistence = {
 };
 
 let override: Persistence | null = null;
-let ephemeralWarned = false;
 
 export function safeStoredFileName(storedFileName: string) {
   const base = path.basename(storedFileName);
@@ -102,20 +102,12 @@ function selectPersistence(): Persistence {
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     return blobPersistence();
   }
-  if (process.env.VERCEL) {
-    warnEphemeral();
+  if (isManagedRuntime()) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN is required on Vercel. Attach a Vercel Blob store to this project — quotes, users, and machine metadata must not use ephemeral /tmp.",
+    );
   }
   return fsPersistence(getDataDir());
-}
-
-function warnEphemeral() {
-  if (ephemeralWarned) {
-    return;
-  }
-  ephemeralWarned = true;
-  console.error(
-    "[spares] BLOB_READ_WRITE_TOKEN is not set. Using ephemeral /tmp — quotes, activity, PO PDFs, and tracking will vanish across serverless instances. Create a Vercel Blob store, attach it to this project (Preview), and redeploy.",
-  );
 }
 
 function fsPersistence(root: string): Persistence {
