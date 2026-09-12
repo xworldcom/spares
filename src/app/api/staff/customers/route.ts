@@ -15,6 +15,7 @@ type CreateCustomerBody = {
   email?: unknown;
   password?: unknown;
   siteIds?: unknown;
+  machineIds?: unknown;
   companyAccess?: unknown;
 };
 
@@ -42,8 +43,12 @@ export async function POST(request: Request) {
   const siteIds = Array.isArray(body.siteIds)
     ? body.siteIds.filter((value): value is string => typeof value === "string")
     : [];
+  const machineIds = Array.isArray(body.machineIds)
+    ? body.machineIds.filter((value): value is string => typeof value === "string")
+    : [];
   const created = await createCustomer(email, await hashPassword(password), {
     siteIds,
+    machineIds,
   });
   if ("error" in created) {
     return error("A user with that email already exists", 409);

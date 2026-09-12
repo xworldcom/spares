@@ -6,42 +6,64 @@ import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { PersonGlyph } from "@/components/catalog/CatalogGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { accessOptionsGrouped, accessSummary, siteLabel } from "@/lib/access";
+import {
+  AccessCascadePicker,
+  grantFromPublicUser,
+} from "@/components/staff/AccessCascadePicker";
+import {
+  accessSummary,
+  grantFromUser,
+  normalizeAccessGrant,
+  type AccessGrant,
+} from "@/lib/access";
 import {
   deletePerson,
   listCustomerAccounts,
   listCustomers,
   listSites,
-  updatePersonSites,
+  updatePersonAccess,
 } from "@/lib/api/auth";
+import { listMachines } from "@/lib/api/machines";
 import { errorMessage } from "@/lib/api/errors";
-import type { CustomerAccount, PublicUser, Site } from "@/lib/api/types";
+import type { CustomerAccount, MachineSummary, PublicUser, Site } from "@/lib/api/types";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
+
+function grantsEqual(left: AccessGrant, right: AccessGrant) {
+  const leftSites = [...left.siteIds].sort().join(",");
+  const rightSites = [...right.siteIds].sort().join(",");
+  const leftMachines = [...left.machineIds].sort().join(",");
+  const rightMachines = [...right.machineIds].sort().join(",");
+  return leftSites === rightSites && leftMachines === rightMachines;
+}
 
 export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
   const [people, setPeople] = useState<PublicUser[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
+  const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [draftAccess, setDraftAccess] = useState<Record<string, string[]>>({});
+  const [draftAccess, setDraftAccess] = useState<Record<string, AccessGrant>>({});
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listCustomers(), listSites(), listCustomerAccounts()])
-      .then(([nextPeople, nextSites, nextAccounts]) => {
+    Promise.all([listCustomers(), listSites(), listCustomerAccounts(), listMachines()])
+      .then(([nextPeople, nextSites, nextAccounts, nextMachines]) => {
         if (cancelled) {
           return;
         }
         setPeople(nextPeople);
         setSites(nextSites);
         setAccounts(nextAccounts);
+        setMachines(nextMachines);
         setDraftAccess(
-          Object.fromEntries(nextPeople.map((row) => [row.id, row.siteIds ?? []])),
+          Object.fromEntries(
+            nextPeople.map((row) => [row.id, grantFromPublicUser(row)]),
+          ),
         );
         setError(null);
         setLoading(false);
@@ -58,43 +80,29 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
     };
   }, [reloadKey, retryKey]);
 
-  const groupedSites = useMemo(
-    () => accessOptionsGrouped(sites, accounts),
-    [sites, accounts],
-  );
-
   const filtered = useMemo(() => {
     return people.filter((row) =>
       catalogQueryMatch(query, [
         displayNameFromEmail(row.email),
         row.email,
-        accessSummary(row, accounts),
-        ...(row.sites ?? []).map((site) => siteLabel(site, accounts)),
+        accessSummary(row, accounts, sites, machines),
       ]),
     );
-  }, [people, query, accounts]);
-
-  function toggleSite(userId: string, siteId: string) {
-    setDraftAccess((current) => {
-      const selected = new Set(current[userId] ?? []);
-      if (selected.has(siteId)) {
-        selected.delete(siteId);
-      } else {
-        selected.add(siteId);
-      }
-      return { ...current, [userId]: [...selected] };
-    });
-  }
+  }, [people, query, accounts, sites, machines]);
 
   async function saveAccess(userId: string) {
     setSavingId(userId);
     setError(null);
+    const grant = normalizeAccessGrant(draftAccess[userId] ?? grantFromUser({}), machines);
     try {
-      const next = await updatePersonSites(userId, draftAccess[userId] ?? []);
+      const next = await updatePersonAccess(userId, grant);
       setPeople((current) => current.map((row) => (row.id === userId ? next : row)));
-      setDraftAccess((current) => ({ ...current, [userId]: next.siteIds ?? [] }));
+      setDraftAccess((current) => ({
+        ...current,
+        [userId]: grantFromPublicUser(next),
+      }));
     } catch (cause) {
-      setError(errorMessage(cause, "Could not update site access."));
+      setError(errorMessage(cause, "Could not update access."));
     } finally {
       setSavingId(null);
     }
@@ -145,7 +153,7 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
           label="Search people"
           value={query}
           onChange={setQuery}
-          placeholder="Search name, email, or site"
+          placeholder="Search name, email, or access"
         />
         <p className="catalog-count">
           {filtered.length} {filtered.length === 1 ? "person" : "people"}
@@ -162,8 +170,8 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
             title={people.length === 0 ? "No people yet" : "No matches"}
             message={
               people.length === 0
-                ? "Create a person with New person. Assign one or more sites for machine and ticket access."
-                : "Try a different name, email, or site."
+                ? "Create a person with New person. Assign customer, site, and machine access."
+                : "Try a different name, email, or access label."
             }
           />
         </div>
@@ -172,15 +180,16 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
           <li className="catalog-people-head" aria-hidden="true">
             <span>Person</span>
             <span>Contact</span>
-            <span>Current access</span>
-            <span>Sites</span>
+            <span>Access</span>
           </li>
           {filtered.map((row) => {
             const name = displayNameFromEmail(row.email);
-            const selected = new Set(draftAccess[row.id] ?? []);
-            const summary = accessSummary(
-              { siteIds: [...selected], sites: sites.filter((site) => selected.has(site.id)) },
-              accounts,
+            const savedGrant = grantFromPublicUser(row);
+            const draft = draftAccess[row.id] ?? savedGrant;
+            const summary = accessSummary(draft, accounts, sites, machines);
+            const dirty = !grantsEqual(
+              normalizeAccessGrant(draft, machines),
+              normalizeAccessGrant(savedGrant, machines),
             );
             return (
               <li key={row.id} className="catalog-person-card catalog-person-card-tall">
@@ -189,40 +198,28 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
                   <div className="min-w-0">
                     <p className="catalog-person-name">{name}</p>
                     <p className="catalog-person-email catalog-person-email-mobile">{row.email}</p>
-                    <p className="catalog-person-plant-mobile">{summary || "No site access"}</p>
+                    <p className="catalog-person-plant-mobile">{summary || "No access"}</p>
                   </div>
                 </div>
                 <p className="catalog-person-email catalog-person-email-desktop">{row.email}</p>
-                <p className="catalog-person-plant-desktop">{summary || "No site access"}</p>
                 <div className="catalog-person-access catalog-person-access-wide">
-                  <fieldset className="catalog-site-picker">
-                    <legend className="sr-only">Sites for {row.email}</legend>
-                    {groupedSites.map((group) => (
-                      <div key={group.customerName} className="catalog-site-picker-group">
-                        <p className="catalog-site-picker-customer">{group.customerName}</p>
-                        <ul className="catalog-site-picker-options">
-                          {group.sites.map((site) => (
-                            <li key={site.id}>
-                              <label className="catalog-site-picker-option">
-                                <input
-                                  type="checkbox"
-                                  checked={selected.has(site.id)}
-                                  disabled={savingId === row.id}
-                                  onChange={() => toggleSite(row.id, site.id)}
-                                />
-                                <span>{site.name}</span>
-                              </label>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </fieldset>
+                  <p className="catalog-person-access-summary">{summary || "No access"}</p>
+                  <AccessCascadePicker
+                    grant={draft}
+                    onChange={(next) =>
+                      setDraftAccess((current) => ({ ...current, [row.id]: next }))
+                    }
+                    sites={sites}
+                    accounts={accounts}
+                    machines={machines}
+                    disabled={savingId === row.id}
+                    legend={`Access for ${row.email}`}
+                  />
                   <div className="catalog-person-actions">
                     <button
                       type="button"
                       className="btn-soft"
-                      disabled={savingId === row.id}
+                      disabled={savingId === row.id || !dirty}
                       onClick={() => void saveAccess(row.id)}
                     >
                       Save access

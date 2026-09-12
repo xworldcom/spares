@@ -43,17 +43,36 @@ export async function listCustomers(): Promise<PublicUser[]> {
 export async function createPerson(
   email: string,
   password: string,
-  siteIds: string[] = [],
+  access: { siteIds?: string[]; machineIds?: string[] } = {},
 ) {
   const data = await apiFetch<AuthUserResponse>("/api/staff/customers", {
     method: "POST",
-    body: JSON.stringify({ email, password, siteIds }),
+    body: JSON.stringify({
+      email,
+      password,
+      siteIds: access.siteIds ?? [],
+      machineIds: access.machineIds ?? [],
+    }),
   });
   return data.user;
 }
 
 /** @deprecated Use createPerson */
 export const createCustomer = createPerson;
+
+export async function updatePersonAccess(
+  userId: string,
+  access: { siteIds: string[]; machineIds: string[] },
+) {
+  const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      siteIds: access.siteIds,
+      machineIds: access.machineIds,
+    }),
+  });
+  return data.user;
+}
 
 export async function updatePersonSites(userId: string, siteIds: string[]) {
   const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {

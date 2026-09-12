@@ -1443,6 +1443,10 @@ html.spares-embed .spares-app-stage {
   display: none;
 }
 
+.catalog-person-access-summary {
+  display: none;
+}
+
 .catalog-person-access {
   display: block;
   min-width: 0;
@@ -1668,6 +1672,75 @@ html.spares-embed .spares-app-stage {
   font-size: 13px;
 }
 
+.access-cascade {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.access-cascade-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.access-cascade-step {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.access-cascade-step-label {
+  margin: 0;
+  color: var(--spares-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.access-cascade-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 11rem;
+  overflow: auto;
+}
+
+.access-cascade-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.access-cascade-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.access-cascade-empty {
+  margin: 0;
+  color: var(--spares-muted);
+  font-size: 12px;
+}
+
+.catalog-person-access-summary {
+  margin: 0 0 0.55rem;
+  color: var(--spares-muted);
+  font-size: 13px;
+}
+
 .catalog-person-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1684,8 +1757,7 @@ html.spares-embed .spares-app-stage {
     grid-template-columns:
       minmax(12rem, 1fr)
       minmax(12rem, 1fr)
-      minmax(10rem, 0.9fr)
-      minmax(22rem, 1.6fr);
+      minmax(28rem, 2fr);
     align-items: start;
   }
 }
@@ -1809,8 +1881,7 @@ html.spares-embed .spares-app-stage {
     grid-template-columns:
       minmax(13rem, 1.15fr)
       minmax(13rem, 1.2fr)
-      minmax(10rem, 1fr)
-      minmax(15rem, 1.15fr);
+      minmax(24rem, 2fr);
     align-items: center;
     gap: 1rem;
     padding: 0.95rem 1.25rem;
@@ -1842,7 +1913,8 @@ html.spares-embed .spares-app-stage {
   }
 
   .catalog-person-email-desktop,
-  .catalog-person-plant-desktop {
+  .catalog-person-plant-desktop,
+  .catalog-person-access-summary {
     display: block;
   }
 }

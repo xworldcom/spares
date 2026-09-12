@@ -32,7 +32,7 @@ import {
   missingFixtureMachines,
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
-import { toPublicUser } from "./access.ts";
+import { normalizeAccessGrant, toPublicUser } from "./access.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -881,7 +881,7 @@ export function deleteCustomerAccount(id: string) {
 export function createCustomer(
   email: string,
   passwordHash: string,
-  access: { siteIds?: string[]; companyAccess?: string[] } = {},
+  access: { siteIds?: string[]; companyAccess?: string[]; machineIds?: string[] } = {},
 ) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
@@ -890,12 +890,16 @@ export function createCustomer(
       return { error: "email-taken" as const };
     }
     const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
+    const machineIds = new Set(db.machines.map((machine) => machine.id));
     const user: StoredUser = {
       id: randomUUID(),
       email: normalized,
       passwordHash,
       role: "customer",
       siteIds: [...new Set((access.siteIds ?? []).filter((id) => known.has(id)))],
+      machineIds: [
+        ...new Set((access.machineIds ?? []).filter((id) => machineIds.has(id))),
+      ],
     };
     await writeDatabase({ ...db, users: [...db.users, user] });
     return { user };
@@ -1077,18 +1081,26 @@ export function updateCustomerSites(
       return { error: "not-customer" as const };
     }
     const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
-    const machineIds = new Set(db.machines.map((machine) => machine.id));
-    const next = {
-      ...user,
+    const validMachines = db.machines.map((machine) => ({
+      id: machine.id,
+      siteId: machine.siteId,
+    }));
+    const rawGrant = {
       siteIds: [...new Set((access.siteIds ?? user.siteIds ?? []).filter((id) => known.has(id)))],
-      companyAccess: undefined,
       machineIds: [
         ...new Set(
           (access.machineIds ?? user.machineIds ?? []).filter((id) =>
-            machineIds.has(id),
+            validMachines.some((machine) => machine.id === id),
           ),
         ),
       ],
+    };
+    const normalized = normalizeAccessGrant(rawGrant, validMachines);
+    const next = {
+      ...user,
+      siteIds: normalized.siteIds,
+      companyAccess: undefined,
+      machineIds: normalized.machineIds,
     };
     const users = db.users.slice();
     users[index] = next;
