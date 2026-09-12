@@ -1,9 +1,20 @@
 export type Role = "staff" | "customer";
 
+export type CustomerAccount = {
+  id: string;
+  name: string;
+  createdAt: string;
+  deletedAt?: string;
+};
+
 export type Site = {
   id: string;
-  company: string;
+  customerId: string;
   name: string;
+  createdAt: string;
+  deletedAt?: string;
+  /** Legacy field from pre-v2 plant rows; kept for migration only. */
+  company?: string;
 };
 
 export type PublicUser = {
@@ -11,10 +22,12 @@ export type PublicUser = {
   email: string;
   role: Role;
   siteIds?: string[];
+  /** Legacy corporate access; migrated to siteIds on read. */
   companyAccess?: string[];
   machineIds?: string[];
   emailDomain?: string;
   sites?: Site[];
+  deletedAt?: string;
 };
 
 export type Part = {

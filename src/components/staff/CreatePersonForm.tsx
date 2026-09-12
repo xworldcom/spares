@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createCustomer, listSites } from "@/lib/api/auth";
+import { createPerson, listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import type { Site } from "@/lib/api/types";
-import { accessOptions, parseAccessValue } from "@/lib/access";
+import { accessOptionsGrouped } from "@/lib/access";
 
-export function CreateCustomerForm({
+export function CreatePersonForm({
   onCreated,
   onCancel,
 }: {
@@ -15,7 +15,7 @@ export function CreateCustomerForm({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [siteId, setSiteId] = useState("");
+  const [siteIds, setSiteIds] = useState<string[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,23 +35,30 @@ export function CreateCustomerForm({
     };
   }, []);
 
+  const grouped = accessOptionsGrouped(sites);
+
+  function toggleSite(siteId: string) {
+    setSiteIds((current) =>
+      current.includes(siteId)
+        ? current.filter((id) => id !== siteId)
+        : [...current, siteId],
+    );
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setCreatedEmail(null);
     setSubmitting(true);
     try {
-      const user = await createCustomer(
-        email.trim(),
-        password,
-        parseAccessValue(siteId),
-      );
+      const user = await createPerson(email.trim(), password, siteIds);
       setCreatedEmail(user.email);
       setEmail("");
       setPassword("");
+      setSiteIds([]);
       onCreated?.();
     } catch (cause) {
-      setError(errorMessage(cause, "Could not create the customer account."));
+      setError(errorMessage(cause, "Could not create that person."));
     } finally {
       setSubmitting(false);
     }
@@ -65,16 +72,16 @@ export function CreateCustomerForm({
       className="catalog-create"
     >
       <div className="catalog-create-copy">
-        <h2>New customer</h2>
-        <p>They use the same login screen. Give a plant, or all plants at their company.</p>
+        <h2>New person</h2>
+        <p>Customer login — assign one or more sites for machine and ticket access.</p>
       </div>
       <div className="catalog-create-grid">
         <div>
-          <label htmlFor="customer-email" className="block text-sm font-medium">
+          <label htmlFor="person-email" className="block text-sm font-medium">
             Email
           </label>
           <input
-            id="customer-email"
+            id="person-email"
             name="email"
             type="email"
             required
@@ -85,11 +92,11 @@ export function CreateCustomerForm({
           />
         </div>
         <div>
-          <label htmlFor="customer-password" className="block text-sm font-medium">
+          <label htmlFor="person-password" className="block text-sm font-medium">
             Temporary password
           </label>
           <input
-            id="customer-password"
+            id="person-password"
             name="password"
             type="password"
             required
@@ -101,23 +108,29 @@ export function CreateCustomerForm({
           />
           <p className="spares-muted mt-1.5 text-sm">At least 10 characters.</p>
         </div>
-        <div>
-          <label htmlFor="customer-site" className="block text-sm font-medium">
-            Access
-          </label>
-          <select
-            id="customer-site"
-            value={siteId}
-            onChange={(event) => setSiteId(event.target.value)}
-            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
-          >
-            <option value="">No access</option>
-            {accessOptions(sites).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
+        <div className="md:col-span-2">
+          <p className="text-sm font-medium">Site access</p>
+          <div className="catalog-site-picker mt-2">
+            {grouped.map((group) => (
+              <div key={group.customerName} className="catalog-site-picker-group">
+                <p className="catalog-site-picker-customer">{group.customerName}</p>
+                <ul className="catalog-site-picker-options">
+                  {group.sites.map((site) => (
+                    <li key={site.id}>
+                      <label className="catalog-site-picker-option">
+                        <input
+                          type="checkbox"
+                          checked={siteIds.includes(site.id)}
+                          onChange={() => toggleSite(site.id)}
+                        />
+                        <span>{site.name}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
       </div>
       {error ? (
@@ -127,8 +140,7 @@ export function CreateCustomerForm({
       ) : null}
       {createdEmail ? (
         <p className="text-sm text-[#8ee0a8]" role="status">
-          Created customer {createdEmail}. They can sign in on the same login
-          screen.
+          Created {createdEmail}. They can sign in on the same login screen.
         </p>
       ) : null}
       <div className="catalog-create-actions">
@@ -146,7 +158,7 @@ export function CreateCustomerForm({
           disabled={submitting}
           className="btn-primary inline-flex h-12 items-center justify-center rounded-full px-5 text-[16px] font-semibold disabled:opacity-60"
         >
-          {submitting ? "Creating…" : "Create customer"}
+          {submitting ? "Creating…" : "Create person"}
         </button>
       </div>
     </form>

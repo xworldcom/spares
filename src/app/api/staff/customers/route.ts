@@ -1,7 +1,7 @@
 import { hashPassword, passwordPolicyError, requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
-import { createCustomer, listCustomers, listSites } from "@/lib/store";
+import { createCustomer, getOrgContext, listCustomers } from "@/lib/store";
 
 export async function GET() {
   const auth = await requireRole("staff");
@@ -42,20 +42,17 @@ export async function POST(request: Request) {
   const siteIds = Array.isArray(body.siteIds)
     ? body.siteIds.filter((value): value is string => typeof value === "string")
     : [];
-  const companyAccess = Array.isArray(body.companyAccess)
-    ? body.companyAccess.filter((value): value is string => typeof value === "string")
-    : [];
   const created = await createCustomer(email, await hashPassword(password), {
     siteIds,
-    companyAccess,
   });
   if ("error" in created) {
     return error("A user with that email already exists", 409);
   }
 
+  const org = await getOrgContext();
   return json(
     {
-      user: toPublicUser(created.user, await listSites()),
+      user: toPublicUser(created.user, org.sites, org.customers),
     },
     201,
   );

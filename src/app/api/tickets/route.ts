@@ -2,7 +2,7 @@ import { canAccessMachine } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { toPublicTicket } from "@/lib/care";
 import { json } from "@/lib/http";
-import { listMachines, listSites, listTickets } from "@/lib/store";
+import { getOrgContext, listMachines, listTickets } from "@/lib/store";
 
 export async function GET() {
   const auth = await requireUser();
@@ -10,14 +10,16 @@ export async function GET() {
     return auth.error;
   }
 
-  const [tickets, machines, sites] = await Promise.all([
+  const [tickets, machines, org] = await Promise.all([
     listTickets(),
     listMachines(),
-    listSites(),
+    getOrgContext(),
   ]);
   const visible = new Map(
     machines
-      .filter((machine) => canAccessMachine(auth.user, machine, sites))
+      .filter((machine) =>
+        canAccessMachine(auth.user, machine, org.sites, org.customers),
+      )
       .map((machine) => [machine.id, machine.name]),
   );
 

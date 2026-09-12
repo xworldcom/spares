@@ -1571,6 +1571,125 @@ html.spares-embed .spares-app-stage {
   min-height: 5.5rem;
 }
 
+.catalog-skeleton-table {
+  min-height: 3.5rem;
+}
+
+.catalog-breadcrumb {
+  margin-bottom: 0.35rem;
+  color: var(--spares-muted);
+  font-size: 13px;
+}
+
+.catalog-breadcrumb a {
+  color: var(--spares-on-paper);
+}
+
+.catalog-table-wrap {
+  overflow-x: auto;
+  border-radius: 1.5rem;
+  background: var(--spares-lift);
+}
+
+.catalog-table {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+}
+
+.catalog-table th,
+.catalog-table td {
+  padding: 0.95rem 1.1rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--spares-line);
+}
+
+.catalog-table th {
+  color: var(--spares-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catalog-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.catalog-table-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.catalog-table-link {
+  color: var(--spares-on-paper);
+  font-weight: 600;
+}
+
+.catalog-table-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.catalog-site-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.catalog-site-picker-group {
+  min-width: 0;
+}
+
+.catalog-site-picker-customer {
+  margin-bottom: 0.35rem;
+  color: var(--spares-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catalog-site-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.catalog-site-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 13px;
+}
+
+.catalog-person-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.catalog-person-access-wide {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .catalog-person-card-tall {
+    grid-template-columns:
+      minmax(12rem, 1fr)
+      minmax(12rem, 1fr)
+      minmax(10rem, 0.9fr)
+      minmax(22rem, 1.6fr);
+    align-items: start;
+  }
+}
+
 @keyframes catalog-pulse {
   0%,
   100% {

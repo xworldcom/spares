@@ -2,16 +2,17 @@ import { requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { createSite, listSites } from "@/lib/store";
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireRole("staff");
   if ("error" in auth) {
     return auth.error;
   }
-  return json({ sites: await listSites() });
+  const customerId = new URL(request.url).searchParams.get("customerId") ?? undefined;
+  return json({ sites: await listSites(customerId ?? undefined) });
 }
 
 type CreateSiteBody = {
-  company?: unknown;
+  customerId?: unknown;
   name?: unknown;
 };
 
@@ -26,14 +27,17 @@ export async function POST(request: Request) {
     return body;
   }
 
-  const company = typeof body.company === "string" ? body.company : "";
+  const customerId = typeof body.customerId === "string" ? body.customerId.trim() : "";
   const name = typeof body.name === "string" ? body.name : "";
-  const created = await createSite(company, name);
+  const created = await createSite(customerId, name);
   if ("error" in created) {
     if (created.error === "taken") {
-      return error("That plant already exists", 409);
+      return error("That site already exists for this customer", 409);
     }
-    return error("Company and plant name are required", 400);
+    if (created.error === "bad-customer") {
+      return error("Choose a valid customer", 400);
+    }
+    return error("Customer and site name are required", 400);
   }
   return json({ site: created.site }, 201);
 }

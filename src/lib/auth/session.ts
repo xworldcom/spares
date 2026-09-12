@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import type { PublicUser, Role } from "@/types";
 import { error } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
-import { findUserByEmail, findUserById, listSites } from "@/lib/store";
+import { findUserByEmail, findUserById, getOrgContext } from "@/lib/store";
 import {
   SESSION_COOKIE,
   SESSION_MS,
@@ -42,7 +42,7 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
   const user =
     (await findUserById(session.userId)) ??
     (session.email ? await findUserByEmail(session.email) : null);
-  if (!user) {
+  if (!user || user.deletedAt) {
     return null;
   }
 
@@ -50,8 +50,11 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     await setSessionCookie(user.id, user.email);
   }
 
-  const sites = user.role === "customer" ? await listSites() : [];
-  return toPublicUser(user, sites);
+  if (user.role === "customer") {
+    const { sites, customers } = await getOrgContext();
+    return toPublicUser(user, sites, customers);
+  }
+  return toPublicUser(user);
 }
 
 export async function requireUser() {

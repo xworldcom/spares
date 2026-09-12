@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { canAccessCareMachine, canManageCare } from "@/lib/care";
 import { error } from "@/lib/http";
-import { getMachine, getTicket, listSites, type StoredMachine } from "@/lib/store";
+import { getMachine, getOrgContext, getTicket, type StoredMachine } from "@/lib/store";
 import type { PublicUser, ServiceTicketRecord } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -18,8 +18,8 @@ export async function requireMachineAccess(machineId: string): Promise<MachineAc
   if (!user) {
     return { error: error("Unauthorized", 401) };
   }
-  const [machine, sites] = await Promise.all([getMachine(machineId), listSites()]);
-  if (!machine || !canAccessCareMachine(user, machine, sites)) {
+  const [machine, org] = await Promise.all([getMachine(machineId), getOrgContext()]);
+  if (!machine || !canAccessCareMachine(user, machine, org.sites, org.customers)) {
     return { error: error("Machine not found", 404) };
   }
   return { user, machine };
@@ -45,11 +45,11 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
   if (!ticket) {
     return { error: error("Ticket not found", 404) };
   }
-  const [machine, sites] = await Promise.all([
+  const [machine, org] = await Promise.all([
     getMachine(ticket.machineId),
-    listSites(),
+    getOrgContext(),
   ]);
-  if (!machine || !canAccessCareMachine(user, machine, sites)) {
+  if (!machine || !canAccessCareMachine(user, machine, org.sites, org.customers)) {
     return { error: error("Ticket not found", 404) };
   }
   return { user, ticket, machine };

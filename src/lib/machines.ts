@@ -1,9 +1,11 @@
-import type { MachineDetail, MachineSummary, Role, Site } from "../types/index.ts";
+import type { CustomerAccount, MachineDetail, MachineSummary, Role, Site } from "../types/index.ts";
+import { siteCompanyName } from "./org.ts";
 import type { StoredMachine } from "./store.ts";
 
 export function siteFields(
   machine: { siteId?: string },
   sites: readonly Site[] = [],
+  accounts: readonly CustomerAccount[] = [],
 ) {
   const site = sites.find((row) => row.id === machine.siteId);
   if (!site) {
@@ -11,7 +13,7 @@ export function siteFields(
   }
   return {
     siteId: site.id,
-    company: site.company,
+    company: siteCompanyName(site, accounts),
     siteName: site.name,
   };
 }
@@ -19,11 +21,12 @@ export function siteFields(
 export function toMachineSummary(
   machine: { id: string; name: string; siteId?: string },
   sites: readonly Site[] = [],
+  accounts: readonly CustomerAccount[] = [],
 ): MachineSummary {
   return {
     id: machine.id,
     name: machine.name,
-    ...siteFields(machine, sites),
+    ...siteFields(machine, sites, accounts),
   };
 }
 
@@ -32,8 +35,9 @@ export function toMachineDetail(
   fileUrl: string,
   role: Role,
   sites: readonly Site[] = [],
+  accounts: readonly CustomerAccount[] = [],
 ): MachineDetail {
-  const located = siteFields(machine, sites);
+  const located = siteFields(machine, sites, accounts);
   if (role === "staff") {
     return {
       id: machine.id,

@@ -9,7 +9,7 @@ import {
 } from "@/lib/pack-upload";
 import {
   getMachine,
-  listSites,
+  getOrgContext,
   ModelPackError,
   replaceMachinePack,
   saveMachineFile,
@@ -77,12 +77,14 @@ export async function POST(
   if ("error" in updated) {
     return error("Machine not found", 404);
   }
+  const org = await getOrgContext();
   return json(
     toMachineDetail(
       updated.machine,
       await machineFileUrl(request, updated.machine),
       auth.user.role,
-      await listSites(),
+      org.sites,
+      org.customers,
     ),
   );
 }

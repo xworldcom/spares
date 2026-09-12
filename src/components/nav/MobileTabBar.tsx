@@ -119,13 +119,15 @@ export function MobileTabBar() {
     "/machines",
     "/machines/new",
     "/care",
-    "/staff/customers",
+    "/staff/accounts",
+    "/staff/people",
     "/staff/quotes",
     "/staff/bugs",
   ] as const;
   const moreActive =
     user?.role === "staff" &&
-    (isNavActive(pathname, "/staff/customers", staffHrefs) ||
+    (isNavActive(pathname, "/staff/accounts", staffHrefs) ||
+      isNavActive(pathname, "/staff/people", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs));
   const moreOpen = moreForPath === pathname;
 
@@ -150,10 +152,16 @@ export function MobileTabBar() {
             }}
           >
             <Link
-              href="/staff/customers"
+              href="/staff/accounts"
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
               Customers
+            </Link>
+            <Link
+              href="/staff/people"
+              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+            >
+              People
             </Link>
             <Link
               href="/staff/bugs"

@@ -11,8 +11,8 @@ import {
 import { canAccessMachine } from "@/lib/access";
 import {
   createMachine,
+  getOrgContext,
   listMachines,
-  listSites,
   ModelPackError,
   saveMachineFile,
 } from "@/lib/store";
@@ -26,12 +26,14 @@ export async function GET(request: NextRequest) {
   }
   const heal =
     auth.user.role === "staff" && request.nextUrl.searchParams.get("heal") === "1";
-  const [machines, sites] = await Promise.all([listMachines({ heal }), listSites()]);
+  const [machines, org] = await Promise.all([listMachines({ heal }), getOrgContext()]);
   const visible = machines.filter((machine) =>
-    canAccessMachine(auth.user, machine, sites),
+    canAccessMachine(auth.user, machine, org.sites, org.customers),
   );
   return json({
-    machines: visible.map((machine) => toMachineSummary(machine, sites)),
+    machines: visible.map((machine) =>
+      toMachineSummary(machine, org.sites, org.customers),
+    ),
   });
 }
 
@@ -74,9 +76,9 @@ export async function POST(request: Request) {
     }
   }
 
-  const sites = await listSites();
-  if (pack.siteId && !sites.some((site) => site.id === pack.siteId)) {
-    return error("Choose a valid plant", 400);
+  const org = await getOrgContext();
+  if (pack.siteId && !org.sites.some((site) => site.id === pack.siteId)) {
+    return error("Choose a valid site", 400);
   }
 
   const machine = await createMachine({
@@ -93,7 +95,8 @@ export async function POST(request: Request) {
       machine,
       await machineFileUrl(request, machine),
       auth.user.role,
-      sites,
+      org.sites,
+      org.customers,
     ),
     201,
   );
