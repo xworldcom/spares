@@ -39,6 +39,8 @@ export function TicketDetail({
   const staff = user?.role === "staff";
 
   useEffect(() => {
+    setTicket(null);
+    setError(null);
     let cancelled = false;
     getTicket(ticketId)
       .then((next) => {
