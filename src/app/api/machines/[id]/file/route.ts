@@ -3,7 +3,7 @@ import { safeDownloadFilename } from "@/lib/download-filename";
 import { error } from "@/lib/http";
 import { resolveMachineFileServe } from "@/lib/model-file-serve";
 import { canAccessMachine } from "@/lib/access";
-import { getMachine, listSites } from "@/lib/store";
+import { getMachine, getOrgContext } from "@/lib/store";
 
 export async function GET(
   request: Request,
@@ -15,8 +15,8 @@ export async function GET(
   }
 
   const { id } = await params;
-  const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
-  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
+  const [machine, org] = await Promise.all([getMachine(id), getOrgContext()]);
+  if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
   }
 

@@ -184,8 +184,9 @@ export function canAccessCareMachine(
   user: Pick<PublicUser, "role" | "siteIds" | "companyAccess" | "machineIds">,
   machine: { id?: string; siteId?: string | null; company?: string | null },
   sites: readonly Site[] = [],
+  accounts: readonly import("../types/index.ts").CustomerAccount[] = [],
 ) {
-  return canAccessMachine(user, machine, sites);
+  return canAccessMachine(user, machine, sites, accounts);
 }
 
 export function canManageCare(user: Pick<PublicUser, "role">) {

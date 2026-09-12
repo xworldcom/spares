@@ -1,6 +1,7 @@
 import type {
   BugReport,
   CareOverview,
+  CustomerAccount,
   MachineSummary,
   MachineUsage,
   PublicMachineManual,
@@ -12,6 +13,7 @@ import type {
 
 export type {
   BugReport,
+  CustomerAccount,
   MachineDetail,
   MachineSummary,
   Part,
@@ -34,6 +36,15 @@ export type CustomersListResponse = {
 
 export type SitesListResponse = {
   sites: Site[];
+};
+
+export type CustomerAccountsListResponse = {
+  accounts: Array<CustomerAccount & { siteCount: number }>;
+};
+
+export type CustomerAccountDetailResponse = {
+  account: CustomerAccount;
+  sites: Array<Site & { machineCount: number }>;
 };
 
 export type MachinesListResponse = {

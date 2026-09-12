@@ -2,6 +2,9 @@ import { apiFetch } from "./client";
 import { ApiError } from "./errors";
 import type {
   AuthUserResponse,
+  CustomerAccount,
+  CustomerAccountDetailResponse,
+  CustomerAccountsListResponse,
   CustomersListResponse,
   PublicUser,
   SitesListResponse,
@@ -37,51 +40,101 @@ export async function listCustomers(): Promise<PublicUser[]> {
   return data.customers ?? [];
 }
 
-export async function createCustomer(
+export async function createPerson(
   email: string,
   password: string,
-  access: { siteIds?: string[]; companyAccess?: string[] } = {},
+  siteIds: string[] = [],
 ) {
   const data = await apiFetch<AuthUserResponse>("/api/staff/customers", {
     method: "POST",
-    body: JSON.stringify({
-      email,
-      password,
-      siteIds: access.siteIds ?? [],
-      companyAccess: access.companyAccess ?? [],
-    }),
+    body: JSON.stringify({ email, password, siteIds }),
   });
   return data.user;
 }
 
-export async function listSites(): Promise<Site[]> {
-  const data = await apiFetch<SitesListResponse>("/api/staff/sites");
+/** @deprecated Use createPerson */
+export const createCustomer = createPerson;
+
+export async function updatePersonSites(userId: string, siteIds: string[]) {
+  const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ siteIds }),
+  });
+  return data.user;
+}
+
+/** @deprecated Use updatePersonSites */
+export const updateCustomerSites = updatePersonSites;
+
+export async function deletePerson(userId: string) {
+  await apiFetch<{ ok: true }>(`/api/staff/customers/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listSites(customerId?: string): Promise<Site[]> {
+  const query = customerId ? `?customerId=${encodeURIComponent(customerId)}` : "";
+  const data = await apiFetch<SitesListResponse>(`/api/staff/sites${query}`);
   return data.sites ?? [];
 }
 
-export async function createSite(company: string, name: string): Promise<Site> {
+export async function createSite(customerId: string, name: string): Promise<Site> {
   const data = await apiFetch<{ site: Site }>("/api/staff/sites", {
     method: "POST",
-    body: JSON.stringify({ company, name }),
+    body: JSON.stringify({ customerId, name }),
   });
   return data.site;
 }
 
-export async function updateCustomerSites(
-  userId: string,
-  access: {
-    siteIds?: string[];
-    companyAccess?: string[];
-    machineIds?: string[];
-  },
-) {
-  const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
+export async function updateSite(
+  siteId: string,
+  patch: { name?: string; customerId?: string },
+): Promise<Site> {
+  const data = await apiFetch<{ site: Site }>(`/api/staff/sites/${siteId}`, {
     method: "PATCH",
-    body: JSON.stringify({
-      siteIds: access.siteIds ?? [],
-      companyAccess: access.companyAccess ?? [],
-      machineIds: access.machineIds ?? [],
-    }),
+    body: JSON.stringify(patch),
   });
-  return data.user;
+  return data.site;
+}
+
+export async function deleteSite(siteId: string) {
+  await apiFetch<{ ok: true }>(`/api/staff/sites/${siteId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listCustomerAccounts(): Promise<
+  Array<CustomerAccount & { siteCount: number }>
+> {
+  const data = await apiFetch<CustomerAccountsListResponse>("/api/staff/accounts");
+  return data.accounts ?? [];
+}
+
+export async function createCustomerAccount(name: string) {
+  const data = await apiFetch<{ account: CustomerAccount & { siteCount: number } }>(
+    "/api/staff/accounts",
+    {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    },
+  );
+  return data.account;
+}
+
+export async function getCustomerAccountDetail(id: string) {
+  return apiFetch<CustomerAccountDetailResponse>(`/api/staff/accounts/${id}`);
+}
+
+export async function updateCustomerAccount(id: string, name: string) {
+  const data = await apiFetch<{ account: CustomerAccount }>(`/api/staff/accounts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+  return data.account;
+}
+
+export async function deleteCustomerAccount(id: string) {
+  await apiFetch<{ ok: true }>(`/api/staff/accounts/${id}`, {
+    method: "DELETE",
+  });
 }

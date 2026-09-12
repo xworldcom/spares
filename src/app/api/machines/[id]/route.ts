@@ -7,7 +7,7 @@ import { parseStaffPartEdit, type StaffPartEdit } from "@/lib/staff-catalog";
 import {
   deleteMachine,
   getMachine,
-  listSites,
+  getOrgContext,
   recordMachineView,
   updateMachine,
 } from "@/lib/store";
@@ -22,8 +22,8 @@ export async function GET(
   }
 
   const { id } = await params;
-  const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
-  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
+  const [machine, org] = await Promise.all([getMachine(id), getOrgContext()]);
+  if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
   }
 
@@ -40,7 +40,8 @@ export async function GET(
       machine,
       await machineFileUrl(request, machine),
       auth.user.role,
-      sites,
+      org.sites,
+      org.customers,
     ),
   );
 }
@@ -113,12 +114,14 @@ export async function PATCH(
     return error("Machine not found", 404);
   }
 
+  const org = await getOrgContext();
   return json(
     toMachineDetail(
       updated.machine,
       await machineFileUrl(request, updated.machine),
       auth.user.role,
-      await listSites(),
+      org.sites,
+      org.customers,
     ),
   );
 }

@@ -2,31 +2,52 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   accessOptions,
+  accessSummary,
   canAccessMachine,
   parseAccessValue,
   siteLabel,
   toPublicUser,
 } from "./access.ts";
 
-const sites = [
-  { id: "site-cargill-ftw", company: "Cargill", name: "Fort Worth" },
-  { id: "site-cargill-wichita", company: "Cargill", name: "Wichita" },
-  { id: "site-acme-dayton", company: "Acme", name: "Dayton" },
+const accounts = [
+  { id: "customer-cargill", name: "Cargill", createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "customer-acme", name: "Acme", createdAt: "2020-01-01T00:00:00.000Z" },
 ];
 
-describe("plant access", () => {
-  it("lets staff see every machine and customers only their plant", () => {
+const sites = [
+  {
+    id: "site-cargill-ftw",
+    customerId: "customer-cargill",
+    name: "Fort Worth",
+    createdAt: "2020-01-01T00:00:00.000Z",
+  },
+  {
+    id: "site-cargill-wichita",
+    customerId: "customer-cargill",
+    name: "Wichita",
+    createdAt: "2020-01-01T00:00:00.000Z",
+  },
+  {
+    id: "site-acme-dayton",
+    customerId: "customer-acme",
+    name: "Dayton",
+    createdAt: "2020-01-01T00:00:00.000Z",
+  },
+];
+
+describe("site access", () => {
+  it("lets staff see every machine and customers only their sites", () => {
     const staff = { role: "staff" as const, siteIds: [] };
     const ftw = { role: "customer" as const, siteIds: ["site-cargill-ftw"] };
     const machine = { siteId: "site-cargill-ftw" };
 
-    assert.equal(canAccessMachine(staff, machine, sites), true);
-    assert.equal(canAccessMachine(ftw, machine, sites), true);
+    assert.equal(canAccessMachine(staff, machine, sites, accounts), true);
+    assert.equal(canAccessMachine(ftw, machine, sites, accounts), true);
     assert.equal(
-      canAccessMachine(ftw, { siteId: "site-acme-dayton" }, sites),
+      canAccessMachine(ftw, { siteId: "site-acme-dayton" }, sites, accounts),
       false,
     );
-    assert.equal(canAccessMachine(ftw, {}, sites), false);
+    assert.equal(canAccessMachine(ftw, {}, sites, accounts), false);
   });
 
   it("lets a person through on a single machine grant", () => {
@@ -36,77 +57,76 @@ describe("plant access", () => {
       machineIds: ["palletizer"],
     };
     assert.equal(
-      canAccessMachine(guest, { id: "palletizer", siteId: "site-acme-dayton" }, sites),
+      canAccessMachine(
+        guest,
+        { id: "palletizer", siteId: "site-acme-dayton" },
+        sites,
+        accounts,
+      ),
       true,
     );
     assert.equal(
-      canAccessMachine(guest, { id: "other", siteId: "site-acme-dayton" }, sites),
+      canAccessMachine(guest, { id: "other", siteId: "site-acme-dayton" }, sites, accounts),
       false,
     );
   });
 
-  it("lets corporate see every plant at their company", () => {
+  it("supports multi-site access", () => {
     const corp = {
       role: "customer" as const,
-      siteIds: [],
-      companyAccess: ["Cargill"],
+      siteIds: ["site-cargill-ftw", "site-cargill-wichita"],
     };
     assert.equal(
-      canAccessMachine(corp, { siteId: "site-cargill-ftw" }, sites),
+      canAccessMachine(corp, { siteId: "site-cargill-ftw" }, sites, accounts),
       true,
     );
     assert.equal(
-      canAccessMachine(corp, { siteId: "site-cargill-wichita" }, sites),
+      canAccessMachine(corp, { siteId: "site-cargill-wichita" }, sites, accounts),
       true,
     );
     assert.equal(
-      canAccessMachine(corp, { siteId: "site-acme-dayton" }, sites),
+      canAccessMachine(corp, { siteId: "site-acme-dayton" }, sites, accounts),
       false,
     );
   });
 
-  it("parses All plants vs a single plant", () => {
-    assert.deepEqual(parseAccessValue("company:Cargill"), {
-      siteIds: [],
-      companyAccess: ["Cargill"],
-    });
+  it("parses a single site id", () => {
     assert.deepEqual(parseAccessValue("site:site-cargill-ftw"), {
       siteIds: ["site-cargill-ftw"],
-      companyAccess: [],
     });
     assert.deepEqual(parseAccessValue(""), {
       siteIds: [],
-      companyAccess: [],
     });
   });
 
-  it("lists All plants above each company's sites", () => {
-    const labels = accessOptions(sites).map((row) => row.label);
-    assert.deepEqual(labels.slice(0, 3), [
-      "Acme · All plants",
+  it("lists sites grouped by customer", () => {
+    const labels = accessOptions(sites, accounts).map((row) => row.label);
+    assert.deepEqual(labels, [
       "Acme · Dayton",
-      "Cargill · All plants",
+      "Cargill · Fort Worth",
+      "Cargill · Wichita",
     ]);
   });
 
-  it("labels a plant as company · site", () => {
+  it("labels a site as customer · site", () => {
     assert.equal(
-      siteLabel({ company: "Cargill", name: "Fort Worth" }),
+      siteLabel(sites[0], accounts),
       "Cargill · Fort Worth",
     );
   });
 
-  it("attaches resolved plants on a public customer", () => {
+  it("summarizes multiple site assignments", () => {
     const user = toPublicUser(
       {
         id: "u1",
         email: "buyer@cargill.test",
         role: "customer",
-        siteIds: ["site-cargill-ftw"],
+        siteIds: ["site-cargill-ftw", "site-cargill-wichita"],
       },
       sites,
+      accounts,
     );
-    assert.deepEqual(user.siteIds, ["site-cargill-ftw"]);
+    assert.equal(accessSummary(user, accounts), "Cargill · Fort Worth, Cargill · Wichita");
     assert.equal(user.sites?.[0]?.name, "Fort Worth");
   });
 });

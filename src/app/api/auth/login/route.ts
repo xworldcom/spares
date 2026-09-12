@@ -3,7 +3,7 @@ import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { allowLoginAttempt } from "@/lib/rate-limit";
-import { findUserByEmail, listSites } from "@/lib/store";
+import { findUserByEmail, getOrgContext } from "@/lib/store";
 
 type LoginBody = {
   email?: unknown;
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   }
 
   const user = await findUserByEmail(email);
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  if (!user || user.deletedAt || !(await verifyPassword(password, user.passwordHash))) {
     // Keep timing closer on missing users without changing the contract.
     if (!user) {
       await hashPassword(password);
@@ -81,7 +81,9 @@ export async function POST(request: Request) {
   if (html) {
     return redirectNoQuery("/machines");
   }
-  return json({
-    user: toPublicUser(user, user.role === "customer" ? await listSites() : []),
-  });
+  if (user.role === "customer") {
+    const org = await getOrgContext();
+    return json({ user: toPublicUser(user, org.sites, org.customers) });
+  }
+  return json({ user: toPublicUser(user) });
 }

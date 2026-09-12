@@ -4,8 +4,8 @@ import { json } from "@/lib/http";
 import { toMachineSummary } from "@/lib/machines";
 import {
   getMachineUsage,
+  getOrgContext,
   listManuals,
-  listSites,
   listTickets,
 } from "@/lib/store";
 import type { CareOverview } from "@/types";
@@ -20,15 +20,15 @@ export async function GET(
     return access.error;
   }
 
-  const [manuals, tickets, usage, sites] = await Promise.all([
+  const [manuals, tickets, usage, org] = await Promise.all([
     listManuals(access.machine.id),
     listTickets(access.machine.id),
     getMachineUsage(access.machine.id),
-    listSites(),
+    getOrgContext(),
   ]);
 
   const overview: CareOverview = {
-    machine: toMachineSummary(access.machine, sites),
+    machine: toMachineSummary(access.machine, org.sites, org.customers),
     manuals: manuals.length,
     ticketsOpen: tickets.filter((ticket) => ticketIsOpen(ticket.status)).length,
     ticketsTotal: tickets.length,

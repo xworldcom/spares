@@ -1,11 +1,10 @@
 import { requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { listSites, updateCustomerSites } from "@/lib/store";
+import { deletePerson, getOrgContext, updateCustomerSites } from "@/lib/store";
 import { toPublicUser } from "@/lib/access";
 
 type PatchBody = {
   siteIds?: unknown;
-  companyAccess?: unknown;
   machineIds?: unknown;
 };
 
@@ -26,21 +25,39 @@ export async function PATCH(
 
   const siteIds = Array.isArray(body.siteIds)
     ? body.siteIds.filter((value): value is string => typeof value === "string")
-    : [];
-  const companyAccess = Array.isArray(body.companyAccess)
-    ? body.companyAccess.filter((value): value is string => typeof value === "string")
-    : [];
+    : undefined;
   const machineIds = Array.isArray(body.machineIds)
     ? body.machineIds.filter((value): value is string => typeof value === "string")
-    : [];
-  if (!("siteIds" in body) && !("companyAccess" in body) && !("machineIds" in body)) {
-    return error("siteIds, companyAccess, or machineIds is required", 400);
+    : undefined;
+  if (siteIds === undefined && machineIds === undefined) {
+    return error("siteIds or machineIds is required", 400);
   }
 
-  const updated = await updateCustomerSites(id, { siteIds, companyAccess, machineIds });
+  const updated = await updateCustomerSites(id, {
+    ...(siteIds !== undefined ? { siteIds } : {}),
+    ...(machineIds !== undefined ? { machineIds } : {}),
+  });
   if ("error" in updated) {
-    return error("Customer not found", 404);
+    return error("Person not found", 404);
   }
 
-  return json({ user: toPublicUser(updated.user, await listSites()) });
+  const org = await getOrgContext();
+  return json({ user: toPublicUser(updated.user, org.sites, org.customers) });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireRole("staff");
+  if ("error" in auth) {
+    return auth.error;
+  }
+
+  const { id } = await params;
+  const removed = await deletePerson(id);
+  if ("error" in removed) {
+    return error("Person not found", 404);
+  }
+  return json({ ok: true });
 }
