@@ -6,28 +6,22 @@ Internal staff upload a machine pack. Customers log in, inspect and rotate a mac
 
 This repository is **private by default**. The product is **not live**. Do not deploy this app to a public production URL, attach a public custom domain, or turn on public signup.
 
-## What this pass is (T1.3)
+## What this pass is (T3.0)
 
-This pull request is the **web UI** (PR #8). It is stacked on:
+One shared quote workspace for customer and staff. Private preview only. Not live.
 
-- Draft T1.2 APIs — [PR #7](https://github.com/xworldcom/spares/pull/7) (`cursor/t1-2-auth-pack-quotes-fcd6`)
-- Draft T1.1 viewer — [PR #9](https://github.com/xworldcom/spares/pull/9) (`cursor/t1-1-placeholder-viewer-84c3`)
+Status pipeline: `requested` → `in_review` → `pricing` → `quoted` → `po_received` → `confirmed` → `ordered` → `shipped` → `delivered` → `closed` (+ `cancelled`).
 
-**Neither #7 nor #9 is merged to `main`.** This PR does not merge them to `main`. Keep #8 as a draft UI PR. Private preview only.
+- Staff prices each line (supplier cost, sell price, lead time).
+- Customer sees sell prices after `quoted`, then can add a PO number and PDF.
+- Staff enters tracking at `shipped`. Customer sees it on the quote page.
+- Chatter-like activity feed with in-app unread (email later).
 
-Fern owns:
-
-- Cookie-session login for staff and customers
-- Role-aware nav after `/api/auth/me`
-- Staff: create customer accounts; upload a pack (machine name + GLB/GLTF + ETO-shaped parts list with part number, name, qty); unmatched staff panel
-- Customer: open that machine; chrome around Drew’s `PartPicker`; selected-part name and part number; request a quote with an optional note
-- Empty, error, and not-signed-in states
-
-Drew owns rotate / zoom / pan / highlight in `src/components/viewer`. Fern does **not** invent a second 3D engine and does not overwrite Drew’s picker, `public/placeholders/`, or cookie loader.
+Machine-page **Request quote** still creates `status=requested` with tray quantities. Extends T2.0 explode / isolate / tray.
 
 ## What this pass is not
 
-No buy/cart/checkout UI, public marketing, self-serve signup, payments, SolidWorks converter, or go-live.
+No email gateway, payments, Total ETO live pull, AR, Yonder, public marketing, or go-live.
 
 ## PartPicker (Drew)
 
@@ -103,7 +97,7 @@ npm run generate:hardware
 
 ## Private-preview seeds (Quinn)
 
-There is **no public signup**. Staff create customer accounts. These two users are **private-preview credentials only** — not production accounts. They are seeded automatically the first time the API store is created. **Do not show these passwords on the login screen.**
+There is **no public signup**. Staff create customer accounts. These two users are **private-preview credentials only** — not production accounts. They are seeded only when `SPARES_ALLOW_SEED=true` (Preview) or during local `npm run dev`. **Do not show these passwords on the login screen.**
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -124,10 +118,76 @@ npm run lint
 npm run build
 ```
 
-Optional (from T1.2):
+Optional (from T1.2, plus T3 durable store):
 
-- `AUTH_SECRET` — signs the httpOnly session cookie. A local non-production default is used when unset.
-- `SPARES_DATA_DIR` — override the file-backed JSON + model directory (defaults to `./data` locally, `/tmp/spares-data` on Vercel).
+- `AUTH_SECRET` — signs the httpOnly session cookie. **Required on Vercel** (Preview and Production). A local-only development default is used when unset off Vercel. Never commit this value.
+- `BLOB_READ_WRITE_TOKEN` — **required on Vercel** (Preview and Production). Quotes, users, machine metadata, PO PDFs, and bug screenshots live in a private Vercel Blob store (`spares/db.json` + `spares/care.json`). The app fails closed on Vercel without this — no silent `/tmp` fallback. Local `npm run dev` does not need this; it keeps using `./data`.
+- `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo.
+- `SPARES_OWNER_PASSWORD` — sets/resets the owner staff password hash on each deploy when paired with `SPARES_OWNER_EMAIL`.
+- `SPARES_ALLOW_SEED` — set to `true` on **Preview only** to seed demo fixtures (`SparesStaff1!`, Hardware, Palletizer, extra customers). Leave unset/false on Production.
+- `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — optional scoped PAT for staff bug-report GitHub issues (`issues:write`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks.
+- `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
+- **S3-compatible object storage (preferred for GLB files)** — keeps large model binaries off Vercel origin transfer. Set all of:
+  - `S3_ENDPOINT` — R2 endpoint, e.g. `https://<accountid>.r2.cloudflarestorage.com`
+  - `S3_REGION` — use `auto` for Cloudflare R2
+  - `S3_BUCKET` — bucket name
+  - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
+  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base for **local dev only**. On Vercel, machine models always use short-lived presigned GET URLs (or the credentialed `/file` proxy) so CAD stays private.
+  - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, hard-capped at one hour). Presigned PUT tickets for staff uploads expire in 15 minutes.
+
+### Tess: wire Cloudflare R2 for model files (recommended)
+
+Large GLBs should not stream through Vercel on every view. JSON records can stay on Blob; only model binaries need R2. **Keep the bucket private** — do not enable r2.dev public access or world-readable listing for Spares critique.
+
+1. In Cloudflare, create a **private R2 bucket** and an **API token** with read/write on that bucket.
+2. In the Vercel project **Preview** environment, set:
+   - `S3_ENDPOINT` = `https://<accountid>.r2.cloudflarestorage.com`
+   - `S3_REGION` = `auto`
+   - `S3_BUCKET` = `spares-models` (or your bucket name)
+   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` = R2 token
+   - Do **not** set `S3_PUBLIC_BASE_URL` unless you later attach a public CDN domain.
+3. Keep `BLOB_READ_WRITE_TOKEN` for `spares/db.json` and small files (PO PDFs, bug screenshots) unless you move JSON elsewhere later.
+4. Redeploy Preview only. Do **not** promote to Production.
+
+On ingest, Spares compresses GLBs with meshopt + Draco before writing to R2. When S3 credentials are set, `GET /api/machines/:id` returns a **short-lived presigned GET URL** in `fileUrl` so the browser loads the GLB straight from R2 without cookies and without Vercel origin transfer. The bucket stays private. Optional `S3_PUBLIC_BASE_URL` switches to a permanent CDN URL instead. `GET /api/machines/:id/file` remains a credentialed same-origin fallback when the object is not in R2 yet (small models only — see migration below).
+
+**After enabling S3 on Preview for the first time**, run the one-shot model backfill so machines uploaded to Vercel Blob before R2 are copied into the bucket:
+
+1. Sign in as staff on Preview.
+2. `POST /api/staff/machines/backfill-models` with your session cookie (browser devtools, or `curl` with the `spares_session` cookie).
+3. Check the JSON summary: `copied` should match legacy machines; `skippedExists` on reruns is normal. Models over 40 MB are skipped with a warning — re-upload those packs manually.
+
+Until backfill completes, the viewer falls back to Blob for small GLBs (&lt; 5 MB) via `/api/machines/:id/file`. Larger legacy models refuse to proxy through Vercel and ask staff to backfill or re-upload.
+
+**Hard stops (no silent Vercel transfer):** When `S3_*` is set, staff uploads use presigned R2 PUT only — a failed upload ticket or S3 POST never falls back to Vercel Blob or multipart. `GET /api/machines/:id/file` redirects to R2 when the object exists; otherwise it proxies legacy Blob/fs models **only** if they are ≤ 5 MB. On Vercel Preview/Production without S3, GLBs over 5 MB are refused with a message to wire R2 (`S3_*`); local `npm run dev` without object storage may still use multipart for DX.
+
+### Tess: attach Blob on Preview (JSON + small files)
+
+Vercel `/tmp` is per-instance. Without Blob **or** another durable store, a quote created on one function instance disappears on the next cold start.
+
+1. In the Vercel dashboard, open **Storage** and create a **Blob** store (private preview is fine).
+2. Connect that store to the `spares` project for the **Preview** environment (Development too if you want). Vercel injects `BLOB_READ_WRITE_TOKEN` — you should not need to paste the token by hand.
+3. Redeploy the Preview. Keep **Vercel Authentication / Deployment Protection / SSO on**. Do not promote to Production.
+4. Confirm Preview env has `BLOB_READ_WRITE_TOKEN` and does **not** have `SPARES_DATA_DIR`.
+5. `DATABASE_URL` / Upstash Redis are **not** required for this pass. JSON records are stored as a private Blob object (`spares/db.json`) alongside files (`spares/files/...`). We can move JSON to Postgres later if the preview outgrows this.
+
+With `SPARES_ALLOW_SEED=true`, an empty Blob store auto-seeds Hardware fixture, Palletizer, and the preview users the first time an API route runs.
+
+### Large GLB packs
+
+Staff Upload pack sends the 3D file **straight to object storage** when configured (S3/R2 presigned PUT, or Vercel Blob when S3 is not set). The create/replace request only carries the machine name, plant, and parts list — so a ~49 MB SolidWorks export no longer dies with `Request failed (413)` at the Next/Vercel body limit. On ingest, Spares normalizes and compresses the GLB (meshopt + Draco) before the final object is stored.
+
+| Path | What succeeds | Hard ceiling |
+| --- | --- | --- |
+| Preview with S3/R2 | GLB packs **up to 256 MB** via presigned upload | Presigned PUT only — no Blob/multipart fallback. |
+| Preview with Blob only (`BLOB_READ_WRITE_TOKEN`, no S3) | GLB packs **up to 5 MB** via Blob client upload | Larger files are refused — wire R2 (`S3_*`) instead of streaming 50–200 MB through Vercel. |
+| Local `npm run dev` without object storage | Multipart through the API | Next/Vercel practical cap **100 MB** (`proxyClientMaxBodySize`). |
+| Over 15 MB without successful compression | Upload is refused before save | “Could not be compressed enough for storage…” — re-export with Draco/meshopt or simplify. |
+| Over the ceiling | Upload is refused before join | “This model is N MB. Staff packs can be up to 256 MB.” |
+
+256 MB is a Vercel-practical ceiling: the join step still reads the stored GLB in the function to extract mesh names.
+
+When S3 is configured, the 3D viewer loads the model from the presigned `fileUrl` (or the optional CDN URL when `S3_PUBLIC_BASE_URL` is set). Without S3, it uses `GET /api/machines/:id/file` (session cookie). Very large assemblies may be slow to open even after a successful upload.
 
 ## API (T1.2, stacked from #7)
 
@@ -137,12 +197,20 @@ The UI calls these routes with `credentials: "include"`:
 - `POST /api/auth/logout`
 - `GET /api/auth/me` → `{ user }`
 - `POST /api/staff/customers` — staff creates customer accounts
-- `POST /api/machines` — multipart `name`, `model`, `partsList`
+- `POST /api/machines` — staff pack create. On Preview (Blob attached) the GLB is uploaded client → private Blob, then this route receives `name`, `partsList`, `storedFileName`, and optional `siteId`. Multipart `model` is the local fallback.
+- `POST /api/machines/model-upload` — staff-only Vercel Blob client-token endpoint for the GLB
+- `POST /api/machines/:id/pack` — same pack payload as create, replaces the model + join
 - `GET /api/machines` → `{ machines: [{ id, name }] }`
-- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }`
-- `GET /api/machines/:id/file` — session cookie required; this is the viewer `src`
-- `POST /api/quotes` — customer `{ machineId, partIds, note? }`
-- `GET /api/quotes` — staff inbox
+- `GET /api/machines/:id` → `{ id, name, fileUrl, parts: [{ id, name, meshName, qty }], unmatched?: [...] }` (`fileUrl` is a presigned R2 URL when the object exists in S3, or same-origin `/file` during Blob→R2 migration)
+- `GET /api/machines/:id/file` — session cookie required; same-origin fallback when the GLB is not in R2 yet (small models only; large legacy files return a plain-English error)
+- `POST /api/staff/machines/backfill-models` — staff-only one-shot copy of legacy Blob/fs GLBs into R2 (idempotent; skips files over 40 MB)
+- `POST /api/quotes` — customer `{ machineId, items: [{ id, qty, name? }], note? }` (`qty` ≥ 1). Creates `status=requested`.
+- `GET /api/quotes` — staff sees all; customer sees own. Includes `unread` and `unreadCount`.
+- `GET /api/quotes/:id` — role-aware detail; marks the quote read for the current user. `:id` may be the sequential number.
+- `PATCH /api/quotes/:id` — staff: status, line pricing (`sellPrice`, `supplierCost`, `leadTimeDays`, `supplier`), tracking. Customer: PO number after quoted. Shipped requires a tracking number.
+- `POST /api/quotes/:id/activity` — message on the shared feed.
+- `POST /api/quotes/:id/po` — customer multipart PDF + optional `poNumber` after quoted. `GET` downloads the PDF.
+- Customer GET of a machine still omits `unmatched`.
 
 Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog source of truth is Total ETO. Join key is part number.
 
@@ -162,4 +230,4 @@ Customer GET **omits `unmatched` entirely**. Staff sees `unmatched`. Catalog sou
 
 ## Do not go live
 
-Keep this GitHub repository private. Preview or local development is fine; production and a custom domain are not part of T1.3.
+Keep this GitHub repository private. Preview or local development is fine; production and a custom domain are not part of T3.0. Keep Vercel SSO on. Do not promote this preview to production.

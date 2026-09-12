@@ -10,12 +10,17 @@ export default async function LoginPage({
     next && next.startsWith("/") && !next.startsWith("//") ? next : "/machines";
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-2 text-sm text-neutral-600">
-        Staff and customers use this screen. Cookie session. No public signup.
+    <div className="login-page mx-auto flex min-h-[calc(100dvh-var(--spares-header))] max-w-md flex-col justify-center px-1 pb-16">
+      <p className="login-kicker text-[11px] font-medium tracking-[0.22em] uppercase">
+        Private
       </p>
-      <div className="mt-6">
+      <h1 className="mt-5 text-[40px] leading-[1.05] font-semibold tracking-tight">
+        Sign in
+      </h1>
+      <p className="spares-muted mt-4 max-w-sm text-[16px] leading-relaxed">
+        Staff and plant accounts. Cookie session. No public signup.
+      </p>
+      <div className="mt-10">
         <LoginForm nextPath={nextPath} />
       </div>
     </div>

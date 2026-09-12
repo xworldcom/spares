@@ -32,30 +32,40 @@ export function PartPicker(props: {
   src: string; // GLB/GLTF URL — Fern passes GET /api/machines/:id/file
   parts: ViewerPart[];
   selectedId?: string | null;
+  explode?: number; // 0 = assembled, 1 = fully exploded
+  hiddenIds?: readonly string[];
+  isolatedId?: string | null;
   onSelect?: (part: ViewerPart | null) => void;
   onUnmatchedSelect?: (mesh: { meshName: string } | null) => void;
+  onLongPress?: (part: ViewerPart) => void;
   className?: string;
 }): JSX.Element;
 ```
 
 | Prop | Behavior |
 | --- | --- |
-| `src` | URL of a `.glb` / `.gltf`. Loaded with `fetch(..., { credentials: "include" })` so the `spares_session` cookie is sent. A cookie-less load 401s on the protected preview. |
+| `src` | URL of a `.glb` / `.gltf`. Same-origin paths load with `fetch(..., { credentials: "include" })` so the `spares_session` cookie is sent. Presigned R2/CDN URLs load cross-origin without cookies. |
 | `parts` | Joined named parts only (customer-pickable). `id` is the part number. |
-| `onSelect` | Click a mesh that maps to `parts[]` → `{ id, name, meshName, qty }`. Click empty space or an unmatched mesh → `null`. |
+| `onSelect` | Pointer-down on a mesh that maps to `parts[]` → `{ id, name, meshName, qty }`. Empty space → `null`. |
 | `selectedId` | Optional controlled highlight (list → viewer). Omit to let the viewer keep last named pick. |
+| `explode` | Radial explode from the assembly centroid. `0` is assembled. Meshes translate away from the centroid; camera framing is not refit. |
+| `hiddenIds` | Named parts with `visible = false`. |
+| `isolatedId` | Other meshes go to opacity ~0.12 and are not clickable. Isolated part stays solid. |
+| `onLongPress` | Press-and-hold (~500ms) on a named part. Parent shows Hide / Only this. Not a right-click CAD menu. |
 | `onUnmatchedSelect` | Optional staff hook. A named mesh with no `parts[]` row reports `{ meshName }` and is **not** a quote-pickable part. |
 
 Unmatched meshes are never treated as named parts. Only rows in `parts` are customer-selectable. Staff unmatched QA belongs in Fern's staff panel, not in this picker.
 
-Rotate, zoom, and pan are built in (OrbitControls).
+Rotate, zoom, and pan are built in (OrbitControls). There is no CAD ribbon. Hide / isolate / explode live on the machine page chrome.
 
-## Cookie file URL
+WebXR / VR is a later pass — do not add XR buttons here.
 
-`src` is Brent's same-origin `fileUrl` (`GET /api/machines/:id/file`), not a public blob. The loader:
+## Model file URL
 
-1. `fetch(src, { credentials: "include" })` for the GLB/GLTF bytes
-2. `GLTFLoader.setWithCredentials(true)` for any follow-up buffer/texture requests
+`src` is Brent's `fileUrl` from `GET /api/machines/:id`. With S3/R2 configured, that is a short-lived presigned GET URL (browser loads directly from object storage, no cookies). Without S3, it is the same-origin proxy `GET /api/machines/:id/file`. The loader:
+
+1. `fetch(src, { credentials: "include" })` for same-origin URLs; `credentials: "omit"` for presigned/CDN URLs
+2. `GLTFLoader.setWithCredentials(true)` only for same-origin follow-up buffer/texture requests
 
 Public fixture URLs such as `/placeholders/palletizer-placeholder.glb` and `/placeholders/hardware/mcmaster-hardware.glb` still work.
 

@@ -1,0 +1,20 @@
+[
+  {
+    "partNumber": "3_DOF_ARM_BASE",
+    "name": "Arm base",
+    "meshName": "3_DOF_ARM_BASE",
+    "qty": 1
+  },
+  {
+    "partNumber": "3_DOF_ARM_SEGMENT",
+    "name": "Arm segment",
+    "meshName": "3_DOF_ARM_SEGMENT",
+    "qty": 2
+  },
+  {
+    "partNumber": "3_DOF_ARM_END_EFFECTOR",
+    "name": "End effector",
+    "meshName": "3_DOF_ARM_END_EFFECTOR",
+    "qty": 1
+  }
+]

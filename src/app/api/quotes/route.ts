@@ -1,33 +1,37 @@
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireUser } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { createQuote, getMachine, listQuotes } from "@/lib/store";
-import type { Quote } from "@/types";
+import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
+import { canAccessMachine } from "@/lib/access";
+import { createQuote, getMachine, listMachines, listQuotes, listSites } from "@/lib/store";
+import type { QuoteItem } from "@/types";
 
 type CreateQuoteBody = {
   machineId?: unknown;
-  partIds?: unknown;
+  items?: unknown;
   note?: unknown;
 };
 
-function toPublicQuote(quote: Quote): Quote {
-  return {
-    id: quote.id,
-    machineId: quote.machineId,
-    partIds: quote.partIds,
-    note: quote.note,
-    createdAt: quote.createdAt,
-    customerEmail: quote.customerEmail,
-  };
-}
-
 export async function GET() {
-  const auth = await requireRole("staff");
+  const auth = await requireUser();
   if ("error" in auth) {
     return auth.error;
   }
 
-  const quotes = await listQuotes();
-  return json({ quotes: quotes.map(toPublicQuote) });
+  const [quotes, machines] = await Promise.all([listQuotes(), listMachines()]);
+  const names = new Map(machines.map((machine) => [machine.id, machine.name]));
+  const visible =
+    auth.user.role === "staff"
+      ? quotes
+      : quotes.filter((quote) => quote.customerId === auth.user.id);
+
+  const publicQuotes = visible.map((quote) =>
+    toPublicQuote(quote, auth.user, names.get(quote.machineId)),
+  );
+
+  return json({
+    quotes: publicQuotes,
+    unreadCount: publicQuotes.filter((quote) => quote.unread).length,
+  });
 }
 
 export async function POST(request: Request) {
@@ -46,34 +50,46 @@ export async function POST(request: Request) {
     return error("machineId is required", 400);
   }
 
-  if (!Array.isArray(body.partIds) || body.partIds.length === 0) {
-    return error("partIds must be a non-empty array", 400);
-  }
-  if (body.partIds.some((partId) => typeof partId !== "string" || !partId.trim())) {
-    return error("partIds must be an array of part numbers", 400);
+  const parsed = parseQuoteItems(body.items);
+  if (!parsed.ok) {
+    return error(parsed.error, 400);
   }
 
   const note =
     typeof body.note === "string" && body.note.trim() ? body.note.trim() : undefined;
 
-  const machine = await getMachine(machineId);
-  if (!machine) {
+  const [machine, sites] = await Promise.all([getMachine(machineId), listSites()]);
+  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
   }
 
-  const pickable = new Set(machine.parts.map((part) => part.id));
-  const partIds = body.partIds.map((partId) => (partId as string).trim());
-  if (partIds.some((partId) => !pickable.has(partId))) {
+  const pickable = new Map(machine.parts.map((part) => [part.id, part]));
+  if (parsed.items.some((item) => !pickable.has(item.id))) {
     return error("One or more part ids are not customer-pickable on this machine", 400);
   }
 
+  const items: QuoteItem[] = parsed.items.map((item) => {
+    const part = pickable.get(item.id);
+    const next: QuoteItem = { id: item.id, qty: item.qty };
+    const name = item.name ?? part?.name;
+    if (name) {
+      next.name = name;
+    }
+    if (part?.vendor) next.vendor = part.vendor;
+    if (part?.material) next.material = part.material;
+    if (part?.replaces) next.replaces = part.replaces;
+    if (part?.stock) next.stock = part.stock;
+    if (part?.category) next.category = part.category;
+    return next;
+  });
+
   const quote = await createQuote({
     machineId,
-    partIds,
+    items,
     note,
     customerId: auth.user.id,
     customerEmail: auth.user.email,
   });
 
-  return json({ quote: toPublicQuote(quote) }, 201);
+  return json({ quote: toPublicQuote(quote, auth.user, machine.name) }, 201);
 }

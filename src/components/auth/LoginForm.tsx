@@ -1,17 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { errorMessage, isApiError } from "@/lib/api/errors";
+import { stripCredentialQueryFromLocation } from "@/lib/auth/safe-url";
+import { useHydrated } from "@/lib/use-hydrated";
+
+const LOGIN_ACTION = "/api/auth/login";
 
 export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
   const { login, status, user } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const hydrated = useHydrated();
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    stripCredentialQueryFromLocation();
+  }, []);
 
   useEffect(() => {
     if (status === "signed-in" && user) {
@@ -19,12 +28,13 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
     }
   }, [nextPath, router, status, user]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit() {
+    const email = emailRef.current?.value.trim() ?? "";
+    const password = passwordRef.current?.value ?? "";
     setError(null);
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
+      await login(email, password);
       router.replace(nextPath);
     } catch (cause) {
       if (isApiError(cause) && cause.status === 0) {
@@ -41,57 +51,62 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
 
   return (
     <form
+      method="post"
+      action={LOGIN_ACTION}
+      autoComplete="on"
+      className="login-form space-y-5"
       onSubmit={(event) => {
-        void handleSubmit(event);
+        event.preventDefault();
+        event.stopPropagation();
+        if (!hydrated || submitting) {
+          return;
+        }
+        void handleSubmit();
       }}
-      className="space-y-4"
     >
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-neutral-800">
+        <label htmlFor="email" className="login-label block text-[13px] font-medium">
           Email
         </label>
         <input
+          ref={emailRef}
           id="email"
           name="email"
           type="email"
           autoComplete="username"
           required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          defaultValue=""
+          className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
         />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-neutral-800">
+        <label htmlFor="password" className="login-label block text-[13px] font-medium">
           Password
         </label>
         <input
+          ref={passwordRef}
           id="password"
           name="password"
           type="password"
           autoComplete="current-password"
           required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          defaultValue=""
+          className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
         />
       </div>
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0b4b0]" role="alert">
           {error}
         </p>
       ) : null}
       <button
         type="submit"
-        disabled={submitting}
-        className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+        disabled={!hydrated || submitting}
+        aria-disabled={!hydrated || submitting}
+        className="login-submit mt-2 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-40"
       >
-        {submitting ? "Signing in…" : "Sign in"}
+        {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
       </button>
-      <p className="text-xs text-neutral-500">
-        Staff and customers use the same screen. Accounts are created by staff —
-        there is no public signup.
-      </p>
     </form>
   );
 }

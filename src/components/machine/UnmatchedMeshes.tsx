@@ -1,31 +1,28 @@
 import type { UnmatchedPart } from "@/lib/api/types";
 
 export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
-  if (unmatched.length === 0) {
-    return (
-      <div className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700">
-        All list rows joined to a mesh. No unmatched meshes.
-      </div>
-    );
+  const rows = Array.isArray(unmatched) ? unmatched : [];
+  if (rows.length === 0) {
+    return null;
   }
 
   return (
     <section
       aria-labelledby="unmatched-heading"
-      className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-4"
+      className="rounded-[22px] bg-[#2a2214] px-4 py-4"
     >
-      <h2 id="unmatched-heading" className="text-sm font-semibold text-amber-950">
-        Unmatched meshes
+      <h2 id="unmatched-heading" className="text-sm font-semibold text-[#f0d9a8]">
+        Join notes
       </h2>
-      <p className="mt-1 text-sm text-amber-900">
-        Staff only. These list rows or 3D meshes did not join on part number /
-        mesh name. They are not hidden.
+      <p className="mt-1 text-sm text-[#e8c27a]">
+        These rows or meshes did not line up on part number. They stay in
+        the model; they are not quote items.
       </p>
       <ul className="mt-3 space-y-2">
-        {unmatched.map((row, index) => (
+        {rows.map((row, index) => (
           <li
             key={`${row.source}-${row.id ?? row.meshName ?? index}`}
-            className="rounded-md bg-white/70 px-3 py-2 text-sm text-amber-950"
+            className="rounded-md bg-black/25 px-3 py-2 text-sm text-[#f0d9a8]"
           >
             <span className="font-medium capitalize">{row.source}</span>
             {row.id ? (
@@ -36,7 +33,7 @@ export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
               <span className="ml-2 tabular-nums">qty {row.qty}</span>
             ) : null}
             {row.meshName ? (
-              <span className="ml-2 font-mono text-xs text-amber-800">
+              <span className="ml-2 font-mono text-xs text-[#e8c27a]">
                 mesh: {row.meshName}
               </span>
             ) : null}

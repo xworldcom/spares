@@ -2,26 +2,44 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { BugReportControl } from "@/components/bug-report/BugReportControl";
+import { MobileTabBar } from "@/components/nav/MobileTabBar";
+import { useCareAlerts } from "@/components/care/CareAlerts";
+import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
+import { isNavActive } from "@/lib/nav-active";
+
+const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes"] as const;
+const STAFF_NAV_HREFS = [
+  "/machines",
+  "/machines/new",
+  "/care",
+  "/staff/customers",
+  "/staff/quotes",
+  "/staff/bugs",
+] as const;
 
 function NavLink({
   href,
+  hrefs,
   children,
 }: {
   href: string;
+  hrefs: readonly string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+  const active = isNavActive(pathname, href, hrefs);
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={
         active
-          ? "rounded-md bg-neutral-900 px-2.5 py-1 text-sm font-medium text-white"
-          : "rounded-md px-2.5 py-1 text-sm text-neutral-700 hover:bg-neutral-200"
+          ? "inline-flex h-11 items-center px-3 text-sm font-semibold tracking-tight"
+          : "spares-muted inline-flex h-11 items-center px-3 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)]"
       }
     >
       {children}
@@ -29,10 +47,63 @@ function NavLink({
   );
 }
 
+function NavLinkWithBadge({
+  href,
+  hrefs,
+  label,
+  unreadCount,
+}: {
+  href: string;
+  hrefs: readonly string[];
+  label: string;
+  unreadCount: number;
+}) {
+  return (
+    <span className="relative inline-flex">
+      <NavLink href={href} hrefs={hrefs}>
+        {label}
+      </NavLink>
+      {unreadCount > 0 ? (
+        <span className="btn-accent absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { status, user, logout } = useAuth();
+  const { unreadCount: careUnreadCount } = useCareAlerts();
+  const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
+  const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const machineStage = /^\/machines\/[^/]+$/.test(pathname) && pathname !== "/machines/new";
+
+  useEffect(() => {
+    const root = document.documentElement;
+    function syncEmbed() {
+      const embedded = window.parent !== window;
+      root.classList.toggle("spares-embed", embedded);
+      const vv = window.visualViewport;
+      const top = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
+      root.style.setProperty("--embed-top", embedded ? `${top}px` : "0px");
+    }
+    syncEmbed();
+    window.visualViewport?.addEventListener("resize", syncEmbed);
+    window.visualViewport?.addEventListener("scroll", syncEmbed);
+    window.addEventListener("resize", syncEmbed);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", syncEmbed);
+      window.visualViewport?.removeEventListener("scroll", syncEmbed);
+      window.removeEventListener("resize", syncEmbed);
+    };
+  }, []);
+  const onLogin = pathname === "/login";
+  const signedIn = status === "signed-in" && user;
+  const showTabs = Boolean(signedIn && !machineStage && !onLogin);
+  const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
 
   async function handleLogout() {
     setLogoutError(null);
@@ -45,52 +116,110 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-sm font-semibold tracking-tight">
+    <div
+      className={
+        onLogin
+          ? "spares-app spares-app-login min-h-dvh"
+          : machineStage
+            ? "spares-app spares-app-stage flex min-h-dvh flex-col"
+            : showTabs
+              ? "spares-app spares-app-tabs min-h-dvh"
+              : "spares-app min-h-dvh"
+      }
+    >
+      <header className="spares-header sticky top-0 z-[60] shrink-0 backdrop-blur-md">
+        <div className="spares-header-inner mx-auto flex h-14 w-full max-w-none items-center gap-2 px-3 sm:px-4 lg:px-5">
+          {machineStage ? (
+            <div className="flex min-w-0 items-center gap-1">
+              <Link
+                href="/machines"
+                className="inline-flex h-11 min-w-0 shrink items-center gap-1 px-2 text-[15px] font-semibold tracking-tight"
+              >
+                <span aria-hidden="true" className="spares-muted text-lg leading-none">
+                  ‹
+                </span>
+                <span className="truncate">Machines</span>
+              </Link>
+              <Link
+                href={`${pathname}/care`}
+                className="spares-muted inline-flex h-11 items-center px-2 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)] lg:hidden"
+              >
+                Care
+              </Link>
+            </div>
+          ) : (
+            <Link
+              href="/"
+              className="relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[16px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-['']"
+            >
               Spares
             </Link>
-            {status === "signed-in" && user ? (
-              <nav className="flex flex-wrap items-center gap-1" aria-label="Main">
-                <NavLink href="/machines">Machines</NavLink>
-                {user.role === "staff" ? (
-                  <>
-                    <NavLink href="/machines/new">Upload pack</NavLink>
-                    <NavLink href="/staff/customers">Customers</NavLink>
-                    <NavLink href="/staff/quotes">Quotes</NavLink>
-                  </>
-                ) : null}
-              </nav>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-3">
-            <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
-              Private · not live
+          )}
+
+          {signedIn ? (
+            <nav
+              className="hidden min-w-0 flex-1 items-center overflow-x-auto lg:flex"
+              aria-label="Main"
+            >
+              <NavLink href="/machines" hrefs={navHrefs}>
+                Machines
+              </NavLink>
+              <NavLinkWithBadge
+                href="/care"
+                hrefs={navHrefs}
+                label="Care"
+                unreadCount={careUnreadCount}
+              />
+              {user.role === "staff" ? (
+                <>
+                  <NavLink href="/machines/new" hrefs={navHrefs}>
+                    Upload
+                  </NavLink>
+                  <NavLink href="/staff/customers" hrefs={navHrefs}>
+                    Customers
+                  </NavLink>
+                  <NavLinkWithBadge
+                    href="/staff/quotes"
+                    hrefs={navHrefs}
+                    label="Quotes"
+                    unreadCount={quotesUnreadCount}
+                  />
+                  <NavLink href="/staff/bugs" hrefs={navHrefs}>
+                    Bug reports
+                  </NavLink>
+                </>
+              ) : (
+                <NavLinkWithBadge
+                  href="/quotes"
+                  hrefs={navHrefs}
+                  label="Quotes"
+                  unreadCount={quotesUnreadCount}
+                />
+              )}
+            </nav>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+            <p className="spares-muted hidden text-[11px] font-medium tracking-[0.2em] uppercase sm:block">
+              Private
             </p>
-            {status === "signed-in" && user ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-600">
-                  {user.email}
-                  <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700 capitalize">
-                    {user.role}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleLogout();
-                  }}
-                  className="rounded-md border border-neutral-300 px-2.5 py-1 text-sm text-neutral-800 hover:bg-neutral-100"
-                >
-                  Sign out
-                </button>
-              </div>
-            ) : (
+            <BugReportControl />
+            {signedIn ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleLogout();
+                }}
+                className="spares-muted inline-flex h-11 items-center px-3 text-sm font-medium transition-colors duration-200 hover:text-[var(--spares-ink)]"
+              >
+                Sign out
+              </button>
+            ) : onLogin ? null : (
               <Link
                 href="/login"
-                className="rounded-md bg-neutral-900 px-2.5 py-1 text-sm font-medium text-white hover:bg-neutral-800"
+                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
               >
                 Sign in
               </Link>
@@ -98,12 +227,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {logoutError ? (
-          <p className="border-t border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800" role="alert">
+          <p className="px-4 py-2 text-sm text-[#f0c4c0]" role="alert">
             {logoutError}
           </p>
         ) : null}
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main
+        className={
+          machineStage
+            ? "mx-auto flex w-full min-h-0 max-w-none flex-1 flex-col px-0 pt-0 pb-0 sm:px-3 sm:pt-2 sm:pb-2 lg:px-4"
+            : "mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8"
+        }
+      >
+        {children}
+      </main>
+      {showTabs ? <MobileTabBar /> : null}
     </div>
   );
 }

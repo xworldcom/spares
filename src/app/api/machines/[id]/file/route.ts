@@ -1,11 +1,12 @@
-import { readFile } from "node:fs/promises";
 import { requireUser } from "@/lib/auth";
+import { safeDownloadFilename } from "@/lib/download-filename";
 import { error } from "@/lib/http";
-import { modelContentType } from "@/lib/machines";
-import { getMachine, machineFilePath } from "@/lib/store";
+import { resolveMachineFileServe } from "@/lib/model-file-serve";
+import { canAccessMachine } from "@/lib/access";
+import { getMachine, listSites } from "@/lib/store";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireUser();
@@ -14,21 +15,28 @@ export async function GET(
   }
 
   const { id } = await params;
-  const machine = await getMachine(id);
-  if (!machine) {
+  const [machine, sites] = await Promise.all([getMachine(id), listSites()]);
+  if (!machine || !canAccessMachine(auth.user, machine, sites)) {
     return error("Machine not found", 404);
   }
 
-  try {
-    const bytes = await readFile(machineFilePath(machine.storedFileName));
-    return new Response(bytes, {
-      headers: {
-        "Content-Type": modelContentType(machine.originalFileName),
-        "Content-Disposition": `inline; filename="${machine.originalFileName}"`,
-        "Cache-Control": "private, no-store",
-      },
-    });
-  } catch {
-    return error("Model file is missing", 404);
+  const result = await resolveMachineFileServe({
+    storedFileName: machine.storedFileName,
+    originalFileName: machine.originalFileName,
+  });
+
+  if (result.kind === "redirect") {
+    return Response.redirect(result.url, 307);
   }
+  if (result.kind === "error") {
+    return error(result.message, result.status);
+  }
+
+  return new Response(new Uint8Array(result.bytes), {
+    headers: {
+      "Content-Type": result.contentType,
+      "Content-Disposition": `inline; filename="${safeDownloadFilename(result.originalFileName, "model.glb")}"`,
+      "Cache-Control": "private, no-store",
+    },
+  });
 }

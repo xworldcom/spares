@@ -1,6 +1,66 @@
+import { cadKeys, cleanCadName, sanitizePackMeshName } from "./cad-name.ts";
 import type { Part, PartsListRow, UnmatchedPart } from "@/types";
 
-function parseCsv(text: string): string[][] {
+function labelAliases(label: string) {
+  const trimmed = label.trim();
+  const cleaned = cleanCadName(trimmed);
+  const aliases = [trimmed.toLowerCase()];
+  if (cleaned && cleaned.toLowerCase() !== aliases[0]) {
+    aliases.push(cleaned.toLowerCase());
+  }
+  const sanitized = sanitizePackMeshName(cleaned || trimmed);
+  if (sanitized && sanitized.toLowerCase() !== aliases[0]) {
+    aliases.push(sanitized.toLowerCase());
+  }
+  return aliases;
+}
+
+function findExactUnusedMesh(
+  unused: Set<string>,
+  labels: Array<string | undefined>,
+) {
+  const targets = new Set<string>();
+  for (const label of labels) {
+    if (!label?.trim()) {
+      continue;
+    }
+    for (const alias of labelAliases(label)) {
+      targets.add(alias);
+    }
+  }
+  if (targets.size === 0) {
+    return null;
+  }
+  for (const meshName of unused) {
+    if (labelAliases(meshName).some((alias) => targets.has(alias))) {
+      return meshName;
+    }
+  }
+  return null;
+}
+
+function reservedExactMeshNames(
+  listRows: PartsListRow[],
+  current: PartsListRow,
+) {
+  const reserved = new Set<string>();
+  for (const row of listRows) {
+    if (row === current) {
+      continue;
+    }
+    for (const label of [row.meshName, row.partNumber]) {
+      if (!label?.trim()) {
+        continue;
+      }
+      for (const alias of labelAliases(label)) {
+        reserved.add(alias);
+      }
+    }
+  }
+  return reserved;
+}
+
+function parseDelimited(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -21,7 +81,7 @@ function parseCsv(text: string): string[][] {
       }
     } else if (char === '"') {
       inQuotes = true;
-    } else if (char === ",") {
+    } else if (char === delimiter) {
       row.push(field);
       field = "";
     } else if (char === "\n" || char === "\r") {
@@ -49,12 +109,25 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
+function detectDelimiter(headerLine: string) {
+  const commas = (headerLine.match(/,/g) ?? []).length;
+  const tabs = (headerLine.match(/\t/g) ?? []).length;
+  const semis = (headerLine.match(/;/g) ?? []).length;
+  if (tabs > commas && tabs >= semis) {
+    return "\t";
+  }
+  if (semis > commas && semis >= tabs) {
+    return ";";
+  }
+  return ",";
+}
+
 function parseQty(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value) && value >= 1) {
     return Math.floor(value);
   }
   if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value.trim());
+    const parsed = Number(value.trim().replace(/,/g, ""));
     if (Number.isFinite(parsed) && parsed >= 1) {
       return Math.floor(parsed);
     }
@@ -62,21 +135,120 @@ function parseQty(value: unknown): number {
   return 1;
 }
 
+function normalizeHeader(value: string) {
+  return value.trim().toLowerCase().replace(/[\s_\-/]+/g, "");
+}
+
+const PART_NUMBER_HEADERS = new Set([
+  "partnumber",
+  "partno",
+  "part#",
+  "pn",
+  "itemnumber",
+  "itemno",
+  "item",
+  "number",
+  "material",
+  "sku",
+  "id",
+]);
+
+const NAME_HEADERS = new Set([
+  "name",
+  "description",
+  "desc",
+  "title",
+  "partname",
+  "itemname",
+  "component",
+]);
+
+const MESH_HEADERS = new Set([
+  "meshname",
+  "mesh",
+  "node",
+  "object",
+  "objectname",
+  "cadname",
+  "filename",
+]);
+
+const QTY_HEADERS = new Set(["qty", "quantity", "qty.", "count", "q", "bomqty"]);
+
+function firstString(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+  return "";
+}
+
 function asRow(value: unknown): PartsListRow | null {
   if (!value || typeof value !== "object") {
     return null;
   }
   const record = value as Record<string, unknown>;
-  const partNumber = typeof record.partNumber === "string" ? record.partNumber.trim() : "";
-  const name = typeof record.name === "string" ? record.name.trim() : "";
+  const normalized: Record<string, unknown> = {};
+  for (const [key, cell] of Object.entries(record)) {
+    normalized[normalizeHeader(key)] = cell;
+  }
+
+  const partNumber =
+    firstString(normalized, [...PART_NUMBER_HEADERS]) ||
+    (typeof record.partNumber === "string" ? record.partNumber.trim() : "");
+  const name =
+    firstString(normalized, [...NAME_HEADERS]) ||
+    (typeof record.name === "string" ? record.name.trim() : "");
   const meshName =
-    typeof record.meshName === "string" && record.meshName.trim()
-      ? record.meshName.trim()
-      : undefined;
+    firstString(normalized, [...MESH_HEADERS]) || undefined;
+
   if (!partNumber || !name) {
     return null;
   }
-  return { partNumber, name, meshName, qty: parseQty(record.qty) };
+  const qtySource =
+    normalized.qty ??
+    normalized.quantity ??
+    normalized.count ??
+    normalized.bomqty ??
+    record.qty;
+  const material = firstString(normalized, ["material", "matl"]);
+  const vendor = firstString(normalized, ["vendor", "manufacturer", "mfr", "supplier"]);
+  const weight = firstString(normalized, ["weight", "mass"]);
+  const category = firstString(normalized, ["category", "type", "class"]);
+  const replaces = firstString(normalized, ["replaces", "supersedes", "replacement"]);
+  const stock = firstString(normalized, ["stock", "onhand", "qtyonhand", "inventory"]);
+  return {
+    partNumber,
+    name,
+    meshName,
+    qty: parseQty(qtySource),
+    ...(material ? { material } : {}),
+    ...(vendor ? { vendor } : {}),
+    ...(weight ? { weight } : {}),
+    ...(category ? { category } : {}),
+    ...(replaces ? { replaces } : {}),
+    ...(stock ? { stock } : {}),
+  };
+}
+
+function rowsFromUnknown(parsed: unknown): PartsListRow[] {
+  if (Array.isArray(parsed)) {
+    return parsed.map(asRow).filter((row): row is PartsListRow => row !== null);
+  }
+  if (parsed && typeof parsed === "object") {
+    const record = parsed as Record<string, unknown>;
+    for (const key of ["parts", "items", "rows", "bom"]) {
+      if (Array.isArray(record[key])) {
+        return rowsFromUnknown(record[key]);
+      }
+    }
+  }
+  return [];
 }
 
 export function parsePartsList(text: string, filename: string): PartsListRow[] {
@@ -86,33 +258,55 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
   }
 
   const lower = filename.toLowerCase();
-  const looksJson = lower.endsWith(".json") || trimmed.startsWith("[");
+  const looksJson =
+    lower.endsWith(".json") || trimmed.startsWith("[") || trimmed.startsWith("{");
   if (looksJson) {
     const parsed = JSON.parse(trimmed) as unknown;
-    if (!Array.isArray(parsed)) {
-      throw new Error("Parts list JSON must be an array");
-    }
-    const rows = parsed.map(asRow).filter((row): row is PartsListRow => row !== null);
+    const rows = rowsFromUnknown(parsed);
     if (rows.length === 0) {
       throw new Error("Parts list has no valid rows");
     }
     return rows;
   }
 
-  const table = parseCsv(trimmed);
+  const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? "";
+  const delimiter = lower.endsWith(".tsv") ? "\t" : detectDelimiter(firstLine);
+  const table = parseDelimited(trimmed, delimiter);
   const header = table[0]?.map((cell) => cell.trim());
   if (!header) {
-    throw new Error("Parts list CSV is missing a header row");
+    throw new Error("Parts list is missing a header row");
   }
 
   const index = {
-    partNumber: header.findIndex((cell) => cell.toLowerCase() === "partnumber"),
-    name: header.findIndex((cell) => cell.toLowerCase() === "name"),
-    meshName: header.findIndex((cell) => cell.toLowerCase() === "meshname"),
-    qty: header.findIndex((cell) => cell.toLowerCase() === "qty"),
+    partNumber: header.findIndex((cell) =>
+      PART_NUMBER_HEADERS.has(normalizeHeader(cell)),
+    ),
+    name: header.findIndex((cell) => NAME_HEADERS.has(normalizeHeader(cell))),
+    meshName: header.findIndex((cell) => MESH_HEADERS.has(normalizeHeader(cell))),
+    qty: header.findIndex((cell) => QTY_HEADERS.has(normalizeHeader(cell))),
+    material: header.findIndex((cell) =>
+      ["material", "matl"].includes(normalizeHeader(cell)),
+    ),
+    vendor: header.findIndex((cell) =>
+      ["vendor", "manufacturer", "mfr", "supplier"].includes(normalizeHeader(cell)),
+    ),
+    weight: header.findIndex((cell) =>
+      ["weight", "mass"].includes(normalizeHeader(cell)),
+    ),
+    category: header.findIndex((cell) =>
+      ["category", "type", "class"].includes(normalizeHeader(cell)),
+    ),
+    replaces: header.findIndex((cell) =>
+      ["replaces", "supersedes", "replacement"].includes(normalizeHeader(cell)),
+    ),
+    stock: header.findIndex((cell) =>
+      ["stock", "onhand", "qtyonhand", "inventory"].includes(normalizeHeader(cell)),
+    ),
   };
   if (index.partNumber < 0 || index.name < 0) {
-    throw new Error("Parts list CSV must include partNumber and name headers");
+    throw new Error(
+      "Parts list needs a part number column and a name/description column",
+    );
   }
 
   const rows: PartsListRow[] = [];
@@ -122,6 +316,12 @@ export function parsePartsList(text: string, filename: string): PartsListRow[] {
       name: cells[index.name] ?? "",
       meshName: index.meshName >= 0 ? (cells[index.meshName] ?? "") : "",
       qty: index.qty >= 0 ? (cells[index.qty] ?? "") : "",
+      material: index.material >= 0 ? (cells[index.material] ?? "") : "",
+      vendor: index.vendor >= 0 ? (cells[index.vendor] ?? "") : "",
+      weight: index.weight >= 0 ? (cells[index.weight] ?? "") : "",
+      category: index.category >= 0 ? (cells[index.category] ?? "") : "",
+      replaces: index.replaces >= 0 ? (cells[index.replaces] ?? "") : "",
+      stock: index.stock >= 0 ? (cells[index.stock] ?? "") : "",
     });
     if (row) {
       rows.push(row);
@@ -139,20 +339,84 @@ export function joinParts(
   listRows: PartsListRow[],
   meshNames: string[],
 ): { parts: Part[]; unmatched: UnmatchedPart[] } {
-  const available = new Set(meshNames);
-  const used = new Set<string>();
+  const unused = new Set(meshNames);
   const parts: Part[] = [];
   const unmatched: UnmatchedPart[] = [];
 
-  for (const row of listRows) {
-    const candidates = [row.meshName, row.partNumber, row.name].filter(
-      (value): value is string => Boolean(value),
+  function consumeInstanceSiblings(row: PartsListRow) {
+    const rowKeys = new Set(
+      [row.meshName, row.partNumber].flatMap((value) => cadKeys(value)),
     );
-    const meshName = candidates.find((name) => available.has(name) && !used.has(name));
+    if (rowKeys.size === 0) {
+      return;
+    }
+    const reserved = reservedExactMeshNames(listRows, row);
+    for (const meshName of meshNames) {
+      if (!unused.has(meshName)) {
+        continue;
+      }
+      if (labelAliases(meshName).some((alias) => reserved.has(alias))) {
+        continue;
+      }
+      if (cadKeys(meshName).some((key) => rowKeys.has(key))) {
+        unused.delete(meshName);
+      }
+    }
+  }
 
+  function takeMeshes(row: PartsListRow): string | null {
+    const exact = findExactUnusedMesh(unused, [row.meshName, row.partNumber]);
+    if (exact) {
+      unused.delete(exact);
+      consumeInstanceSiblings(row);
+      return exact;
+    }
+
+    const rowKeys = new Set(
+      [row.meshName, row.partNumber, row.name].flatMap((value) => cadKeys(value)),
+    );
+    if (rowKeys.size === 0) {
+      return null;
+    }
+    const reserved = reservedExactMeshNames(listRows, row);
+    const hits = meshNames.filter((meshName) => {
+      if (!unused.has(meshName)) {
+        return false;
+      }
+      if (labelAliases(meshName).some((alias) => reserved.has(alias))) {
+        return false;
+      }
+      return cadKeys(meshName).some((key) => rowKeys.has(key));
+    });
+    if (hits.length === 0) {
+      return null;
+    }
+    for (const hit of hits) {
+      unused.delete(hit);
+    }
+    return hits[0] ?? null;
+  }
+
+  for (const row of listRows) {
+    const meshName = takeMeshes(row);
     if (meshName) {
-      parts.push({ id: row.partNumber, name: row.name, meshName, qty: row.qty });
-      used.add(meshName);
+      const existing = parts.find((part) => part.id === row.partNumber);
+      if (existing) {
+        existing.qty += row.qty;
+      } else {
+        parts.push({
+          id: row.partNumber,
+          name: row.name,
+          meshName,
+          qty: row.qty,
+          ...(row.material ? { material: row.material } : {}),
+          ...(row.vendor ? { vendor: row.vendor } : {}),
+          ...(row.weight ? { weight: row.weight } : {}),
+          ...(row.category ? { category: row.category } : {}),
+          ...(row.replaces ? { replaces: row.replaces } : {}),
+          ...(row.stock ? { stock: row.stock } : {}),
+        });
+      }
     } else {
       unmatched.push({
         source: "list",
@@ -165,7 +429,7 @@ export function joinParts(
   }
 
   for (const meshName of meshNames) {
-    if (!used.has(meshName)) {
+    if (unused.has(meshName)) {
       unmatched.push({ source: "model", meshName });
     }
   }

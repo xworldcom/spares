@@ -1,15 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { createCustomer } from "@/lib/api/auth";
+import { useEffect, useState } from "react";
+import { createCustomer, listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
+import type { Site } from "@/lib/api/types";
+import { accessOptions, parseAccessValue } from "@/lib/access";
 
-export function CreateCustomerForm() {
+export function CreateCustomerForm({
+  onCreated,
+  onCancel,
+}: {
+  onCreated?: () => void;
+  onCancel?: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [siteId, setSiteId] = useState("");
+  const [sites, setSites] = useState<Site[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdEmail, setCreatedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listSites()
+      .then((next) => {
+        if (!cancelled) {
+          setSites(next);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -17,10 +41,15 @@ export function CreateCustomerForm() {
     setCreatedEmail(null);
     setSubmitting(true);
     try {
-      const user = await createCustomer(email.trim(), password);
+      const user = await createCustomer(
+        email.trim(),
+        password,
+        parseAccessValue(siteId),
+      );
       setCreatedEmail(user.email);
       setEmail("");
       setPassword("");
+      onCreated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not create the customer account."));
     } finally {
@@ -33,56 +62,93 @@ export function CreateCustomerForm() {
       onSubmit={(event) => {
         void handleSubmit(event);
       }}
-      className="max-w-md space-y-4 rounded-lg border border-neutral-200 bg-white p-5"
+      className="catalog-create"
     >
-      <div>
-        <label htmlFor="customer-email" className="block text-sm font-medium">
-          Customer email
-        </label>
-        <input
-          id="customer-email"
-          name="email"
-          type="email"
-          required
-          autoComplete="off"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
-        />
+      <div className="catalog-create-copy">
+        <h2>New customer</h2>
+        <p>They use the same login screen. Give a plant, or all plants at their company.</p>
       </div>
-      <div>
-        <label htmlFor="customer-password" className="block text-sm font-medium">
-          Temporary password
-        </label>
-        <input
-          id="customer-password"
-          name="password"
-          type="password"
-          required
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
-        />
+      <div className="catalog-create-grid">
+        <div>
+          <label htmlFor="customer-email" className="block text-sm font-medium">
+            Email
+          </label>
+          <input
+            id="customer-email"
+            name="email"
+            type="email"
+            required
+            autoComplete="off"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          />
+        </div>
+        <div>
+          <label htmlFor="customer-password" className="block text-sm font-medium">
+            Temporary password
+          </label>
+          <input
+            id="customer-password"
+            name="password"
+            type="password"
+            required
+            minLength={10}
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          />
+          <p className="spares-muted mt-1.5 text-sm">At least 10 characters.</p>
+        </div>
+        <div>
+          <label htmlFor="customer-site" className="block text-sm font-medium">
+            Access
+          </label>
+          <select
+            id="customer-site"
+            value={siteId}
+            onChange={(event) => setSiteId(event.target.value)}
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          >
+            <option value="">No access</option>
+            {accessOptions(sites).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}
       {createdEmail ? (
-        <p className="text-sm text-green-800" role="status">
+        <p className="text-sm text-[#8ee0a8]" role="status">
           Created customer {createdEmail}. They can sign in on the same login
           screen.
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
-      >
-        {submitting ? "Creating…" : "Create customer"}
-      </button>
+      <div className="catalog-create-actions">
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-soft inline-flex h-12 items-center justify-center rounded-full px-5 text-[15px] font-semibold"
+          >
+            Cancel
+          </button>
+        ) : null}
+        <button
+          type="submit"
+          disabled={submitting}
+          className="btn-primary inline-flex h-12 items-center justify-center rounded-full px-5 text-[16px] font-semibold disabled:opacity-60"
+        >
+          {submitting ? "Creating…" : "Create customer"}
+        </button>
+      </div>
     </form>
   );
 }

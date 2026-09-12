@@ -8,32 +8,36 @@ export default function Home() {
   const signedIn = status === "signed-in" && user;
 
   return (
-    <div className="max-w-lg">
-      <p className="text-sm font-medium tracking-wide text-neutral-500 uppercase">
+    <div className="mx-auto max-w-lg pb-8">
+      <p className="spares-muted text-[11px] font-medium tracking-[0.22em] uppercase">
         Private
       </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Spares</h1>
-      <p className="mt-4 text-neutral-700">
-        This application is private and is not live.
-      </p>
-      <p className="mt-2 text-neutral-600">
-        Staff upload one machine pack. A logged-in customer opens it, inspects
-        the 3D model, clicks a named part, and requests a quote. There is no
+      <h1 className="mt-5 text-[40px] leading-[1.05] font-semibold tracking-tight">
+        Spares
+      </h1>
+      <p className="spares-muted mt-5 text-[16px] leading-relaxed">
+        Inspect a machine. Pick a named part. Request a quote. Not live — no
         public signup, cart, or checkout.
       </p>
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-10 flex flex-wrap gap-3">
         {signedIn ? (
           <>
             <Link
               href="/machines"
-              className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+              className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[15px] font-semibold"
             >
               Open machines
+            </Link>
+            <Link
+              href={user.role === "staff" ? "/staff/quotes" : "/quotes"}
+              className="spares-muted inline-flex h-12 items-center px-3 text-[15px] font-medium"
+            >
+              Quotes
             </Link>
             {user.role === "staff" ? (
               <Link
                 href="/machines/new"
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-white"
+                className="spares-muted inline-flex h-12 items-center px-3 text-[15px] font-medium"
               >
                 Upload pack
               </Link>
@@ -42,7 +46,7 @@ export default function Home() {
         ) : (
           <Link
             href="/login"
-            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[15px] font-semibold"
           >
             Sign in
           </Link>

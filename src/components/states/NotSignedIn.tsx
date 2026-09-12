@@ -9,15 +9,15 @@ export function NotSignedIn() {
       : "/login";
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-5 text-amber-950">
+    <div className="rounded-lg border border-[#e8c27a]/25 bg-[#2a2214] px-4 py-5 text-[#f0d9a8]">
       <p className="text-sm font-semibold">Not signed in</p>
-      <p className="mt-1 text-sm text-amber-900">
+      <p className="mt-1 text-sm text-[#e8c27a]">
         Sign in with a staff or customer account to continue. There is no public
         signup.
       </p>
       <Link
         href={href}
-        className="mt-3 inline-flex rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800"
+        className="btn-primary mt-3 inline-flex rounded-full px-4 py-2 text-sm font-medium"
       >
         Sign in
       </Link>

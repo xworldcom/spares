@@ -1,22 +1,71 @@
+import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { findUserByEmail } from "@/lib/store";
+import { toPublicUser } from "@/lib/access";
+import { allowLoginAttempt } from "@/lib/rate-limit";
+import { findUserByEmail, listSites } from "@/lib/store";
 
 type LoginBody = {
   email?: unknown;
   password?: unknown;
 };
 
+function wantsDocument(request: Request) {
+  const accept = request.headers.get("accept") ?? "";
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return false;
+  }
+  return accept.includes("text/html");
+}
+
+function redirectNoQuery(path: string) {
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: path },
+  });
+}
+
+async function readLoginBody(request: Request): Promise<LoginBody | NextResponse> {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
+    try {
+      const form = await request.formData();
+      return {
+        email: form.get("email"),
+        password: form.get("password"),
+      };
+    } catch {
+      return error("Invalid form body", 400);
+    }
+  }
+  return readJson<LoginBody>(request);
+}
+
+export async function GET(request: Request) {
+  return NextResponse.redirect(new URL("/login", request.url), 303);
+}
+
 export async function POST(request: Request) {
-  const body = await readJson<LoginBody>(request);
+  const html = wantsDocument(request);
+  const body = await readLoginBody(request);
   if (isErrorResponse(body)) {
-    return body;
+    return html ? redirectNoQuery("/login") : body;
   }
 
   const email = typeof body.email === "string" ? body.email.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
   if (!email || !password) {
-    return error("Email and password are required", 400);
+    return html ? redirectNoQuery("/login") : error("Email and password are required", 400);
+  }
+
+  if (!allowLoginAttempt(request, email)) {
+    return error("Too many sign-in attempts. Try again in a few minutes.", 429, {
+      "Retry-After": "900",
+    });
   }
 
   const user = await findUserByEmail(email);
@@ -25,11 +74,14 @@ export async function POST(request: Request) {
     if (!user) {
       await hashPassword(password);
     }
-    return error("Invalid email or password", 401);
+    return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
-  await setSessionCookie(user.id);
+  await setSessionCookie(user.id, user.email);
+  if (html) {
+    return redirectNoQuery("/machines");
+  }
   return json({
-    user: { id: user.id, email: user.email, role: user.role },
+    user: toPublicUser(user, user.role === "customer" ? await listSites() : []),
   });
 }

@@ -1,20 +1,17 @@
+import { cadKeys, isIgnoredCadNodeName } from "@/lib/cad-name";
 import type { Object3D } from "three";
 import type { ViewerPart } from "./types";
-
-const IGNORED_NAMES = new Set([
-  "",
-  "Scene",
-  "SceneRoot",
-  "RootNode",
-  "AuxScene",
-  "Root",
-]);
 
 export function buildPartIndex(
   parts: ViewerPart[],
 ): Map<string, ViewerPart> {
   const index = new Map<string, ViewerPart>();
   for (const part of parts) {
+    for (const key of [...cadKeys(part.meshName), ...cadKeys(part.id), ...cadKeys(part.name)]) {
+      if (!index.has(key)) {
+        index.set(key, part);
+      }
+    }
     if (part.meshName) {
       index.set(part.meshName, part);
     }
@@ -23,6 +20,20 @@ export function buildPartIndex(
     }
   }
   return index;
+}
+
+function lookupPart(name: string, partsByName: Map<string, ViewerPart>) {
+  const exact = partsByName.get(name);
+  if (exact) {
+    return exact;
+  }
+  for (const key of cadKeys(name)) {
+    const part = partsByName.get(key);
+    if (part) {
+      return part;
+    }
+  }
+  return undefined;
 }
 
 export function resolvePick(
@@ -34,8 +45,8 @@ export function resolvePick(
 
   while (current) {
     const name = current.name?.trim();
-    if (name && !IGNORED_NAMES.has(name)) {
-      const part = partsByName.get(name);
+    if (name && !isIgnoredCadNodeName(name)) {
+      const part = lookupPart(name, partsByName);
       if (part) {
         return { part };
       }
@@ -56,15 +67,22 @@ export function meshMatchesSelection(
   if (!selected) {
     return false;
   }
+  const selectedKeys = new Set(
+    "id" in selected
+      ? [...cadKeys(selected.meshName), ...cadKeys(selected.id)]
+      : cadKeys(selected.meshName),
+  );
   let current: Object3D | null = object;
   while (current) {
     const name = current.name?.trim();
-    if (name && !IGNORED_NAMES.has(name)) {
-      if ("id" in selected) {
-        if (name === selected.meshName || name === selected.id) {
-          return true;
-        }
-      } else if (name === selected.meshName) {
+    if (name && !isIgnoredCadNodeName(name)) {
+      if ("id" in selected && (name === selected.meshName || name === selected.id)) {
+        return true;
+      }
+      if (!("id" in selected) && name === selected.meshName) {
+        return true;
+      }
+      if (cadKeys(name).some((key) => selectedKeys.has(key))) {
         return true;
       }
     }

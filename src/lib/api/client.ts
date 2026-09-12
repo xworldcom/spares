@@ -17,6 +17,9 @@ function readErrorMessage(body: unknown, status: number) {
   if (status === 404) {
     return "Not found.";
   }
+  if (status === 413) {
+    return "This model is too large to send through the server in one request.";
+  }
   return `Request failed (${status})`;
 }
 
@@ -32,6 +35,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
     response = await fetch(path, {
       ...init,
+      cache: "no-store",
       credentials: "include",
       headers,
     });
