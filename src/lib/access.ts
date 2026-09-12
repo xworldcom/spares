@@ -402,20 +402,22 @@ export function canAccessMachine(
   if ((user.siteIds ?? []).includes(siteId)) {
     return true;
   }
+  const hasModernAccess =
+    (user.siteIds?.length ?? 0) > 0 || (user.machineIds?.length ?? 0) > 0;
   const companies = user.companyAccess ?? [];
-  if (companies.length === 0) {
-    return false;
+  if (!hasModernAccess && companies.length > 0) {
+    const site = sites.find((row) => row.id === siteId);
+    const company =
+      machine.company ??
+      (site ? siteCompanyName(site, accounts) : "") ??
+      "";
+    if (!company) {
+      return false;
+    }
+    const needle = company.toLowerCase();
+    return companies.some((row) => row.toLowerCase() === needle);
   }
-  const site = sites.find((row) => row.id === siteId);
-  const company =
-    machine.company ??
-    (site ? siteCompanyName(site, accounts) : "") ??
-    "";
-  if (!company) {
-    return false;
-  }
-  const needle = company.toLowerCase();
-  return companies.some((row) => row.toLowerCase() === needle);
+  return false;
 }
 
 export function toPublicUser(

@@ -140,6 +140,17 @@ const SEED_USER_SITES: Record<string, string[]> = {
   "user-cargill-corp": ["site-cargill-ftw", "site-cargill-wichita"],
 };
 
+/** Canonical preview seed access; applied only when a seed user has no modern grants yet. */
+const SEED_USER_GRANTS: Record<string, { siteIds: string[]; machineIds: string[] }> = {
+  "user-customer": { siteIds: ["site-cargill-ftw"], machineIds: [] },
+  "user-acme": { siteIds: ["site-acme-dayton"], machineIds: [] },
+  "user-mill": { siteIds: ["site-demo-plant1"], machineIds: [] },
+  "user-cargill-corp": {
+    siteIds: ["site-cargill-ftw", "site-cargill-wichita"],
+    machineIds: [],
+  },
+};
+
 const SEED_MACHINE_SITES: Record<string, string> = {
   palletizer: "site-cargill-ftw",
   "hardware-fixture": "site-acme-dayton",
@@ -575,21 +586,39 @@ function ensureOrg(db: Database): Database {
     if (user.role !== "customer" || user.deletedAt) {
       return user;
     }
-    const hasAccess =
-      (user.siteIds && user.siteIds.length > 0) ||
-      (user.companyAccess && user.companyAccess.length > 0) ||
-      (user.machineIds && user.machineIds.length > 0);
+    const hasSiteIds = (user.siteIds?.length ?? 0) > 0;
+    const hasMachineIds = (user.machineIds?.length ?? 0) > 0;
+    const hasCompanyAccess = (user.companyAccess?.length ?? 0) > 0;
+    let healed = user;
+    if ((hasSiteIds || hasMachineIds) && hasCompanyAccess) {
+      healed = { ...healed, companyAccess: undefined };
+    }
+    const hasAccess = hasSiteIds || hasMachineIds || hasCompanyAccess;
     if (hasAccess) {
-      return user;
+      return healed;
+    }
+    const seededGrant = SEED_USER_GRANTS[user.id];
+    if (seededGrant) {
+      return {
+        ...healed,
+        siteIds: seededGrant.siteIds,
+        machineIds: seededGrant.machineIds,
+        companyAccess: undefined,
+      };
     }
     const seeded = SEED_USER_SITES[user.id];
-    return seeded ? { ...user, siteIds: seeded, companyAccess: undefined } : user;
+    return seeded
+      ? { ...healed, siteIds: seeded, machineIds: [], companyAccess: undefined }
+      : healed;
   });
   const machines = next.machines.map((machine) => {
+    const seeded = SEED_MACHINE_SITES[machine.id];
+    if (seeded && isSeedAllowed()) {
+      return machine.siteId === seeded ? machine : { ...machine, siteId: seeded };
+    }
     if (machine.siteId) {
       return machine;
     }
-    const seeded = SEED_MACHINE_SITES[machine.id];
     return seeded ? { ...machine, siteId: seeded } : machine;
   });
   return migrateOrgTree({

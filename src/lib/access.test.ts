@@ -187,4 +187,25 @@ describe("access grants", () => {
     assert.equal(isSiteFullyGranted(grant, "site-cargill-ftw", machines), true);
     assert.deepEqual(normalizeAccessGrant(grant, machines), grant);
   });
+
+  it("does not let legacy companyAccess add machines when siteIds are set", () => {
+    const user = {
+      role: "customer" as const,
+      siteIds: ["site-cargill-ftw"],
+      companyAccess: ["Acme"],
+    };
+    assert.equal(
+      canAccessMachine(user, { id: "palletizer", siteId: "site-cargill-ftw" }, sites, accounts),
+      true,
+    );
+    assert.equal(
+      canAccessMachine(
+        user,
+        { id: "hardware-fixture", siteId: "site-acme-dayton" },
+        sites,
+        accounts,
+      ),
+      false,
+    );
+  });
 });
