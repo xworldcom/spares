@@ -93,7 +93,10 @@ describe("model migration: S3 miss falls back to legacy blob/fs", () => {
     const rerun = await backfillModelToS3("backfill-me.glb");
     assert.equal(rerun.status, "skipped_exists");
 
-    const request = new Request("https://preview.example.test/api/machines/m2");
+    const request = new Request(
+      "https://spares-yonder3.vercel.app/api/machines/m2",
+      { headers: { Origin: "https://spares-yonder3.vercel.app" } },
+    );
     const url = await machineFileUrl(request, {
       id: "m2",
       storedFileName: "backfill-me.glb",

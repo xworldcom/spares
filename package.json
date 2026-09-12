@@ -10,7 +10,8 @@
     "test": "node --experimental-strip-types --test src/lib/*.test.ts src/lib/**/*.test.ts src/lib/auth/*.test.ts src/components/viewer/*.test.ts",
     "generate:placeholder": "node scripts/generate-placeholder-glb.mjs",
     "generate:hardware": "node scripts/generate-hardware-glb.mjs",
-    "generate:arm": "node scripts/generate-arm-glb.mjs"
+    "generate:arm": "node scripts/generate-arm-glb.mjs",
+    "configure:r2-cors": "node scripts/configure-r2-cors.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",

@@ -90,6 +90,24 @@ describe("resolveMachineFileServe", () => {
     delete process.env.VERCEL;
   });
 
+  it("streams from R2 when cross-origin presigned URLs are not allowed", async () => {
+    configureS3Env();
+    setPersistenceForTests(createMemoryPersistence());
+    setTestS3Objects(
+      new Map([[modelObjectKey("in-r2.glb"), Buffer.from("from-r2")]]),
+    );
+
+    const result = await resolveMachineFileServe({
+      storedFileName: "in-r2.glb",
+      originalFileName: "in-r2.glb",
+      crossOriginObjectUrl: false,
+    });
+    assert.equal(result.kind, "stream");
+    if (result.kind === "stream") {
+      assert.equal(result.bytes.toString(), "from-r2");
+    }
+  });
+
   it("redirects to a presigned R2 URL when the object exists without a public base", async () => {
     configureS3Env();
     delete process.env.S3_PUBLIC_BASE_URL;

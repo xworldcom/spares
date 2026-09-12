@@ -1,9 +1,18 @@
 import { requireMachineAccess } from "@/lib/care-http";
+import {
+  corsPreflightResponse,
+  shouldUseCrossOriginObjectUrl,
+  withModelAssetCors,
+} from "@/lib/cors";
 import { error } from "@/lib/http";
 import { manualFileUrl } from "@/lib/manual-file-url";
 import { readManualFile, selectManualStoreKind } from "@/lib/manual-storage";
 import { getManual } from "@/lib/store";
 import { safeDownloadName } from "@/lib/quotes";
+
+export async function OPTIONS(request: Request) {
+  return corsPreflightResponse(request);
+}
 
 export async function GET(
   request: Request,
@@ -20,7 +29,10 @@ export async function GET(
     return error("Manual not found", 404);
   }
 
-  if (selectManualStoreKind() === "s3") {
+  if (
+    selectManualStoreKind() === "s3" &&
+    shouldUseCrossOriginObjectUrl(request)
+  ) {
     const signed = await manualFileUrl(request, access.machine.id, manual);
     if (signed.startsWith("http://") || signed.startsWith("https://")) {
       return Response.redirect(signed, 302);
@@ -34,10 +46,10 @@ export async function GET(
 
   const filename = safeDownloadName(manual.originalFileName || "manual.pdf");
   return new Response(new Uint8Array(bytes), {
-    headers: {
+    headers: withModelAssetCors(request, {
       "Content-Type": manual.contentType || "application/octet-stream",
       "Content-Disposition": `inline; filename="${filename}"`,
       "Cache-Control": "private, no-store",
-    },
+    }),
   });
 }

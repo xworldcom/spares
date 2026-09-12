@@ -1,9 +1,18 @@
 import { requireUser } from "@/lib/auth";
+import {
+  corsPreflightResponse,
+  shouldUseCrossOriginObjectUrl,
+  withModelAssetCors,
+} from "@/lib/cors";
 import { safeDownloadFilename } from "@/lib/download-filename";
 import { error } from "@/lib/http";
 import { resolveMachineFileServe } from "@/lib/model-file-serve";
 import { canAccessMachine } from "@/lib/access";
 import { getMachine, getOrgContext } from "@/lib/store";
+
+export async function OPTIONS(request: Request) {
+  return corsPreflightResponse(request);
+}
 
 export async function GET(
   request: Request,
@@ -23,6 +32,7 @@ export async function GET(
   const result = await resolveMachineFileServe({
     storedFileName: machine.storedFileName,
     originalFileName: machine.originalFileName,
+    crossOriginObjectUrl: shouldUseCrossOriginObjectUrl(request),
   });
 
   if (result.kind === "redirect") {
@@ -33,10 +43,10 @@ export async function GET(
   }
 
   return new Response(new Uint8Array(result.bytes), {
-    headers: {
+    headers: withModelAssetCors(request, {
       "Content-Type": result.contentType,
       "Content-Disposition": `inline; filename="${safeDownloadFilename(result.originalFileName, "model.glb")}"`,
       "Cache-Control": "private, no-store",
-    },
+    }),
   });
 }

@@ -1,5 +1,6 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { requireRole } from "@/lib/auth";
+import { rejectDisallowedOrigin } from "@/lib/cors";
 import { json, error } from "@/lib/http";
 import {
   blobUploadMaxBytes,
@@ -39,6 +40,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const originError = rejectDisallowedOrigin(request);
+  if (originError) {
+    return originError;
+  }
+
   if (isS3Configured()) {
     const auth = await requireRole("staff");
     if ("error" in auth) {
