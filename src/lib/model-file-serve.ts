@@ -3,6 +3,7 @@ import {
   createModelDownloadUrl,
   modelExistsInS3,
   modelProxyRefusedMessage,
+  readModelFile,
   selectModelStoreKind,
 } from "./model-storage.ts";
 import { modelPublicUrl } from "./model-url.ts";
@@ -27,18 +28,32 @@ export type ModelFileServeResult =
 export async function resolveMachineFileServe(input: {
   storedFileName: string;
   originalFileName: string;
+  crossOriginObjectUrl?: boolean;
 }): Promise<ModelFileServeResult> {
+  const crossOriginObjectUrl = input.crossOriginObjectUrl ?? true;
   if (selectModelStoreKind() === "s3") {
     if (await modelExistsInS3(input.storedFileName)) {
-      const publicUrl = modelPublicUrl(input.storedFileName);
-      if (publicUrl) {
-        return { kind: "redirect", url: publicUrl };
+      if (crossOriginObjectUrl) {
+        const publicUrl = modelPublicUrl(input.storedFileName);
+        if (publicUrl) {
+          return { kind: "redirect", url: publicUrl };
+        }
+        const { downloadUrl } = await createModelDownloadUrl(
+          input.storedFileName,
+          modelDownloadUrlTtlSeconds(),
+        );
+        return { kind: "redirect", url: downloadUrl };
       }
-      const { downloadUrl } = await createModelDownloadUrl(
-        input.storedFileName,
-        modelDownloadUrlTtlSeconds(),
-      );
-      return { kind: "redirect", url: downloadUrl };
+      const bytes = await readModelFile(input.storedFileName);
+      if (!bytes?.length) {
+        return { kind: "error", message: "Model file is missing", status: 404 };
+      }
+      return {
+        kind: "stream",
+        bytes,
+        contentType: modelContentType(input.originalFileName),
+        originalFileName: input.originalFileName,
+      };
     }
   }
 

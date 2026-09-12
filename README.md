@@ -134,6 +134,38 @@ Optional (from T1.2, plus T3 durable store):
   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
   - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base for **local dev only**. On Vercel, machine models always use short-lived presigned GET URLs (or the credentialed `/file` proxy) so CAD stays private.
   - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, hard-capped at one hour). Presigned PUT tickets for staff uploads expire in 15 minutes.
+  - `SPARES_CORS_ORIGINS` — optional comma-separated extra browser origins for model/manual asset CORS (e.g. a Vercel Preview hostname). Soft Launch aliases and localhost are always included.
+
+### CORS for model assets (Kevin)
+
+Browser loads of presigned R2 URLs require a **fail-closed** bucket CORS policy. Spares only allows Spares deployment hosts — not arbitrary sites.
+
+**Allowed by default**
+
+- `https://spares-yonder3.vercel.app` (Soft Launch)
+- `https://spares-liart.vercel.app` (Soft Launch)
+- `http://localhost:3000` and `http://127.0.0.1:3000` (local dev)
+- Any origins listed in `SPARES_CORS_ORIGINS`
+
+**Behaviour**
+
+- Soft Launch origins receive presigned R2 GET/PUT URLs in API responses (direct browser → R2).
+- Other Spares Vercel preview hostnames (`spares-*.vercel.app`) are accepted by the app but fall back to the credentialed same-origin `/file` proxy (server streams from R2) until that preview URL is added to the bucket or `SPARES_CORS_ORIGINS`.
+- Disallowed `Origin` headers on upload signing routes receive `403`.
+- `S3_PUBLIC_BASE_URL` stays **off** on Vercel — signed GET only.
+
+**Apply R2 bucket CORS** (once per bucket, or after adding preview origins):
+
+```bash
+# Dry-run the policy JSON
+npm run configure:r2-cors -- --dry-run
+
+# Apply with current S3_* credentials
+npm run configure:r2-cors
+
+# Add a one-off preview origin
+npm run configure:r2-cors -- --add-origin=https://spares-git-main-xworldcom.vercel.app
+```
 
 ### Tess: wire Cloudflare R2 for model files (recommended)
 

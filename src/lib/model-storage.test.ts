@@ -94,7 +94,9 @@ describe("model public URLs", () => {
     setTestS3Objects(
       new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
     );
-    const request = new Request("https://preview.example.test/api/machines/m1");
+    const request = new Request("http://localhost:3000/api/machines/m1", {
+      headers: { Origin: "http://localhost:3000" },
+    });
     const url = await machineFileUrl(request, {
       id: "m1",
       storedFileName: "abc.glb",
@@ -112,7 +114,10 @@ describe("model public URLs", () => {
     setTestS3Objects(
       new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
     );
-    const request = new Request("https://preview.example.test/api/machines/m1");
+    const request = new Request(
+      "https://spares-yonder3.vercel.app/api/machines/m1",
+      { headers: { Origin: "https://spares-yonder3.vercel.app" } },
+    );
     const url = await machineFileUrl(request, {
       id: "m1",
       storedFileName: "abc.glb",
@@ -132,7 +137,10 @@ describe("model public URLs", () => {
     setTestS3Objects(
       new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
     );
-    const request = new Request("https://preview.example.test/api/machines/m1");
+    const request = new Request(
+      "https://spares-liart.vercel.app/api/machines/m1",
+      { headers: { Origin: "https://spares-liart.vercel.app" } },
+    );
     const url = await machineFileUrl(request, {
       id: "m1",
       storedFileName: "abc.glb",
@@ -143,6 +151,32 @@ describe("model public URLs", () => {
     assert.match(parsed.pathname, /models\/abc\.glb$/);
     assert.ok(parsed.searchParams.has("X-Amz-Signature"));
     assert.ok(parsed.searchParams.has("X-Amz-Expires"));
+  });
+
+  it("falls back to the credentialed proxy for preview origins not on the R2 allowlist", async () => {
+    process.env.S3_ENDPOINT = "https://example.r2.cloudflarestorage.com";
+    process.env.S3_BUCKET = "spares-models";
+    process.env.S3_ACCESS_KEY_ID = "key";
+    process.env.S3_SECRET_ACCESS_KEY = "secret";
+    setTestS3Objects(
+      new Map([["models/abc.glb", Buffer.from("already-in-s3")]]),
+    );
+    const request = new Request(
+      "https://spares-git-main-xworldcom.vercel.app/api/machines/m1",
+      {
+        headers: {
+          Origin: "https://spares-git-main-xworldcom.vercel.app",
+        },
+      },
+    );
+    const url = await machineFileUrl(request, {
+      id: "m1",
+      storedFileName: "abc.glb",
+    });
+    assert.equal(
+      url,
+      "https://spares-git-main-xworldcom.vercel.app/api/machines/m1/file",
+    );
   });
 
   it("falls back to the credentialed API proxy without S3 credentials", async () => {
