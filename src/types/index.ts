@@ -20,6 +20,7 @@ export type Site = {
 export type PublicUser = {
   id: string;
   email: string;
+  name?: string;
   role: Role;
   siteIds?: string[];
   /** Legacy corporate access; migrated to siteIds on read. */

@@ -20,6 +20,7 @@ export function CreatePersonForm({
   onCancel?: () => void;
 }) {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [grant, setGrant] = useState<AccessGrant>(() => grantFromUser({}));
   const [sites, setSites] = useState<Site[]>([]);
@@ -52,9 +53,13 @@ export function CreatePersonForm({
     setSubmitting(true);
     const normalized = normalizeAccessGrant(grant, machines);
     try {
-      const user = await createPerson(email.trim(), password, normalized);
+      const user = await createPerson(email.trim(), password, {
+        ...normalized,
+        name: name.trim() || undefined,
+      });
       setCreatedEmail(user.email);
       setEmail("");
+      setName("");
       setPassword("");
       setGrant(grantFromUser({}));
       onCreated?.();
@@ -77,6 +82,21 @@ export function CreatePersonForm({
         <p>Customer login — pick a customer, then site(s), then machine(s).</p>
       </div>
       <div className="catalog-create-grid">
+        <div>
+          <label htmlFor="person-name" className="block text-sm font-medium">
+            Name
+          </label>
+          <input
+            id="person-name"
+            name="name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Jane Doe"
+            className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+          />
+        </div>
         <div>
           <label htmlFor="person-email" className="block text-sm font-medium">
             Email

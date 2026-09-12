@@ -1,9 +1,11 @@
 import { requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { deletePerson, getOrgContext, updateCustomerSites } from "@/lib/store";
+import { deletePerson, getOrgContext, updatePerson } from "@/lib/store";
 import { toPublicUser } from "@/lib/access";
 
 type PatchBody = {
+  name?: unknown;
+  email?: unknown;
   siteIds?: unknown;
   machineIds?: unknown;
 };
@@ -23,21 +25,42 @@ export async function PATCH(
     return body;
   }
 
+  const name =
+    body.name === null
+      ? null
+      : typeof body.name === "string"
+        ? body.name
+        : undefined;
+  const email = typeof body.email === "string" ? body.email.trim() : undefined;
   const siteIds = Array.isArray(body.siteIds)
     ? body.siteIds.filter((value): value is string => typeof value === "string")
     : undefined;
   const machineIds = Array.isArray(body.machineIds)
     ? body.machineIds.filter((value): value is string => typeof value === "string")
     : undefined;
-  if (siteIds === undefined && machineIds === undefined) {
-    return error("siteIds or machineIds is required", 400);
+
+  if (
+    name === undefined &&
+    email === undefined &&
+    siteIds === undefined &&
+    machineIds === undefined
+  ) {
+    return error("name, email, siteIds, or machineIds is required", 400);
   }
 
-  const updated = await updateCustomerSites(id, {
+  const updated = await updatePerson(id, {
+    ...(name !== undefined ? { name } : {}),
+    ...(email !== undefined ? { email } : {}),
     ...(siteIds !== undefined ? { siteIds } : {}),
     ...(machineIds !== undefined ? { machineIds } : {}),
   });
   if ("error" in updated) {
+    if (updated.error === "email-taken") {
+      return error("A user with that email already exists", 409);
+    }
+    if (updated.error === "bad-email") {
+      return error("Email is required", 400);
+    }
     return error("Person not found", 404);
   }
 

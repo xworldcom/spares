@@ -8,12 +8,13 @@ import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { MachineGlyph } from "@/components/catalog/CatalogGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { listSites } from "@/lib/api/auth";
+import { listSites, listCustomerAccounts } from "@/lib/api/auth";
 import { listMachines, deleteMachine, updateMachineName, updateMachineSite } from "@/lib/api/machines";
 import { errorMessage, isUnauthorized } from "@/lib/api/errors";
-import type { MachineSummary, Site } from "@/lib/api/types";
+import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
+import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -36,6 +37,7 @@ export function MachinesList() {
   const { user, refresh } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,14 +51,22 @@ export function MachinesList() {
   useEffect(() => {
     let cancelled = false;
     const sitesLoad =
-      user?.role === "staff" ? listSites().catch(() => [] as Site[]) : Promise.resolve([] as Site[]);
+      user?.role === "staff"
+        ? Promise.all([listSites(), listCustomerAccounts()])
+            .then(([nextSites, nextAccounts]) => ({
+              sites: nextSites,
+              accounts: nextAccounts,
+            }))
+            .catch(() => ({ sites: [] as Site[], accounts: [] as CustomerAccount[] }))
+        : Promise.resolve({ sites: [] as Site[], accounts: [] as CustomerAccount[] });
     Promise.all([loadMachines(false), sitesLoad])
-      .then(([next, nextSites]) => {
+      .then(([next, org]) => {
         if (cancelled) {
           return;
         }
         setMachines(next);
-        setSites(nextSites);
+        setSites(org.sites);
+        setAccounts(org.accounts);
         setError(null);
         setLoading(false);
       })
@@ -416,25 +426,17 @@ export function MachinesList() {
                 </div>
                 {staff && open ? (
                   <div id={`machine-actions-${machine.id}`} className="catalog-machine-actions">
-                    <label className="catalog-action-label">
-                      Plant
-                      <select
-                        value={machine.siteId ?? ""}
+                    <div className="catalog-action-label">
+                      <MachineSitePicker
+                        accounts={accounts}
+                        sites={sites}
+                        siteId={machine.siteId ?? ""}
                         disabled={savingId === machine.id}
-                        onChange={(event) => {
-                          void onAssign(machine.id, event.target.value);
+                        onSiteChange={(nextSiteId) => {
+                          void onAssign(machine.id, nextSiteId);
                         }}
-                        className="spares-field mt-1.5 h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
-                        aria-label={`Plant for ${machine.name}`}
-                      >
-                        <option value="">No plant</option>
-                        {sites.map((site) => (
-                          <option key={site.id} value={site.id}>
-                            {siteLabel(site)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                      />
+                    </div>
                     <div className="catalog-action-row">
                       {renaming ? null : (
                         <button type="button" onClick={() => startRename(machine)}>
