@@ -166,6 +166,7 @@ const SEED_MACHINE_SITES: Record<string, string> = {
 export type StoredUser = {
   id: string;
   email: string;
+  name?: string;
   passwordHash: string;
   role: Role;
   siteIds?: string[];
@@ -952,9 +953,15 @@ export function deleteCustomerAccount(id: string) {
 export function createCustomer(
   email: string,
   passwordHash: string,
-  access: { siteIds?: string[]; companyAccess?: string[]; machineIds?: string[] } = {},
+  access: {
+    siteIds?: string[];
+    companyAccess?: string[];
+    machineIds?: string[];
+    name?: string;
+  } = {},
 ) {
   const normalized = normalizeEmail(email);
+  const trimmedName = access.name?.trim();
   return withLock(async () => {
     const db = await readDatabase();
     if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
@@ -971,6 +978,7 @@ export function createCustomer(
       machineIds: [
         ...new Set((access.machineIds ?? []).filter((id) => machineIds.has(id))),
       ],
+      ...(trimmedName ? { name: trimmedName } : {}),
     };
     await writeDatabase({ ...db, users: [...db.users, user] });
     return { user };
@@ -1133,9 +1141,11 @@ export function deleteSite(siteId: string) {
   });
 }
 
-export function updateCustomerSites(
+export function updatePerson(
   userId: string,
-  access: {
+  patch: {
+    name?: string | null;
+    email?: string;
     siteIds?: string[];
     companyAccess?: string[];
     machineIds?: string[];
@@ -1151,34 +1161,70 @@ export function updateCustomerSites(
     if (user.role !== "customer" || user.deletedAt) {
       return { error: "not-customer" as const };
     }
-    const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
-    const validMachines = db.machines.map((machine) => ({
-      id: machine.id,
-      siteId: machine.siteId,
-    }));
-    const rawGrant = {
-      siteIds: [...new Set((access.siteIds ?? user.siteIds ?? []).filter((id) => known.has(id)))],
-      machineIds: [
-        ...new Set(
-          (access.machineIds ?? user.machineIds ?? []).filter((id) =>
-            validMachines.some((machine) => machine.id === id),
+
+    let next: StoredUser = { ...user };
+
+    if (patch.email !== undefined) {
+      const normalized = normalizeEmail(patch.email);
+      if (!normalized) {
+        return { error: "bad-email" as const };
+      }
+      if (
+        db.users.some(
+          (row) => row.id !== userId && row.email === normalized && !row.deletedAt,
+        )
+      ) {
+        return { error: "email-taken" as const };
+      }
+      next = { ...next, email: normalized };
+    }
+
+    if (patch.name !== undefined) {
+      const trimmed = patch.name?.trim() ?? "";
+      if (trimmed) {
+        next = { ...next, name: trimmed };
+      } else {
+        const { name: _removed, ...rest } = next;
+        next = rest as StoredUser;
+      }
+    }
+
+    if (patch.siteIds !== undefined || patch.machineIds !== undefined) {
+      const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
+      const validMachines = db.machines.map((machine) => ({
+        id: machine.id,
+        siteId: machine.siteId,
+      }));
+      const rawGrant = {
+        siteIds: [
+          ...new Set((patch.siteIds ?? user.siteIds ?? []).filter((id) => known.has(id))),
+        ],
+        machineIds: [
+          ...new Set(
+            (patch.machineIds ?? user.machineIds ?? []).filter((id) =>
+              validMachines.some((machine) => machine.id === id),
+            ),
           ),
-        ),
-      ],
-    };
-    const normalized = normalizeAccessGrant(rawGrant, validMachines);
-    const next = {
-      ...user,
-      siteIds: normalized.siteIds,
-      companyAccess: undefined,
-      machineIds: normalized.machineIds,
-    };
+        ],
+      };
+      const normalized = normalizeAccessGrant(rawGrant, validMachines);
+      next = {
+        ...next,
+        siteIds: normalized.siteIds,
+        companyAccess: undefined,
+        machineIds: normalized.machineIds,
+      };
+    }
+
     const users = db.users.slice();
     users[index] = next;
     await writeDatabase({ ...db, users });
     return { user: next };
   });
 }
+
+/** @deprecated Use updatePerson */
+export const updateCustomerSites = updatePerson;
 
 export function updateMachine(
   machineId: string,

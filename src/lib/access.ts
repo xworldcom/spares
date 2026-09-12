@@ -452,6 +452,7 @@ export function toPublicUser(
   user: {
     id: string;
     email: string;
+    name?: string;
     role: Role;
     siteIds?: string[];
     companyAccess?: string[];
@@ -480,6 +481,7 @@ export function toPublicUser(
     siteIds,
     companyAccess,
     machineIds,
+    ...(user.name?.trim() ? { name: user.name.trim() } : {}),
     ...(domain ? { emailDomain: domain } : {}),
     ...(resolved && resolved.length > 0 ? { sites: resolved } : {}),
     ...(user.deletedAt ? { deletedAt: user.deletedAt } : {}),

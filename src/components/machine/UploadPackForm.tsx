@@ -3,11 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { UnmatchedMeshes } from "@/components/machine/UnmatchedMeshes";
+import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
 import { siteLabel } from "@/lib/access";
-import { listSites } from "@/lib/api/auth";
+import { listCustomerAccounts, listSites } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import { replaceMachinePack, uploadMachinePack, getMachine } from "@/lib/api/machines";
-import type { MachineDetail, PartsListRow, Site } from "@/lib/api/types";
+import type { CustomerAccount, MachineDetail, PartsListRow, Site } from "@/lib/api/types";
 import { formatMegabytes } from "@/lib/pack-limits";
 import { emptyPartsRow, partsListToJsonFile } from "@/lib/parts-list";
 import { parsePartsList } from "@/lib/parts";
@@ -137,6 +138,7 @@ export function UploadPackForm() {
   const [result, setResult] = useState<MachineDetail | null>(null);
   const [siteId, setSiteId] = useState("");
   const [sites, setSites] = useState<Site[]>([]);
+  const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
   const [replaceName, setReplaceName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -165,10 +167,11 @@ export function UploadPackForm() {
 
   useEffect(() => {
     let cancelled = false;
-    listSites()
-      .then((next) => {
+    Promise.all([listSites(), listCustomerAccounts()])
+      .then(([nextSites, nextAccounts]) => {
         if (!cancelled) {
-          setSites(next);
+          setSites(nextSites);
+          setAccounts(nextAccounts);
         }
       })
       .catch(() => undefined);
@@ -329,24 +332,12 @@ export function UploadPackForm() {
             />
           </div>
           {replaceId ? null : (
-            <div>
-              <label htmlFor="machine-site" className="block text-sm font-medium">
-                Plant
-              </label>
-              <select
-                id="machine-site"
-                value={siteId}
-                onChange={(event) => setSiteId(event.target.value)}
-                className={fieldClass}
-              >
-                <option value="">Unassigned — staff only</option>
-                {sites.map((site) => (
-                  <option key={site.id} value={site.id}>
-                    {siteLabel(site)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <MachineSitePicker
+              accounts={accounts}
+              sites={sites}
+              siteId={siteId}
+              onSiteChange={setSiteId}
+            />
           )}
         </section>
 

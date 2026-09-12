@@ -22,12 +22,18 @@ import {
   listCustomers,
   listSites,
   updatePersonAccess,
+  updatePersonProfile,
 } from "@/lib/api/auth";
 import { listMachines } from "@/lib/api/machines";
 import { errorMessage } from "@/lib/api/errors";
 import type { CustomerAccount, MachineSummary, PublicUser, Site } from "@/lib/api/types";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
-import { displayNameFromEmail } from "@/lib/ui/display-name";
+import { displayPersonName } from "@/lib/ui/display-name";
+
+type PersonProfile = {
+  name: string;
+  email: string;
+};
 
 function grantsEqual(left: AccessGrant, right: AccessGrant) {
   const leftSites = [...left.siteIds].sort().join(",");
@@ -35,6 +41,17 @@ function grantsEqual(left: AccessGrant, right: AccessGrant) {
   const leftMachines = [...left.machineIds].sort().join(",");
   const rightMachines = [...right.machineIds].sort().join(",");
   return leftSites === rightSites && leftMachines === rightMachines;
+}
+
+function profileFromUser(user: PublicUser): PersonProfile {
+  return {
+    name: user.name?.trim() ?? "",
+    email: user.email,
+  };
+}
+
+function profilesEqual(left: PersonProfile, right: PersonProfile) {
+  return left.name.trim() === right.name.trim() && left.email.trim() === right.email.trim();
 }
 
 export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
@@ -48,6 +65,7 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
   const [retryKey, setRetryKey] = useState(0);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftAccess, setDraftAccess] = useState<Record<string, AccessGrant>>({});
+  const [draftProfile, setDraftProfile] = useState<Record<string, PersonProfile>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +82,9 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
           Object.fromEntries(
             nextPeople.map((row) => [row.id, grantFromPublicUser(row)]),
           ),
+        );
+        setDraftProfile(
+          Object.fromEntries(nextPeople.map((row) => [row.id, profileFromUser(row)])),
         );
         setError(null);
         setLoading(false);
@@ -83,7 +104,7 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
   const filtered = useMemo(() => {
     return people.filter((row) =>
       catalogQueryMatch(query, [
-        displayNameFromEmail(row.email),
+        displayPersonName(row),
         row.email,
         accessSummary(row, accounts, sites, machines),
       ]),
@@ -103,6 +124,34 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
       }));
     } catch (cause) {
       setError(errorMessage(cause, "Could not update access."));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function saveProfile(userId: string) {
+    setSavingId(userId);
+    setError(null);
+    const draft = draftProfile[userId] ?? profileFromUser(people.find((row) => row.id === userId)!);
+    const trimmedName = draft.name.trim();
+    const trimmedEmail = draft.email.trim();
+    if (!trimmedEmail) {
+      setError("Email is required.");
+      setSavingId(null);
+      return;
+    }
+    try {
+      const next = await updatePersonProfile(userId, {
+        email: trimmedEmail,
+        name: trimmedName || null,
+      });
+      setPeople((current) => current.map((row) => (row.id === userId ? next : row)));
+      setDraftProfile((current) => ({
+        ...current,
+        [userId]: profileFromUser(next),
+      }));
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not update profile."));
     } finally {
       setSavingId(null);
     }
@@ -183,25 +232,72 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
             <span>Access</span>
           </li>
           {filtered.map((row) => {
-            const name = displayNameFromEmail(row.email);
+            const savedProfile = profileFromUser(row);
+            const draftPerson = draftProfile[row.id] ?? savedProfile;
+            const displayName = displayPersonName({
+              name: draftPerson.name,
+              email: draftPerson.email,
+            });
             const savedGrant = grantFromPublicUser(row);
             const draft = draftAccess[row.id] ?? savedGrant;
             const summary = accessSummary(draft, accounts, sites, machines);
-            const dirty = !grantsEqual(
+            const accessDirty = !grantsEqual(
               normalizeAccessGrant(draft, machines),
               normalizeAccessGrant(savedGrant, machines),
             );
+            const profileDirty = !profilesEqual(draftPerson, savedProfile);
             return (
               <li key={row.id} className="catalog-person-card catalog-person-card-tall">
                 <div className="catalog-person-who">
                   <PersonGlyph email={row.email} />
                   <div className="min-w-0">
-                    <p className="catalog-person-name">{name}</p>
-                    <p className="catalog-person-email catalog-person-email-mobile">{row.email}</p>
+                    <p className="catalog-person-name">{displayName}</p>
+                    <p className="catalog-person-email catalog-person-email-mobile">
+                      {draftPerson.email}
+                    </p>
                     <p className="catalog-person-plant-mobile">{summary || "No access"}</p>
                   </div>
                 </div>
-                <p className="catalog-person-email catalog-person-email-desktop">{row.email}</p>
+                <div className="catalog-person-contact">
+                  <label className="catalog-person-field">
+                    <span className="catalog-person-field-label">Name</span>
+                    <input
+                      value={draftPerson.name}
+                      disabled={savingId === row.id}
+                      placeholder={displayPersonName({ email: draftPerson.email })}
+                      onChange={(event) =>
+                        setDraftProfile((current) => ({
+                          ...current,
+                          [row.id]: { ...draftPerson, name: event.target.value },
+                        }))
+                      }
+                      className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
+                    />
+                  </label>
+                  <label className="catalog-person-field">
+                    <span className="catalog-person-field-label">Email</span>
+                    <input
+                      type="email"
+                      value={draftPerson.email}
+                      disabled={savingId === row.id}
+                      onChange={(event) =>
+                        setDraftProfile((current) => ({
+                          ...current,
+                          [row.id]: { ...draftPerson, email: event.target.value },
+                        }))
+                      }
+                      className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn-soft"
+                    disabled={savingId === row.id || !profileDirty}
+                    onClick={() => void saveProfile(row.id)}
+                  >
+                    Save details
+                  </button>
+                </div>
                 <div className="catalog-person-access catalog-person-access-wide">
                   <p className="catalog-person-access-summary">{summary || "No access"}</p>
                   <AccessCascadePicker
@@ -219,7 +315,7 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
                     <button
                       type="button"
                       className="btn-soft"
-                      disabled={savingId === row.id || !dirty}
+                      disabled={savingId === row.id || !accessDirty}
                       onClick={() => void saveAccess(row.id)}
                     >
                       Save access

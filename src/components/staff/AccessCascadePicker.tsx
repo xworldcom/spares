@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CustomerPicker } from "@/components/staff/CustomerPicker";
 import {
   customerIdForGrant,
   grantFromUser,
@@ -97,22 +98,16 @@ export function AccessCascadePicker({
       {legend ? <legend className="sr-only">{legend}</legend> : null}
       <div className="access-cascade-columns">
         <div className="access-cascade-step">
-          <p className="access-cascade-step-label">Customer</p>
-          <ul className="access-cascade-options">
-            {activeAccounts.map((account) => (
-              <li key={account.id}>
-                <label className="access-cascade-option">
-                  <input
-                    type="radio"
-                    name={`access-customer-${legend ?? "picker"}`}
-                    checked={selectedCustomerId === account.id}
-                    onChange={() => setCustomerId(account.id)}
-                  />
-                  <span>{account.name}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
+          <CustomerPicker
+            id={`access-customer-${legend ?? "picker"}`}
+            accounts={activeAccounts}
+            value={selectedCustomerId}
+            onChange={setCustomerId}
+            disabled={disabled}
+            allowEmpty
+            emptyLabel="Select customer"
+            placeholder="Search customers…"
+          />
         </div>
         <div className="access-cascade-step">
           <p className="access-cascade-step-label">Sites</p>

@@ -43,13 +43,14 @@ export async function listCustomers(): Promise<PublicUser[]> {
 export async function createPerson(
   email: string,
   password: string,
-  access: { siteIds?: string[]; machineIds?: string[] } = {},
+  access: { siteIds?: string[]; machineIds?: string[]; name?: string } = {},
 ) {
   const data = await apiFetch<AuthUserResponse>("/api/staff/customers", {
     method: "POST",
     body: JSON.stringify({
       email,
       password,
+      name: access.name?.trim() || undefined,
       siteIds: access.siteIds ?? [],
       machineIds: access.machineIds ?? [],
     }),
@@ -70,6 +71,17 @@ export async function updatePersonAccess(
       siteIds: access.siteIds,
       machineIds: access.machineIds,
     }),
+  });
+  return data.user;
+}
+
+export async function updatePersonProfile(
+  userId: string,
+  profile: { name?: string | null; email?: string },
+) {
+  const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(profile),
   });
   return data.user;
 }

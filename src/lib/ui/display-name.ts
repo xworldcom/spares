@@ -11,7 +11,16 @@ function titleCaseToken(token: string): string {
   );
 }
 
-/** Human label from an email local-part. No profile name field yet. */
+/** Prefer stored profile name, else derive from email local-part. */
+export function displayPersonName(user: { name?: string; email: string }): string {
+  const stored = user.name?.trim();
+  if (stored) {
+    return stored;
+  }
+  return displayNameFromEmail(user.email);
+}
+
+/** Human label from an email local-part. */
 export function displayNameFromEmail(email: string): string {
   const trimmed = email.trim();
   const local = trimmed.split("@")[0] ?? "";
