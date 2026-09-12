@@ -101,17 +101,26 @@ export async function listMachineTickets(machineId: string) {
   const data = await apiFetch<TicketsListResponse>(
     `/api/machines/${machineId}/tickets`,
   );
-  return data.tickets ?? [];
+  return {
+    tickets: data.tickets ?? [],
+    unreadCount: data.unreadCount ?? 0,
+  };
 }
 
 export async function listStaffTickets() {
   const data = await apiFetch<TicketsListResponse>("/api/staff/tickets");
-  return data.tickets ?? [];
+  return {
+    tickets: data.tickets ?? [],
+    unreadCount: data.unreadCount ?? 0,
+  };
 }
 
 export async function listAccessibleTickets() {
   const data = await apiFetch<TicketsListResponse>("/api/tickets");
-  return data.tickets ?? [];
+  return {
+    tickets: data.tickets ?? [],
+    unreadCount: data.unreadCount ?? 0,
+  };
 }
 
 export async function createTicket(

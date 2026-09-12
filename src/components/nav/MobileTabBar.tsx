@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useCareAlerts } from "@/components/care/CareAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { isNavActive } from "@/lib/nav-active";
 
@@ -108,7 +109,8 @@ function TabLink({
 
 export function MobileTabBar() {
   const { user } = useAuth();
-  const { unreadCount } = useQuoteAlerts();
+  const { unreadCount: careUnreadCount } = useCareAlerts();
+  const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
   const pathname = usePathname();
   const [moreForPath, setMoreForPath] = useState<string | null>(null);
 
@@ -176,14 +178,19 @@ export function MobileTabBar() {
               <TabLink href="/machines/new" hrefs={staffHrefs} label="Upload">
                 <UploadIcon active={isNavActive(pathname, "/machines/new", staffHrefs)} />
               </TabLink>
-              <TabLink href="/care" hrefs={staffHrefs} label="Care">
+              <TabLink
+                href="/care"
+                hrefs={staffHrefs}
+                label="Care"
+                badge={careUnreadCount}
+              >
                 <CareIcon active={isNavActive(pathname, "/care", staffHrefs)} />
               </TabLink>
               <TabLink
                 href="/staff/quotes"
                 hrefs={staffHrefs}
                 label="Quotes"
-                badge={unreadCount}
+                badge={quotesUnreadCount}
               >
                 <QuotesIcon active={isNavActive(pathname, "/staff/quotes", staffHrefs)} />
               </TabLink>
@@ -206,14 +213,19 @@ export function MobileTabBar() {
               <TabLink href="/machines" hrefs={customerHrefs} label="Machines">
                 <MachinesIcon active={isNavActive(pathname, "/machines", customerHrefs)} />
               </TabLink>
-              <TabLink href="/care" hrefs={customerHrefs} label="Care">
+              <TabLink
+                href="/care"
+                hrefs={customerHrefs}
+                label="Care"
+                badge={careUnreadCount}
+              >
                 <CareIcon active={isNavActive(pathname, "/care", customerHrefs)} />
               </TabLink>
               <TabLink
                 href="/quotes"
                 hrefs={customerHrefs}
                 label="Quotes"
-                badge={unreadCount}
+                badge={quotesUnreadCount}
               >
                 <QuotesIcon active={isNavActive(pathname, "/quotes", customerHrefs)} />
               </TabLink>

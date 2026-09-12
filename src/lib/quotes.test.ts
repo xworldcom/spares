@@ -299,6 +299,39 @@ describe("role-aware items and unread", () => {
     );
   });
 
+  it("marks a quote unread for the customer after staff activity", () => {
+    const withStaffReply = {
+      ...record,
+      activities: [
+        {
+          id: "a1",
+          at: "2026-01-01T00:00:00.000Z",
+          actorRole: "customer",
+          actorEmail: "c@example.test",
+          kind: "message",
+          text: "Need bearings",
+        },
+        {
+          id: "a2",
+          at: "2026-01-02T00:00:00.000Z",
+          actorRole: "staff",
+          actorEmail: "staff@spares.local",
+          kind: "message",
+          text: "Quoted today",
+        },
+      ],
+      lastReadAt: { "cust-1": "2026-01-01T01:00:00.000Z" },
+    };
+    const customer = {
+      id: "cust-1",
+      email: "c@example.test",
+      role: "customer" as const,
+    };
+    assert.equal(isQuoteUnreadForUser(withStaffReply, customer), true);
+    const publicQuotes = [toPublicQuote(withStaffReply, customer)];
+    assert.equal(publicQuotes.filter((quote) => quote.unread).length, 1);
+  });
+
   it("strips cost from the public customer quote", () => {
     const quoted = { ...record, status: "quoted" as const };
     const publicQuote = toPublicQuote(quoted, {

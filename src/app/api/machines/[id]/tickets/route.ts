@@ -24,10 +24,12 @@ export async function GET(
     return access.error;
   }
   const tickets = await listTickets(access.machine.id);
+  const publicTickets = tickets.map((ticket) =>
+    toPublicTicket(ticket, access.user, access.machine.name),
+  );
   return json({
-    tickets: tickets.map((ticket) =>
-      toPublicTicket(ticket, access.user, access.machine.name),
-    ),
+    tickets: publicTickets,
+    unreadCount: publicTickets.filter((ticket) => ticket.unread).length,
   });
 }
 
