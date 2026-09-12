@@ -75,6 +75,25 @@ function partIdForObject(
   return hit && "part" in hit ? hit.part.id : null;
 }
 
+function hoverMatches(
+  left: ViewerPart | UnmatchedMesh | null,
+  right: ViewerPart | UnmatchedMesh | null,
+) {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  if ("id" in left && "id" in right) {
+    return left.id === right.id;
+  }
+  if (!("id" in left) && !("id" in right)) {
+    return left.meshName === right.meshName;
+  }
+  return false;
+}
+
 function applyHighlight(
   mesh: Mesh,
   selected: ViewerPart | UnmatchedMesh | null,
@@ -201,33 +220,32 @@ function LoadedModel({
   src,
   parts,
   selected,
-  hovered,
   explode,
   hiddenIds,
   isolatedId,
   gestureRef,
   onPick,
   onLongPress,
-  onHover,
   onRegisterCancelHold,
+  onRegisterClearHover,
 }: {
   src: string;
   parts: ViewerPart[];
   selected: ViewerPart | UnmatchedMesh | null;
-  hovered: ViewerPart | UnmatchedMesh | null;
   explode: number;
   hiddenIds: readonly string[];
   isolatedId: string | null;
   gestureRef: MutableRefObject<ViewerGesture>;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
   onLongPress?: (part: ViewerPart) => void;
-  onHover: (hit: ViewerPart | UnmatchedMesh | null) => void;
   onRegisterCancelHold?: (cancelHold: () => void) => void;
+  onRegisterClearHover?: (clearHover: () => void) => void;
 }) {
   const gltf = useCredentialedGLTF(src);
   const partsByName = useMemo(() => buildPartIndex(parts), [parts]);
   const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
   const holdRef = useRef<{ timer: number | null }>({ timer: null });
+  const hoveredRef = useRef<ViewerPart | UnmatchedMesh | null>(null);
 
   const scene = useMemo(() => {
     const cloned = gltf.scene.clone(true);
@@ -251,16 +269,20 @@ function LoadedModel({
     return cloned;
   }, [gltf.scene]);
 
-  useLayoutEffect(() => {
-    applyExplode(scene, explode);
+  function refreshHighlights() {
     scene.traverse((object) => {
       if (!isMesh(object)) {
         return;
       }
       applyVisibility(object, partsByName, hiddenSet, isolatedId);
-      applyHighlight(object, selected, hovered);
+      applyHighlight(object, selected, hoveredRef.current);
     });
-  }, [scene, explode, hiddenSet, isolatedId, partsByName, selected, hovered]);
+  }
+
+  useLayoutEffect(() => {
+    applyExplode(scene, explode);
+    refreshHighlights();
+  }, [scene, explode, hiddenSet, isolatedId, partsByName, selected]);
 
   useEffect(() => {
     return () => {
@@ -287,6 +309,13 @@ function LoadedModel({
 
   useEffect(() => {
     onRegisterCancelHold?.(clearHold);
+    onRegisterClearHover?.(() => {
+      if (hoveredRef.current == null) {
+        return;
+      }
+      hoveredRef.current = null;
+      refreshHighlights();
+    });
   });
 
   function isTap(event: ThreeEvent<PointerEvent>) {
@@ -321,6 +350,14 @@ function LoadedModel({
     onPick(gestureRef.current.pendingHit);
   }
 
+  function setHovered(hit: ViewerPart | UnmatchedMesh | null) {
+    if (hoverMatches(hoveredRef.current, hit)) {
+      return;
+    }
+    hoveredRef.current = hit;
+    refreshHighlights();
+  }
+
   function handlePointerOver(event: ThreeEvent<PointerEvent>) {
     if (
       gestureRef.current.dragging ||
@@ -328,13 +365,12 @@ function LoadedModel({
     ) {
       return;
     }
-    event.stopPropagation();
     const hit = resolvePick(event.object, partsByName);
     if (!hit) {
-      onHover(null);
+      setHovered(null);
       return;
     }
-    onHover("part" in hit ? hit.part : hit);
+    setHovered("part" in hit ? hit.part : hit);
   }
 
   function handlePointerOut(event: ThreeEvent<PointerEvent>) {
@@ -344,7 +380,7 @@ function LoadedModel({
     ) {
       return;
     }
-    onHover(null);
+    setHovered(null);
   }
 
   return (
@@ -555,6 +591,22 @@ function ViewerStatus({
   );
 }
 
+const FRAMING_MS = 1200;
+
+function FramingLatch({ onFramed }: { onFramed: () => void }) {
+  const onFramedRef = useRef(onFramed);
+  onFramedRef.current = onFramed;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      onFramedRef.current();
+    }, FRAMING_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return null;
+}
+
 function ExpandCameraFar({ object }: { object: Object3D }) {
   const { camera } = useThree();
   useLayoutEffect(() => {
@@ -595,7 +647,7 @@ function ViewerCanvas({
   onLongPress?: (part: ViewerPart) => void;
   onCaptureReady?: (capture: (partId: string) => string | null) => void;
 }) {
-  const [hovered, setHovered] = useState<ViewerPart | UnmatchedMesh | null>(null);
+  const [orbitEnabled, setOrbitEnabled] = useState(false);
   const gestureRef = useRef<ViewerGesture>({
     dragging: false,
     moved: false,
@@ -606,10 +658,15 @@ function ViewerCanvas({
     pendingHit: null,
   });
   const cancelHoldRef = useRef<(() => void) | null>(null);
+  const clearHoverRef = useRef<(() => void) | null>(null);
   const [load, setLoad] = useState<{
     status: "loading" | "ready" | "error";
     message?: string;
   }>({ status: "loading" });
+
+  useEffect(() => {
+    setOrbitEnabled(false);
+  }, [src]);
 
   useEffect(() => {
     let cancelled = false;
@@ -658,7 +715,7 @@ function ViewerCanvas({
       <ViewerGestureTracker
         gestureRef={gestureRef}
         onDragStart={() => {
-          setHovered(null);
+          clearHoverRef.current?.();
           cancelHoldRef.current?.();
         }}
       />
@@ -672,20 +729,22 @@ function ViewerCanvas({
       {load.status === "ready" ? (
         <Suspense fallback={null}>
         <Bounds fit clip observe margin={1.3}>
+          <FramingLatch onFramed={() => setOrbitEnabled(true)} />
           <LoadedModel
             src={src}
             parts={parts}
             selected={selected}
-            hovered={hovered}
             explode={explode}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
             gestureRef={gestureRef}
             onPick={onPick}
             onLongPress={onLongPress}
-            onHover={setHovered}
             onRegisterCancelHold={(cancelHold) => {
               cancelHoldRef.current = cancelHold;
+            }}
+            onRegisterClearHover={(clearHover) => {
+              clearHoverRef.current = clearHover;
             }}
           />
         </Bounds>
@@ -693,7 +752,8 @@ function ViewerCanvas({
       ) : null}
       <OrbitControls
         makeDefault
-        enableDamping
+        enabled={orbitEnabled}
+        enableDamping={orbitEnabled}
         enablePan
         enableRotate
         enableZoom
