@@ -3,9 +3,17 @@ import { describe, it } from "node:test";
 import {
   accessOptions,
   accessSummary,
+  accessSummaryParts,
   canAccessMachine,
+  customerIdForGrant,
+  grantFromUser,
+  isMachineGranted,
+  isSiteFullyGranted,
+  normalizeAccessGrant,
   parseAccessValue,
   siteLabel,
+  toggleMachineGrant,
+  toggleSiteGrant,
   toPublicUser,
 } from "./access.ts";
 
@@ -33,6 +41,12 @@ const sites = [
     name: "Dayton",
     createdAt: "2020-01-01T00:00:00.000Z",
   },
+];
+
+const machines = [
+  { id: "palletizer", name: "Palletizer", siteId: "site-cargill-ftw" },
+  { id: "hardware-fixture", name: "Hardware Fixture", siteId: "site-acme-dayton" },
+  { id: "line-a", name: "Line A", siteId: "site-cargill-ftw" },
 ];
 
 describe("site access", () => {
@@ -126,7 +140,93 @@ describe("site access", () => {
       sites,
       accounts,
     );
-    assert.equal(accessSummary(user, accounts), "Cargill · Fort Worth, Cargill · Wichita");
+    assert.equal(
+      accessSummary(user, accounts, sites, machines),
+      "Cargill · Fort Worth, Cargill · Wichita",
+    );
     assert.equal(user.sites?.[0]?.name, "Fort Worth");
+  });
+});
+
+describe("access grants", () => {
+  it("promotes a full machine selection to a site grant", () => {
+    let grant = grantFromUser({});
+    grant = toggleSiteGrant(grant, "site-cargill-ftw", machines);
+    assert.deepEqual(normalizeAccessGrant(grant, machines), {
+      siteIds: ["site-cargill-ftw"],
+      machineIds: [],
+    });
+    assert.equal(isSiteFullyGranted(grant, "site-cargill-ftw", machines), true);
+    assert.equal(isMachineGranted(grant, machines[0]), true);
+    assert.equal(isMachineGranted(grant, machines[2]), true);
+  });
+
+  it("keeps partial machine picks as machineIds", () => {
+    let grant = grantFromUser({});
+    grant = toggleMachineGrant(grant, machines[0], machines);
+    assert.deepEqual(normalizeAccessGrant(grant, machines), {
+      siteIds: [],
+      machineIds: ["palletizer"],
+    });
+    assert.equal(
+      accessSummaryParts(grant, sites, accounts, machines).join(", "),
+      "Cargill · Fort Worth · Palletizer",
+    );
+  });
+
+  it("converts a whole site grant into partial machines when one machine is cleared", () => {
+    let grant = toggleSiteGrant(grantFromUser({}), "site-cargill-ftw", machines);
+    grant = toggleMachineGrant(grant, machines[0], machines);
+    assert.deepEqual(normalizeAccessGrant(grant, machines), {
+      siteIds: [],
+      machineIds: ["line-a"],
+    });
+  });
+
+  it("preserves legacy siteIds as whole-site access", () => {
+    const grant = grantFromUser({ siteIds: ["site-cargill-ftw"] });
+    assert.equal(isSiteFullyGranted(grant, "site-cargill-ftw", machines), true);
+    assert.deepEqual(normalizeAccessGrant(grant, machines), grant);
+  });
+
+  it("does not let legacy companyAccess add machines when siteIds are set", () => {
+    const user = {
+      role: "customer" as const,
+      siteIds: ["site-cargill-ftw"],
+      companyAccess: ["Acme"],
+    };
+    assert.equal(
+      canAccessMachine(user, { id: "palletizer", siteId: "site-cargill-ftw" }, sites, accounts),
+      true,
+    );
+    assert.equal(
+      canAccessMachine(
+        user,
+        { id: "hardware-fixture", siteId: "site-acme-dayton" },
+        sites,
+        accounts,
+      ),
+      false,
+    );
+  });
+
+  it("focuses the cascade on the grant customer", () => {
+    assert.equal(
+      customerIdForGrant(
+        { siteIds: ["site-cargill-ftw", "site-cargill-wichita"], machineIds: [] },
+        sites,
+        machines,
+        accounts,
+      ),
+      "customer-cargill",
+    );
+    assert.equal(
+      customerIdForGrant({ siteIds: [], machineIds: ["palletizer"] }, sites, machines, accounts),
+      "customer-cargill",
+    );
+    assert.equal(
+      customerIdForGrant({ siteIds: ["site-acme-dayton"], machineIds: [] }, sites, machines, accounts),
+      "customer-acme",
+    );
   });
 });

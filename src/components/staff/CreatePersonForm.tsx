@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createPerson, listSites } from "@/lib/api/auth";
+import { AccessCascadePicker } from "@/components/staff/AccessCascadePicker";
+import { grantFromUser, normalizeAccessGrant, type AccessGrant } from "@/lib/access";
+import {
+  createPerson,
+  listCustomerAccounts,
+  listSites,
+} from "@/lib/api/auth";
+import { listMachines } from "@/lib/api/machines";
 import { errorMessage } from "@/lib/api/errors";
-import type { Site } from "@/lib/api/types";
-import { accessOptionsGrouped } from "@/lib/access";
+import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
 
 export function CreatePersonForm({
   onCreated,
@@ -15,18 +21,22 @@ export function CreatePersonForm({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [siteIds, setSiteIds] = useState<string[]>([]);
+  const [grant, setGrant] = useState<AccessGrant>(() => grantFromUser({}));
   const [sites, setSites] = useState<Site[]>([]);
+  const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
+  const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdEmail, setCreatedEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    listSites()
-      .then((next) => {
+    Promise.all([listSites(), listCustomerAccounts(), listMachines()])
+      .then(([nextSites, nextAccounts, nextMachines]) => {
         if (!cancelled) {
-          setSites(next);
+          setSites(nextSites);
+          setAccounts(nextAccounts);
+          setMachines(nextMachines);
         }
       })
       .catch(() => undefined);
@@ -35,27 +45,18 @@ export function CreatePersonForm({
     };
   }, []);
 
-  const grouped = accessOptionsGrouped(sites);
-
-  function toggleSite(siteId: string) {
-    setSiteIds((current) =>
-      current.includes(siteId)
-        ? current.filter((id) => id !== siteId)
-        : [...current, siteId],
-    );
-  }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setCreatedEmail(null);
     setSubmitting(true);
+    const normalized = normalizeAccessGrant(grant, machines);
     try {
-      const user = await createPerson(email.trim(), password, siteIds);
+      const user = await createPerson(email.trim(), password, normalized);
       setCreatedEmail(user.email);
       setEmail("");
       setPassword("");
-      setSiteIds([]);
+      setGrant(grantFromUser({}));
       onCreated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not create that person."));
@@ -73,7 +74,7 @@ export function CreatePersonForm({
     >
       <div className="catalog-create-copy">
         <h2>New person</h2>
-        <p>Customer login — assign one or more sites for machine and ticket access.</p>
+        <p>Customer login — pick a customer, then site(s), then machine(s).</p>
       </div>
       <div className="catalog-create-grid">
         <div>
@@ -109,27 +110,16 @@ export function CreatePersonForm({
           <p className="spares-muted mt-1.5 text-sm">At least 10 characters.</p>
         </div>
         <div className="md:col-span-2">
-          <p className="text-sm font-medium">Site access</p>
-          <div className="catalog-site-picker mt-2">
-            {grouped.map((group) => (
-              <div key={group.customerName} className="catalog-site-picker-group">
-                <p className="catalog-site-picker-customer">{group.customerName}</p>
-                <ul className="catalog-site-picker-options">
-                  {group.sites.map((site) => (
-                    <li key={site.id}>
-                      <label className="catalog-site-picker-option">
-                        <input
-                          type="checkbox"
-                          checked={siteIds.includes(site.id)}
-                          onChange={() => toggleSite(site.id)}
-                        />
-                        <span>{site.name}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <p className="text-sm font-medium">Access</p>
+          <div className="mt-2">
+            <AccessCascadePicker
+              grant={grant}
+              onChange={setGrant}
+              sites={sites}
+              accounts={accounts}
+              machines={machines}
+              legend="New person access"
+            />
           </div>
         </div>
       </div>

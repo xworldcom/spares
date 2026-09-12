@@ -32,7 +32,7 @@ import {
   missingFixtureMachines,
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
-import { toPublicUser } from "./access.ts";
+import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -139,6 +139,24 @@ const SEED_USER_SITES: Record<string, string[]> = {
   "user-mill": ["site-demo-plant1"],
   "user-cargill-corp": ["site-cargill-ftw", "site-cargill-wichita"],
 };
+
+/** Canonical preview seed access; applied when a seed user has no modern grants yet. */
+const SEED_USER_GRANTS: Record<string, { siteIds: string[]; machineIds: string[] }> = {
+  "user-customer": { siteIds: [], machineIds: ["palletizer"] },
+  "user-acme": { siteIds: ["site-acme-dayton"], machineIds: [] },
+  "user-mill": { siteIds: ["site-demo-plant1"], machineIds: [] },
+  "user-cargill-corp": {
+    siteIds: ["site-cargill-ftw", "site-cargill-wichita"],
+    machineIds: [],
+  },
+};
+
+const SEED_CUSTOMER_USER_IDS = new Set([
+  "user-customer",
+  "user-acme",
+  "user-mill",
+  "user-cargill-corp",
+]);
 
 const SEED_MACHINE_SITES: Record<string, string> = {
   palletizer: "site-cargill-ftw",
@@ -571,26 +589,79 @@ function ensureOrg(db: Database): Database {
     }
     return `${a.customerId} ${a.name}`.localeCompare(`${b.customerId} ${b.name}`);
   });
-  const users = next.users.map((user) => {
-    if (user.role !== "customer" || user.deletedAt) {
-      return user;
-    }
-    const hasAccess =
-      (user.siteIds && user.siteIds.length > 0) ||
-      (user.companyAccess && user.companyAccess.length > 0) ||
-      (user.machineIds && user.machineIds.length > 0);
-    if (hasAccess) {
-      return user;
-    }
-    const seeded = SEED_USER_SITES[user.id];
-    return seeded ? { ...user, siteIds: seeded, companyAccess: undefined } : user;
-  });
   const machines = next.machines.map((machine) => {
+    const seeded = SEED_MACHINE_SITES[machine.id];
+    if (seeded && isSeedAllowed()) {
+      return machine.siteId === seeded ? machine : { ...machine, siteId: seeded };
+    }
     if (machine.siteId) {
       return machine;
     }
-    const seeded = SEED_MACHINE_SITES[machine.id];
     return seeded ? { ...machine, siteId: seeded } : machine;
+  });
+  const users = next.users.map((user) => {
+    if (user.deletedAt) {
+      return user;
+    }
+    let healed = user;
+    if (isSeedAllowed() && SEED_CUSTOMER_USER_IDS.has(user.id) && user.role !== "customer") {
+      healed = { ...healed, role: "customer" as const };
+    }
+    if (healed.role !== "customer") {
+      return healed;
+    }
+    const hasSiteIds = (healed.siteIds?.length ?? 0) > 0;
+    const hasMachineIds = (healed.machineIds?.length ?? 0) > 0;
+    const hasCompanyAccess = (healed.companyAccess?.length ?? 0) > 0;
+    if ((hasSiteIds || hasMachineIds) && hasCompanyAccess) {
+      healed = { ...healed, companyAccess: undefined };
+    }
+    if (isSeedAllowed() && user.id === "user-customer") {
+      const hardware = machines.find((row) => row.id === "hardware-fixture");
+      if (
+        hardware &&
+        canAccessMachine(
+          {
+            role: "customer",
+            siteIds: healed.siteIds ?? [],
+            machineIds: healed.machineIds ?? [],
+            companyAccess: healed.companyAccess,
+          },
+          hardware,
+          sites,
+          customers,
+        )
+      ) {
+        const canonical = SEED_USER_GRANTS["user-customer"];
+        return {
+          ...healed,
+          role: "customer" as const,
+          siteIds: canonical.siteIds,
+          machineIds: canonical.machineIds,
+          companyAccess: undefined,
+        };
+      }
+    }
+    const hasAccess =
+      (healed.siteIds?.length ?? 0) > 0 ||
+      (healed.machineIds?.length ?? 0) > 0 ||
+      (healed.companyAccess?.length ?? 0) > 0;
+    if (hasAccess) {
+      return healed;
+    }
+    const seededGrant = SEED_USER_GRANTS[user.id];
+    if (seededGrant) {
+      return {
+        ...healed,
+        siteIds: seededGrant.siteIds,
+        machineIds: seededGrant.machineIds,
+        companyAccess: undefined,
+      };
+    }
+    const seeded = SEED_USER_SITES[user.id];
+    return seeded
+      ? { ...healed, siteIds: seeded, machineIds: [], companyAccess: undefined }
+      : healed;
   });
   return migrateOrgTree({
     ...next,
@@ -881,7 +952,7 @@ export function deleteCustomerAccount(id: string) {
 export function createCustomer(
   email: string,
   passwordHash: string,
-  access: { siteIds?: string[]; companyAccess?: string[] } = {},
+  access: { siteIds?: string[]; companyAccess?: string[]; machineIds?: string[] } = {},
 ) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
@@ -890,12 +961,16 @@ export function createCustomer(
       return { error: "email-taken" as const };
     }
     const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
+    const machineIds = new Set(db.machines.map((machine) => machine.id));
     const user: StoredUser = {
       id: randomUUID(),
       email: normalized,
       passwordHash,
       role: "customer",
       siteIds: [...new Set((access.siteIds ?? []).filter((id) => known.has(id)))],
+      machineIds: [
+        ...new Set((access.machineIds ?? []).filter((id) => machineIds.has(id))),
+      ],
     };
     await writeDatabase({ ...db, users: [...db.users, user] });
     return { user };
@@ -1077,18 +1152,26 @@ export function updateCustomerSites(
       return { error: "not-customer" as const };
     }
     const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
-    const machineIds = new Set(db.machines.map((machine) => machine.id));
-    const next = {
-      ...user,
+    const validMachines = db.machines.map((machine) => ({
+      id: machine.id,
+      siteId: machine.siteId,
+    }));
+    const rawGrant = {
       siteIds: [...new Set((access.siteIds ?? user.siteIds ?? []).filter((id) => known.has(id)))],
-      companyAccess: undefined,
       machineIds: [
         ...new Set(
           (access.machineIds ?? user.machineIds ?? []).filter((id) =>
-            machineIds.has(id),
+            validMachines.some((machine) => machine.id === id),
           ),
         ),
       ],
+    };
+    const normalized = normalizeAccessGrant(rawGrant, validMachines);
+    const next = {
+      ...user,
+      siteIds: normalized.siteIds,
+      companyAccess: undefined,
+      machineIds: normalized.machineIds,
     };
     const users = db.users.slice();
     users[index] = next;
