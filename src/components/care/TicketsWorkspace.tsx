@@ -95,23 +95,6 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
     refresh();
   }
 
-  if (loading) {
-    return <LoadingState label="Loading tickets…" />;
-  }
-
-  if (error && tickets.length === 0) {
-    return (
-      <ErrorState
-        title="Failed to load tickets"
-        message={error}
-        onRetry={() => {
-          setLoading(true);
-          refresh();
-        }}
-      />
-    );
-  }
-
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
   const selected = ticketId
@@ -147,7 +130,18 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
         />
       ) : null}
 
-      {tickets.length === 0 ? (
+      {loading && tickets.length === 0 ? (
+        <LoadingState label="Loading tickets…" />
+      ) : error && tickets.length === 0 ? (
+        <ErrorState
+          title="Failed to load tickets"
+          message={error}
+          onRetry={() => {
+            setLoading(true);
+            refresh();
+          }}
+        />
+      ) : tickets.length === 0 ? (
         <EmptyState
           title="No tickets yet"
           message={
@@ -171,6 +165,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
 
   const detailPanel = ticketId ? (
     <TicketDetail
+      key={ticketId}
       machineId={selected?.machineId ?? machineId ?? ""}
       ticketId={ticketId}
       backHref={listHref}
