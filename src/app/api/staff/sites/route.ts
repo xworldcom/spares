@@ -2,6 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { createSite, listSites } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const auth = await requireRole("staff");
   if ("error" in auth) {

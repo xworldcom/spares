@@ -116,7 +116,9 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
     setError(null);
     try {
       await deleteCustomerAccount(id);
-      setAccounts((current) => current.filter((row) => row.id !== id));
+      const rows = await listCustomerAccounts();
+      setAccounts(rows);
+      setEditNames(Object.fromEntries(rows.map((row) => [row.id, row.name])));
     } catch (cause) {
       setError(errorMessage(cause, "Could not delete that customer."));
     } finally {

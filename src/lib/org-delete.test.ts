@@ -11,6 +11,8 @@ import {
   resetStoreMemoryForTests,
   SEED_CUSTOMER_ACCOUNTS,
   SEED_SITES,
+  updateSite,
+  writeCatalogHealForTests,
 } from "./store.ts";
 
 const SEED_NOW = "2020-01-01T00:00:00.000Z";
@@ -156,5 +158,42 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     const accounts = await listCustomerAccounts();
     assert.equal(accounts.some((row) => row.id === created.account.id), false);
+  });
+
+  it("does not undo a soft delete when a stale catalog heal writes afterward", async () => {
+    process.env.SPARES_ALLOW_SEED = "false";
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        ...seedOrgDb(),
+        customers: [],
+        sites: [],
+      }),
+    );
+
+    const created = await createCustomerAccount("Smoke Throwaway Customer");
+    assert.ok("account" in created);
+    const customerId = created.account.id;
+
+    const createdSite = await createSite(customerId, "Smoke Site");
+    assert.ok("site" in createdSite);
+    await updateSite(createdSite.site.id, { name: "Smoke Site Edited" });
+
+    const staleHealSnapshot = JSON.parse((await persistence.readDatabaseJson()) ?? "{}");
+    resetStoreMemoryForTests();
+
+    await deleteSite(createdSite.site.id);
+    await deleteCustomerAccount(customerId);
+
+    resetStoreMemoryForTests();
+    await writeCatalogHealForTests(staleHealSnapshot);
+
+    resetStoreMemoryForTests();
+    const accounts = await listCustomerAccounts();
+    assert.equal(accounts.some((row) => row.id === customerId), false);
+    const sites = await listSites(customerId);
+    assert.equal(sites.length, 0);
   });
 });

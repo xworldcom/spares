@@ -6,6 +6,8 @@ import {
   listSites,
 } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const auth = await requireRole("staff");
   if ("error" in auth) {

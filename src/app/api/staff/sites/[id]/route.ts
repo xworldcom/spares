@@ -2,6 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { deleteSite, updateSite } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 type PatchBody = {
   name?: unknown;
   customerId?: unknown;

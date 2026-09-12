@@ -190,6 +190,11 @@ export type StoredManual = MachineManual;
 export type StoredTicket = ServiceTicketRecord;
 export type StoredUsage = MachineUsage;
 
+type OrgTombstones = {
+  customerIds?: string[];
+  siteIds?: string[];
+};
+
 type Database = {
   schemaVersion?: number;
   customers?: CustomerAccount[];
@@ -202,6 +207,7 @@ type Database = {
   manuals?: StoredManual[];
   tickets?: StoredTicket[];
   machineUsage?: StoredUsage[];
+  orgTombstones?: OrgTombstones;
 };
 
 type CareStore = {
@@ -482,23 +488,68 @@ function stabilizeSeedUsers(db: Database): Database {
   return { ...db, users, quotes };
 }
 
+function tombstonedCustomerIds(db: Database) {
+  return new Set(db.orgTombstones?.customerIds ?? []);
+}
+
+function tombstonedSiteIds(db: Database) {
+  return new Set(db.orgTombstones?.siteIds ?? []);
+}
+
+function withCustomerTombstone(db: Database, customerId: string): Database {
+  const ids = new Set([...(db.orgTombstones?.customerIds ?? []), customerId]);
+  return {
+    ...db,
+    orgTombstones: { ...db.orgTombstones, customerIds: [...ids] },
+  };
+}
+
+function withSiteTombstone(db: Database, siteId: string): Database {
+  const ids = new Set([...(db.orgTombstones?.siteIds ?? []), siteId]);
+  return {
+    ...db,
+    orgTombstones: { ...db.orgTombstones, siteIds: [...ids] },
+  };
+}
+
+/** Org CRUD lives in blob writes — catalog heal must not clobber concurrent deletes. */
+function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
+  return {
+    ...healed,
+    customers: latest.customers ?? healed.customers,
+    sites: latest.sites ?? healed.sites,
+    users: latest.users ?? healed.users,
+    quotes: latest.quotes ?? healed.quotes,
+    bugReports: latest.bugReports ?? healed.bugReports,
+    orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
+  };
+}
+
 function ensureOrg(db: Database): Database {
   const migrated = migrateOrgTree(db);
   let next = migrated.db;
+  const deletedCustomers = tombstonedCustomerIds(next);
+  const deletedSites = tombstonedSiteIds(next);
   const haveCustomers = new Map((next.customers ?? []).map((row) => [row.id, row]));
   const haveSites = new Map((next.sites ?? []).map((site) => [site.id, site]));
   if (isSeedAllowed()) {
     for (const customer of SEED_CUSTOMER_ACCOUNTS) {
+      if (deletedCustomers.has(customer.id)) {
+        continue;
+      }
       if (!haveCustomers.has(customer.id)) {
         haveCustomers.set(customer.id, customer);
       }
     }
     for (const site of SEED_SITES) {
+      if (deletedSites.has(site.id)) {
+        continue;
+      }
       if (haveSites.has(site.id)) {
         continue;
       }
       const customer = haveCustomers.get(site.customerId);
-      if (customer?.deletedAt) {
+      if (customer?.deletedAt || deletedCustomers.has(site.customerId)) {
         continue;
       }
       haveSites.set(site.id, site);
@@ -627,6 +678,7 @@ function parseDatabase(
         manuals: parsed.manuals ?? [],
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
+        orgTombstones: parsed.orgTombstones,
       },
       numbersAssigned: rawQuotes.some(
         (quote) => typeof quote.number !== "number" || quote.number < 1,
@@ -695,7 +747,10 @@ async function writeDatabase(next: Database) {
 
 /** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
 async function writeCatalogHeal(next: Database) {
-  const kept = await overlayPersistedCare(next);
+  const latestRaw = await getPersistence().readDatabaseJson();
+  const loaded = latestRaw ? parseDatabase(latestRaw) : null;
+  const merged = loaded?.db ? mergeOrgCrudFromLatest(next, loaded.db) : next;
+  const kept = await overlayPersistedCare(merged);
   memory = kept;
   await getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2));
 }
@@ -818,7 +873,7 @@ export function deleteCustomerAccount(id: string) {
     }
     const next = customers.slice();
     next[index] = { ...next[index], deletedAt: new Date().toISOString() };
-    await writeDatabase({ ...db, customers: next });
+    await writeDatabase(withCustomerTombstone({ ...db, customers: next }, id));
     return { ok: true as const };
   });
 }
@@ -998,7 +1053,7 @@ export function deleteSite(siteId: string) {
         siteIds: user.siteIds.filter((id) => id !== siteId),
       };
     });
-    await writeDatabase({ ...db, sites: updated, users });
+    await writeDatabase(withSiteTombstone({ ...db, sites: updated, users }, siteId));
     return { ok: true as const };
   });
 }
@@ -1192,6 +1247,11 @@ export function listMachineModelFiles() {
 /** Test helper: drop the in-process cache so the next read hits disk. */
 export function resetStoreMemoryForTests() {
   memory = null;
+}
+
+/** Test helper: simulate a stale catalog heal racing a persisted org delete. */
+export function writeCatalogHealForTests(staleHeal: Database) {
+  return writeCatalogHeal(staleHeal);
 }
 
 /** Test helper: simulate a warm instance that has users but no machines. */
