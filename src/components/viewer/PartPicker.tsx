@@ -421,13 +421,17 @@ function StudioGround() {
 function ViewerGestureTracker({
   gestureRef,
   onDragStart,
+  onOrbitEngage,
 }: {
   gestureRef: MutableRefObject<ViewerGesture>;
   onDragStart: () => void;
+  onOrbitEngage: () => void;
 }) {
   const { gl } = useThree();
   const onDragStartRef = useRef(onDragStart);
   onDragStartRef.current = onDragStart;
+  const onOrbitEngageRef = useRef(onOrbitEngage);
+  onOrbitEngageRef.current = onOrbitEngage;
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -443,12 +447,17 @@ function ViewerGestureTracker({
     }
 
     function onCanvasPointerDown(event: PointerEvent) {
+      onOrbitEngageRef.current();
       gesture.dragging = false;
       gesture.moved = false;
       gesture.fired = false;
       gesture.startX = event.clientX;
       gesture.startY = event.clientY;
       gesture.pointerId = event.pointerId;
+    }
+
+    function onCanvasWheel() {
+      onOrbitEngageRef.current();
     }
 
     function onCanvasPointerMove(event: PointerEvent) {
@@ -474,12 +483,14 @@ function ViewerGestureTracker({
     canvas.addEventListener("pointermove", onCanvasPointerMove);
     canvas.addEventListener("pointerup", onCanvasPointerEnd);
     canvas.addEventListener("pointercancel", onCanvasPointerEnd);
+    canvas.addEventListener("wheel", onCanvasWheel, { passive: true });
 
     return () => {
       canvas.removeEventListener("pointerdown", onCanvasPointerDown);
       canvas.removeEventListener("pointermove", onCanvasPointerMove);
       canvas.removeEventListener("pointerup", onCanvasPointerEnd);
       canvas.removeEventListener("pointercancel", onCanvasPointerEnd);
+      canvas.removeEventListener("wheel", onCanvasWheel);
     };
   }, [gl, gestureRef]);
 
@@ -591,22 +602,6 @@ function ViewerStatus({
   );
 }
 
-const FRAMING_MS = 1200;
-
-function FramingLatch({ onFramed }: { onFramed: () => void }) {
-  const onFramedRef = useRef(onFramed);
-  onFramedRef.current = onFramed;
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      onFramedRef.current();
-    }, FRAMING_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  return null;
-}
-
 function ExpandCameraFar({ object }: { object: Object3D }) {
   const { camera } = useThree();
   useLayoutEffect(() => {
@@ -714,6 +709,7 @@ function ViewerCanvas({
       <color attach="background" args={[VIEWER_BG]} />
       <ViewerGestureTracker
         gestureRef={gestureRef}
+        onOrbitEngage={() => setOrbitEnabled(true)}
         onDragStart={() => {
           clearHoverRef.current?.();
           cancelHoldRef.current?.();
@@ -729,7 +725,6 @@ function ViewerCanvas({
       {load.status === "ready" ? (
         <Suspense fallback={null}>
         <Bounds fit clip observe margin={1.3}>
-          <FramingLatch onFramed={() => setOrbitEnabled(true)} />
           <LoadedModel
             src={src}
             parts={parts}
