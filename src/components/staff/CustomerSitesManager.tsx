@@ -110,8 +110,16 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
     }
   }
 
-  async function removeSite(siteId: string) {
-    if (!window.confirm("Delete this site? Machines must be moved first.")) {
+  async function removeSite(siteId: string, siteName: string, machineCount: number) {
+    const blockedHint =
+      machineCount > 0
+        ? `\n\nThis site still has ${machineCount} machine${machineCount === 1 ? "" : "s"}. Move or remove them first.`
+        : "";
+    if (
+      !window.confirm(
+        `Delete site “${siteName}”?${blockedHint || " People lose access to this site."}`,
+      )
+    ) {
       return;
     }
     setSubmitting(true);
@@ -257,7 +265,7 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
                         type="button"
                         className="btn-soft text-[#f0c4c0]"
                         disabled={submitting}
-                        onClick={() => void removeSite(site.id)}
+                        onClick={() => void removeSite(site.id, site.name, site.machineCount)}
                       >
                         Delete
                       </button>

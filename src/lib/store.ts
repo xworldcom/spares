@@ -494,17 +494,32 @@ function ensureOrg(db: Database): Database {
       }
     }
     for (const site of SEED_SITES) {
-      if (!haveSites.has(site.id)) {
-        haveSites.set(site.id, site);
+      if (haveSites.has(site.id)) {
+        continue;
       }
+      const customer = haveCustomers.get(site.customerId);
+      if (customer?.deletedAt) {
+        continue;
+      }
+      haveSites.set(site.id, site);
     }
   }
-  const customers = [...haveCustomers.values()]
-    .filter((row) => !row.deletedAt)
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const sites = [...haveSites.values()]
-    .filter((row) => !row.deletedAt)
-    .sort((a, b) => `${a.customerId} ${a.name}`.localeCompare(`${b.customerId} ${b.name}`));
+  const customers = [...haveCustomers.values()].sort((a, b) => {
+    const aDeleted = a.deletedAt ? 1 : 0;
+    const bDeleted = b.deletedAt ? 1 : 0;
+    if (aDeleted !== bDeleted) {
+      return aDeleted - bDeleted;
+    }
+    return a.name.localeCompare(b.name);
+  });
+  const sites = [...haveSites.values()].sort((a, b) => {
+    const aDeleted = a.deletedAt ? 1 : 0;
+    const bDeleted = b.deletedAt ? 1 : 0;
+    if (aDeleted !== bDeleted) {
+      return aDeleted - bDeleted;
+    }
+    return `${a.customerId} ${a.name}`.localeCompare(`${b.customerId} ${b.name}`);
+  });
   const users = next.users.map((user) => {
     if (user.role !== "customer" || user.deletedAt) {
       return user;

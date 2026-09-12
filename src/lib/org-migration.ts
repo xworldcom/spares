@@ -136,19 +136,24 @@ export function migrateOrgTree<T extends OrgSlice>(db: T): { db: T; changed: boo
 }
 
 export function normalizeOrgTree<T extends OrgSlice>(db: T): T {
-  const customers = [...(db.customers ?? [])].filter((row) => !row.deletedAt);
+  const customers = [...(db.customers ?? [])];
+  const activeCustomers = customers.filter((row) => !row.deletedAt);
   const sites = [...(db.sites ?? [])]
-    .filter((row) => !row.deletedAt)
     .map((site) => {
-      if (site.customerId || !site.company) {
+      if (site.deletedAt || site.customerId || !site.company) {
         return site;
       }
-      const customer = findCustomerByName(customers, site.company);
+      const customer = findCustomerByName(activeCustomers, site.company);
       return customer ? { ...site, customerId: customer.id } : site;
     })
-    .sort((a, b) =>
-      `${a.customerId ?? ""} ${a.name}`.localeCompare(`${b.customerId ?? ""} ${b.name}`),
-    );
+    .sort((a, b) => {
+      const aDeleted = a.deletedAt ? 1 : 0;
+      const bDeleted = b.deletedAt ? 1 : 0;
+      if (aDeleted !== bDeleted) {
+        return aDeleted - bDeleted;
+      }
+      return `${a.customerId ?? ""} ${a.name}`.localeCompare(`${b.customerId ?? ""} ${b.name}`);
+    });
   return {
     ...db,
     schemaVersion: ORG_SCHEMA_VERSION,

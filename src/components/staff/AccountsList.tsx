@@ -100,8 +100,16 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
     }
   }
 
-  async function removeAccount(id: string) {
-    if (!window.confirm("Delete this customer account? Sites must be removed first.")) {
+  async function removeAccount(id: string, name: string, siteCount: number) {
+    const blockedHint =
+      siteCount > 0
+        ? `\n\nThis customer still has ${siteCount} site${siteCount === 1 ? "" : "s"}. Remove those sites first.`
+        : "";
+    if (
+      !window.confirm(
+        `Delete customer “${name}”?${blockedHint || " This cannot be undone on Preview."}`,
+      )
+    ) {
       return;
     }
     setSavingId(id);
@@ -252,7 +260,7 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
                         type="button"
                         className="btn-soft text-[#f0c4c0]"
                         disabled={savingId === row.id}
-                        onClick={() => void removeAccount(row.id)}
+                        onClick={() => void removeAccount(row.id, row.name, row.siteCount)}
                       >
                         Delete
                       </button>
