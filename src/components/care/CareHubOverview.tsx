@@ -20,12 +20,14 @@ export function CareHubOverview() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([listMachines(), listAccessibleTickets()])
-      .then(([machineRows, tickets]) => {
+      .then(([machineRows, ticketData]) => {
         if (cancelled) {
           return;
         }
         setMachines(machineRows);
-        setOpenTickets(tickets.filter((ticket) => ticketIsOpen(ticket.status)).length);
+        setOpenTickets(
+          ticketData.tickets.filter((ticket) => ticketIsOpen(ticket.status)).length,
+        );
         setError(null);
         setLoading(false);
       })

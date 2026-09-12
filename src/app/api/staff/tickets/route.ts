@@ -11,9 +11,11 @@ export async function GET() {
 
   const [tickets, machines] = await Promise.all([listTickets(), listMachines()]);
   const names = new Map(machines.map((machine) => [machine.id, machine.name]));
+  const publicTickets = tickets.map((ticket) =>
+    toPublicTicket(ticket, auth.user, names.get(ticket.machineId)),
+  );
   return json({
-    tickets: tickets.map((ticket) =>
-      toPublicTicket(ticket, auth.user, names.get(ticket.machineId)),
-    ),
+    tickets: publicTickets,
+    unreadCount: publicTickets.filter((ticket) => ticket.unread).length,
   });
 }

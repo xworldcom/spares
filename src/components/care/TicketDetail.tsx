@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -30,6 +31,7 @@ export function TicketDetail({
   onUpdated?: () => void;
 }) {
   const { user } = useAuth();
+  const { refresh: refreshCareAlerts } = useCareAlerts();
   const [ticket, setTicket] = useState<ServiceTicket | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,6 +47,7 @@ export function TicketDetail({
         }
         setTicket(next);
         setError(null);
+        void refreshCareAlerts();
       })
       .catch((cause: unknown) => {
         if (cancelled) {
@@ -55,7 +58,7 @@ export function TicketDetail({
     return () => {
       cancelled = true;
     };
-  }, [ticketId, reloadKey]);
+  }, [ticketId, reloadKey, refreshCareAlerts]);
 
   async function onStatus(status: TicketStatus) {
     if (!ticket) {

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
+import { useCareAlerts } from "@/components/care/CareAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isNavActive } from "@/lib/nav-active";
@@ -46,19 +47,21 @@ function NavLink({
   );
 }
 
-function QuotesNavLink({
+function NavLinkWithBadge({
   href,
   hrefs,
+  label,
   unreadCount,
 }: {
   href: string;
   hrefs: readonly string[];
+  label: string;
   unreadCount: number;
 }) {
   return (
     <span className="relative inline-flex">
       <NavLink href={href} hrefs={hrefs}>
-        Quotes
+        {label}
       </NavLink>
       {unreadCount > 0 ? (
         <span className="btn-accent absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
@@ -71,7 +74,8 @@ function QuotesNavLink({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { status, user, logout } = useAuth();
-  const { unreadCount } = useQuoteAlerts();
+  const { unreadCount: careUnreadCount } = useCareAlerts();
+  const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
   const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -160,9 +164,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink href="/machines" hrefs={navHrefs}>
                 Machines
               </NavLink>
-              <NavLink href="/care" hrefs={navHrefs}>
-                Care
-              </NavLink>
+              <NavLinkWithBadge
+                href="/care"
+                hrefs={navHrefs}
+                label="Care"
+                unreadCount={careUnreadCount}
+              />
               {user.role === "staff" ? (
                 <>
                   <NavLink href="/machines/new" hrefs={navHrefs}>
@@ -171,20 +178,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <NavLink href="/staff/customers" hrefs={navHrefs}>
                     Customers
                   </NavLink>
-                  <QuotesNavLink
+                  <NavLinkWithBadge
                     href="/staff/quotes"
                     hrefs={navHrefs}
-                    unreadCount={unreadCount}
+                    label="Quotes"
+                    unreadCount={quotesUnreadCount}
                   />
                   <NavLink href="/staff/bugs" hrefs={navHrefs}>
                     Bug reports
                   </NavLink>
                 </>
               ) : (
-                <QuotesNavLink
+                <NavLinkWithBadge
                   href="/quotes"
                   hrefs={navHrefs}
-                  unreadCount={unreadCount}
+                  label="Quotes"
+                  unreadCount={quotesUnreadCount}
                 />
               )}
             </nav>

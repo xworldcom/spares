@@ -82,6 +82,7 @@ export type ManualResponse = {
 
 export type TicketsListResponse = {
   tickets: ServiceTicket[];
+  unreadCount: number;
 };
 
 export type TicketResponse = {

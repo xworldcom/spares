@@ -14,6 +14,7 @@ import {
   manualContentType,
   manualExtension,
   manualOverLimitMessage,
+  countUnreadTickets,
   nextTicketNumber,
   parseCareText,
   parseOptionalNumber,
@@ -84,6 +85,24 @@ describe("care tickets", () => {
     assert.equal(hubTicketHref("t1"), "/care/tickets/t1");
     assert.equal(machineTicketsHref("m1"), "/machines/m1/care/tickets");
     assert.equal(machineTicketsHref("m1", "t1"), "/machines/m1/care/tickets/t1");
+  });
+
+  it("counts unread tickets for tab badges", () => {
+    const tickets = [
+      {
+        activities: [{ id: "a1", at: "2026-01-02T00:00:00.000Z" }],
+        lastReadAt: {},
+      },
+      {
+        activities: [{ id: "a2", at: "2026-01-02T00:00:00.000Z" }],
+        lastReadAt: { "user-customer": "2026-01-03T00:00:00.000Z" },
+      },
+      {
+        activities: [],
+        lastReadAt: {},
+      },
+    ];
+    assert.equal(countUnreadTickets(tickets, { id: "user-customer" }), 1);
   });
 
   it("marks unread from lastReadAt", () => {

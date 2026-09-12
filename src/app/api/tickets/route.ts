@@ -27,5 +27,8 @@ export async function GET() {
       toPublicTicket(ticket, auth.user, visible.get(ticket.machineId)),
     );
 
-  return json({ tickets: filtered });
+  return json({
+    tickets: filtered,
+    unreadCount: filtered.filter((ticket) => ticket.unread).length,
+  });
 }

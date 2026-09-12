@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useCareAlerts } from "@/components/care/CareAlerts";
 import { NewTicketForm } from "@/components/care/NewTicketForm";
 import { TicketDetail } from "@/components/care/TicketDetail";
 import { TicketsList } from "@/components/care/TicketsList";
@@ -43,6 +44,7 @@ function listHrefFor(scope: TicketsWorkspaceProps["scope"], machineId?: string) 
 export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspaceProps) {
   const router = useRouter();
   const desktop = useDesktopStage();
+  const { refresh: refreshCareAlerts } = useCareAlerts();
   const [tickets, setTickets] = useState<ServiceTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +64,10 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
         if (cancelled) {
           return;
         }
-        setTickets(next);
+        setTickets(next.tickets);
         setError(null);
         setLoading(false);
+        void refreshCareAlerts();
       })
       .catch((cause: unknown) => {
         if (cancelled) {
@@ -76,7 +79,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
     return () => {
       cancelled = true;
     };
-  }, [scope, machineId, reloadKey]);
+  }, [scope, machineId, reloadKey, refreshCareAlerts]);
 
   function refresh() {
     setReloadKey((key) => key + 1);

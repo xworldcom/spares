@@ -240,6 +240,12 @@ export function isTicketUnreadForUser(
   return latest > last;
 }
 
+export function countUnreadTickets<
+  T extends Pick<ServiceTicketRecord, "activities" | "lastReadAt">,
+>(tickets: readonly T[], user: Pick<PublicUser, "id">) {
+  return tickets.filter((ticket) => isTicketUnreadForUser(ticket, user)).length;
+}
+
 export function toPublicTicket(
   ticket: ServiceTicketRecord,
   user: Pick<PublicUser, "id">,
