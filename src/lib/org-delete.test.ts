@@ -290,4 +290,84 @@ describe("seed access heal", () => {
       false,
     );
   });
+
+  it("resets demo customer@ when the grant would expose hardware fixture", async () => {
+    process.env.SPARES_ALLOW_SEED = "true";
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        ...seedOrgDb(),
+        users: [
+          ...seedOrgDb().users,
+          {
+            id: "user-customer",
+            email: "customer@spares.local",
+            passwordHash: "x",
+            role: "customer" as const,
+            siteIds: ["site-cargill-ftw"],
+            machineIds: ["hardware-fixture"],
+          },
+        ],
+        machines: [
+          {
+            id: "palletizer",
+            name: "Palletizer",
+            storedFileName: "palletizer.glb",
+            originalFileName: "palletizer.glb",
+            parts: [],
+            unmatched: [],
+            createdAt: SEED_NOW,
+            siteId: "site-cargill-ftw",
+          },
+          {
+            id: "hardware-fixture",
+            name: "Hardware fixture",
+            storedFileName: "hardware-fixture.glb",
+            originalFileName: "hardware-fixture.glb",
+            parts: [],
+            unmatched: [],
+            createdAt: SEED_NOW,
+            siteId: "site-acme-dayton",
+          },
+        ],
+      }),
+    );
+
+    resetStoreMemoryForTests();
+    const { findUserById, listMachines } = await import("./store.ts");
+    await listMachines();
+    const user = await findUserById("user-customer");
+    assert.deepEqual(user?.siteIds, []);
+    assert.deepEqual(user?.machineIds, ["palletizer"]);
+  });
+
+  it("forces seed demo users back to customer role", async () => {
+    process.env.SPARES_ALLOW_SEED = "true";
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        ...seedOrgDb(),
+        users: [
+          ...seedOrgDb().users,
+          {
+            id: "user-customer",
+            email: "customer@spares.local",
+            passwordHash: "x",
+            role: "staff" as const,
+            siteIds: ["site-cargill-ftw"],
+          },
+        ],
+      }),
+    );
+
+    resetStoreMemoryForTests();
+    const { findUserById, listMachines } = await import("./store.ts");
+    await listMachines();
+    const user = await findUserById("user-customer");
+    assert.equal(user?.role, "customer");
+  });
 });

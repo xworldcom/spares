@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  customerIdForGrant,
   grantFromUser,
   isMachineGranted,
   isSiteFullyGranted,
@@ -37,12 +38,20 @@ export function AccessCascadePicker({
     [accounts],
   );
 
-  const [customerId, setCustomerId] = useState<string>(() => activeAccounts[0]?.id ?? "");
+  const grantCustomerId = useMemo(
+    () => customerIdForGrant(grant, sites, machines, activeAccounts),
+    [grant, sites, machines, activeAccounts],
+  );
 
-  const selectedCustomerId =
-    activeAccounts.some((row) => row.id === customerId)
-      ? customerId
-      : (activeAccounts[0]?.id ?? "");
+  const [customerId, setCustomerId] = useState(grantCustomerId);
+
+  useEffect(() => {
+    setCustomerId(grantCustomerId);
+  }, [grantCustomerId]);
+
+  const selectedCustomerId = activeAccounts.some((row) => row.id === customerId)
+    ? customerId
+    : grantCustomerId;
 
   const customerSites = useMemo(
     () => sitesForCustomer(selectedCustomerId, sites),
@@ -59,7 +68,7 @@ export function AccessCascadePicker({
       )
       .map((site) => site.id);
     return new Set([...fromGrant, ...partialSites]);
-  }, [customerSites, grant.machineIds, grant.siteIds]);
+  }, [customerSites, grant.machineIds, grant.siteIds, machines]);
 
   const visibleMachines = useMemo(() => {
     return customerSites

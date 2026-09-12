@@ -185,6 +185,34 @@ export function sitesForCustomer(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Pick the customer column to focus for a person's saved grant. */
+export function customerIdForGrant(
+  grant: AccessGrant,
+  sites: readonly Site[],
+  machines: readonly Pick<MachineSummary, "id" | "siteId">[],
+  accounts: readonly CustomerAccount[] = [],
+) {
+  for (const siteId of grant.siteIds) {
+    const site = sites.find((row) => row.id === siteId && !row.deletedAt);
+    if (site?.customerId) {
+      return site.customerId;
+    }
+  }
+  for (const machineId of grant.machineIds) {
+    const machine = machines.find((row) => row.id === machineId);
+    const site = machine?.siteId
+      ? sites.find((row) => row.id === machine.siteId && !row.deletedAt)
+      : undefined;
+    if (site?.customerId) {
+      return site.customerId;
+    }
+  }
+  const active = accounts
+    .filter((row) => !row.deletedAt)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return active[0]?.id ?? "";
+}
+
 
 export function siteLabel(
   site: Pick<Site, "name"> & Partial<Pick<Site, "customerId" | "company">>,

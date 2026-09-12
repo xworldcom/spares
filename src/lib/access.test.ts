@@ -5,6 +5,7 @@ import {
   accessSummary,
   accessSummaryParts,
   canAccessMachine,
+  customerIdForGrant,
   grantFromUser,
   isMachineGranted,
   isSiteFullyGranted,
@@ -206,6 +207,26 @@ describe("access grants", () => {
         accounts,
       ),
       false,
+    );
+  });
+
+  it("focuses the cascade on the grant customer", () => {
+    assert.equal(
+      customerIdForGrant(
+        { siteIds: ["site-cargill-ftw", "site-cargill-wichita"], machineIds: [] },
+        sites,
+        machines,
+        accounts,
+      ),
+      "customer-cargill",
+    );
+    assert.equal(
+      customerIdForGrant({ siteIds: [], machineIds: ["palletizer"] }, sites, machines, accounts),
+      "customer-cargill",
+    );
+    assert.equal(
+      customerIdForGrant({ siteIds: ["site-acme-dayton"], machineIds: [] }, sites, machines, accounts),
+      "customer-acme",
     );
   });
 });
