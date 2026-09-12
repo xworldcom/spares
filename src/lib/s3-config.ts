@@ -26,6 +26,11 @@ export function s3PublicBaseUrl() {
   return base ? base.replace(/\/$/, "") : null;
 }
 
+/** CAD models stay private on Vercel — use presigned GET or the auth proxy. */
+export function preferSignedModelUrls() {
+  return Boolean(process.env.VERCEL);
+}
+
 export const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 export const MAX_SIGNED_URL_TTL_SECONDS = 3600;
 export const DEFAULT_UPLOAD_URL_TTL_SECONDS = 900;

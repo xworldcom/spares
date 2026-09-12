@@ -8,6 +8,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { DESKTOP_STAGE } from "@/components/machine/useDesktopStage";
+import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
@@ -110,7 +111,27 @@ function QuoteTrayForm({
         ) : null}
       </div>
 
-      {lines.length === 0 ? (
+      {sent ? (
+        <div
+          className="quote-sheet-success mt-6 min-h-0 flex-1 rounded-[20px] border border-[rgba(10,132,255,0.35)] bg-[rgba(10,132,255,0.12)] px-4 py-5"
+          role="status"
+        >
+          <p className="text-[20px] font-semibold tracking-tight text-[var(--spares-ink)]">
+            Quote sent
+          </p>
+          <p className="spares-muted mt-2 text-[15px] leading-relaxed">
+            Your request was submitted. We will follow up with pricing and updates.
+          </p>
+          {sentHref ? (
+            <Link
+              href={sentHref}
+              className="btn-accent mt-4 inline-flex h-11 items-center rounded-full px-4 text-[15px] font-semibold"
+            >
+              View quote
+            </Link>
+          ) : null}
+        </div>
+      ) : lines.length === 0 ? (
         <div className="quote-sheet-empty mt-8 min-h-0 flex-1">
           <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
             Nothing here yet. Select a named part, then add it.
@@ -197,25 +218,12 @@ function QuoteTrayForm({
       ) : null}
 
       {error ? (
-        <p className="mt-2 text-sm text-red-600" role="alert">
+        <p className="spares-alert mt-2 rounded-2xl px-3 py-2 text-sm" role="alert">
           {error}
         </p>
       ) : null}
-      {sent ? (
-        <p className="spares-muted mt-2 text-sm" role="status">
-          Quote sent.
-          {sentHref ? (
-            <>
-              {" "}
-              <Link href={sentHref} className="font-medium text-[#0a84ff]">
-                View quote
-              </Link>
-            </>
-          ) : null}
-        </p>
-      ) : null}
 
-      {lines.length > 0 ? (
+      {lines.length > 0 && !sent ? (
         <button
           type="button"
           disabled={submitting}
@@ -255,6 +263,7 @@ export function QuoteTray({
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [sentHref, setSentHref] = useState<string | undefined>();
+  const { refresh: refreshQuoteAlerts } = useQuoteAlerts();
   const [sheet, setSheet] = useState<Sheet>(() =>
     initialQuoteSheetSnap(open, isDesktopStage()),
   );
@@ -272,6 +281,13 @@ export function QuoteTray({
 
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
   const prevCount = useRef(count);
+
+  useEffect(() => {
+    if (sent && count > 0) {
+      setSent(false);
+      setSentHref(undefined);
+    }
+  }, [sent, count]);
 
   useEffect(() => {
     const increased = count > prevCount.current;
@@ -345,7 +361,9 @@ export function QuoteTray({
       setSentHref(quoteHref("customer", created));
       setNote("");
       onClear();
-      dismiss();
+      setSheet("full");
+      setOpen(true);
+      void refreshQuoteAlerts();
     } catch (cause) {
       setError(errorMessage(cause, "Could not request a quote."));
     } finally {

@@ -9,7 +9,7 @@ import {
 import { refuseMultipartModelInForm } from "./model-upload-policy.ts";
 import { joinParts, parsePartsList } from "./parts.ts";
 import { isModelFilename, modelExtension } from "./machines.ts";
-import { readStoredFile } from "./store.ts";
+import { modelExistsInS3, readModelFile, selectModelStoreKind } from "./model-storage.ts";
 
 export type PackFormSuccess = {
   name: string;
@@ -34,12 +34,16 @@ export function isPackFormError(
 }
 
 async function readUploadedModel(storedFileName: string) {
+  const read = async () => {
+    const bytes = await readModelFile(storedFileName);
+    return bytes?.length ? bytes : null;
+  };
   try {
-    return await readStoredFile(storedFileName);
+    return await read();
   } catch {
     await new Promise((resolve) => setTimeout(resolve, 400));
     try {
-      return await readStoredFile(storedFileName);
+      return await read();
     } catch {
       return null;
     }
@@ -88,6 +92,16 @@ export async function readPackForm(
         : storedFileName;
     if (!isModelFilename(originalFileName) && !isModelFilename(storedFileName)) {
       return { error: "Model must be a .glb or .gltf file", status: 400 };
+    }
+    if (selectModelStoreKind() === "s3") {
+      if (!(await modelExistsInS3(storedFileName))) {
+        return {
+          error:
+            "The uploaded model was not found in storage. Try uploading the pack again.",
+          status: 400,
+        };
+      }
+      alreadyStored = true;
     }
     const bytes = await readUploadedModel(storedFileName);
     if (!bytes) {

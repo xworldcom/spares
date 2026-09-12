@@ -56,13 +56,15 @@ export async function POST(
     return error(joined.error, joined.status);
   }
 
-  try {
-    await saveMachineFile(pack.storedFileName, pack.modelBytes);
-  } catch (cause) {
-    if (cause instanceof ModelPackError) {
-      return error(cause.message, 413);
+  if (!pack.alreadyStored) {
+    try {
+      await saveMachineFile(pack.storedFileName, pack.modelBytes);
+    } catch (cause) {
+      if (cause instanceof ModelPackError) {
+        return error(cause.message, 413);
+      }
+      throw cause;
     }
-    throw cause;
   }
 
   const updated = await replaceMachinePack(id, {

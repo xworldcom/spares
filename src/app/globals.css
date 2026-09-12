@@ -320,7 +320,7 @@
 }
 
 .spares-app-tabs {
-  padding-bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--spares-tabbar);
 }
 
 .spares-app-stage {
@@ -1646,6 +1646,10 @@ html.spares-embed .spares-app-stage {
 }
 
 @media (min-width: 1024px) {
+  .catalog-machine-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .catalog-create-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1657,6 +1661,16 @@ html.spares-embed .spares-app-stage {
   .catalog-plants-form button {
     grid-column: auto;
     justify-self: auto;
+  }
+}
+
+@media (min-width: 1280px) {
+  .catalog-machine-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .care-page-wide {
+    max-width: none;
   }
 }
 

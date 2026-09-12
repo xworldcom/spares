@@ -1,4 +1,8 @@
-import { isS3Configured, s3PublicBaseUrl } from "./s3-config.ts";
+import {
+  isS3Configured,
+  preferSignedModelUrls,
+  s3PublicBaseUrl,
+} from "./s3-config.ts";
 
 const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
 
@@ -15,6 +19,9 @@ export function modelObjectKey(storedFileName: string) {
 }
 
 export function modelPublicUrl(storedFileName: string): string | null {
+  if (preferSignedModelUrls()) {
+    return null;
+  }
   const base = s3PublicBaseUrl();
   if (!base || !isS3Configured()) {
     return null;
