@@ -34,14 +34,10 @@ function SolidWorksExportCard() {
             <span>Tools → Macro</span>).
           </li>
           <li>
-            Open your saved assembly and run it — you get a GLB and a parts
-            list with <span className="font-mono text-[13px]">meshName</span>{" "}
-            already matched to each node.
+            Open your saved assembly and run it — you get a 3D model and a parts
+            list with mesh names matched to each part.
           </li>
-          <li>
-            Drop those two files in the zones below. Parts join on upload —
-            no manual mesh wiring.
-          </li>
+          <li>Drop those two files in the zones below.</li>
         </ol>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <a
@@ -237,7 +233,7 @@ export function UploadPackForm() {
       return;
     }
     if (!model) {
-      setError("Add a GLB or GLTF model.");
+      setError("Add a 3D model file.");
       return;
     }
 
@@ -313,8 +309,8 @@ export function UploadPackForm() {
               <span className="font-medium text-[var(--spares-ink)]">
                 {replaceName ?? "this machine"}
               </span>
-              . Upload a new GLB and parts list. Change the plant from the machines
-              list if needed.
+              . Upload a new model and parts list. Change the plant from the
+              machines list if needed.
             </p>
           ) : null}
           <div>
@@ -349,8 +345,8 @@ export function UploadPackForm() {
           </p>
           <FileDrop
             id="model-file"
-            label="GLB or GLTF"
-            hint="From the macro, or Save As glTF Binary from SolidWorks. Packs up to 256 MB."
+            label="3D model file"
+            hint="From the Spares macro or a SolidWorks export. Up to 256 MB."
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             file={model}
             onFile={setModel}
@@ -362,10 +358,8 @@ export function UploadPackForm() {
             3 · Parts list
           </p>
           <p className="spares-muted text-sm leading-relaxed">
-            CSV, TSV, or JSON from the macro or your BOM. Part numbers and{" "}
-            <span className="font-mono text-[13px]">meshName</span> join to
-            nodes in the model automatically. A GLB with no matching list does
-            not create parts.
+            CSV, TSV, or JSON from the macro or your BOM. Part numbers link to
+            the model when mesh names match.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
