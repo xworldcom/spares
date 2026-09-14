@@ -9,6 +9,11 @@
  *   node scripts/configure-r2-cors.mjs
  *   node scripts/configure-r2-cors.mjs --dry-run
  *   node scripts/configure-r2-cors.mjs --add-origin=https://spares-git-main-xworldcom.vercel.app
+ *
+ * Vercel Preview hosts (spares-*.vercel.app) are allowed by app CORS but not on the
+ * bucket by default. Small chat attachments use a same-origin proxy on Preview; for
+ * large direct-to-R2 uploads from a Preview tab, add that deployment URL with
+ * --add-origin (or SPARES_CORS_ORIGINS) then re-run this script.
  */
 
 import { PutBucketCorsCommand, S3Client } from "@aws-sdk/client-s3";

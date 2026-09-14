@@ -17,7 +17,7 @@ import { errorMessage } from "@/lib/api/errors";
 import { careHref } from "@/lib/care";
 import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
 import { mergeActivitiesById } from "@/lib/merge-activities";
-import type { ServiceTicket, TicketStatus } from "@/types";
+import type { ChatAttachment, ServiceTicket, TicketStatus } from "@/types";
 
 export function TicketDetail({
   machineId,
@@ -103,7 +103,7 @@ export function TicketDetail({
     }
   }
 
-  async function onSend(text: string) {
+  async function onSend(input: { text: string; attachments?: ChatAttachment[] }) {
     if (!ticket || !user) {
       return;
     }
@@ -114,13 +114,14 @@ export function TicketDetail({
       actorRole: user.role,
       actorEmail: user.email,
       kind: "message" as const,
-      text,
+      text: input.text,
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     };
     setTicket({ ...ticket, activities: [...ticket.activities, temp] });
     setBusy(true);
     setError(null);
     try {
-      setTicket(await postTicketActivity(ticket.id, text));
+      setTicket(await postTicketActivity(ticket.id, input));
       onUpdated?.();
     } catch (cause) {
       setTicket((current) =>
@@ -195,6 +196,8 @@ export function TicketDetail({
         selfEmail={user.email}
         busy={busy || !threadReady}
         onSend={onSend}
+        threadKind="ticket"
+        threadId={ticket.id}
         title="Notes"
         subtitle="iMessage-style chatter on this machine. Status changes land as quiet chips."
       />

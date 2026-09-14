@@ -150,10 +150,13 @@ export async function updateTicketStatus(id: string, status: TicketStatus) {
   return data.ticket;
 }
 
-export async function postTicketActivity(id: string, text: string) {
+export async function postTicketActivity(
+  id: string,
+  input: { text: string; attachments?: import("@/types").ChatAttachment[] },
+) {
   const data = await apiFetch<TicketResponse>(`/api/tickets/${id}/activity`, {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(input),
   });
   return data.ticket;
 }

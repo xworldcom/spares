@@ -122,6 +122,16 @@ export type QuoteItem = {
 
 export type QuoteActivityKind = "message" | "status" | "pricing" | "po" | "shipment";
 
+/** Chat media attached to a Care ticket or quote message. Binary lives in R2 under `chat/`. */
+export type ChatAttachment = {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  r2Key: string;
+  createdAt: string;
+};
+
 export type QuoteActivity = {
   id: string;
   at: string;
@@ -129,6 +139,7 @@ export type QuoteActivity = {
   actorEmail: string;
   kind: QuoteActivityKind;
   text: string;
+  attachments?: ChatAttachment[];
 };
 
 export type Quote = {
@@ -239,6 +250,7 @@ export type TicketActivity = {
   actorEmail: string;
   kind: TicketActivityKind;
   text: string;
+  attachments?: ChatAttachment[];
 };
 
 export type ServiceTicketRecord = {
