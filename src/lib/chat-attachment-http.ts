@@ -1,5 +1,7 @@
-import { rejectDisallowedOrigin } from "./cors.ts";
+import { rejectDisallowedOrigin, shouldUseCrossOriginObjectUrl } from "./cors.ts";
 import {
+  CHAT_ATTACHMENT_PROXY_MAX_BYTES,
+  chatAttachmentPreviewTooLargeMessage,
   chatObjectKey,
   chatStoredFileName,
   parseActivityAttachments,
@@ -11,7 +13,8 @@ import {
   chatAttachmentHead,
   completeChatAttachmentMultipartUpload,
   createChatAttachmentDownloadUrl,
-  createChatAttachmentUploadTicket,
+  planChatAttachmentUpload,
+  putChatAttachmentObject,
   selectChatAttachmentStoreKind,
   vercelRequiresChatObjectStorageMessage,
 } from "./chat-attachment-storage.ts";
@@ -29,6 +32,7 @@ export async function handleChatAttachmentUploadPost(
   originalFileName: string,
   sizeBytes: number,
   contentType?: string,
+  proxyUploadPath?: string,
 ) {
   const originError = rejectDisallowedOrigin(request);
   if (originError) {
@@ -56,19 +60,129 @@ export async function handleChatAttachmentUploadPost(
   }
 
   const storedFileName = chatStoredFileName(originalFileName);
+  const path = proxyUploadPath?.trim();
+  if (!path) {
+    return error("Proxy upload path is not configured.", 500);
+  }
   try {
-    const ticket = await createChatAttachmentUploadTicket({
-      storedFileName,
-      originalFileName,
-      sizeBytes,
-      contentType: validated.contentType,
-    });
-    return json(ticket);
+    const planned = await planChatAttachmentUpload(
+      request,
+      {
+        storedFileName,
+        originalFileName,
+        sizeBytes,
+        contentType: validated.contentType,
+      },
+      path,
+    );
+    if (!planned.ok) {
+      return error(planned.error, planned.status);
+    }
+    return json(planned.ticket);
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Could not start the attachment upload.";
     return error(message, 400);
   }
+}
+
+export async function handleChatAttachmentProxyPost(
+  request: Request,
+  originalFileName: string,
+  sizeBytes: number,
+  contentType?: string,
+) {
+  const originError = rejectDisallowedOrigin(request);
+  if (originError) {
+    return originError;
+  }
+
+  if (shouldUseCrossOriginObjectUrl(request)) {
+    return error(
+      "Direct-to-storage upload is available on this origin. Use the presigned upload ticket instead.",
+      400,
+    );
+  }
+
+  try {
+    assertChatAttachmentUploadAllowed();
+  } catch (cause) {
+    const message =
+      cause instanceof Error ? cause.message : vercelRequiresChatObjectStorageMessage();
+    return error(message, 503);
+  }
+
+  if (selectChatAttachmentStoreKind() !== "s3") {
+    return error(
+      "Direct-to-storage upload is only available when R2/S3 is configured.",
+      503,
+    );
+  }
+
+  const validated = validateChatUploadInput(originalFileName, sizeBytes, contentType);
+  if (!validated.ok) {
+    return error(validated.error, 400);
+  }
+  if (sizeBytes > CHAT_ATTACHMENT_PROXY_MAX_BYTES) {
+    return error(chatAttachmentPreviewTooLargeMessage(sizeBytes), 413);
+  }
+
+  const contentLength = request.headers.get("Content-Length");
+  if (contentLength) {
+    const parsedLength = Number(contentLength);
+    if (Number.isFinite(parsedLength) && parsedLength > CHAT_ATTACHMENT_PROXY_MAX_BYTES) {
+      return error(chatAttachmentPreviewTooLargeMessage(parsedLength), 413);
+    }
+  }
+
+  let body: ArrayBuffer;
+  try {
+    body = await request.arrayBuffer();
+  } catch {
+    return error("Could not read the attachment body.", 400);
+  }
+  if (!body.byteLength) {
+    return error("Attachment body is required.", 400);
+  }
+  if (body.byteLength > CHAT_ATTACHMENT_PROXY_MAX_BYTES) {
+    return error(chatAttachmentPreviewTooLargeMessage(body.byteLength), 413);
+  }
+  if (body.byteLength !== sizeBytes) {
+    return error("Attachment size does not match the declared sizeBytes.", 400);
+  }
+
+  const storedFileName = chatStoredFileName(originalFileName);
+  try {
+    await putChatAttachmentObject(
+      storedFileName,
+      new Uint8Array(body),
+      validated.contentType,
+    );
+    return json({
+      ok: true,
+      storedFileName,
+      r2Key: chatObjectKey(storedFileName),
+    });
+  } catch (cause) {
+    const message =
+      cause instanceof Error ? cause.message : "Could not store the attachment.";
+    return error(message, 400);
+  }
+}
+
+export function parseChatAttachmentProxyUpload(request: Request) {
+  const url = new URL(request.url);
+  const originalFileName = url.searchParams.get("originalFileName")?.trim() ?? "";
+  const sizeParam = url.searchParams.get("sizeBytes");
+  const sizeBytes = sizeParam ? Number(sizeParam) : NaN;
+  const contentType = url.searchParams.get("contentType")?.trim() || undefined;
+  if (!originalFileName) {
+    return { ok: false as const, error: "originalFileName is required.", status: 400 };
+  }
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return { ok: false as const, error: "sizeBytes is required.", status: 400 };
+  }
+  return { ok: true as const, originalFileName, sizeBytes, contentType };
 }
 
 export async function handleChatAttachmentCompletePost(

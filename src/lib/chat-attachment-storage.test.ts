@@ -3,10 +3,14 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   chatMultipartPartCount,
   chatUploadMode,
+  createChatAttachmentProxyUploadTicket,
   createChatAttachmentUploadTicket,
+  planChatAttachmentUpload,
+  putChatAttachmentObject,
   setTestChatS3Objects,
   writeChatAttachmentForTests,
 } from "./chat-attachment-storage.ts";
+import { CHAT_ATTACHMENT_PROXY_MAX_BYTES } from "./chat-attachments.ts";
 
 describe("chat-attachment-storage", () => {
   const env = { ...process.env };
@@ -50,6 +54,100 @@ describe("chat-attachment-storage", () => {
     const sizeBytes = 70 * 1024 * 1024;
     assert.equal(chatUploadMode(sizeBytes), "multipart");
     assert.equal(chatMultipartPartCount(sizeBytes), 2);
+  });
+
+  it("returns a proxy ticket for Preview origins not on the R2 allowlist", async () => {
+    const request = new Request("https://spares-abc123.vercel.app/api/tickets/t1/attachments/upload", {
+      headers: { Origin: "https://spares-abc123.vercel.app" },
+    });
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440000.png";
+    const planned = await planChatAttachmentUpload(
+      request,
+      {
+        storedFileName,
+        originalFileName: "photo.png",
+        sizeBytes: 2048,
+        contentType: "image/png",
+      },
+      "/api/tickets/t1/attachments/proxy",
+    );
+    assert.equal(planned.ok, true);
+    if (planned.ok) {
+      assert.equal(planned.ticket.method, "proxy");
+      if (planned.ticket.method === "proxy") {
+        assert.equal(planned.ticket.uploadUrl, "/api/tickets/t1/attachments/proxy");
+      }
+    }
+  });
+
+  it("refuses large files on Preview with a clear message", async () => {
+    const request = new Request("https://spares-abc123.vercel.app/api/tickets/t1/attachments/upload", {
+      headers: { Origin: "https://spares-abc123.vercel.app" },
+    });
+    const planned = await planChatAttachmentUpload(
+      request,
+      {
+        storedFileName: "chat-550e8400-e29b-41d4-a716-446655440000.zip",
+        originalFileName: "big.zip",
+        sizeBytes: CHAT_ATTACHMENT_PROXY_MAX_BYTES + 1,
+        contentType: "application/zip",
+      },
+      "/api/tickets/t1/attachments/proxy",
+    );
+    assert.equal(planned.ok, false);
+    if (!planned.ok) {
+      assert.equal(planned.status, 413);
+      assert.match(planned.error, /Soft Launch/);
+    }
+  });
+
+  it("returns presigned PUT tickets for Soft Launch origins", async () => {
+    const request = new Request("https://spares-yonder3.vercel.app/api/tickets/t1/attachments/upload", {
+      headers: { Origin: "https://spares-yonder3.vercel.app" },
+    });
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440000.png";
+    const planned = await planChatAttachmentUpload(
+      request,
+      {
+        storedFileName,
+        originalFileName: "photo.png",
+        sizeBytes: 2048,
+        contentType: "image/png",
+      },
+      "/api/tickets/t1/attachments/proxy",
+    );
+    assert.equal(planned.ok, true);
+    if (planned.ok) {
+      assert.equal(planned.ticket.method, "PUT");
+    }
+  });
+
+  it("plans proxy uploads for preview deploys", () => {
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440000.png";
+    const ticket = createChatAttachmentProxyUploadTicket(
+      {
+        storedFileName,
+        originalFileName: "photo.png",
+        sizeBytes: 4096,
+        contentType: "image/png",
+      },
+      "/api/tickets/t1/attachments/proxy",
+    );
+    assert.equal(ticket.method, "proxy");
+    assert.equal(ticket.uploadUrl, "/api/tickets/t1/attachments/proxy");
+    assert.equal(ticket.r2Key, `chat/${storedFileName}`);
+  });
+
+  it("stores proxy upload bytes under chat/", async () => {
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440000.png";
+    const map = new Map<string, Buffer>();
+    setTestChatS3Objects(map);
+    await putChatAttachmentObject(
+      storedFileName,
+      new Uint8Array([1, 2, 3]),
+      "image/png",
+    );
+    assert.ok(map.has(`chat/${storedFileName}`));
   });
 
   it("writes test objects under chat/", async () => {

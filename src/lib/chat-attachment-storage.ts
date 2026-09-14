@@ -9,12 +9,15 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
+  CHAT_ATTACHMENT_PROXY_MAX_BYTES,
   CHAT_MULTIPART_PART_BYTES,
   CHAT_MULTIPART_THRESHOLD_BYTES,
+  chatAttachmentPreviewTooLargeMessage,
   chatObjectKey,
   isChatStoredFileName,
   validateChatUploadInput,
 } from "./chat-attachments.ts";
+import { shouldUseCrossOriginObjectUrl } from "./cors.ts";
 import {
   isS3Configured,
   modelDownloadUrlTtlSeconds,
@@ -43,7 +46,18 @@ export type ChatMultipartUploadTicket = {
   parts: Array<{ partNumber: number; uploadUrl: string }>;
 };
 
-export type ChatUploadTicket = ChatPutUploadTicket | ChatMultipartUploadTicket;
+export type ChatProxyUploadTicket = {
+  method: "proxy";
+  uploadUrl: string;
+  storedFileName: string;
+  r2Key: string;
+  contentType: string;
+};
+
+export type ChatUploadTicket =
+  | ChatPutUploadTicket
+  | ChatMultipartUploadTicket
+  | ChatProxyUploadTicket;
 
 let s3Client: S3Client | null = null;
 let testS3Objects: Map<string, Buffer> | null = null;
@@ -107,12 +121,129 @@ export function chatMultipartPartCount(sizeBytes: number) {
   return Math.ceil(sizeBytes / CHAT_MULTIPART_PART_BYTES);
 }
 
+export function createChatAttachmentProxyUploadTicket(
+  input: {
+    storedFileName: string;
+    originalFileName: string;
+    sizeBytes: number;
+    contentType?: string;
+  },
+  proxyUploadPath: string,
+): ChatProxyUploadTicket {
+  assertChatAttachmentUploadAllowed();
+  if (selectChatAttachmentStoreKind() !== "s3") {
+    throw new Error("Direct-to-storage upload is only available when R2/S3 is configured.");
+  }
+  const validated = validateChatUploadInput(
+    input.originalFileName,
+    input.sizeBytes,
+    input.contentType,
+  );
+  if (!validated.ok) {
+    throw new Error(validated.error);
+  }
+  const storedFileName = safeChatStoredFileName(input.storedFileName);
+  const path = proxyUploadPath.trim();
+  if (!path.startsWith("/")) {
+    throw new Error("Invalid proxy upload path.");
+  }
+  return {
+    method: "proxy",
+    uploadUrl: path,
+    storedFileName,
+    r2Key: chatObjectKey(storedFileName),
+    contentType: validated.contentType,
+  };
+}
+
+export async function putChatAttachmentObject(
+  storedFileName: string,
+  body: Uint8Array,
+  contentType: string,
+) {
+  assertChatAttachmentUploadAllowed();
+  const name = safeChatStoredFileName(storedFileName);
+  const key = chatObjectKey(name);
+  if (testS3Objects) {
+    testS3Objects.set(key, Buffer.from(body));
+    return;
+  }
+  await getS3Client().send(
+    new PutObjectCommand({
+      Bucket: s3Bucket(),
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+}
+
+export type ChatAttachmentUploadPlan =
+  | { ok: true; ticket: ChatUploadTicket }
+  | { ok: false; error: string; status: number };
+
+export async function planChatAttachmentUpload(
+  request: Request,
+  input: {
+    storedFileName: string;
+    originalFileName: string;
+    sizeBytes: number;
+    contentType?: string;
+  },
+  proxyUploadPath: string,
+): Promise<ChatAttachmentUploadPlan> {
+  assertChatAttachmentUploadAllowed();
+  if (selectChatAttachmentStoreKind() !== "s3") {
+    return {
+      ok: false,
+      error: "Direct-to-storage upload is only available when R2/S3 is configured.",
+      status: 503,
+    };
+  }
+  const validated = validateChatUploadInput(
+    input.originalFileName,
+    input.sizeBytes,
+    input.contentType,
+  );
+  if (!validated.ok) {
+    return { ok: false, error: validated.error, status: 400 };
+  }
+
+  const payload = {
+    storedFileName: input.storedFileName,
+    originalFileName: input.originalFileName,
+    sizeBytes: input.sizeBytes,
+    contentType: validated.contentType,
+  };
+
+  if (!shouldUseCrossOriginObjectUrl(request)) {
+    if (input.sizeBytes > CHAT_ATTACHMENT_PROXY_MAX_BYTES) {
+      return {
+        ok: false,
+        error: chatAttachmentPreviewTooLargeMessage(input.sizeBytes),
+        status: 413,
+      };
+    }
+    const path = proxyUploadPath.trim();
+    if (!path.startsWith("/")) {
+      return { ok: false, error: "Invalid proxy upload path.", status: 500 };
+    }
+    return {
+      ok: true,
+      ticket: createChatAttachmentProxyUploadTicket(payload, path),
+    };
+  }
+
+  const ticket = await createChatAttachmentUploadTicket(payload);
+  return { ok: true, ticket };
+}
+
 export async function createChatAttachmentUploadTicket(input: {
   storedFileName: string;
   originalFileName: string;
   sizeBytes: number;
   contentType?: string;
-}): Promise<ChatUploadTicket> {
+}): Promise<ChatPutUploadTicket | ChatMultipartUploadTicket> {
   assertChatAttachmentUploadAllowed();
   if (selectChatAttachmentStoreKind() !== "s3") {
     throw new Error("Direct-to-storage upload is only available when R2/S3 is configured.");

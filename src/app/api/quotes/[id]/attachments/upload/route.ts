@@ -45,5 +45,6 @@ export async function POST(
     parsed.originalFileName,
     parsed.sizeBytes,
     parsed.contentType,
+    `/api/quotes/${id}/attachments/proxy`,
   );
 }

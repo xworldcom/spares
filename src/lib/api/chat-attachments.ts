@@ -1,4 +1,5 @@
 import {
+  CHAT_ATTACHMENT_STORAGE_CORS_MESSAGE,
   CHAT_MULTIPART_PART_BYTES,
   isBlockedChatFilename,
   MAX_CHAT_ATTACHMENT_BYTES,
@@ -29,7 +30,15 @@ type UploadTicketMultipart = {
   parts: Array<{ partNumber: number; uploadUrl: string }>;
 };
 
-type UploadTicket = UploadTicketPut | UploadTicketMultipart;
+type UploadTicketProxy = {
+  method: "proxy";
+  uploadUrl: string;
+  storedFileName: string;
+  r2Key: string;
+  contentType: string;
+};
+
+type UploadTicket = UploadTicketPut | UploadTicketMultipart | UploadTicketProxy;
 
 function uploadBase(kind: ChatThreadKind, id: string) {
   return kind === "ticket"
@@ -61,15 +70,41 @@ async function requestUploadTicket(
   });
 }
 
+function isLikelyStorageCorsFailure(cause: unknown) {
+  return cause instanceof TypeError && /failed to fetch/i.test(cause.message);
+}
+
 async function uploadPut(ticket: UploadTicketPut, file: File) {
-  const response = await fetch(ticket.uploadUrl, {
-    method: "PUT",
-    body: file,
-    headers: { "Content-Type": ticket.contentType },
-  });
+  let response: Response;
+  try {
+    response = await fetch(ticket.uploadUrl, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": ticket.contentType },
+    });
+  } catch (cause) {
+    if (isLikelyStorageCorsFailure(cause)) {
+      throw new ApiError(CHAT_ATTACHMENT_STORAGE_CORS_MESSAGE, 0);
+    }
+    throw cause;
+  }
   if (!response.ok) {
     throw new Error(`Could not upload the attachment to storage (${response.status}).`);
   }
+}
+
+async function uploadProxy(ticket: UploadTicketProxy, file: File) {
+  const url = new URL(ticket.uploadUrl, window.location.origin);
+  url.searchParams.set("originalFileName", file.name);
+  url.searchParams.set("sizeBytes", String(file.size));
+  if (ticket.contentType) {
+    url.searchParams.set("contentType", ticket.contentType);
+  }
+  await apiFetch(url.pathname + url.search, {
+    method: "POST",
+    headers: { "Content-Type": ticket.contentType || "application/octet-stream" },
+    body: file,
+  });
 }
 
 async function uploadMultipart(
@@ -83,10 +118,18 @@ async function uploadMultipart(
     const start = (part.partNumber - 1) * ticket.partSize;
     const end = Math.min(start + ticket.partSize, file.size);
     const chunk = file.slice(start, end);
-    const response = await fetch(part.uploadUrl, {
-      method: "PUT",
-      body: chunk,
-    });
+    let response: Response;
+    try {
+      response = await fetch(part.uploadUrl, {
+        method: "PUT",
+        body: chunk,
+      });
+    } catch (cause) {
+      if (isLikelyStorageCorsFailure(cause)) {
+        throw new ApiError(CHAT_ATTACHMENT_STORAGE_CORS_MESSAGE, 0);
+      }
+      throw cause;
+    }
     if (!response.ok) {
       throw new Error(`Could not upload part ${part.partNumber} (${response.status}).`);
     }
@@ -131,7 +174,10 @@ export async function uploadChatAttachment(
   }
 
   const ticket = await requestUploadTicket(kind, id, file);
-  if (ticket.method === "PUT") {
+  if (ticket.method === "proxy") {
+    await uploadProxy(ticket, file);
+    onProgress?.({ loaded: file.size, total: file.size });
+  } else if (ticket.method === "PUT") {
     await uploadPut(ticket, file);
     onProgress?.({ loaded: file.size, total: file.size });
   } else {

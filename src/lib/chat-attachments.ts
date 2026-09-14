@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { ChatAttachment } from "../types/index.ts";
+import { MODEL_PROXY_MAX_BYTES } from "./pack-limits.ts";
 
 /** ~1 GB per chat attachment (client + server enforced). */
 export const MAX_CHAT_ATTACHMENT_BYTES = 1024 * 1024 * 1024;
+
+/** Preview deploys proxy small attachments through Vercel (R2 bucket CORS is Soft Launch only). */
+export const CHAT_ATTACHMENT_PROXY_MAX_BYTES = MODEL_PROXY_MAX_BYTES;
 
 /** Use multipart presigned upload above this size. */
 export const CHAT_MULTIPART_THRESHOLD_BYTES = 10 * 1024 * 1024;
@@ -77,6 +81,16 @@ export function chatAttachmentOverLimitMessage(bytes: number) {
     gb >= 0.1 ? `${Math.round(gb * 10) / 10} GB` : `${Math.round(bytes / (1024 * 1024))} MB`;
   return `This file is ${shown}. Chat attachments can be up to 1 GB.`;
 }
+
+export function chatAttachmentPreviewTooLargeMessage(bytes: number) {
+  const mb = Math.max(1, Math.round(bytes / (1024 * 1024)));
+  const limitMb = Math.round(CHAT_ATTACHMENT_PROXY_MAX_BYTES / (1024 * 1024));
+  return `This attachment is ${mb} MB. On Vercel Preview, chat uploads can be up to ${limitMb} MB through the app. Use Soft Launch for larger files, or add this Preview origin: node scripts/configure-r2-cors.mjs --add-origin=<your-preview-url>`;
+}
+
+/** Shown when a browser PUT to presigned R2 is blocked by bucket CORS. */
+export const CHAT_ATTACHMENT_STORAGE_CORS_MESSAGE =
+  "Upload blocked (storage CORS). Try Soft Launch or ask Tess to add this Preview origin.";
 
 export function guessChatContentType(filename: string) {
   const ext = chatAttachmentExtension(filename);
