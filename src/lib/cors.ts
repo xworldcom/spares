@@ -9,6 +9,8 @@
 export const SPARES_SOFT_LAUNCH_ORIGINS = [
   "https://spares-yonder3.vercel.app",
   "https://spares-liart.vercel.app",
+  "https://oee360.com",
+  "https://www.oee360.com",
 ] as const;
 
 /** Local development hosts. */
