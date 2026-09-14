@@ -9,6 +9,7 @@
     <RootNamespace>Spares.SwAddin</RootNamespace>
     <AssemblyName>Spares.SwAddin</AssemblyName>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ComVisible>true</ComVisible>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <EnableComHosting>false</EnableComHosting>
     <RegisterForComInterop>false</RegisterForComInterop>

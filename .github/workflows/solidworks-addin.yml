@@ -1,0 +1,56 @@
+name: SolidWorks add-in package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, sw-addin-publish]
+    paths:
+      - "solidworks-addin/**"
+      - ".github/workflows/solidworks-addin.yml"
+
+jobs:
+  package:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build x64 Release
+        run: |
+          msbuild solidworks-addin/Spares.SwAddin.sln `
+            /restore `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:DebugType=none
+
+      - name: Stage downloadable package
+        shell: pwsh
+        run: |
+          $root = "solidworks-addin/dist/Spares-SolidWorks-Addin"
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          $dll = @(
+            "solidworks-addin/Spares.SwAddin/bin/x64/Release/Spares.SwAddin.dll",
+            "solidworks-addin/Spares.SwAddin/bin/Release/Spares.SwAddin.dll"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $dll) { throw "Build succeeded but Spares.SwAddin.dll was not found." }
+          Copy-Item $dll (Join-Path $root "Spares.SwAddin.dll")
+          $tlb = [IO.Path]::ChangeExtension($dll, ".tlb")
+          if (Test-Path $tlb) { Copy-Item $tlb (Join-Path $root "Spares.SwAddin.tlb") }
+          Copy-Item solidworks-addin/installer/Install.ps1 $root
+          Copy-Item solidworks-addin/installer/Uninstall.ps1 $root
+          Copy-Item solidworks-addin/installer/Install.cmd $root
+          Copy-Item solidworks-addin/installer/Uninstall.cmd $root
+          Copy-Item solidworks-addin/installer/README.txt $root
+          Compress-Archive -Force -Path $root -DestinationPath "solidworks-addin/dist/Spares-SolidWorks-Addin.zip"
+          Get-ChildItem $root, "solidworks-addin/dist/Spares-SolidWorks-Addin.zip" | Format-Table Name, Length
+
+      - name: Upload add-in zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spares-SolidWorks-Addin
+          path: solidworks-addin/dist/Spares-SolidWorks-Addin.zip
+          if-no-files-found: error
