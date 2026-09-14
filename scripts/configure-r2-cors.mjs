@@ -16,6 +16,8 @@ import { PutBucketCorsCommand, S3Client } from "@aws-sdk/client-s3";
 const SOFT_LAUNCH_ORIGINS = [
   "https://spares-yonder3.vercel.app",
   "https://spares-liart.vercel.app",
+  "https://oee360.com",
+  "https://www.oee360.com",
 ];
 
 const LOCAL_DEV_ORIGINS = [
