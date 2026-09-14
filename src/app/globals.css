@@ -1070,10 +1070,160 @@ html.spares-embed .spares-app-stage {
 
 .imsg-composer {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 0.55rem;
   padding: 0.7rem 0.85rem 0.85rem;
   border-top: 1px solid var(--spares-line);
+}
+
+.imsg-composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.55rem;
+}
+
+.imsg-attach {
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #1c1f26;
+  color: #eceae4;
+  font-size: 1.1rem;
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.08);
+}
+
+.imsg-attach:disabled {
+  opacity: 0.4;
+}
+
+.imsg-pending-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.imsg-pending-files li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: #1c1f26;
+  padding: 0.45rem 0.65rem;
+  font-size: 13px;
+  color: #d8d4cc;
+}
+
+.imsg-pending-size {
+  margin-left: auto;
+  color: #a8a49c;
+}
+
+.imsg-pending-remove {
+  border: 0;
+  background: transparent;
+  color: #eceae4;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+}
+
+.imsg-upload-progress,
+.imsg-composer-error {
+  margin: 0;
+  font-size: 13px;
+}
+
+.imsg-composer-error {
+  color: #f0c4c0;
+}
+
+.imsg-upload-progress {
+  color: #a8a49c;
+}
+
+.imsg-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.imsg-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.imsg-text + .imsg-attachments {
+  margin-top: 0.55rem;
+}
+
+.imsg-attachment {
+  margin: 0;
+}
+
+.imsg-attachment-image img,
+.imsg-attachment-video video {
+  display: block;
+  max-width: min(100%, 320px);
+  border-radius: 0.75rem;
+  background: #111318;
+}
+
+.imsg-attachment-image figcaption,
+.imsg-attachment-video figcaption {
+  margin-top: 0.35rem;
+  font-size: 11px;
+  color: rgba(236, 234, 228, 0.62);
+}
+
+.imsg-attachment-download {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.85rem;
+  background: rgba(10, 10, 12, 0.28);
+  padding: 0.55rem 0.7rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.imsg-attachment-icon {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  background: rgba(236, 234, 228, 0.1);
+  font-weight: 700;
+}
+
+.imsg-attachment-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.imsg-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.imsg-attachment-meta {
+  font-size: 12px;
+  color: rgba(236, 234, 228, 0.62);
 }
 
 .imsg-composer-field {

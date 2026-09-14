@@ -137,6 +137,38 @@ describe("normalizeStoredQuote", () => {
     } as never);
     assert.equal(quote.items[0]?.sellPrice, 24.5);
   });
+
+  it("keeps chat attachments on message activities", () => {
+    const quote = normalizeStoredQuote({
+      id: "q5",
+      machineId: "m1",
+      items: [{ id: "A", qty: 1 }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "c@example.test",
+      activities: [
+        {
+          id: "act-1",
+          at: "2026-09-14T00:00:00.000Z",
+          actorRole: "customer",
+          actorEmail: "c@example.test",
+          kind: "message",
+          text: "",
+          attachments: [
+            {
+              id: "att-1",
+              filename: "photo.png",
+              contentType: "image/png",
+              sizeBytes: 1200,
+              r2Key: "chat/chat-550e8400-e29b-41d4-a716-446655440000.png",
+              createdAt: "2026-09-14T00:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    } as never);
+    assert.equal(quote.activities.length, 1);
+    assert.equal(quote.activities[0]?.attachments?.[0]?.filename, "photo.png");
+  });
 });
 
 describe("status and visibility", () => {

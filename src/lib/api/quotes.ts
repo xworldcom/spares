@@ -57,11 +57,11 @@ export async function updateQuote(
 
 export async function postQuoteActivity(
   idOrNumber: string,
-  text: string,
+  input: { text: string; attachments?: import("@/types").ChatAttachment[] },
 ): Promise<Quote> {
   const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}/activity`, {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(input),
   });
   return data.quote;
 }

@@ -1518,8 +1518,9 @@ function newActivity(
   kind: QuoteActivity["kind"],
   text: string,
   at = new Date().toISOString(),
+  attachments?: QuoteActivity["attachments"],
 ): QuoteActivity {
-  return {
+  const activity: QuoteActivity = {
     id: randomUUID(),
     at,
     actorRole: actor.role,
@@ -1527,6 +1528,10 @@ function newActivity(
     kind,
     text,
   };
+  if (attachments?.length) {
+    activity.attachments = attachments;
+  }
+  return activity;
 }
 
 export function createQuote(input: {
@@ -1604,9 +1609,10 @@ export function appendQuoteActivity(
   actor: { email: string; role: Role; id: string },
   kind: QuoteActivity["kind"],
   text: string,
+  attachments?: QuoteActivity["attachments"],
 ) {
   return mutateQuote(idOrNumber, (quote) => {
-    const activity = newActivity(actor, kind, text);
+    const activity = newActivity(actor, kind, text, undefined, attachments);
     return {
       ...quote,
       activities: [...quote.activities, activity],
@@ -1630,8 +1636,9 @@ function newTicketActivity(
   kind: TicketActivity["kind"],
   text: string,
   at = new Date().toISOString(),
+  attachments?: TicketActivity["attachments"],
 ): TicketActivity {
-  return {
+  const activity: TicketActivity = {
     id: randomUUID(),
     at,
     actorRole: actor.role,
@@ -1639,6 +1646,10 @@ function newTicketActivity(
     kind,
     text,
   };
+  if (attachments?.length) {
+    activity.attachments = attachments;
+  }
+  return activity;
 }
 
 export function listManuals(machineId: string) {
@@ -1818,9 +1829,10 @@ export function appendTicketActivity(
   idOrNumber: string,
   actor: { email: string; role: Role; id: string },
   text: string,
+  attachments?: TicketActivity["attachments"],
 ) {
   return mutateTicket(idOrNumber, (ticket) => {
-    const activity = newTicketActivity(actor, "message", text);
+    const activity = newTicketActivity(actor, "message", text, undefined, attachments);
     return {
       ...ticket,
       activities: [...ticket.activities, activity],
