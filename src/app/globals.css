@@ -945,6 +945,29 @@ html.spares-embed .spares-app-stage {
   padding: 0.15rem 0;
 }
 
+@keyframes imsg-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.imsg-row.imsg-enter,
+.imsg-system.imsg-enter .imsg-chip {
+  animation: imsg-enter 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imsg-row.imsg-enter,
+  .imsg-system.imsg-enter .imsg-chip {
+    animation: none;
+  }
+}
+
 .imsg-chip {
   display: inline-flex;
   max-width: 22rem;

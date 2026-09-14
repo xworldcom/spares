@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { formatWhen } from "@/components/quote/quote-format";
 import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
@@ -50,7 +50,32 @@ export function QuoteActivityFeed({
   const [sendError, setSendError] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const seenIdsRef = useRef(new Set<string>());
+  const bootstrappedRef = useRef(false);
+  const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
   const self = { email: selfEmail, role };
+
+  useEffect(() => {
+    if (!bootstrappedRef.current) {
+      for (const activity of activities) {
+        seenIdsRef.current.add(activity.id);
+      }
+      if (activities.length > 0) {
+        bootstrappedRef.current = true;
+      }
+      return;
+    }
+    const fresh: string[] = [];
+    for (const activity of activities) {
+      if (!seenIdsRef.current.has(activity.id)) {
+        fresh.push(activity.id);
+        seenIdsRef.current.add(activity.id);
+      }
+    }
+    if (fresh.length > 0) {
+      setEnteringIds(new Set(fresh));
+    }
+  }, [activities]);
 
   useEffect(() => {
     const root = scrollerRef.current;
@@ -105,7 +130,10 @@ export function QuoteActivityFeed({
             const lane = activityLane(activity, self);
             if (lane === "system") {
               return (
-                <li key={activity.id} className="imsg-system">
+                <li
+                  key={activity.id}
+                  className={enteringIds.has(activity.id) ? "imsg-system imsg-enter" : "imsg-system"}
+                >
                   <span className="imsg-chip">
                     {activity.text}
                     <span className="imsg-chip-when">{formatWhen(activity.at)}</span>
@@ -121,12 +149,37 @@ export function QuoteActivityFeed({
             const own = lane === "own";
             const label = actorLabel(activity, role, selfEmail);
 
+            const rowClass = [
+              own ? "imsg-row imsg-own" : "imsg-row imsg-other",
+              enteringIds.has(activity.id) ? "imsg-enter" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+
             return (
               <li
                 key={activity.id}
-                className={own ? "imsg-row imsg-own" : "imsg-row imsg-other"}
+                className={rowClass}
                 data-stacked={stacked ? "true" : "false"}
                 data-end={lastInStack ? "true" : "false"}
+                onAnimationEnd={() => {
+                  if (!enteringIds.has(activity.id)) {
+                    return;
+                  }
+                  setEnteringIds((current) => {
+                    if (!current.has(activity.id)) {
+                      return current;
+                    }
+                    const next = new Set(current);
+                    next.delete(activity.id);
+                    return next;
+                  });
+                }}
+                style={
+                  enteringIds.has(activity.id)
+                    ? ({ animationFillMode: "backwards" } as CSSProperties)
+                    : undefined
+                }
               >
                 {!own ? (
                   lastInStack ? <OtherAvatar email={activity.actorEmail} /> : <span className="imsg-avatar-spacer" aria-hidden="true" />

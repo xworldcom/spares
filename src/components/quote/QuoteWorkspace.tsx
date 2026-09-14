@@ -23,6 +23,7 @@ import {
   uploadQuotePo,
 } from "@/lib/api/quotes";
 import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
   canEditTracking,
   invoiceVisible,
@@ -49,7 +50,6 @@ export function QuoteWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const loading = loadedRef !== quoteRef;
   const runLock = useRef<Promise<void>>(Promise.resolve());
 
   function applyQuote(next: Quote) {
@@ -94,26 +94,26 @@ export function QuoteWorkspace({
     }
     const next = await getQuote(quoteRef);
     setQuote((current) => {
-      if (!current) {
+      if (
+        !current ||
+        (String(current.number) !== quoteRef && current.id !== quoteRef)
+      ) {
         return next;
       }
-      const sameThread =
-        current.status === next.status &&
-        current.activities.length === next.activities.length &&
-        current.activities.at(-1)?.id === next.activities.at(-1)?.id;
-      if (sameThread) {
+      const { activities, changed } = mergeActivitiesById(current.activities, next.activities);
+      if (!changed && current.status === next.status && current.unread === next.unread) {
         return current;
       }
       return {
         ...current,
         status: next.status,
-        activities: next.activities,
+        activities,
         unread: next.unread,
       };
     });
   }, [busy, items, pendingStatus, quote, quoteRef]);
 
-  useConversationPoll(Boolean(quote && user && loadedRef === quoteRef), pollQuote);
+  useConversationPoll(Boolean(quote && user), pollQuote);
 
   async function run(action: () => Promise<Quote>, success?: string) {
     let release: () => void = () => {};
@@ -167,22 +167,24 @@ export function QuoteWorkspace({
     }
   }
 
-  if (loading) {
+  if (!quote) {
+    if (error) {
+      return (
+        <ErrorState
+          title="Quote unavailable"
+          message={error}
+        />
+      );
+    }
     return <LoadingState label="Loading quote…" />;
   }
 
-  if (error && !quote) {
-    return (
-      <ErrorState
-        title="Quote unavailable"
-        message={error}
-      />
-    );
-  }
-
-  if (!quote || !user) {
+  if (!user) {
     return null;
   }
+
+  const threadReady =
+    String(quote.number) === quoteRef || quote.id === quoteRef;
 
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
@@ -406,10 +408,10 @@ export function QuoteWorkspace({
       ) : null}
 
       <QuoteActivityFeed
-        activities={quote.activities}
+        activities={threadReady ? quote.activities : []}
         role={role}
         selfEmail={user.email}
-        busy={busy}
+        busy={busy || !threadReady}
         onSend={sendActivity}
       />
 

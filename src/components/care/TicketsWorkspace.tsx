@@ -165,7 +165,6 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
 
   const detailPanel = ticketId ? (
     <TicketDetail
-      key={ticketId}
       machineId={selected?.machineId ?? machineId ?? ""}
       ticketId={ticketId}
       backHref={listHref}

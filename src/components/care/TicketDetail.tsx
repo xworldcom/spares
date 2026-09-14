@@ -16,6 +16,7 @@ import {
 import { errorMessage } from "@/lib/api/errors";
 import { careHref } from "@/lib/care";
 import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ServiceTicket, TicketStatus } from "@/types";
 
 export function TicketDetail({
@@ -40,7 +41,6 @@ export function TicketDetail({
   const staff = user?.role === "staff";
 
   useEffect(() => {
-    setTicket(null);
     setError(null);
     let cancelled = false;
     getTicket(ticketId)
@@ -69,20 +69,17 @@ export function TicketDetail({
     }
     const next = await getTicket(ticketId);
     setTicket((current) => {
-      if (!current) {
+      if (!current || current.id !== ticketId) {
         return next;
       }
-      const sameThread =
-        current.status === next.status &&
-        current.activities.length === next.activities.length &&
-        current.activities.at(-1)?.id === next.activities.at(-1)?.id;
-      if (sameThread) {
+      const { activities, changed } = mergeActivitiesById(current.activities, next.activities);
+      if (!changed && current.status === next.status && current.unread === next.unread) {
         return current;
       }
       return {
         ...current,
         status: next.status,
-        activities: next.activities,
+        activities,
         unread: next.unread,
       };
     });
@@ -141,23 +138,27 @@ export function TicketDetail({
     }
   }
 
-  if (error && !ticket) {
-    return (
-      <ErrorState
-        title="Failed to load ticket"
-        message={error}
-        onRetry={() => {
-          setError(null);
-          setReloadKey((key) => key + 1);
-        }}
-      />
-    );
-  }
-
-  if (!ticket || !user) {
+  if (!user) {
     return <LoadingState label="Loading ticket…" />;
   }
 
+  if (!ticket) {
+    if (error) {
+      return (
+        <ErrorState
+          title="Failed to load ticket"
+          message={error}
+          onRetry={() => {
+            setError(null);
+            setReloadKey((key) => key + 1);
+          }}
+        />
+      );
+    }
+    return <LoadingState label="Loading ticket…" />;
+  }
+
+  const threadReady = ticket.id === ticketId;
   const ticketsBack = backHref ?? careHref(machineId, "tickets");
 
   return (
@@ -167,26 +168,32 @@ export function TicketDetail({
           <span aria-hidden="true">‹</span> Tickets
         </Link>
       ) : null}
-      <div>
-        <p className="care-kicker">Ticket {ticket.number}</p>
-        <h2 className="text-[28px] font-semibold tracking-tight">{ticket.title}</h2>
-      </div>
-      <TicketStatusStrip
-        status={ticket.status}
-        editable={staff}
-        pending={busy}
-        onChange={staff ? onStatus : undefined}
-      />
+      {threadReady ? (
+        <>
+          <div>
+            <p className="care-kicker">Ticket {ticket.number}</p>
+            <h2 className="text-[28px] font-semibold tracking-tight">{ticket.title}</h2>
+          </div>
+          <TicketStatusStrip
+            status={ticket.status}
+            editable={staff}
+            pending={busy}
+            onChange={staff ? onStatus : undefined}
+          />
+        </>
+      ) : (
+        <div className="h-24" aria-busy="true" aria-label="Loading conversation" />
+      )}
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}
       <QuoteActivityFeed
-        activities={ticket.activities}
+        activities={threadReady ? ticket.activities : []}
         role={user.role}
         selfEmail={user.email}
-        busy={busy}
+        busy={busy || !threadReady}
         onSend={onSend}
         title="Notes"
         subtitle="iMessage-style chatter on this machine. Status changes land as quiet chips."
