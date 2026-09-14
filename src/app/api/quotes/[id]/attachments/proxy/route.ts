@@ -21,6 +21,7 @@ export async function POST(
   }
   return handleChatAttachmentProxyPost(
     request,
+    parsed.storedFileName,
     parsed.originalFileName,
     parsed.sizeBytes,
     parsed.contentType,

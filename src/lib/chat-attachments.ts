@@ -193,6 +193,28 @@ export function isChatStoredFileName(value: string) {
     /^chat-[0-9a-f-]{36}$/.test(value);
 }
 
+export function parseChatAttachmentProxyUpload(request: Request) {
+  const url = new URL(request.url);
+  const originalFileName = url.searchParams.get("originalFileName")?.trim() ?? "";
+  const sizeParam = url.searchParams.get("sizeBytes");
+  const sizeBytes = sizeParam ? Number(sizeParam) : NaN;
+  const contentType = url.searchParams.get("contentType")?.trim() || undefined;
+  const storedFileName = url.searchParams.get("storedFileName")?.trim() ?? "";
+  if (!originalFileName) {
+    return { ok: false as const, error: "originalFileName is required.", status: 400 };
+  }
+  if (!storedFileName) {
+    return { ok: false as const, error: "storedFileName is required.", status: 400 };
+  }
+  if (!isChatStoredFileName(storedFileName)) {
+    return { ok: false as const, error: "storedFileName is invalid.", status: 400 };
+  }
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return { ok: false as const, error: "sizeBytes is required.", status: 400 };
+  }
+  return { ok: true as const, storedFileName, originalFileName, sizeBytes, contentType };
+}
+
 export function parseActivityMessageText(
   raw: unknown,
   max: number,

@@ -5,12 +5,13 @@ import {
   chatUploadMode,
   createChatAttachmentProxyUploadTicket,
   createChatAttachmentUploadTicket,
+  chatAttachmentHead,
   planChatAttachmentUpload,
   putChatAttachmentObject,
   setTestChatS3Objects,
   writeChatAttachmentForTests,
 } from "./chat-attachment-storage.ts";
-import { CHAT_ATTACHMENT_PROXY_MAX_BYTES } from "./chat-attachments.ts";
+import { CHAT_ATTACHMENT_PROXY_MAX_BYTES, chatObjectKey } from "./chat-attachments.ts";
 
 describe("chat-attachment-storage", () => {
   const env = { ...process.env };
@@ -136,6 +137,35 @@ describe("chat-attachment-storage", () => {
     assert.equal(ticket.method, "proxy");
     assert.equal(ticket.uploadUrl, "/api/tickets/t1/attachments/proxy");
     assert.equal(ticket.r2Key, `chat/${storedFileName}`);
+  });
+
+  it("plans proxy ticket then stores bytes at the same key for activity validation", async () => {
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440001.png";
+    const previewOrigin = "https://spares-abc123.vercel.app";
+    const request = new Request(`${previewOrigin}/api/tickets/t1/attachments/upload`, {
+      headers: { Origin: previewOrigin },
+    });
+    const planned = await planChatAttachmentUpload(
+      request,
+      {
+        storedFileName,
+        originalFileName: "photo.png",
+        sizeBytes: 3,
+        contentType: "image/png",
+      },
+      "/api/tickets/t1/attachments/proxy",
+    );
+    assert.equal(planned.ok, true);
+    if (!planned.ok) {
+      return;
+    }
+    assert.equal(planned.ticket.r2Key, chatObjectKey(storedFileName));
+
+    const body = new Uint8Array([9, 8, 7]);
+    await putChatAttachmentObject(storedFileName, body, "image/png");
+    const head = await chatAttachmentHead(storedFileName);
+    assert.ok(head);
+    assert.equal(head?.sizeBytes, body.byteLength);
   });
 
   it("stores proxy upload bytes under chat/", async () => {

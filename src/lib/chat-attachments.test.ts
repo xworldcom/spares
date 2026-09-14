@@ -6,6 +6,7 @@ import {
   chatAttachmentOverLimitMessage,
   chatStoredFileName,
   isBlockedChatFilename,
+  parseChatAttachmentProxyUpload,
   MAX_CHAT_ATTACHMENT_BYTES,
   parseChatActivityBody,
   validateChatUploadInput,
@@ -97,5 +98,22 @@ describe("chat-attachments", () => {
 
   it("formats over-limit messages", () => {
     assert.match(chatAttachmentOverLimitMessage(MAX_CHAT_ATTACHMENT_BYTES + 1), /1 GB/);
+  });
+
+  it("requires the planned storedFileName on proxy upload URLs", () => {
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440000.png";
+    const request = new Request(
+      `https://spares-abc123.vercel.app/api/tickets/t1/attachments/proxy?storedFileName=${encodeURIComponent(storedFileName)}&originalFileName=photo.png&sizeBytes=3`,
+    );
+    const parsed = parseChatAttachmentProxyUpload(request);
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) {
+      assert.equal(parsed.storedFileName, storedFileName);
+    }
+
+    const missing = new Request(
+      "https://spares-abc123.vercel.app/api/tickets/t1/attachments/proxy?originalFileName=photo.png&sizeBytes=3",
+    );
+    assert.equal(parseChatAttachmentProxyUpload(missing).ok, false);
   });
 });

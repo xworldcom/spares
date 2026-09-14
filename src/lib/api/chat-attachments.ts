@@ -95,16 +95,20 @@ async function uploadPut(ticket: UploadTicketPut, file: File) {
 
 async function uploadProxy(ticket: UploadTicketProxy, file: File) {
   const url = new URL(ticket.uploadUrl, window.location.origin);
+  url.searchParams.set("storedFileName", ticket.storedFileName);
   url.searchParams.set("originalFileName", file.name);
   url.searchParams.set("sizeBytes", String(file.size));
   if (ticket.contentType) {
     url.searchParams.set("contentType", ticket.contentType);
   }
-  await apiFetch(url.pathname + url.search, {
-    method: "POST",
-    headers: { "Content-Type": ticket.contentType || "application/octet-stream" },
-    body: file,
-  });
+  return apiFetch<{ ok: true; storedFileName: string; r2Key: string }>(
+    url.pathname + url.search,
+    {
+      method: "POST",
+      headers: { "Content-Type": ticket.contentType || "application/octet-stream" },
+      body: file,
+    },
+  );
 }
 
 async function uploadMultipart(
@@ -174,8 +178,10 @@ export async function uploadChatAttachment(
   }
 
   const ticket = await requestUploadTicket(kind, id, file);
+  let r2Key = ticket.r2Key;
   if (ticket.method === "proxy") {
-    await uploadProxy(ticket, file);
+    const uploaded = await uploadProxy(ticket, file);
+    r2Key = uploaded.r2Key;
     onProgress?.({ loaded: file.size, total: file.size });
   } else if (ticket.method === "PUT") {
     await uploadPut(ticket, file);
@@ -191,7 +197,7 @@ export async function uploadChatAttachment(
     filename: file.name,
     contentType,
     sizeBytes: file.size,
-    r2Key: ticket.r2Key,
+    r2Key,
     createdAt: new Date().toISOString(),
   };
 }

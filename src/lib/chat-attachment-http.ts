@@ -4,7 +4,9 @@ import {
   chatAttachmentPreviewTooLargeMessage,
   chatObjectKey,
   chatStoredFileName,
+  isChatStoredFileName,
   parseActivityAttachments,
+  parseChatAttachmentProxyUpload,
   validateChatUploadInput,
 } from "./chat-attachments.ts";
 import {
@@ -88,6 +90,7 @@ export async function handleChatAttachmentUploadPost(
 
 export async function handleChatAttachmentProxyPost(
   request: Request,
+  storedFileName: string,
   originalFileName: string,
   sizeBytes: number,
   contentType?: string,
@@ -117,6 +120,10 @@ export async function handleChatAttachmentProxyPost(
       "Direct-to-storage upload is only available when R2/S3 is configured.",
       503,
     );
+  }
+
+  if (!isChatStoredFileName(storedFileName)) {
+    return error("storedFileName is invalid.", 400);
   }
 
   const validated = validateChatUploadInput(originalFileName, sizeBytes, contentType);
@@ -151,7 +158,6 @@ export async function handleChatAttachmentProxyPost(
     return error("Attachment size does not match the declared sizeBytes.", 400);
   }
 
-  const storedFileName = chatStoredFileName(originalFileName);
   try {
     await putChatAttachmentObject(
       storedFileName,
@@ -168,21 +174,6 @@ export async function handleChatAttachmentProxyPost(
       cause instanceof Error ? cause.message : "Could not store the attachment.";
     return error(message, 400);
   }
-}
-
-export function parseChatAttachmentProxyUpload(request: Request) {
-  const url = new URL(request.url);
-  const originalFileName = url.searchParams.get("originalFileName")?.trim() ?? "";
-  const sizeParam = url.searchParams.get("sizeBytes");
-  const sizeBytes = sizeParam ? Number(sizeParam) : NaN;
-  const contentType = url.searchParams.get("contentType")?.trim() || undefined;
-  if (!originalFileName) {
-    return { ok: false as const, error: "originalFileName is required.", status: 400 };
-  }
-  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
-    return { ok: false as const, error: "sizeBytes is required.", status: 400 };
-  }
-  return { ok: true as const, originalFileName, sizeBytes, contentType };
 }
 
 export async function handleChatAttachmentCompletePost(
@@ -316,4 +307,4 @@ export function parseUploadJsonBody(body: {
   return { ok: true as const, originalFileName, sizeBytes, contentType };
 }
 
-export { parseActivityAttachments };
+export { parseActivityAttachments, parseChatAttachmentProxyUpload };
