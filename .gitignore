@@ -42,3 +42,10 @@ next-env.d.ts
 
 # local file-backed store (users, machines, uploaded models)
 /data
+
+# SolidWorks add-in build
+/solidworks-addin/**/bin/
+/solidworks-addin/**/obj/
+/solidworks-addin/**/*.user
+/solidworks-addin/**/*.suo
+/solidworks-addin/**/*.tlb
