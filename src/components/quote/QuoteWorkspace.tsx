@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
@@ -22,6 +22,7 @@ import {
   updateQuote,
   uploadQuotePo,
 } from "@/lib/api/quotes";
+import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
 import {
   canEditTracking,
   invoiceVisible,
@@ -83,6 +84,36 @@ export function QuoteWorkspace({
     // applyQuote is local state wiring, not an effect input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteRef]);
+
+  const pollQuote = useCallback(async () => {
+    if (!quote || busy || pendingStatus !== null) {
+      return;
+    }
+    if (JSON.stringify(items) !== JSON.stringify(quote.items)) {
+      return;
+    }
+    const next = await getQuote(quoteRef);
+    setQuote((current) => {
+      if (!current) {
+        return next;
+      }
+      const sameThread =
+        current.status === next.status &&
+        current.activities.length === next.activities.length &&
+        current.activities.at(-1)?.id === next.activities.at(-1)?.id;
+      if (sameThread) {
+        return current;
+      }
+      return {
+        ...current,
+        status: next.status,
+        activities: next.activities,
+        unread: next.unread,
+      };
+    });
+  }, [busy, items, pendingStatus, quote, quoteRef]);
+
+  useConversationPoll(Boolean(quote && user && loadedRef === quoteRef), pollQuote);
 
   async function run(action: () => Promise<Quote>, success?: string) {
     let release: () => void = () => {};

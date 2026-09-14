@@ -266,6 +266,72 @@ function unionById<T extends { id: string }>(...lists: readonly T[][]): T[] {
   return [...map.values()];
 }
 
+function unionActivities<T extends { id: string; at: string }>(
+  ...lists: readonly (readonly T[])[]
+): T[] {
+  const map = new Map<string, T>();
+  for (const list of lists) {
+    for (const row of list) {
+      const previous = map.get(row.id);
+      if (!previous || row.at >= previous.at) {
+        map.set(row.id, row);
+      }
+    }
+  }
+  return [...map.values()].sort((a, b) => a.at.localeCompare(b.at));
+}
+
+function mergeTicketRecord(a: StoredTicket, b: StoredTicket): StoredTicket {
+  const activities = unionActivities(a.activities, b.activities);
+  const latestA = a.activities.at(-1)?.at ?? "";
+  const latestB = b.activities.at(-1)?.at ?? "";
+  const newer = latestB > latestA ? b : a;
+  return {
+    ...newer,
+    activities,
+    lastReadAt: { ...a.lastReadAt, ...b.lastReadAt },
+  };
+}
+
+function unionTickets(...lists: readonly StoredTicket[][]): StoredTicket[] {
+  const map = new Map<string, StoredTicket>();
+  for (const list of lists) {
+    for (const ticket of list) {
+      const previous = map.get(ticket.id);
+      map.set(ticket.id, previous ? mergeTicketRecord(previous, ticket) : ticket);
+    }
+  }
+  return [...map.values()];
+}
+
+function mergeQuoteRecord(a: StoredQuote, b: StoredQuote): StoredQuote {
+  const activities = unionActivities(a.activities, b.activities);
+  const latestA = a.activities.at(-1)?.at ?? a.createdAt;
+  const latestB = b.activities.at(-1)?.at ?? b.createdAt;
+  const newer = latestB > latestA ? b : a;
+  const older = newer === b ? a : b;
+  return {
+    ...newer,
+    activities,
+    lastReadAt: { ...older.lastReadAt, ...newer.lastReadAt },
+    items: newer.items.length >= older.items.length ? newer.items : older.items,
+    shipments: newer.shipments.length >= older.shipments.length
+      ? newer.shipments
+      : older.shipments,
+  };
+}
+
+function unionQuotes(...lists: readonly StoredQuote[][]): StoredQuote[] {
+  const map = new Map<string, StoredQuote>();
+  for (const list of lists) {
+    for (const quote of list) {
+      const previous = map.get(quote.id);
+      map.set(quote.id, previous ? mergeQuoteRecord(previous, quote) : quote);
+    }
+  }
+  return [...map.values()];
+}
+
 function unionUsage(...lists: readonly StoredUsage[][]): StoredUsage[] {
   const map = new Map<string, StoredUsage>();
   for (const list of lists) {
@@ -282,7 +348,7 @@ function unionUsage(...lists: readonly StoredUsage[][]): StoredUsage[] {
 function unionCare(...stores: readonly CareStore[]): CareStore {
   return {
     manuals: unionById(...stores.map((store) => store.manuals)),
-    tickets: unionById(...stores.map((store) => store.tickets)),
+    tickets: unionTickets(...stores.map((store) => store.tickets)),
     machineUsage: unionUsage(...stores.map((store) => store.machineUsage)),
   };
 }
@@ -533,15 +599,21 @@ function withSiteTombstone(db: Database, siteId: string): Database {
 
 /** Org CRUD lives in blob writes — catalog heal must not clobber concurrent deletes. */
 function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
-  return {
-    ...healed,
-    customers: latest.customers ?? healed.customers,
-    sites: latest.sites ?? healed.sites,
-    users: latest.users ?? healed.users,
-    quotes: latest.quotes ?? healed.quotes,
-    bugReports: latest.bugReports ?? healed.bugReports,
-    orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
-  };
+  const latestCare = careCollections(latest);
+  const healedCare = careCollections(healed);
+  const care = unionCare(healedCare, latestCare);
+  return applyCare(
+    {
+      ...healed,
+      customers: latest.customers ?? healed.customers,
+      sites: latest.sites ?? healed.sites,
+      users: latest.users ?? healed.users,
+      quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
+      bugReports: latest.bugReports ?? healed.bugReports,
+      orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
+    },
+    care,
+  );
 }
 
 function ensureOrg(db: Database): Database {
@@ -824,7 +896,10 @@ async function writeCatalogHeal(next: Database) {
   const merged = loaded?.db ? mergeOrgCrudFromLatest(next, loaded.db) : next;
   const kept = await overlayPersistedCare(merged);
   memory = kept;
-  await getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2));
+  await Promise.all([
+    getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2)),
+    writeCareStore(careCollections(kept)),
+  ]);
 }
 
 function normalizeEmail(email: string) {

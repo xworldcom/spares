@@ -46,13 +46,19 @@ export function QuoteActivityFeed({
   subtitle?: string;
 }) {
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const self = { email: selfEmail, role };
 
   useEffect(() => {
     const root = scrollerRef.current;
-    if (root) {
+    if (!root) {
+      return;
+    }
+    const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
+    if (nearBottom) {
       root.scrollTop = root.scrollHeight;
     }
   }, [activities]);
@@ -68,12 +74,22 @@ export function QuoteActivityFeed({
 
   async function submit() {
     const next = text.trim();
-    if (!next || busy) {
+    if (!next || busy || sending) {
       return;
     }
-    await onSend(next);
-    setText("");
+    setSendError(null);
+    setSending(true);
+    try {
+      await onSend(next);
+      setText("");
+    } catch {
+      setSendError("Could not send that message. Your text is still here — try again.");
+    } finally {
+      setSending(false);
+    }
   }
+
+  const composerBusy = busy || sending;
 
   return (
     <section className="imsg-card">
@@ -155,12 +171,17 @@ export function QuoteActivityFeed({
         </label>
         <button
           type="submit"
-          disabled={busy || !text.trim()}
+          disabled={composerBusy || !text.trim()}
           className="imsg-send"
         >
-          Send
+          {sending ? "Sending…" : "Send"}
         </button>
       </form>
+      {sendError ? (
+        <p className="px-4 pb-3 text-sm text-[#f0c4c0]" role="alert">
+          {sendError}
+        </p>
+      ) : null}
     </section>
   );
 }

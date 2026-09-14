@@ -406,4 +406,106 @@ describe("machine care store", () => {
     );
     assert.equal((await getTicket(opened.ticket.id))?.number, opened.ticket.number);
   });
+
+  it("keeps ticket messages when care.json lags behind db.json", async () => {
+    delete process.env.SPARES_DATA_DIR;
+    process.env.VERCEL = "1";
+    const remote = createMemoryPersistence();
+    setPersistenceForTests(remote);
+    resetStoreMemoryForTests();
+    seedEmptyMachineCatalogForTests(seedUsers);
+    await remote.writeDatabaseJson(
+      JSON.stringify({
+        users: seedUsers,
+        machines: [],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+      }),
+    );
+    resetStoreMemoryForTests();
+
+    const created = await createMachine({
+      name: "Chat cell",
+      storedFileName: "chat-cell.glb",
+      originalFileName: "chat-cell.glb",
+      parts: [{ id: "PN-1", name: "Frame", meshName: "PN-1", qty: 1 }],
+      unmatched: [],
+    });
+    const opened = await createTicket({
+      machineId: created.id,
+      title: "Noisy bearing",
+      customerId: "user-customer",
+      customerEmail: "customer@spares.local",
+      actor: {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
+    });
+    assert.equal("error" in opened, false);
+    if ("error" in opened) {
+      return;
+    }
+    await appendTicketActivity(opened.ticket.id, {
+      id: "user-staff",
+      email: "staff@spares.local",
+      role: "staff",
+    }, "We can visit Tuesday.");
+
+    const care = JSON.parse((await remote.readCareJson()) ?? "{}") as {
+      tickets?: { id: string; activities: { text: string }[] }[];
+    };
+    const ticket = care.tickets?.find((row) => row.id === opened.ticket.id);
+    assert.ok(ticket);
+    ticket.activities = ticket.activities.filter(
+      (row) => row.text !== "We can visit Tuesday.",
+    );
+    await remote.writeCareJson(JSON.stringify(care));
+    resetStoreMemoryForTests();
+
+    const detail = await getTicket(opened.ticket.id);
+    assert.equal(detail?.activities.at(-1)?.text, "We can visit Tuesday.");
+  });
+});
+
+describe("quote conversation persistence", () => {
+  after(() => {
+    resetStoreMemoryForTests();
+    setPersistenceForTests(null);
+    delete process.env.SPARES_DATA_DIR;
+    delete process.env.VERCEL;
+  });
+
+  it("reloads quote messages for staff and customer accessors", async () => {
+    await isolatedDataDir();
+    await listMachines();
+
+    const quote = await createQuote({
+      machineId: FIXTURE_MACHINE_IDS.hardware,
+      items: [{ id: "5972K325", qty: 1, name: "Bearing" }],
+      customerId: "user-customer",
+      customerEmail: "customer@spares.local",
+    });
+    await appendQuoteActivity(
+      quote.id,
+      { id: "user-customer", email: "customer@spares.local", role: "customer" },
+      "message",
+      "Can you confirm lead time?",
+    );
+    await appendQuoteActivity(
+      quote.id,
+      { id: "user-staff", email: "staff@spares.local", role: "staff" },
+      "message",
+      "About two weeks.",
+    );
+
+    resetStoreMemoryForTests();
+
+    const byId = await getQuote(quote.id);
+    const byNumber = await getQuote(String(quote.number));
+    assert.equal(byId?.activities.at(-1)?.text, "About two weeks.");
+    assert.equal(byNumber?.activities.length, byId?.activities.length);
+    assert.equal(byNumber?.activities.at(-2)?.text, "Can you confirm lead time?");
+  });
 });

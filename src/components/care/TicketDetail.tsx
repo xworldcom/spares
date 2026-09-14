@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
 import { careHref } from "@/lib/care";
+import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
 import type { ServiceTicket, TicketStatus } from "@/types";
 
 export function TicketDetail({
@@ -62,6 +63,33 @@ export function TicketDetail({
     };
   }, [ticketId, reloadKey, refreshCareAlerts]);
 
+  const pollTicket = useCallback(async () => {
+    if (busy) {
+      return;
+    }
+    const next = await getTicket(ticketId);
+    setTicket((current) => {
+      if (!current) {
+        return next;
+      }
+      const sameThread =
+        current.status === next.status &&
+        current.activities.length === next.activities.length &&
+        current.activities.at(-1)?.id === next.activities.at(-1)?.id;
+      if (sameThread) {
+        return current;
+      }
+      return {
+        ...current,
+        status: next.status,
+        activities: next.activities,
+        unread: next.unread,
+      };
+    });
+  }, [busy, ticketId]);
+
+  useConversationPoll(Boolean(ticket && user), pollTicket);
+
   async function onStatus(status: TicketStatus) {
     if (!ticket) {
       return;
@@ -79,15 +107,33 @@ export function TicketDetail({
   }
 
   async function onSend(text: string) {
-    if (!ticket) {
+    if (!ticket || !user) {
       return;
     }
+    const tempId = `pending-${Date.now()}`;
+    const temp = {
+      id: tempId,
+      at: new Date().toISOString(),
+      actorRole: user.role,
+      actorEmail: user.email,
+      kind: "message" as const,
+      text,
+    };
+    setTicket({ ...ticket, activities: [...ticket.activities, temp] });
     setBusy(true);
     setError(null);
     try {
       setTicket(await postTicketActivity(ticket.id, text));
       onUpdated?.();
     } catch (cause) {
+      setTicket((current) =>
+        current
+          ? {
+              ...current,
+              activities: current.activities.filter((row) => row.id !== tempId),
+            }
+          : current,
+      );
       setError(errorMessage(cause, "Could not send that note."));
       throw cause;
     } finally {
