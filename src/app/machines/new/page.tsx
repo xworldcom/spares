@@ -9,8 +9,8 @@ export default function UploadPackPage() {
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight">Upload pack</h1>
           <p className="spares-muted mt-2 text-[15px] leading-relaxed">
-            Add a GLB and parts list for a machine. SolidWorks? Start with the
-            macro below.
+            Add a 3D model and parts list for a machine. Using SolidWorks? Start
+            with the macro below.
           </p>
         </div>
         <Suspense>

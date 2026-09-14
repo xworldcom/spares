@@ -107,9 +107,6 @@ export function ManualsPanel({ machineId }: { machineId: string }) {
           }}
         >
           <h2>Upload a manual</h2>
-          <p className="spares-muted text-sm leading-relaxed">
-            PDF or Word. Stored on object storage like 3D models — not Vercel Blob.
-          </p>
           <label className="care-field">
             <span>Title</span>
             <input

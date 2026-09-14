@@ -180,9 +180,7 @@ export function UsagePanel({ machineId }: { machineId: string }) {
           <h2>Edit history</h2>
         </header>
         {(usage?.history ?? []).length === 0 ? (
-          <p className="spares-muted text-sm leading-relaxed">
-            Saves will land here so the next tech can see what changed.
-          </p>
+          <p className="spares-muted text-sm leading-relaxed">No edits yet.</p>
         ) : (
           <ol className="care-history">
             {usage?.history.map((entry) => (

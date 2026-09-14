@@ -351,7 +351,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 No model
               </p>
               <p className="chrome-quiet mt-2 max-w-sm text-[14px] leading-relaxed">
-                This pack does not have a GLB or GLTF file to display.
+                This machine does not have a 3D model to display.
               </p>
             </div>
           </div>

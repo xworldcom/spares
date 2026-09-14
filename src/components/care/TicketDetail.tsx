@@ -199,7 +199,6 @@ export function TicketDetail({
         threadKind="ticket"
         threadId={ticket.id}
         title="Notes"
-        subtitle="iMessage-style chatter on this machine. Status changes land as quiet chips."
       />
     </div>
   );

@@ -50,7 +50,7 @@ export function QuoteActivityFeed({
   threadKind,
   threadId,
   title = "Conversation",
-  subtitle = "Notes with the other party. Status stays on the timeline.",
+  subtitle,
 }: {
   activities: QuoteActivity[];
   role: Role;
@@ -174,11 +174,11 @@ export function QuoteActivityFeed({
     <section className="imsg-card">
       <header className="imsg-header">
         <h2>{title}</h2>
-        <p>{subtitle}</p>
+        {subtitle ? <p>{subtitle}</p> : null}
       </header>
       <ol ref={scrollerRef} className="imsg-thread">
         {activities.length === 0 ? (
-          <li className="imsg-empty">No messages yet. Status changes will land here as quiet chips.</li>
+          <li className="imsg-empty">No messages yet.</li>
         ) : (
           activities.map((activity, index) => {
             const lane = activityLane(activity, self);

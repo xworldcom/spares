@@ -582,7 +582,7 @@ function modelLoadMessage(error: unknown) {
     }
     return `The 3D model could not be shown. ${error.message}`;
   }
-  return "The 3D model could not be shown. The file may be too large or not a valid GLB.";
+  return "The 3D model could not be shown. The file may be too large or invalid.";
 }
 
 function ViewerStatus({
