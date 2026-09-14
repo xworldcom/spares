@@ -78,14 +78,14 @@ export function TicketDetail({
     }
   }
 
-  async function onSend(text: string) {
+  async function onSend(input: { text: string; attachments?: import("@/types").ChatAttachment[] }) {
     if (!ticket) {
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      setTicket(await postTicketActivity(ticket.id, text));
+      setTicket(await postTicketActivity(ticket.id, input));
       onUpdated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not send that note."));
@@ -142,6 +142,8 @@ export function TicketDetail({
         selfEmail={user.email}
         busy={busy}
         onSend={onSend}
+        threadKind="ticket"
+        threadId={ticket.id}
         title="Notes"
         subtitle="iMessage-style chatter on this machine. Status changes land as quiet chips."
       />

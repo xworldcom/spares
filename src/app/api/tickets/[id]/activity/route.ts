@@ -1,10 +1,13 @@
-import { MAX_CARE_TEXT, parseCareText, toPublicTicket } from "@/lib/care";
+import { MAX_CARE_TEXT, toPublicTicket } from "@/lib/care";
 import { actorOf, requireTicketAccess } from "@/lib/care-http";
+import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
+import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { appendTicketActivity } from "@/lib/store";
 
 type ActivityBody = {
   text?: unknown;
+  attachments?: unknown;
 };
 
 export async function POST(
@@ -21,15 +24,21 @@ export async function POST(
   if (isErrorResponse(body)) {
     return body;
   }
-  const parsed = parseCareText(body.text, "Message", MAX_CARE_TEXT);
+  const parsed = parseChatActivityBody(body, MAX_CARE_TEXT, "Message");
   if (!parsed.ok) {
     return error(parsed.error, 400);
+  }
+
+  const verified = await verifyActivityAttachments(parsed.attachments);
+  if (!verified.ok) {
+    return error(verified.error, verified.status);
   }
 
   const next = await appendTicketActivity(
     access.ticket.id,
     actorOf(access.user),
     parsed.text,
+    parsed.attachments,
   );
   if (!next) {
     return error("Ticket not found", 404);

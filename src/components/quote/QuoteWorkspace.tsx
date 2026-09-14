@@ -109,7 +109,10 @@ export function QuoteWorkspace({
     return true;
   }
 
-  async function sendActivity(text: string) {
+  async function sendActivity(input: {
+    text: string;
+    attachments?: import("@/types").ChatAttachment[];
+  }) {
     if (!quote || !user) {
       return;
     }
@@ -120,10 +123,11 @@ export function QuoteWorkspace({
       actorRole: role,
       actorEmail: user.email,
       kind: "message" as const,
-      text,
+      text: input.text,
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     };
     setQuote({ ...quote, activities: [...quote.activities, temp] });
-    const ok = await run(() => postQuoteActivity(String(quote.number), text));
+    const ok = await run(() => postQuoteActivity(String(quote.number), input));
     if (!ok) {
       setQuote((current) =>
         current
@@ -380,6 +384,8 @@ export function QuoteWorkspace({
         selfEmail={user.email}
         busy={busy}
         onSend={sendActivity}
+        threadKind="quote"
+        threadId={quote.id}
       />
 
       {role === "staff" && (statusDirty || itemsDirty) ? (

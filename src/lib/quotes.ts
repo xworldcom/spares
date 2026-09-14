@@ -1,3 +1,4 @@
+import { normalizeChatAttachments } from "./chat-attachments.ts";
 import type {
   PublicUser,
   Quote,
@@ -810,17 +811,26 @@ function normalizeActivity(raw: unknown): QuoteActivity | null {
   if (!record.kind || !kinds.includes(record.kind)) {
     return null;
   }
-  if (typeof record.text !== "string" || !record.text.trim()) {
+  const text = typeof record.text === "string" ? record.text.trim() : "";
+  const attachments = normalizeChatAttachments(record.attachments);
+  if (!text && record.kind === "message" && attachments.length === 0) {
     return null;
   }
-  return {
+  if (!text && record.kind !== "message") {
+    return null;
+  }
+  const activity: QuoteActivity = {
     id: record.id,
     at: record.at,
     actorRole: record.actorRole,
     actorEmail: record.actorEmail,
     kind: record.kind,
-    text: record.text.trim(),
+    text,
   };
+  if (attachments.length) {
+    activity.attachments = attachments;
+  }
+  return activity;
 }
 
 function normalizeShipment(raw: unknown, index: number): QuoteShipment | null {
