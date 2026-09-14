@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
@@ -22,6 +22,8 @@ import {
   updateQuote,
   uploadQuotePo,
 } from "@/lib/api/quotes";
+import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
   canEditTracking,
   invoiceVisible,
@@ -48,7 +50,6 @@ export function QuoteWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const loading = loadedRef !== quoteRef;
   const runLock = useRef<Promise<void>>(Promise.resolve());
 
   function applyQuote(next: Quote) {
@@ -83,6 +84,36 @@ export function QuoteWorkspace({
     // applyQuote is local state wiring, not an effect input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteRef]);
+
+  const pollQuote = useCallback(async () => {
+    if (!quote || busy || pendingStatus !== null) {
+      return;
+    }
+    if (JSON.stringify(items) !== JSON.stringify(quote.items)) {
+      return;
+    }
+    const next = await getQuote(quoteRef);
+    setQuote((current) => {
+      if (
+        !current ||
+        (String(current.number) !== quoteRef && current.id !== quoteRef)
+      ) {
+        return next;
+      }
+      const { activities, changed } = mergeActivitiesById(current.activities, next.activities);
+      if (!changed && current.status === next.status && current.unread === next.unread) {
+        return current;
+      }
+      return {
+        ...current,
+        status: next.status,
+        activities,
+        unread: next.unread,
+      };
+    });
+  }, [busy, items, pendingStatus, quote, quoteRef]);
+
+  useConversationPoll(Boolean(quote && user), pollQuote);
 
   async function run(action: () => Promise<Quote>, success?: string) {
     let release: () => void = () => {};
@@ -140,22 +171,24 @@ export function QuoteWorkspace({
     }
   }
 
-  if (loading) {
+  if (!quote) {
+    if (error) {
+      return (
+        <ErrorState
+          title="Quote unavailable"
+          message={error}
+        />
+      );
+    }
     return <LoadingState label="Loading quote…" />;
   }
 
-  if (error && !quote) {
-    return (
-      <ErrorState
-        title="Quote unavailable"
-        message={error}
-      />
-    );
-  }
-
-  if (!quote || !user) {
+  if (!user) {
     return null;
   }
+
+  const threadReady =
+    String(quote.number) === quoteRef || quote.id === quoteRef;
 
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
@@ -379,10 +412,10 @@ export function QuoteWorkspace({
       ) : null}
 
       <QuoteActivityFeed
-        activities={quote.activities}
+        activities={threadReady ? quote.activities : []}
         role={role}
         selfEmail={user.email}
-        busy={busy}
+        busy={busy || !threadReady}
         onSend={sendActivity}
         threadKind="quote"
         threadId={quote.id}

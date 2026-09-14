@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
@@ -15,7 +15,9 @@ import {
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
 import { careHref } from "@/lib/care";
-import type { ServiceTicket, TicketStatus } from "@/types";
+import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { mergeActivitiesById } from "@/lib/merge-activities";
+import type { ChatAttachment, ServiceTicket, TicketStatus } from "@/types";
 
 export function TicketDetail({
   machineId,
@@ -39,7 +41,6 @@ export function TicketDetail({
   const staff = user?.role === "staff";
 
   useEffect(() => {
-    setTicket(null);
     setError(null);
     let cancelled = false;
     getTicket(ticketId)
@@ -62,6 +63,30 @@ export function TicketDetail({
     };
   }, [ticketId, reloadKey, refreshCareAlerts]);
 
+  const pollTicket = useCallback(async () => {
+    if (busy) {
+      return;
+    }
+    const next = await getTicket(ticketId);
+    setTicket((current) => {
+      if (!current || current.id !== ticketId) {
+        return next;
+      }
+      const { activities, changed } = mergeActivitiesById(current.activities, next.activities);
+      if (!changed && current.status === next.status && current.unread === next.unread) {
+        return current;
+      }
+      return {
+        ...current,
+        status: next.status,
+        activities,
+        unread: next.unread,
+      };
+    });
+  }, [busy, ticketId]);
+
+  useConversationPoll(Boolean(ticket && user), pollTicket);
+
   async function onStatus(status: TicketStatus) {
     if (!ticket) {
       return;
@@ -78,16 +103,35 @@ export function TicketDetail({
     }
   }
 
-  async function onSend(input: { text: string; attachments?: import("@/types").ChatAttachment[] }) {
-    if (!ticket) {
+  async function onSend(input: { text: string; attachments?: ChatAttachment[] }) {
+    if (!ticket || !user) {
       return;
     }
+    const tempId = `pending-${Date.now()}`;
+    const temp = {
+      id: tempId,
+      at: new Date().toISOString(),
+      actorRole: user.role,
+      actorEmail: user.email,
+      kind: "message" as const,
+      text: input.text,
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+    };
+    setTicket({ ...ticket, activities: [...ticket.activities, temp] });
     setBusy(true);
     setError(null);
     try {
       setTicket(await postTicketActivity(ticket.id, input));
       onUpdated?.();
     } catch (cause) {
+      setTicket((current) =>
+        current
+          ? {
+              ...current,
+              activities: current.activities.filter((row) => row.id !== tempId),
+            }
+          : current,
+      );
       setError(errorMessage(cause, "Could not send that note."));
       throw cause;
     } finally {
@@ -95,23 +139,27 @@ export function TicketDetail({
     }
   }
 
-  if (error && !ticket) {
-    return (
-      <ErrorState
-        title="Failed to load ticket"
-        message={error}
-        onRetry={() => {
-          setError(null);
-          setReloadKey((key) => key + 1);
-        }}
-      />
-    );
-  }
-
-  if (!ticket || !user) {
+  if (!user) {
     return <LoadingState label="Loading ticket…" />;
   }
 
+  if (!ticket) {
+    if (error) {
+      return (
+        <ErrorState
+          title="Failed to load ticket"
+          message={error}
+          onRetry={() => {
+            setError(null);
+            setReloadKey((key) => key + 1);
+          }}
+        />
+      );
+    }
+    return <LoadingState label="Loading ticket…" />;
+  }
+
+  const threadReady = ticket.id === ticketId;
   const ticketsBack = backHref ?? careHref(machineId, "tickets");
 
   return (
@@ -121,26 +169,32 @@ export function TicketDetail({
           <span aria-hidden="true">‹</span> Tickets
         </Link>
       ) : null}
-      <div>
-        <p className="care-kicker">Ticket {ticket.number}</p>
-        <h2 className="text-[28px] font-semibold tracking-tight">{ticket.title}</h2>
-      </div>
-      <TicketStatusStrip
-        status={ticket.status}
-        editable={staff}
-        pending={busy}
-        onChange={staff ? onStatus : undefined}
-      />
+      {threadReady ? (
+        <>
+          <div>
+            <p className="care-kicker">Ticket {ticket.number}</p>
+            <h2 className="text-[28px] font-semibold tracking-tight">{ticket.title}</h2>
+          </div>
+          <TicketStatusStrip
+            status={ticket.status}
+            editable={staff}
+            pending={busy}
+            onChange={staff ? onStatus : undefined}
+          />
+        </>
+      ) : (
+        <div className="h-24" aria-busy="true" aria-label="Loading conversation" />
+      )}
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
         </p>
       ) : null}
       <QuoteActivityFeed
-        activities={ticket.activities}
+        activities={threadReady ? ticket.activities : []}
         role={user.role}
         selfEmail={user.email}
-        busy={busy}
+        busy={busy || !threadReady}
         onSend={onSend}
         threadKind="ticket"
         threadId={ticket.id}
