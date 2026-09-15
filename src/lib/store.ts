@@ -814,19 +814,22 @@ function ensureOrg(db: Database): Database {
     if (hasAccess) {
       return healed;
     }
-    const seededGrant = SEED_USER_GRANTS[user.id];
-    if (seededGrant) {
-      return {
-        ...healed,
-        siteIds: seededGrant.siteIds,
-        machineIds: seededGrant.machineIds,
-        companyAccess: undefined,
-      };
+    if (isSeedAllowed()) {
+      const seededGrant = SEED_USER_GRANTS[user.id];
+      if (seededGrant) {
+        return {
+          ...healed,
+          siteIds: seededGrant.siteIds,
+          machineIds: seededGrant.machineIds,
+          companyAccess: undefined,
+        };
+      }
+      const seeded = SEED_USER_SITES[user.id];
+      if (seeded) {
+        return { ...healed, siteIds: seeded, machineIds: [], companyAccess: undefined };
+      }
     }
-    const seeded = SEED_USER_SITES[user.id];
-    return seeded
-      ? { ...healed, siteIds: seeded, machineIds: [], companyAccess: undefined }
-      : healed;
+    return healed;
   });
   return migrateOrgTree({
     ...next,
