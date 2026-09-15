@@ -8,7 +8,7 @@ import {
   safeDownloadName,
   toPublicQuote,
 } from "@/lib/quotes";
-import { tenantIdForUser } from "@/lib/tenant";
+import { userTenantId } from "@/lib/tenant";
 import {
   createQuoteActivity,
   mutateQuote,
@@ -90,7 +90,7 @@ export async function POST(
   await saveMachineFile(storedFileName, Buffer.from(await file.arrayBuffer()));
 
   const actor = actorOf(access.user);
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const next = await mutateQuote(access.quote.id, tenantId, (quote) => {
     const stamp = new Date().toISOString();
     const nextStatus = quote.status === "quoted" ? "po_received" : quote.status;

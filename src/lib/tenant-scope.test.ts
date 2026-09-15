@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
 import { signSession, verifySession } from "./auth/session-token.ts";
+import { canAccessMachine } from "./access.ts";
 import { createMemoryPersistence, setPersistenceForTests } from "./persistence.ts";
 import {
   createMachine,
@@ -13,7 +14,7 @@ import {
   listMachines,
   resetStoreMemoryForTests,
 } from "./store.ts";
-import { DEFAULT_TENANT_ID } from "./tenant.ts";
+import { DEFAULT_TENANT_ID, tenantIdForUser } from "./tenant.ts";
 import { hashPassword } from "./auth/password.ts";
 
 async function isolated() {
@@ -69,5 +70,48 @@ describe("tenant isolation", () => {
     const session = verifySession(token);
     assert.ok(session);
     assert.equal(session?.tenantId, DEFAULT_TENANT_ID);
+  });
+
+  it("does not default missing user tenantId to the host tenant", () => {
+    assert.equal(tenantIdForUser({ tenantId: undefined }), null);
+    assert.equal(tenantIdForUser({}), null);
+    assert.equal(tenantIdForUser({ tenantId: "tenant-b" }), "tenant-b");
+  });
+
+  it("staff cannot access host machines when scoped to another tenant", () => {
+    const hostMachine = {
+      id: "m-host",
+      tenantId: DEFAULT_TENANT_ID,
+      siteId: null,
+    };
+    const allowed = canAccessMachine(
+      { role: "staff", tenantId: "tenant-b" },
+      hostMachine,
+    );
+    assert.equal(allowed, false);
+    const deniedWithoutTenant = canAccessMachine({ role: "staff" }, hostMachine);
+    assert.equal(deniedWithoutTenant, false);
+  });
+
+  it("rejects duplicate staff email across tenants", async () => {
+    await isolated();
+    const first = await createTenantStaffUser(DEFAULT_TENANT_ID, {
+      email: "dup@test",
+      passwordHash: await hashPassword("pass"),
+      role: "staff",
+    });
+    assert.ok("user" in first);
+    const other = await createTenant("Dup Email Co");
+    assert.ok("tenant" in other);
+    if (!("tenant" in other)) {
+      return;
+    }
+    const second = await createTenantStaffUser(other.tenant.id, {
+      email: "dup@test",
+      passwordHash: await hashPassword("pass2"),
+      role: "staff",
+    });
+    assert.ok("error" in second);
+    assert.equal(second.error, "email-taken");
   });
 });

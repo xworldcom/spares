@@ -61,6 +61,17 @@ export function filterByTenant<T extends { tenantId?: string }>(
   return rows.filter((row) => belongsToTenant(row, tenantId));
 }
 
+/** Session/API tenant scope — never default to the host tenant when unset. */
 export function tenantIdForUser(user: { tenantId?: string }) {
-  return user.tenantId ?? DEFAULT_TENANT_ID;
+  const id = user.tenantId?.trim();
+  return id || null;
+}
+
+/** Use after auth when a tenant-scoped user is required. */
+export function userTenantId(user: { tenantId?: string }) {
+  const id = tenantIdForUser(user);
+  if (!id) {
+    throw new Error("Authenticated user is missing tenantId");
+  }
+  return id;
 }

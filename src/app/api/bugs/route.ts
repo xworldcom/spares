@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { DEFAULT_TENANT_ID, effectiveTenantId } from "@/lib/tenant";
+import { DEFAULT_TENANT_ID, tenantIdForUser } from "@/lib/tenant";
 import {
   bugReportUserLabel,
   parseJpegBase64,
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   };
 
   const bugTenantId = sessionUser
-    ? effectiveTenantId(sessionUser)
+    ? tenantIdForUser(sessionUser) ?? DEFAULT_TENANT_ID
     : DEFAULT_TENANT_ID;
 
   let stored: Awaited<ReturnType<typeof createBugReport>> | null = null;

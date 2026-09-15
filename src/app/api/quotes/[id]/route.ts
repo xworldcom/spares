@@ -15,7 +15,7 @@ import {
   toPublicQuote,
   trackingUpdatedActivityText,
 } from "@/lib/quotes";
-import { tenantIdForUser } from "@/lib/tenant";
+import { userTenantId } from "@/lib/tenant";
 import { createQuoteActivity, markQuoteRead, mutateQuote } from "@/lib/store";
 import type { QuoteRecord, QuoteStatus } from "@/types";
 
@@ -37,7 +37,7 @@ export async function GET(
     return access.error;
   }
 
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const marked =
     (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
   return json({
@@ -61,7 +61,7 @@ export async function PATCH(
   }
 
   const actor = actorOf(access.user);
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const now = () => new Date().toISOString();
 
   if (access.user.role === "customer") {

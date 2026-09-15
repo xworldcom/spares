@@ -3,7 +3,7 @@ import { actorOf, requireTicketAccess } from "@/lib/care-http";
 import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
 import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { tenantIdForUser } from "@/lib/tenant";
+import { userTenantId } from "@/lib/tenant";
 import { appendTicketActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -35,7 +35,7 @@ export async function POST(
     return error(verified.error, verified.status);
   }
 
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const next = await appendTicketActivity(
     access.ticket.id,
     tenantId,

@@ -650,7 +650,10 @@ function ensureOrg(db: Database): Database {
         continue;
       }
       if (!haveCustomers.has(customer.id)) {
-        haveCustomers.set(customer.id, customer);
+        haveCustomers.set(customer.id, {
+          ...customer,
+          tenantId: customer.tenantId ?? DEFAULT_TENANT_ID,
+        });
       }
     }
     for (const site of SEED_SITES) {
@@ -664,7 +667,10 @@ function ensureOrg(db: Database): Database {
       if (customer?.deletedAt || deletedCustomers.has(site.customerId)) {
         continue;
       }
-      haveSites.set(site.id, site);
+      haveSites.set(site.id, {
+        ...site,
+        tenantId: site.tenantId ?? DEFAULT_TENANT_ID,
+      });
     }
   }
   const customers = [...haveCustomers.values()].sort((a, b) => {
@@ -774,7 +780,11 @@ async function withFixtureMachines(db: Database): Promise<Database> {
   if (extras.length === 0) {
     return db;
   }
-  return { ...db, machines: [...db.machines, ...extras] };
+  const stamped = extras.map((machine) => ({
+    ...machine,
+    tenantId: DEFAULT_TENANT_ID,
+  }));
+  return { ...db, machines: [...db.machines, ...stamped] };
 }
 
 function catalogChanged(before: Database, after: Database) {
@@ -939,7 +949,16 @@ export function findUserByEmail(email: string) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
     const db = await ensureCatalog();
-    return db.users.find((user) => user.email === normalized) ?? null;
+    const matches = db.users.filter(
+      (user) => user.email === normalized && !user.deletedAt,
+    );
+    if (matches.length === 0) {
+      return null;
+    }
+    if (matches.length === 1) {
+      return matches[0];
+    }
+    return null;
   });
 }
 
@@ -986,11 +1005,7 @@ export function createTenantStaffUser(
     if (!tenant) {
       return { error: "bad-tenant" as const };
     }
-    if (
-      db.users.some(
-        (user) => user.email === normalized && !user.deletedAt && belongsToTenant(user, tenantId),
-      )
-    ) {
+    if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
       return { error: "email-taken" as const };
     }
     const user: StoredUser = {
@@ -1143,12 +1158,7 @@ export function createCustomer(
   const trimmedName = access.name?.trim();
   return withLock(async () => {
     const db = await readDatabase();
-    if (
-      db.users.some(
-        (user) =>
-          user.email === normalized && !user.deletedAt && belongsToTenant(user, tenantId),
-      )
-    ) {
+    if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
       return { error: "email-taken" as const };
     }
     const known = new Set(

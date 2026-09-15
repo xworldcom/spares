@@ -19,6 +19,9 @@ export async function requireQuoteAccess(
   }
 
   const tenantId = tenantIdForUser(user);
+  if (!tenantId) {
+    return { error: error("Forbidden", 403) };
+  }
   const quote = await getQuote(idOrNumber, tenantId);
   if (!quote) {
     return { error: error("Quote not found", 404) };

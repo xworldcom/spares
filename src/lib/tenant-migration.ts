@@ -56,16 +56,28 @@ function stamp<T extends { tenantId?: string }>(
   return changed ? next : [...rows];
 }
 
+/** Legacy rows keep an explicit tenant; never overwrite an existing tenantId. */
+function stampMissing<T extends { tenantId?: string }>(
+  rows: readonly T[] | undefined,
+  tenantId: string,
+): { rows: T[]; changed: boolean } {
+  if (!rows?.length) {
+    return { rows: [], changed: false };
+  }
+  let changed = false;
+  const next = rows.map((row) => {
+    if (row.tenantId) {
+      return row;
+    }
+    changed = true;
+    return { ...row, tenantId };
+  });
+  return { rows: changed ? next : [...rows], changed };
+}
+
 export function migrateTenants<T extends TenantSlice>(
   db: T,
 ): { db: T; changed: boolean } {
-  if ((db.schemaVersion ?? 1) >= TENANT_SCHEMA_VERSION) {
-    const tenants = db.tenants ?? [];
-    if (tenants.length > 0) {
-      return { db, changed: false };
-    }
-  }
-
   const now = new Date().toISOString();
   const tenantId = DEFAULT_TENANT_ID;
   let changed = false;
@@ -76,33 +88,32 @@ export function migrateTenants<T extends TenantSlice>(
     changed = true;
   }
 
-  const users = stamp(db.users, tenantId);
-  const customers = stamp(db.customers, tenantId);
-  const sites = stamp(db.sites, tenantId);
-  const machines = stamp(db.machines, tenantId);
-  const quotes = stamp(db.quotes, tenantId);
-  const tickets = stamp(db.tickets, tenantId);
-  const manuals = stamp(db.manuals, tenantId);
-  const machineUsage = stamp(db.machineUsage, tenantId);
-  const bugReports = stamp(db.bugReports, tenantId);
-  const machineViews = stamp(db.machineViews, tenantId);
+  const initial = (db.schemaVersion ?? 1) < TENANT_SCHEMA_VERSION;
+  const stampRows = <R extends { tenantId?: string }>(
+    rows: readonly R[] | undefined,
+  ): R[] => {
+    if (initial) {
+      return stamp(rows, tenantId);
+    }
+    const { rows: next, changed: rowChanged } = stampMissing(rows, tenantId);
+    if (rowChanged) {
+      changed = true;
+    }
+    return next;
+  };
 
-  if (
-    users !== db.users ||
-    customers !== db.customers ||
-    sites !== db.sites ||
-    machines !== db.machines ||
-    quotes !== db.quotes ||
-    tickets !== db.tickets ||
-    manuals !== db.manuals ||
-    machineUsage !== db.machineUsage ||
-    bugReports !== db.bugReports ||
-    machineViews !== db.machineViews
-  ) {
-    changed = true;
-  }
+  const users = stampRows(db.users);
+  const customers = stampRows(db.customers);
+  const sites = stampRows(db.sites);
+  const machines = stampRows(db.machines);
+  const quotes = stampRows(db.quotes);
+  const tickets = stampRows(db.tickets);
+  const manuals = stampRows(db.manuals);
+  const machineUsage = stampRows(db.machineUsage);
+  const bugReports = stampRows(db.bugReports);
+  const machineViews = stampRows(db.machineViews);
 
-  if ((db.schemaVersion ?? 1) < TENANT_SCHEMA_VERSION) {
+  if (initial) {
     changed = true;
   }
 

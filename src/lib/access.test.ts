@@ -16,6 +16,7 @@ import {
   toggleSiteGrant,
   toPublicUser,
 } from "./access.ts";
+import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 const accounts = [
   { id: "customer-cargill", name: "Cargill", createdAt: "2020-01-01T00:00:00.000Z" },
@@ -51,9 +52,13 @@ const machines = [
 
 describe("site access", () => {
   it("lets staff see every machine and customers only their sites", () => {
-    const staff = { role: "staff" as const, siteIds: [] };
+    const staff = {
+      role: "staff" as const,
+      siteIds: [],
+      tenantId: DEFAULT_TENANT_ID,
+    };
     const ftw = { role: "customer" as const, siteIds: ["site-cargill-ftw"] };
-    const machine = { siteId: "site-cargill-ftw" };
+    const machine = { siteId: "site-cargill-ftw", tenantId: DEFAULT_TENANT_ID };
 
     assert.equal(canAccessMachine(staff, machine, sites, accounts), true);
     assert.equal(canAccessMachine(ftw, machine, sites, accounts), true);

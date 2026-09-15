@@ -7,7 +7,7 @@ import {
 } from "@/lib/care";
 import { actorOf, requireMachineAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { tenantIdForUser } from "@/lib/tenant";
+import { userTenantId } from "@/lib/tenant";
 import { createTicket, listTickets } from "@/lib/store";
 
 type CreateBody = {
@@ -24,7 +24,7 @@ export async function GET(
   if ("error" in access) {
     return access.error;
   }
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const tickets = await listTickets(tenantId, access.machine.id);
   const publicTickets = tickets.map((ticket) =>
     toPublicTicket(ticket, access.user, access.machine.name),
@@ -59,7 +59,7 @@ export async function POST(
     return error(note.error, 400);
   }
 
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const created = await createTicket(tenantId, {
     machineId: access.machine.id,
     title: title.text,

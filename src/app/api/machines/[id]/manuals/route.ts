@@ -18,7 +18,7 @@ import {
   selectManualStoreKind,
   vercelRequiresManualObjectStorageMessage,
 } from "@/lib/manual-storage";
-import { tenantIdForUser } from "@/lib/tenant";
+import { userTenantId } from "@/lib/tenant";
 import { createManual, listManuals } from "@/lib/store";
 import type { PublicMachineManual } from "@/types";
 
@@ -52,7 +52,7 @@ export async function GET(
   if ("error" in access) {
     return access.error;
   }
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const manuals = await listManuals(access.machine.id, tenantId);
   return json({ manuals: await toPublic(request, access.machine.id, manuals) });
 }
@@ -67,7 +67,7 @@ export async function POST(
     return access.error;
   }
 
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("multipart/form-data")) {
     return createFromMultipart(request, access.machine.id, access.user.email, tenantId);

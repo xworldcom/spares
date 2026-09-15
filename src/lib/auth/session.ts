@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import type { PublicUser, Role } from "@/types";
 import { error } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
-import { effectiveTenantId, isPlatformOwnerEmail } from "@/lib/tenant";
+import { isPlatformOwnerEmail } from "@/lib/tenant";
 import { findUserByEmail, findUserById, getOrgContext } from "@/lib/store";
 import {
   SESSION_COOKIE,
@@ -51,7 +51,7 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     return null;
   }
 
-  const tenantId = effectiveTenantId(user);
+  const tenantId = user.tenantId?.trim() || undefined;
   if (
     !session.email ||
     session.email !== user.email ||
@@ -63,6 +63,9 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
 
   const platformOwner = isPlatformOwnerEmail(user.email);
   if (user.role === "customer") {
+    if (!tenantId) {
+      return toPublicUser(user, [], [], { platformOwner });
+    }
     const { sites, customers } = await getOrgContext(tenantId);
     return toPublicUser(user, sites, customers, { platformOwner, tenantId });
   }

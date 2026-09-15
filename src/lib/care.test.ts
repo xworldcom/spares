@@ -25,6 +25,7 @@ import {
   toPublicTicket,
   usageSummary,
 } from "./care.ts";
+import { DEFAULT_TENANT_ID } from "./tenant.ts";
 import { manualObjectKey } from "./manual-storage.ts";
 
 describe("care manuals", () => {
@@ -142,8 +143,14 @@ describe("care access and usage", () => {
     assert.equal(canManageCare({ role: "customer" }), false);
     assert.equal(
       canAccessCareMachine(
-        { role: "staff", siteIds: [], companyAccess: [], machineIds: [] },
-        { id: "m1", siteId: "site-x" },
+        {
+          role: "staff",
+          siteIds: [],
+          companyAccess: [],
+          machineIds: [],
+          tenantId: DEFAULT_TENANT_ID,
+        },
+        { id: "m1", siteId: "site-x", tenantId: DEFAULT_TENANT_ID },
       ),
       true,
     );

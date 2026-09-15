@@ -7,7 +7,7 @@ import {
 import { error } from "@/lib/http";
 import { manualFileUrl } from "@/lib/manual-file-url";
 import { readManualFile, selectManualStoreKind } from "@/lib/manual-storage";
-import { tenantIdForUser } from "@/lib/tenant";
+import { userTenantId } from "@/lib/tenant";
 import { getManual } from "@/lib/store";
 import { safeDownloadName } from "@/lib/quotes";
 
@@ -25,7 +25,7 @@ export async function GET(
     return access.error;
   }
 
-  const tenantId = tenantIdForUser(access.user);
+  const tenantId = userTenantId(access.user);
   const manual = await getManual(access.machine.id, manualId, tenantId);
   if (!manual) {
     return error("Manual not found", 404);

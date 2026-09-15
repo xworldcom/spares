@@ -20,6 +20,9 @@ export async function requireMachineAccess(machineId: string): Promise<MachineAc
     return { error: error("Unauthorized", 401) };
   }
   const tenantId = tenantIdForUser(user);
+  if (!tenantId) {
+    return { error: error("Forbidden", 403) };
+  }
   const [machine, org] = await Promise.all([
     getMachine(machineId, tenantId),
     getOrgContext(tenantId),
@@ -47,6 +50,9 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
     return { error: error("Unauthorized", 401) };
   }
   const tenantId = tenantIdForUser(user);
+  if (!tenantId) {
+    return { error: error("Forbidden", 403) };
+  }
   const ticket = await getTicket(idOrNumber, tenantId);
   if (!ticket) {
     return { error: error("Ticket not found", 404) };
