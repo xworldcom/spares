@@ -651,6 +651,18 @@ function mergeUsersForHeal(healed: StoredUser[], latest: StoredUser[]): StoredUs
   return [...map.values()];
 }
 
+function mergeOrgUsersAndClampTenants(
+  healed: Database,
+  latest: Database,
+  users: StoredUser[],
+): StoredUser[] {
+  return clampSatelliteStaffTenants({
+    ...healed,
+    tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
+    users,
+  }).users;
+}
+
 function mergeTenantsForHeal(
   healed: Tenant[] | undefined,
   latest: Tenant[] | undefined,
@@ -669,7 +681,11 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
       customers: latest.customers ?? healed.customers,
       sites: latest.sites ?? healed.sites,
-      users: mergeUsersForHeal(healed.users, latest.users),
+      users: mergeOrgUsersAndClampTenants(
+        healed,
+        latest,
+        mergeUsersForHeal(healed.users, latest.users),
+      ),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
@@ -679,7 +695,7 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
 }
 
 function ensureTenants(db: Database): Database {
-  return migrateTenants(db).db;
+  return clampSatelliteStaffTenants(migrateTenants(db).db);
 }
 
 function ensureOrg(db: Database): Database {
@@ -839,8 +855,54 @@ function catalogChanged(before: Database, after: Database) {
     (after.tenants?.length ?? 0) !== (before.tenants?.length ?? 0) ||
     (after.sites?.length ?? 0) !== (before.sites?.length ?? 0) ||
     (after.customers?.length ?? 0) !== (before.customers?.length ?? 0) ||
-    after.users.some((user, index) => user.id !== before.users[index]?.id)
+    after.users.some((user, index) => user.id !== before.users[index]?.id) ||
+    staffTenantAssignmentsChanged(before.users, after.users)
   );
+}
+
+function staffTenantAssignmentsChanged(before: StoredUser[], after: StoredUser[]) {
+  const beforeById = new Map(before.map((user) => [user.id, user.tenantId]));
+  return after.some((user) => beforeById.get(user.id) !== user.tenantId);
+}
+
+function bindStaffTenantIds(
+  db: Database,
+  bindings: ReadonlyArray<{ userId: string; tenantId: string }>,
+): Database {
+  if (bindings.length === 0) {
+    return db;
+  }
+  const byId = new Map(bindings.map((row) => [row.userId, row.tenantId]));
+  return {
+    ...db,
+    users: db.users.map((user) => {
+      const tenantId = byId.get(user.id);
+      return tenantId ? { ...user, tenantId } : user;
+    }),
+  };
+}
+
+/** Keep non-host staff off tenant-oee360-host whenever satellite tenants exist. */
+function clampSatelliteStaffTenants(db: Database): Database {
+  const satellites = (db.tenants ?? []).filter((row) => row.id !== DEFAULT_TENANT_ID);
+  if (satellites.length === 0) {
+    return db;
+  }
+  const newestSatelliteId = [...satellites].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  )[0].id;
+  let changed = false;
+  const users = db.users.map((user) => {
+    if (user.role !== "staff" || !user.email || isHostStaffEmail(user.email)) {
+      return user;
+    }
+    if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
+      return user;
+    }
+    changed = true;
+    return { ...user, tenantId: newestSatelliteId };
+  });
+  return changed ? { ...db, users } : db;
 }
 
 /**
@@ -943,6 +1005,7 @@ async function readDatabase(): Promise<Database> {
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
     usersRemapped ||
+    staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
     (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
     (next.customers?.length ?? 0) !== (loaded.db.customers?.length ?? 0) ||
@@ -960,7 +1023,26 @@ async function writeCareStore(care: CareStore) {
 }
 
 async function writeDatabase(next: Database) {
-  const normalized = applyCare(next, careCollections(next));
+  const normalized = applyCare(clampSatelliteStaffTenants(next), careCollections(next));
+  memory = normalized;
+  await Promise.all([
+    getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
+    writeCareStore(careCollections(normalized)),
+  ]);
+}
+
+/** Org creates race catalog heals — merge with latest blob before persisting. */
+async function writeDatabaseWithOrgMerge(next: Database) {
+  let merged = clampSatelliteStaffTenants(next);
+  for (let pass = 0; pass < 2; pass++) {
+    const latestRaw = await getPersistence().readDatabaseJson();
+    const loaded = latestRaw ? parseDatabase(latestRaw) : null;
+    if (!loaded?.db) {
+      break;
+    }
+    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, loaded.db));
+  }
+  const normalized = applyCare(merged, careCollections(merged));
   memory = normalized;
   await Promise.all([
     getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
@@ -979,7 +1061,7 @@ async function writeCatalogHeal(next: Database) {
     }
     merged = mergeOrgCrudFromLatest(merged, loaded.db);
   }
-  const kept = await overlayPersistedCare(merged);
+  const kept = await overlayPersistedCare(clampSatelliteStaffTenants(merged));
   memory = kept;
   await Promise.all([
     getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2)),
@@ -1096,7 +1178,11 @@ export function createTenantWithOptionalStaff(
       );
       staffUser = { ...staffUser, tenantId: tenant.id };
     }
-    await writeDatabase({ ...migrated, users: finalUsers });
+    const payload = bindStaffTenantIds(
+      clampSatelliteStaffTenants({ ...migrated, users: finalUsers }),
+      staffUser ? [{ userId: staffUser.id, tenantId: tenant.id }] : [],
+    );
+    await writeDatabaseWithOrgMerge(payload);
     return { tenant, staffUser };
   });
 }

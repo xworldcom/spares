@@ -202,4 +202,51 @@ describe("tenant isolation", () => {
     assert.equal(loaded?.tenantId, created.tenant.id);
     assert.notEqual(loaded?.tenantId, DEFAULT_TENANT_ID);
   });
+
+  it("persists satellite staff tenantId repairs to blob", async () => {
+    await isolated();
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        schemaVersion: 3,
+        tenants: [
+          {
+            id: DEFAULT_TENANT_ID,
+            name: "OEE360 Host",
+            slug: "oee360-host",
+            createdAt: "2020-01-01T00:00:00.000Z",
+          },
+          {
+            id: "tenant-b",
+            name: "Company B",
+            slug: "company-b",
+            createdAt: "2025-06-01T00:00:00.000Z",
+          },
+        ],
+        users: [
+          {
+            id: "user-b",
+            email: "companyb-staff@test",
+            passwordHash: "x",
+            role: "staff" as const,
+            tenantId: DEFAULT_TENANT_ID,
+          },
+        ],
+        machines: [],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+      }),
+    );
+
+    resetStoreMemoryForTests();
+    const loaded = await findUserByEmail("companyb-staff@test");
+    assert.equal(loaded?.tenantId, "tenant-b");
+
+    resetStoreMemoryForTests();
+    const raw = JSON.parse((await persistence.readDatabaseJson()) ?? "{}");
+    assert.equal(raw.users?.[0]?.tenantId, "tenant-b");
+  });
 });
