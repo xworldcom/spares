@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { useCareAlerts } from "@/components/care/CareAlerts";
@@ -101,8 +102,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.removeEventListener("resize", syncEmbed);
     };
   }, []);
-  const onLogin = pathname === "/login";
+  const onLogin = pathname === "/login" || pathname === "/";
   const signedIn = status === "signed-in" && user;
+  const cinematic = onLogin && !signedIn;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
   const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
 
@@ -119,13 +121,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={
-        onLogin
-          ? "spares-app spares-app-login min-h-dvh"
-          : machineStage
-            ? "spares-app spares-app-stage flex min-h-dvh flex-col"
-            : showTabs
-              ? "spares-app spares-app-tabs min-h-dvh"
-              : "spares-app min-h-dvh"
+        cinematic
+          ? "spares-app spares-app-login spares-app-cinematic min-h-dvh"
+          : onLogin
+            ? "spares-app spares-app-login min-h-dvh"
+            : machineStage
+              ? "spares-app spares-app-stage flex min-h-dvh flex-col"
+              : showTabs
+                ? "spares-app spares-app-tabs min-h-dvh"
+                : "spares-app min-h-dvh"
       }
     >
       <header className="spares-header sticky top-0 z-[60] shrink-0 backdrop-blur-md">
@@ -150,10 +154,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           ) : (
             <Link
-              href="/"
-              className="relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[16px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-['']"
+              href={signedIn ? "/machines" : "/"}
+              className="relative inline-flex h-11 min-h-11 shrink-0 items-center px-2 before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-['']"
             >
-              Spares
+              <BrandMark />
             </Link>
           )}
 
@@ -220,7 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 Sign out
               </button>
-            ) : onLogin ? null : (
+            ) : cinematic ? null : (
               <Link
                 href="/login"
                 className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
@@ -238,9 +242,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
       <main
         className={
-          machineStage
-            ? "mx-auto flex w-full min-h-0 max-w-none flex-1 flex-col px-0 pt-0 pb-0 sm:px-3 sm:pt-2 sm:pb-2 lg:px-4"
-            : "mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8"
+          cinematic
+            ? "w-full flex-1"
+            : machineStage
+              ? "mx-auto flex w-full min-h-0 max-w-none flex-1 flex-col px-0 pt-0 pb-0 sm:px-3 sm:pt-2 sm:pb-2 lg:px-4"
+              : "mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8"
         }
       >
         {children}
