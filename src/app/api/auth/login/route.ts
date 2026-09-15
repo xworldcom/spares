@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
+import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { allowLoginAttempt } from "@/lib/rate-limit";
 import { findUserByEmail, getOrgContext } from "@/lib/store";
 
@@ -66,6 +67,10 @@ export async function POST(request: Request) {
     return error("Too many sign-in attempts. Try again in a few minutes.", 429, {
       "Retry-After": "900",
     });
+  }
+
+  if (isDemoSeedLoginBlocked(email)) {
+    return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
   const user = await findUserByEmail(email);

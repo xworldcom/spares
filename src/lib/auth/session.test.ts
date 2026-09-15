@@ -1,6 +1,31 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { sessionSecret, signSession, verifySession } from "./session-token.ts";
+import {
+  sessionCookieOptions,
+  sessionSecret,
+  signSession,
+  verifySession,
+} from "./session-token.ts";
+
+describe("session cookie options", () => {
+  it("sets HttpOnly, Secure on Vercel, and SameSite=Lax", () => {
+    const previousVercel = process.env.VERCEL;
+    process.env.VERCEL = "1";
+    try {
+      const opts = sessionCookieOptions(3600);
+      assert.equal(opts.httpOnly, true);
+      assert.equal(opts.secure, true);
+      assert.equal(opts.sameSite, "lax");
+      assert.equal(opts.path, "/");
+    } finally {
+      if (previousVercel === undefined) {
+        delete process.env.VERCEL;
+      } else {
+        process.env.VERCEL = previousVercel;
+      }
+    }
+  });
+});
 
 describe("session cookie payload", () => {
   it("signs email so a remapped user id can still resolve", () => {

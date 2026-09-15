@@ -112,6 +112,8 @@ There is **no public signup**. Staff create customer accounts. These two users a
 | staff | `staff@spares.local` | `SparesStaff1!` |
 | customer | `customer@spares.local` | `SparesCustomer1!` |
 
+On **Vercel Production**, leave `SPARES_ALLOW_SEED` unset; demo accounts cannot sign in even if `db.json` was copied from Preview. See [docs/soft-launch-security.md](docs/soft-launch-security.md).
+
 ## Local development
 
 ```bash
