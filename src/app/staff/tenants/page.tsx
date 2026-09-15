@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Tenant } from "@/types";
+import { DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME } from "@/lib/tenant";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { apiFetch } from "@/lib/api/client";
 
@@ -74,12 +75,16 @@ function PlatformTenants() {
     );
   }
 
+  const hostTenant =
+    tenants.find((row) => row.id === DEFAULT_TENANT_ID)?.name ?? DEFAULT_TENANT_NAME;
+
   return (
     <main className="page-shell">
       <h1 className="page-title">Host companies</h1>
       <p className="text-muted mb-6">
         Create automation-company tenants on the shared OEE360 platform. Existing Soft Launch
-        data lives in tenant <code>{tenants[0]?.name ?? "OEE360 Host"}</code>.
+        data lives in tenant <code>{hostTenant}</code> (
+        <code className="text-xs">{DEFAULT_TENANT_ID}</code>).
       </p>
 
       <form className="stack gap-3 max-w-md mb-10" onSubmit={onCreate}>

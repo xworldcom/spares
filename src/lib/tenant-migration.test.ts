@@ -70,6 +70,85 @@ describe("tenant migration", () => {
     assert.equal(db.users?.[0]?.tenantId, "tenant-b");
   });
 
+  it("does not auto-stamp users to the host tenant when multiple tenants exist", () => {
+    const { db, changed } = migrateTenants({
+      schemaVersion: 3,
+      tenants: [
+        {
+          id: DEFAULT_TENANT_ID,
+          name: DEFAULT_TENANT_NAME,
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tenant-b",
+          name: "Company B",
+          slug: "company-b",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      users: [
+        {
+          id: "u-new",
+          email: "companyb-staff@test",
+          passwordHash: "x",
+          role: "staff",
+        },
+      ],
+      customers: [],
+      sites: [],
+      machines: [],
+      quotes: [],
+      bugReports: [],
+    });
+    assert.equal(changed, true);
+    assert.equal(db.users?.[0]?.tenantId, "tenant-b");
+  });
+
+  it("repairs non-host staff mistakenly stamped to the host tenant", () => {
+    const { db, changed } = migrateTenants({
+      schemaVersion: 3,
+      tenants: [
+        {
+          id: DEFAULT_TENANT_ID,
+          name: DEFAULT_TENANT_NAME,
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tenant-b",
+          name: "Company B",
+          slug: "company-b",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      users: [
+        {
+          id: "u-host",
+          email: "kevin@huzevka.com",
+          passwordHash: "x",
+          role: "staff",
+          tenantId: DEFAULT_TENANT_ID,
+        },
+        {
+          id: "u-b",
+          email: "companyb-staff@test",
+          passwordHash: "x",
+          role: "staff",
+          tenantId: DEFAULT_TENANT_ID,
+        },
+      ],
+      customers: [],
+      sites: [],
+      machines: [],
+      quotes: [],
+      bugReports: [],
+    });
+    assert.equal(changed, true);
+    assert.equal(db.users?.[0]?.tenantId, DEFAULT_TENANT_ID);
+    assert.equal(db.users?.[1]?.tenantId, "tenant-b");
+  });
+
   it("is a no-op when already migrated", () => {
     const input = {
       schemaVersion: 3,

@@ -78,14 +78,16 @@ export async function POST(request: Request) {
   }
 
   const tenantId = user.tenantId?.trim() || undefined;
+  if (!tenantId) {
+    return html
+      ? redirectNoQuery("/login")
+      : error("Account is missing a host tenant. Contact support.", 403);
+  }
   await setSessionCookie(user.id, user.email, tenantId);
   if (html) {
     return redirectNoQuery("/machines");
   }
   if (user.role === "customer") {
-    if (!tenantId) {
-      return error("Account is missing a host tenant. Contact support.", 403);
-    }
     const org = await getOrgContext(tenantId);
     return json({
       user: toPublicUser(user, org.sites, org.customers, { tenantId }),

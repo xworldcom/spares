@@ -51,7 +51,10 @@ export function belongsToTenant<T extends { tenantId?: string }>(
   row: T,
   tenantId: string,
 ) {
-  return effectiveTenantId(row) === tenantId;
+  if (tenantId === DEFAULT_TENANT_ID) {
+    return effectiveTenantId(row) === DEFAULT_TENANT_ID;
+  }
+  return row.tenantId === tenantId;
 }
 
 export function filterByTenant<T extends { tenantId?: string }>(
