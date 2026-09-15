@@ -264,7 +264,8 @@ The UI calls these routes with `credentials: "include"`:
 - `POST /api/auth/login` JSON `{ email, password }` → `{ user }`
 - `POST /api/auth/logout`
 - `GET /api/auth/me` → `{ user }`
-- `POST /api/staff/customers` — staff creates customer accounts
+- `POST /api/staff/customers` — staff creates customer people (email/password + site/machine access)
+- `POST /api/staff/team` — staff (or platform owner with `tenantId`) creates staff logins for the host or a satellite company
 - `POST /api/machines` — staff pack create. On Preview (Blob attached) the GLB is uploaded client → private Blob, then this route receives `name`, `partsList`, `storedFileName`, and optional `siteId`. Multipart `model` is the local fallback.
 - `POST /api/machines/model-upload` — staff-only Vercel Blob client-token endpoint for the GLB
 - `POST /api/machines/:id/pack` — same pack payload as create, replaces the model + join

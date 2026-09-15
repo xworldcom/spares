@@ -103,6 +103,34 @@ export async function deletePerson(userId: string) {
   });
 }
 
+export type StaffTeamMember = {
+  id: string;
+  email: string;
+  tenantId: string | null;
+};
+
+export async function listStaffTeam(tenantId?: string): Promise<StaffTeamMember[]> {
+  const query = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
+  const data = await apiFetch<{ staff: StaffTeamMember[] }>(`/api/staff/team${query}`);
+  return data.staff ?? [];
+}
+
+export async function createStaffMember(
+  email: string,
+  password: string,
+  tenantId?: string,
+): Promise<StaffTeamMember> {
+  const data = await apiFetch<{ user: StaffTeamMember }>("/api/staff/team", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password,
+      ...(tenantId ? { tenantId } : {}),
+    }),
+  });
+  return data.user;
+}
+
 export async function listSites(customerId?: string): Promise<Site[]> {
   const query = customerId ? `?customerId=${encodeURIComponent(customerId)}` : "";
   const data = await apiFetch<SitesListResponse>(`/api/staff/sites${query}`);

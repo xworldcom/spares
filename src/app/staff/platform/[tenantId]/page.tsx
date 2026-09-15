@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { apiFetch } from "@/lib/api/client";
 import type { Tenant } from "@/types";
 
@@ -138,7 +139,7 @@ function TenantDetail() {
     );
   }
 
-  const { deployment, staff } = detail;
+  const { deployment } = detail;
 
   return (
     <main className="page-shell">
@@ -211,20 +212,10 @@ function TenantDetail() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold mb-3">Staff on this tenant</h2>
-        <p className="text-sm text-muted mb-3">
-          Cross-check with the full list on{" "}
-          <Link className="underline" href="/staff/tenants">Hosts</Link>.
-        </p>
-        <ul className="stack gap-2">
-          {staff.map((row) => (
-            <li key={row.id} className="card p-3 text-sm">
-              <span className="font-medium">{row.email}</span>
-              <span className="text-muted font-mono text-xs ml-2">{row.tenantId}</span>
-            </li>
-          ))}
-          {staff.length === 0 ? <li className="text-muted text-sm">No staff users yet.</li> : null}
-        </ul>
+        <StaffTeamPanel
+          fixedTenantId={tenantId}
+          onCreated={() => void load()}
+        />
       </section>
     </main>
   );

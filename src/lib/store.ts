@@ -1329,6 +1329,23 @@ export function listStaffUsersForPlatform() {
   });
 }
 
+export function listStaffUsersForTenant(tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return db.users
+      .filter(
+        (user) =>
+          user.role === "staff" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => ({
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId ?? null,
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+  });
+}
+
 export function listCustomers(tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
