@@ -3,8 +3,9 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Spares",
-  description: "Private industrial spare-parts platform. Not live.",
+  title: "OEE360",
+  description:
+    "Overall equipment effectiveness, seen all the way around. Private industrial machines, parts, quotes, and care.",
   robots: {
     index: false,
     follow: false,
@@ -15,7 +16,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0c0d0f",
+  themeColor: "#07080a",
 };
 
 const CRITICAL_CSS = `
