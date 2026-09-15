@@ -875,13 +875,27 @@ function catalogChanged(before: Database, after: Database) {
     (after.sites?.length ?? 0) !== (before.sites?.length ?? 0) ||
     (after.customers?.length ?? 0) !== (before.customers?.length ?? 0) ||
     after.users.some((user, index) => user.id !== before.users[index]?.id) ||
-    staffTenantAssignmentsChanged(before.users, after.users)
+    staffTenantAssignmentsChanged(before.users, after.users) ||
+    hostSeedMachineTenantsChanged(before, after)
   );
 }
 
 function staffTenantAssignmentsChanged(before: StoredUser[], after: StoredUser[]) {
   const beforeById = new Map(before.map((user) => [user.id, user.tenantId]));
   return after.some((user) => beforeById.get(user.id) !== user.tenantId);
+}
+
+function hostSeedMachineTenantsChanged(before: Database, after: Database) {
+  if (!isSeedAllowed()) {
+    return false;
+  }
+  const beforeById = new Map(before.machines.map((machine) => [machine.id, machine.tenantId]));
+  return after.machines.some((machine) => {
+    if (!HOST_SEED_MACHINE_IDS.has(machine.id)) {
+      return false;
+    }
+    return beforeById.get(machine.id) !== machine.tenantId;
+  });
 }
 
 function bindStaffTenantIds(
@@ -1339,8 +1353,12 @@ export function createTenantStaffUser(
       role: input.role,
       tenantId,
     };
-    await writeDatabase({ ...db, users: [...db.users, user] });
-    return { user };
+    const payload = { ...db, users: [...db.users, user] };
+    await writeDatabaseWithOrgMerge(payload);
+    const persisted = (memory ?? (await readDatabase())).users.find(
+      (row) => row.id === user.id,
+    );
+    return { user: persisted ?? user };
   });
 }
 

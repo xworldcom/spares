@@ -21,7 +21,8 @@ import {
 import { canAssignStaffAcrossTenants, DEFAULT_TENANT_ID } from "./tenant.ts";
 
 const HOST = DEFAULT_TENANT_ID;
-const HOST_STAFF = "qa-staff-host4-pr128@example.com";
+/** Tess / Quinn Preview repro (Soft Launch host staff, not Kevin). */
+const HOST_STAFF = "qa-staff-host5-pr128@example.com";
 
 async function softLaunchPreview() {
   const dir = await mkdtemp(path.join(tmpdir(), "spares-soft-launch-host-"));
@@ -30,7 +31,7 @@ async function softLaunchPreview() {
   delete process.env.VERCEL;
   delete process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS;
   process.env.SPARES_PLATFORM_OWNER_EMAILS = `${HOST_STAFF},kevin@huzevka.com`;
-  process.env.SPARES_OWNER_EMAIL = HOST_STAFF;
+  process.env.SPARES_OWNER_EMAIL = "kevin@huzevka.com";
   setPersistenceForTests(createMemoryPersistence());
   await mkdir(path.join(dir, "files"), { recursive: true });
   resetStoreMemoryForTests();
@@ -94,6 +95,23 @@ describe("Soft Launch host staff (Quinn CoS)", () => {
     );
     assert.equal(visible.length, machines.length);
     assert.ok(visible.length >= 2);
+  });
+
+  it("Preview bootstrap owner email matches Tess host staff login", async () => {
+    for (const key of envKeys) {
+      previous[key] = process.env[key];
+    }
+    await softLaunchPreview();
+    process.env.SPARES_OWNER_EMAIL = HOST_STAFF;
+    process.env.SPARES_OWNER_PASSWORD = "BootstrapPreviewPass1!";
+    await createTenant("Satellite Co");
+
+    resetStoreMemoryForTests();
+    const loaded = await findUserByEmail(HOST_STAFF);
+    assert.ok(loaded, "ensureOwnerStaff should upsert bootstrap staff");
+    assert.equal(loaded?.tenantId, HOST);
+    const machines = await listMachines(HOST);
+    assert.ok(machines.length >= 2);
   });
 
   it("host staff POST foreign satellite tenantId → 403 even when in PLATFORM_OWNER_EMAILS", async () => {

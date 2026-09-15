@@ -41,7 +41,7 @@ describe("host staff login session tenant (Quinn PR128)", () => {
     assert.ok("tenant" in satellite);
     const satelliteId = satellite.tenant.id;
 
-    const email = "qa-staff-host-pr128@example.com";
+    const email = "qa-staff-host5-pr128@example.com";
     const password = "HostStaffPass1!";
     const created = await createTenantStaffUser(DEFAULT_TENANT_ID, {
       email,
