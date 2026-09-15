@@ -8,7 +8,6 @@ const outDir = join(root, "public/landing");
 
 const assets = [
   ["oee360-stage_mp4", "oee360-stage.mp4"],
-  ["oee360-stage_webm", "oee360-stage.webm"],
   ["oee360-stage_jpg", "oee360-stage.jpg"],
 ];
 
