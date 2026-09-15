@@ -1,0 +1,122 @@
+"use client";
+
+import { Canvas, useFrame } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
+import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  Box3,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+  type Object3D,
+} from "three";
+
+const MODEL = "/placeholders/palletizer-placeholder.glb";
+const STAGE = "#07080a";
+
+function isMesh(object: Object3D): object is Mesh {
+  return "isMesh" in object && Boolean((object as Mesh).isMesh);
+}
+
+function FittedMachine({ paused }: { paused: boolean }) {
+  const root = useRef<Group>(null);
+  const spin = useRef<Group>(null);
+  const { scene } = useGLTF(MODEL);
+
+  const model = useMemo(() => {
+    const cloned = scene.clone(true);
+    cloned.traverse((object) => {
+      if (!isMesh(object)) {
+        return;
+      }
+      const next = Array.isArray(object.material)
+        ? object.material.map((material) => material.clone())
+        : object.material
+          ? object.material.clone()
+          : new MeshStandardMaterial();
+      const apply = (material: MeshStandardMaterial) => {
+        material.metalness = Math.min(0.72, Math.max(0.28, material.metalness || 0.4));
+        material.roughness = Math.min(0.55, material.roughness || 0.38);
+        material.envMapIntensity = 1.1;
+        material.needsUpdate = true;
+      };
+      if (Array.isArray(next)) {
+        for (const material of next) {
+          if (material instanceof MeshStandardMaterial) {
+            apply(material);
+          }
+        }
+        object.material = next;
+      } else if (next instanceof MeshStandardMaterial) {
+        apply(next);
+        object.material = next;
+      }
+    });
+    return cloned;
+  }, [scene]);
+
+  useLayoutEffect(() => {
+    const box = new Box3().setFromObject(model);
+    const size = box.getSize(new Vector3());
+    const center = box.getCenter(new Vector3());
+    model.position.sub(center);
+    const longest = Math.max(size.x, size.y, size.z, 1);
+    const scale = 2.35 / longest;
+    if (root.current) {
+      root.current.scale.setScalar(scale);
+    }
+  }, [model]);
+
+  useFrame((_, delta) => {
+    if (paused || !spin.current) {
+      return;
+    }
+    spin.current.rotation.y += delta * 0.045;
+    spin.current.rotation.x = Math.sin(spin.current.rotation.y * 0.35) * 0.04;
+  });
+
+  return (
+    <group ref={root} position={[0.15, -0.15, 0]}>
+      <group ref={spin}>
+        <primitive object={model} />
+      </group>
+    </group>
+  );
+}
+
+function Lights() {
+  return (
+    <>
+      <color attach="background" args={[STAGE]} />
+      <fog attach="fog" args={[STAGE, 5.5, 16]} />
+      <ambientLight intensity={0.22} color="#d9ddd4" />
+      <directionalLight position={[4.2, 6.4, 3.2]} intensity={1.55} color="#fff6e8" />
+      <directionalLight position={[-5.5, 1.4, -3.8]} intensity={0.45} color="#7f9bb8" />
+      <spotLight position={[0.2, 7.5, 1.2]} angle={0.55} penumbra={0.8} intensity={0.55} color="#f3efe4" />
+    </>
+  );
+}
+
+export function OrbitStage() {
+  const paused =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  return (
+    <div className="landing-stage" aria-hidden="true">
+      <Canvas
+        camera={{ position: [3.05, 1.55, 4.15], fov: 32, near: 0.1, far: 40 }}
+        dpr={[1, 1.6]}
+        gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+      >
+        <Lights />
+        <Suspense fallback={null}>
+          <FittedMachine paused={paused} />
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+}
+
+useGLTF.preload(MODEL);
