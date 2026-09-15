@@ -23,6 +23,14 @@ Machine-page **Request quote** still creates `status=requested` with tray quanti
 
 No email gateway, payments, Total ETO live pull, AR, Yonder, public marketing, or go-live.
 
+## SolidWorks add-in (staff publish)
+
+Staff can publish an assembly from SolidWorks instead of building a GLB + CSV by hand.
+
+Source: [`solidworks-addin/`](solidworks-addin/). Click **Upload** in the Task Pane → oee360 creates the machine pack → staff assigns customer and site on the machine page.
+
+Windows + SOLIDWORKS + Visual Studio 2022. See [`solidworks-addin/README.md`](solidworks-addin/README.md). Soft Launch web upload stays available.
+
 ## PartPicker (Drew)
 
 Import from `src/components/viewer`. Full contract: [`src/components/viewer/README.md`](src/components/viewer/README.md).
