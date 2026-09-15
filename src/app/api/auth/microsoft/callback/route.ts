@@ -11,7 +11,7 @@ import {
   microsoftCallbackRedirectUri,
   oauthStateCookieOptions,
   pickMicrosoftEmail,
-  resolveMicrosoftLogin,
+  resolveMicrosoftSession,
 } from "@/lib/auth/microsoft";
 import { findUserByEmail } from "@/lib/store";
 
@@ -73,11 +73,11 @@ export async function GET(request: Request) {
   }
 
   const user = await findUserByEmail(email);
-  const decision = resolveMicrosoftLogin(user);
-  if (!decision.ok) {
+  const session = resolveMicrosoftSession(user);
+  if (!session.ok) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);
   }
 
-  await setSessionCookie(user!.id, user!.email);
+  await setSessionCookie(session.userId, session.email, session.tenantId);
   return successRedirect(state.origin, state.next);
 }

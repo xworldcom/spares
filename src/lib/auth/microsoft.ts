@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { isAllowedModelAssetOrigin } from "../cors.ts";
+import { effectiveStaffTenantId } from "../tenant.ts";
 import { sessionSecret } from "./session-token.ts";
 
 import {
@@ -34,6 +35,14 @@ export type MicrosoftOAuthState = {
 export type MicrosoftLoginLookup = {
   deletedAt?: string | null;
 } | null;
+
+export type MicrosoftSessionUser = MicrosoftLoginLookup & {
+  id?: string;
+  email?: string;
+  role?: string;
+  tenantId?: string;
+  staffCreatedTenantId?: string;
+};
 
 export function azureAdConfig(): AzureAdConfig | null {
   const clientId = process.env.AZURE_AD_CLIENT_ID?.trim();
@@ -175,6 +184,31 @@ export function resolveMicrosoftLogin(
     return { ok: false, message: MICROSOFT_ACCESS_DENIED_MESSAGE };
   }
   return { ok: true };
+}
+
+/** Map Graph email → Spares session scope (same tenant rules as POST /api/auth/login). */
+export function resolveMicrosoftSession(
+  user: MicrosoftSessionUser | null,
+):
+  | { ok: true; userId: string; email: string; tenantId: string }
+  | { ok: false; message: string } {
+  const decision = resolveMicrosoftLogin(user);
+  if (!decision.ok) {
+    return decision;
+  }
+  if (!user?.id || !user.email) {
+    return { ok: false, message: MICROSOFT_ACCESS_DENIED_MESSAGE };
+  }
+  const tenantId = effectiveStaffTenantId(user);
+  if (!tenantId) {
+    return { ok: false, message: MICROSOFT_ACCESS_DENIED_MESSAGE };
+  }
+  return {
+    ok: true,
+    userId: user.id,
+    email: user.email.trim().toLowerCase(),
+    tenantId,
+  };
 }
 
 export async function exchangeMicrosoftCode(
