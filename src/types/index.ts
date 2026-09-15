@@ -6,6 +6,8 @@ export type Tenant = {
   name: string;
   slug: string;
   createdAt: string;
+  /** When set, tenant is marked inactive for platform admin (data unchanged). */
+  inactiveAt?: string;
 };
 
 export type CustomerAccount = {
