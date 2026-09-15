@@ -218,7 +218,13 @@ describe("Soft Launch host staff (Quinn CoS)", () => {
         },
         satellite.tenant,
       ],
-      users: [{ ...created.user, tenantId: satellite.tenant.id }],
+      users: [
+        {
+          ...created.user,
+          tenantId: satellite.tenant.id,
+          staffCreatedTenantId: HOST,
+        },
+      ],
       machines: [],
       quotes: [],
       bugReports: [],

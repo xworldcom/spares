@@ -78,6 +78,23 @@ export function canAssignStaffAcrossTenants(email: string) {
   return crossTenantStaffAdminEmails().has(email.trim().toLowerCase());
 }
 
+/** Staff login/API scope — create-time tenant pin beats catalog heal drift (non–cross-tenant admins). */
+export function effectiveStaffTenantId(user: {
+  role?: string;
+  email?: string;
+  tenantId?: string;
+  staffCreatedTenantId?: string;
+}) {
+  if (user.role !== "staff") {
+    return user.tenantId?.trim() || null;
+  }
+  const pinned = user.staffCreatedTenantId?.trim();
+  if (pinned && !canAssignStaffAcrossTenants(user.email ?? "")) {
+    return pinned;
+  }
+  return user.tenantId?.trim() || null;
+}
+
 export function effectiveTenantId(row: { tenantId?: string }) {
   return row.tenantId ?? DEFAULT_TENANT_ID;
 }

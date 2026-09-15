@@ -7,6 +7,7 @@ import {
   decideStaffTeamTenant,
 } from "@/lib/staff-team-guard";
 import { createTenantStaffUser, findUserById, listStaffUsersForTenant } from "@/lib/store";
+import { effectiveStaffTenantId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   if (!actor) {
     return error("Unauthorized", 401);
   }
-  const actorTenantId = actor.tenantId?.trim() ?? "";
+  const actorTenantId = effectiveStaffTenantId(actor) ?? "";
   if (!actorTenantId || actorTenantId !== auth.tenantId) {
     return error("Forbidden", 403);
   }
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
   if (!actor) {
     return error("Unauthorized", 401);
   }
-  const actorTenantId = actor.tenantId?.trim() ?? "";
+  const actorTenantId = effectiveStaffTenantId(actor) ?? "";
   const tenantPick = authorizeStaffTeamPost({
     actorTenantId,
     actorEmail: actor.email,

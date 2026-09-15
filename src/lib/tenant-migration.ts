@@ -8,7 +8,12 @@ import {
   slugifyTenant,
 } from "./tenant.ts";
 
-type TenantUser = { tenantId?: string; role?: string; email?: string };
+type TenantUser = {
+  tenantId?: string;
+  role?: string;
+  email?: string;
+  staffCreatedTenantId?: string;
+};
 type TenantCustomer = CustomerAccount & { tenantId?: string };
 type TenantSite = Site & { tenantId?: string };
 type TenantMachine = { id: string; tenantId?: string };
@@ -105,6 +110,14 @@ function repairMisassignedStaffUsers(
     if (user.role !== "staff" || !user.email || isKnownHostStaffEmail(user.email)) {
       return user;
     }
+    const pinned = user.staffCreatedTenantId?.trim();
+    if (pinned) {
+      if (user.tenantId === pinned) {
+        return user;
+      }
+      changed = true;
+      return { ...user, tenantId: pinned };
+    }
     const target = byBootstrapEmail.get(user.email.trim().toLowerCase());
     if (!target) {
       return user;
@@ -177,7 +190,17 @@ export function migrateTenants<T extends TenantSlice>(
   if (repaired.changed) {
     changed = true;
   }
-  const usersFinal = repaired.users;
+  const usersFinal = repaired.users.map((user) => {
+    if (
+      user.role === "staff" &&
+      user.tenantId === DEFAULT_TENANT_ID &&
+      !user.staffCreatedTenantId?.trim()
+    ) {
+      changed = true;
+      return { ...user, staffCreatedTenantId: DEFAULT_TENANT_ID };
+    }
+    return user;
+  });
   const customers = stampRows(db.customers);
   const sites = stampRows(db.sites);
   const machines = stampRows(db.machines);

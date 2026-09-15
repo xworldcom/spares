@@ -40,6 +40,7 @@ import {
   DEFAULT_TENANT_ID,
   TENANT_SCHEMA_VERSION,
   belongsToTenant,
+  canAssignStaffAcrossTenants,
   filterByTenant,
   platformOwnerEmails,
 } from "./tenant.ts";
@@ -190,6 +191,8 @@ export type StoredUser = {
   passwordHash: string;
   role: Role;
   tenantId?: string;
+  /** Set when a staff login is created; pins company scope for non–cross-tenant admins. */
+  staffCreatedTenantId?: string;
   siteIds?: string[];
   /** Legacy corporate access; migrated to siteIds on read. */
   companyAccess?: string[];
@@ -541,6 +544,7 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
       role: "staff",
       passwordHash,
       tenantId: current.tenantId ?? DEFAULT_TENANT_ID,
+      staffCreatedTenantId: current.staffCreatedTenantId ?? DEFAULT_TENANT_ID,
     };
     return { ...db, users };
   }
@@ -554,6 +558,7 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
         passwordHash,
         role: "staff",
         tenantId: DEFAULT_TENANT_ID,
+        staffCreatedTenantId: DEFAULT_TENANT_ID,
       },
     ],
   };
@@ -639,6 +644,12 @@ function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUse
   const merged = { ...healed, ...latest };
   if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
     return merged;
+  }
+  const pinned =
+    latest.staffCreatedTenantId?.trim() ??
+    healed.staffCreatedTenantId?.trim();
+  if (pinned && !canAssignStaffAcrossTenants(merged.email)) {
+    return { ...merged, tenantId: pinned, staffCreatedTenantId: pinned };
   }
   const latestTenant = latest.tenantId?.trim();
   if (latestTenant) {
@@ -942,6 +953,14 @@ function clampSatelliteStaffTenants(db: Database): Database {
   const users = db.users.map((user) => {
     if (user.role !== "staff" || !user.email || isHostStaffEmail(user.email)) {
       return user;
+    }
+    const pinned = user.staffCreatedTenantId?.trim();
+    if (pinned) {
+      if (user.tenantId === pinned) {
+        return user;
+      }
+      changed = true;
+      return { ...user, tenantId: pinned };
     }
     if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
       return user;
@@ -1306,6 +1325,7 @@ export function createTenantWithOptionalStaff(
         passwordHash: staff.passwordHash,
         role: "staff",
         tenantId: tenant.id,
+        staffCreatedTenantId: tenant.id,
       };
       users = [...users, staffUser];
     }
@@ -1352,6 +1372,7 @@ export function createTenantStaffUser(
       passwordHash: input.passwordHash,
       role: input.role,
       tenantId,
+      staffCreatedTenantId: tenantId,
     };
     const payload = { ...db, users: [...db.users, user] };
     await writeDatabaseWithOrgMerge(payload);
@@ -1957,13 +1978,29 @@ export function deleteMachine(machineId: string, tenantId: string) {
   });
 }
 
+function machinesForTenantListing(db: Database, tenantId: string) {
+  let rows = filterByTenant(db.machines, tenantId);
+  if (!isSeedAllowed() || tenantId !== DEFAULT_TENANT_ID) {
+    return rows;
+  }
+  const seen = new Set(rows.map((row) => row.id));
+  for (const machine of db.machines) {
+    if (!HOST_SEED_MACHINE_IDS.has(machine.id) || seen.has(machine.id)) {
+      continue;
+    }
+    rows = [...rows, { ...machine, tenantId: DEFAULT_TENANT_ID }];
+    seen.add(machine.id);
+  }
+  return rows;
+}
+
 export function listMachines(tenantId: string, options?: { heal?: boolean }) {
   return withLock(async () => {
     if (options?.heal) {
       memory = null;
     }
     const db = await ensureCatalog({ restoreFiles: options?.heal });
-    return filterByTenant(db.machines, tenantId).map((machine) => ({
+    return machinesForTenantListing(db, tenantId).map((machine) => ({
       id: machine.id,
       name: machine.name,
       siteId: machine.siteId,
