@@ -25,6 +25,7 @@ Implementation:
 - Login rate limit: 8 attempts / 15 minutes per IP and per email — `src/lib/rate-limit.ts`, `src/app/api/auth/login/route.ts`
 - No public signup; staff create **customer** logins under `POST /api/staff/customers` (People UI) and **staff** logins under `POST /api/staff/team` (Team UI). Demo `@spares.local` addresses cannot be created when seeds are off.
 - Cross-tenant staff create (`tenantId` ≠ actor’s company) is limited to `SPARES_PLATFORM_OWNER_EMAILS` (or default `kevin@huzevka.com`). **`SPARES_OWNER_EMAIL` alone does not grant this** (Preview QA staff can stay bootstrap-only). The bootstrap owner address is also removed from the cross-tenant staff allowlist when Preview mirrors it into `SPARES_PLATFORM_OWNER_EMAILS`.
+- Host-company staff created on `tenant-oee360-host` must keep that tenant through catalog heal/login. Only satellite tenants’ bootstrap staff emails (set when the company is created) are repaired off the host tenant.
 - Passwords must not appear in URLs; client strips credential query keys — `src/lib/auth/safe-url.ts`
 
 ## APIs and roles

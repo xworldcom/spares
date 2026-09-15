@@ -223,6 +223,7 @@ describe("tenant isolation", () => {
             name: "Company B",
             slug: "company-b",
             createdAt: "2025-06-01T00:00:00.000Z",
+            bootstrapStaffEmail: "companyb-staff@test",
           },
         ],
         users: [

@@ -889,15 +889,29 @@ function bindStaffTenantIds(
   };
 }
 
-/** Keep non-host staff off tenant-oee360-host whenever satellite tenants exist. */
+function satelliteTenantByBootstrapEmail(db: Database) {
+  const map = new Map<string, string>();
+  for (const tenant of db.tenants ?? []) {
+    if (tenant.id === DEFAULT_TENANT_ID) {
+      continue;
+    }
+    const bootstrap = tenant.bootstrapStaffEmail?.trim().toLowerCase();
+    if (bootstrap) {
+      map.set(bootstrap, tenant.id);
+    }
+  }
+  return map;
+}
+
+/**
+ * Move satellite bootstrap staff off the host tenant when catalog heal left them on
+ * tenant-oee360-host. Host-company staff (no bootstrap binding) stay on the host tenant.
+ */
 function clampSatelliteStaffTenants(db: Database): Database {
-  const satellites = (db.tenants ?? []).filter((row) => row.id !== DEFAULT_TENANT_ID);
-  if (satellites.length === 0) {
+  const byBootstrapEmail = satelliteTenantByBootstrapEmail(db);
+  if (byBootstrapEmail.size === 0) {
     return db;
   }
-  const newestSatelliteId = [...satellites].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  )[0].id;
   let changed = false;
   const users = db.users.map((user) => {
     if (user.role !== "staff" || !user.email || isHostStaffEmail(user.email)) {
@@ -906,8 +920,12 @@ function clampSatelliteStaffTenants(db: Database): Database {
     if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
       return user;
     }
+    const target = byBootstrapEmail.get(normalizeEmail(user.email));
+    if (!target || user.tenantId === target) {
+      return user;
+    }
     changed = true;
-    return { ...user, tenantId: newestSatelliteId };
+    return { ...user, tenantId: target };
   });
   return changed ? { ...db, users } : db;
 }
@@ -1247,11 +1265,12 @@ export function createTenantWithOptionalStaff(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const tenant = newTenantFromName(trimmed);
+    let tenant = newTenantFromName(trimmed);
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {
       const normalized = normalizeEmail(staff.email);
+      tenant = { ...tenant, bootstrapStaffEmail: normalized };
       if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
         return { error: "email-taken" as const };
       }
