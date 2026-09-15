@@ -3,6 +3,7 @@ import { mkdtemp, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
+import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
 import { canAccessMachine } from "./access.ts";
 import { hashPassword } from "./auth/password.ts";
 import { signSession, verifySession } from "./auth/session-token.ts";
@@ -15,6 +16,7 @@ import {
   getOrgContext,
   listMachines,
   resetStoreMemoryForTests,
+  writeCatalogHealForTests,
 } from "./store.ts";
 import { canAssignStaffAcrossTenants, DEFAULT_TENANT_ID } from "./tenant.ts";
 
@@ -111,5 +113,104 @@ describe("Soft Launch host staff (Quinn CoS)", () => {
       requestedTenantId: satellite.tenant.id,
     });
     assert.deepEqual(authz, { ok: false, reason: "forbidden" });
+  });
+
+  it("Preview-like blob: mis-tagged seed machines still visible to host staff after heal", async () => {
+    for (const key of envKeys) {
+      previous[key] = process.env[key];
+    }
+    const persistence = createMemoryPersistence();
+    await softLaunchPreview();
+    setPersistenceForTests(persistence);
+    const satellite = await createTenant("Satellite Co");
+    assert.ok("tenant" in satellite);
+    const satelliteId = satellite.tenant.id;
+
+    const machineRow = (id: string, name: string) => ({
+      id,
+      name,
+      storedFileName: `${id}.glb`,
+      originalFileName: `${id}.glb`,
+      parts: [],
+      unmatched: [],
+      createdAt: "2020-01-01T00:00:00.000Z",
+      tenantId: satelliteId,
+    });
+
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        schemaVersion: 3,
+        tenants: [
+          {
+            id: HOST,
+            name: "OEE360 Host",
+            slug: "oee360-host",
+            createdAt: "2020-01-01T00:00:00.000Z",
+          },
+          { ...satellite.tenant, bootstrapStaffEmail: "satellite-only@test" },
+        ],
+        users: [],
+        machines: [
+          machineRow(FIXTURE_MACHINE_IDS.hardware, "Hardware fixture"),
+          machineRow(FIXTURE_MACHINE_IDS.palletizer, "Palletizer"),
+        ],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+      }),
+    );
+
+    resetStoreMemoryForTests();
+    await createTenantStaffUser(HOST, {
+      email: HOST_STAFF,
+      passwordHash: await hashPassword("HostStaffPass1!"),
+      role: "staff",
+    });
+
+    const machines = await listMachines(HOST);
+    assert.ok(machines.some((row) => row.id === FIXTURE_MACHINE_IDS.hardware));
+    assert.ok(machines.some((row) => row.id === FIXTURE_MACHINE_IDS.palletizer));
+  });
+
+  it("stale catalog heal cannot re-scope host staff to a satellite tenant", async () => {
+    for (const key of envKeys) {
+      previous[key] = process.env[key];
+    }
+    await softLaunchPreview();
+    const satellite = await createTenant("Satellite Co");
+    assert.ok("tenant" in satellite);
+
+    const created = await createTenantStaffUser(HOST, {
+      email: HOST_STAFF,
+      passwordHash: await hashPassword("HostStaffPass1!"),
+      role: "staff",
+    });
+    assert.ok("user" in created);
+
+    resetStoreMemoryForTests();
+    await writeCatalogHealForTests({
+      schemaVersion: 3,
+      tenants: [
+        {
+          id: HOST,
+          name: "OEE360 Host",
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        satellite.tenant,
+      ],
+      users: [{ ...created.user, tenantId: satellite.tenant.id }],
+      machines: [],
+      quotes: [],
+      bugReports: [],
+      sites: [],
+    });
+
+    resetStoreMemoryForTests();
+    const loaded = await findUserByEmail(HOST_STAFF);
+    assert.equal(loaded?.tenantId, HOST);
+    const machines = await listMachines(HOST);
+    assert.ok(machines.length >= 2, "host staff must see host seed machines after heal merge");
   });
 });

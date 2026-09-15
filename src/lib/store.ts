@@ -29,6 +29,7 @@ import {
   statusActivityText,
 } from "./quotes.ts";
 import {
+  FIXTURE_MACHINE_IDS,
   missingFixtureMachines,
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
@@ -175,6 +176,12 @@ const SEED_MACHINE_SITES: Record<string, string> = {
   palletizer: "site-cargill-ftw",
   "hardware-fixture": "site-acme-dayton",
 };
+
+/** Soft Launch demo catalog machines always belong to the host tenant. */
+const HOST_SEED_MACHINE_IDS = new Set<string>([
+  FIXTURE_MACHINE_IDS.hardware,
+  FIXTURE_MACHINE_IDS.palletizer,
+]);
 
 export type StoredUser = {
   id: string;
@@ -633,14 +640,11 @@ function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUse
   if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
     return merged;
   }
-  const pickSatellite = (id: string | undefined) =>
-    id && id !== DEFAULT_TENANT_ID ? id : undefined;
-  const tenantId =
-    pickSatellite(latest.tenantId) ??
-    pickSatellite(healed.tenantId) ??
-    latest.tenantId ??
-    healed.tenantId;
-  return { ...merged, tenantId };
+  const latestTenant = latest.tenantId?.trim();
+  if (latestTenant) {
+    return { ...merged, tenantId: latestTenant };
+  }
+  return merged;
 }
 
 function mergeUsersForHeal(healed: StoredUser[], latest: StoredUser[]): StoredUser[] {
@@ -755,14 +759,22 @@ function ensureOrg(db: Database): Database {
     return `${a.customerId} ${a.name}`.localeCompare(`${b.customerId} ${b.name}`);
   });
   const machines = next.machines.map((machine) => {
+    let row = machine;
+    if (
+      isSeedAllowed() &&
+      HOST_SEED_MACHINE_IDS.has(machine.id) &&
+      row.tenantId !== DEFAULT_TENANT_ID
+    ) {
+      row = { ...row, tenantId: DEFAULT_TENANT_ID };
+    }
     const seeded = SEED_MACHINE_SITES[machine.id];
     if (seeded && isSeedAllowed()) {
-      return machine.siteId === seeded ? machine : { ...machine, siteId: seeded };
+      return row.siteId === seeded ? row : { ...row, siteId: seeded };
     }
-    if (machine.siteId) {
-      return machine;
+    if (row.siteId) {
+      return row;
     }
-    return seeded ? { ...machine, siteId: seeded } : machine;
+    return seeded ? { ...row, siteId: seeded } : row;
   });
   const users = next.users.map((user) => {
     if (user.deletedAt) {
