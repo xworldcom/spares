@@ -14,6 +14,9 @@ import {
   updateSite,
   writeCatalogHealForTests,
 } from "./store.ts";
+import { DEFAULT_TENANT_ID } from "./tenant.ts";
+
+const T = DEFAULT_TENANT_ID;
 
 const SEED_NOW = "2020-01-01T00:00:00.000Z";
 
@@ -64,11 +67,11 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedOrgDb()));
 
-    const removed = await deleteSite("site-cargill-wichita");
+    const removed = await deleteSite("site-cargill-wichita", T);
     assert.equal("ok" in removed, true);
 
     resetStoreMemoryForTests();
-    const sites = await listSites("customer-cargill");
+    const sites = await listSites(T, "customer-cargill");
     assert.equal(
       sites.some((site) => site.id === "site-cargill-wichita"),
       false,
@@ -88,9 +91,9 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedOrgDb()));
 
-    await deleteSite("site-cargill-wichita");
+    await deleteSite("site-cargill-wichita", T);
     resetStoreMemoryForTests();
-    const sites = await listSites("customer-cargill");
+    const sites = await listSites(T, "customer-cargill");
     assert.equal(sites.length, 1);
     assert.equal(sites[0]?.id, "site-cargill-ftw");
   });
@@ -102,7 +105,7 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedOrgDb()));
 
-    const blocked = await deleteSite("site-cargill-ftw");
+    const blocked = await deleteSite("site-cargill-ftw", T);
     assert.equal("error" in blocked && blocked.error, "has-machines");
   });
 
@@ -113,15 +116,15 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedOrgDb()));
 
-    await deleteSite("site-demo-plant1");
-    const removed = await deleteCustomerAccount("customer-demo");
+    await deleteSite("site-demo-plant1", T);
+    const removed = await deleteCustomerAccount("customer-demo", T);
     assert.equal("ok" in removed, true);
 
     resetStoreMemoryForTests();
-    const accounts = await listCustomerAccounts();
+    const accounts = await listCustomerAccounts(T);
     assert.equal(accounts.some((row) => row.id === "customer-demo"), false);
 
-    const demoSites = await listSites("customer-demo");
+    const demoSites = await listSites(T, "customer-demo");
     assert.equal(demoSites.length, 0);
   });
 
@@ -132,7 +135,7 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedOrgDb()));
 
-    const blocked = await deleteCustomerAccount("customer-cargill");
+    const blocked = await deleteCustomerAccount("customer-cargill", T);
     assert.equal("error" in blocked && blocked.error, "has-sites");
   });
 
@@ -149,14 +152,14 @@ describe("org delete persistence", () => {
       }),
     );
 
-    const created = await createCustomerAccount("Temp Corp");
+    const created = await createCustomerAccount("Temp Corp", T);
     assert.ok("account" in created);
 
-    const removed = await deleteCustomerAccount(created.account.id);
+    const removed = await deleteCustomerAccount(created.account.id, T);
     assert.equal("ok" in removed, true);
 
     resetStoreMemoryForTests();
-    const accounts = await listCustomerAccounts();
+    const accounts = await listCustomerAccounts(T);
     assert.equal(accounts.some((row) => row.id === created.account.id), false);
   });
 
@@ -173,27 +176,27 @@ describe("org delete persistence", () => {
       }),
     );
 
-    const created = await createCustomerAccount("Smoke Throwaway Customer");
+    const created = await createCustomerAccount("Smoke Throwaway Customer", T);
     assert.ok("account" in created);
     const customerId = created.account.id;
 
-    const createdSite = await createSite(customerId, "Smoke Site");
+    const createdSite = await createSite(T, customerId, "Smoke Site");
     assert.ok("site" in createdSite);
-    await updateSite(createdSite.site.id, { name: "Smoke Site Edited" });
+    await updateSite(createdSite.site.id, T, { name: "Smoke Site Edited" });
 
     const staleHealSnapshot = JSON.parse((await persistence.readDatabaseJson()) ?? "{}");
     resetStoreMemoryForTests();
 
-    await deleteSite(createdSite.site.id);
-    await deleteCustomerAccount(customerId);
+    await deleteSite(createdSite.site.id, T);
+    await deleteCustomerAccount(customerId, T);
 
     resetStoreMemoryForTests();
     await writeCatalogHealForTests(staleHealSnapshot);
 
     resetStoreMemoryForTests();
-    const accounts = await listCustomerAccounts();
+    const accounts = await listCustomerAccounts(T);
     assert.equal(accounts.some((row) => row.id === customerId), false);
-    const sites = await listSites(customerId);
+    const sites = await listSites(T, customerId);
     assert.equal(sites.length, 0);
   });
 });
@@ -254,14 +257,14 @@ describe("seed access heal", () => {
     const { canAccessMachine } = await import("./access.ts");
     const { getOrgContext } = await import("./store.ts");
 
-    await listMachines();
+    await listMachines(T);
     const user = await findUserById("user-customer");
     assert.ok(user);
     assert.deepEqual(user?.siteIds, ["site-cargill-ftw"]);
     assert.equal(user?.companyAccess, undefined);
 
-    const org = await getOrgContext();
-    const machines = await listMachines();
+    const org = await getOrgContext(T);
+    const machines = await listMachines(T);
     const hardware = machines.find((row) => row.id === "hardware-fixture");
     assert.equal(hardware?.siteId, "site-acme-dayton");
 
@@ -337,7 +340,7 @@ describe("seed access heal", () => {
 
     resetStoreMemoryForTests();
     const { findUserById, listMachines } = await import("./store.ts");
-    await listMachines();
+    await listMachines(T);
     const user = await findUserById("user-customer");
     assert.deepEqual(user?.siteIds, []);
     assert.deepEqual(user?.machineIds, ["palletizer"]);
@@ -366,7 +369,7 @@ describe("seed access heal", () => {
 
     resetStoreMemoryForTests();
     const { findUserById, listMachines } = await import("./store.ts");
-    await listMachines();
+    await listMachines(T);
     const user = await findUserById("user-customer");
     assert.equal(user?.role, "customer");
   });

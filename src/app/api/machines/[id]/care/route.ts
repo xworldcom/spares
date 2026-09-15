@@ -2,6 +2,7 @@ import { ticketIsOpen, toPublicTicket } from "@/lib/care";
 import { requireMachineAccess } from "@/lib/care-http";
 import { json } from "@/lib/http";
 import { toMachineSummary } from "@/lib/machines";
+import { tenantIdForUser } from "@/lib/tenant";
 import {
   getMachineUsage,
   getOrgContext,
@@ -20,11 +21,12 @@ export async function GET(
     return access.error;
   }
 
+  const tenantId = tenantIdForUser(access.user);
   const [manuals, tickets, usage, org] = await Promise.all([
-    listManuals(access.machine.id),
-    listTickets(access.machine.id),
-    getMachineUsage(access.machine.id),
-    getOrgContext(),
+    listManuals(access.machine.id, tenantId),
+    listTickets(tenantId, access.machine.id),
+    getMachineUsage(access.machine.id, tenantId),
+    getOrgContext(tenantId),
   ]);
 
   const overview: CareOverview = {

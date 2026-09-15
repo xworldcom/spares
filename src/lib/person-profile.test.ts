@@ -8,7 +8,10 @@ import {
   SEED_SITES,
   updatePerson,
 } from "./store.ts";
+import { DEFAULT_TENANT_ID } from "./tenant.ts";
 import { toPublicUser } from "./access.ts";
+
+const T = DEFAULT_TENANT_ID;
 
 const SEED_NOW = "2020-01-01T00:00:00.000Z";
 
@@ -48,7 +51,7 @@ describe("person profile updates", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedPeopleDb()));
 
-    const created = await createCustomer("profile-test@acme.test", "hash", {
+    const created = await createCustomer(T, "profile-test@acme.test", "hash", {
       name: "Buyer One",
       siteIds: ["site-acme-dayton"],
     });
@@ -61,7 +64,7 @@ describe("person profile updates", () => {
     assert.equal(publicUser.name, "Buyer One");
     assert.equal(publicUser.email, "profile-test@acme.test");
 
-    const renamed = await updatePerson(created.user.id, {
+    const renamed = await updatePerson(created.user.id, T, {
       name: "Acme Buyer",
       email: "procurement@acme.test",
     });
@@ -72,7 +75,7 @@ describe("person profile updates", () => {
     assert.equal(renamed.user.name, "Acme Buyer");
     assert.equal(renamed.user.email, "procurement@acme.test");
 
-    const cleared = await updatePerson(created.user.id, { name: null });
+    const cleared = await updatePerson(created.user.id, T, { name: null });
     assert.equal("user" in cleared, true);
     if (!("user" in cleared)) {
       return;
@@ -87,15 +90,15 @@ describe("person profile updates", () => {
     resetStoreMemoryForTests();
     await persistence.writeDatabaseJson(JSON.stringify(seedPeopleDb()));
 
-    const first = await createCustomer("first@acme.test", "hash");
-    const second = await createCustomer("second@acme.test", "hash");
+    const first = await createCustomer(T, "first@acme.test", "hash");
+    const second = await createCustomer(T, "second@acme.test", "hash");
     assert.equal("user" in first, true);
     assert.equal("user" in second, true);
     if (!("user" in first) || !("user" in second)) {
       return;
     }
 
-    const conflict = await updatePerson(second.user.id, { email: "first@acme.test" });
+    const conflict = await updatePerson(second.user.id, T, { email: "first@acme.test" });
     assert.equal("error" in conflict, true);
     assert.equal(conflict.error, "email-taken");
   });

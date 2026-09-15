@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, json } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail } from "@/lib/machines";
@@ -21,12 +21,12 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
   const { id } = await params;
-  const existing = await getMachine(id);
+  const existing = await getMachine(id, auth.tenantId);
   if (!existing) {
     return error("Machine not found", 404);
   }
@@ -67,7 +67,7 @@ export async function POST(
     }
   }
 
-  const updated = await replaceMachinePack(id, {
+  const updated = await replaceMachinePack(id, auth.tenantId, {
     name: pack.name,
     storedFileName: pack.storedFileName,
     originalFileName: pack.originalFileName,
@@ -77,7 +77,7 @@ export async function POST(
   if ("error" in updated) {
     return error("Machine not found", 404);
   }
-  const org = await getOrgContext();
+  const org = await getOrgContext(auth.tenantId);
   return json(
     toMachineDetail(
       updated.machine,

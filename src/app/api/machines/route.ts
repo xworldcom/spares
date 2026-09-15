@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireRole, requireUser } from "@/lib/auth";
+import { requireTenantStaff, requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, json } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail, toMachineSummary } from "@/lib/machines";
@@ -20,13 +20,16 @@ import {
 export const maxDuration = 120;
 
 export async function GET(request: NextRequest) {
-  const auth = await requireUser();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
   const heal =
     auth.user.role === "staff" && request.nextUrl.searchParams.get("heal") === "1";
-  const [machines, org] = await Promise.all([listMachines({ heal }), getOrgContext()]);
+  const [machines, org] = await Promise.all([
+    listMachines(auth.tenantId, { heal }),
+    getOrgContext(auth.tenantId),
+  ]);
   const visible = machines.filter((machine) =>
     canAccessMachine(auth.user, machine, org.sites, org.customers),
   );
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -76,12 +79,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const org = await getOrgContext();
+  const org = await getOrgContext(auth.tenantId);
   if (pack.siteId && !org.sites.some((site) => site.id === pack.siteId)) {
     return error("Choose a valid site", 400);
   }
 
-  const machine = await createMachine({
+  const machine = await createMachine(auth.tenantId, {
     name: pack.name,
     storedFileName: pack.storedFileName,
     originalFileName: pack.originalFileName,

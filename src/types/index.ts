@@ -1,10 +1,19 @@
 export type Role = "staff" | "customer";
 
+/** Automation company (host) sharing the platform; not an end-customer account. */
+export type Tenant = {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+};
+
 export type CustomerAccount = {
   id: string;
   name: string;
   createdAt: string;
   deletedAt?: string;
+  tenantId?: string;
 };
 
 export type Site = {
@@ -13,6 +22,7 @@ export type Site = {
   name: string;
   createdAt: string;
   deletedAt?: string;
+  tenantId?: string;
   /** Legacy field from pre-v2 plant rows; kept for migration only. */
   company?: string;
 };
@@ -22,6 +32,8 @@ export type PublicUser = {
   email: string;
   name?: string;
   role: Role;
+  tenantId?: string;
+  platformOwner?: boolean;
   siteIds?: string[];
   /** Legacy corporate access; migrated to siteIds on read. */
   companyAccess?: string[];
@@ -56,6 +68,7 @@ export type MachineSummary = {
   id: string;
   name: string;
   siteId?: string;
+  tenantId?: string;
   company?: string;
   siteName?: string;
   version?: number;
@@ -80,6 +93,7 @@ export type MachineView = {
   userId: string;
   email: string;
   machineId: string;
+  tenantId?: string;
 };
 
 export type QuoteStatus =
@@ -171,6 +185,7 @@ export type QuoteRecord = {
   createdAt: string;
   customerEmail: string;
   customerId: string;
+  tenantId?: string;
   status: QuoteStatus;
   poNumber?: string;
   poStoredFileName?: string;
@@ -190,6 +205,7 @@ export type BugReport = {
   userAgent: string;
   userEmail?: string;
   userRole?: Role;
+  tenantId?: string;
   logText: string;
   screenshotUrl?: string;
   githubIssueUrl?: string;
@@ -228,6 +244,7 @@ export type MachineManual = {
   sizeBytes?: number;
   uploadedAt: string;
   uploadedByEmail: string;
+  tenantId?: string;
 };
 
 export type PublicMachineManual = MachineManual & {
@@ -262,6 +279,7 @@ export type ServiceTicketRecord = {
   createdAt: string;
   customerId: string;
   customerEmail: string;
+  tenantId?: string;
   activities: TicketActivity[];
   lastReadAt: Record<string, string>;
 };
@@ -288,6 +306,7 @@ export type UsageHistoryEntry = {
 
 export type MachineUsage = {
   machineId: string;
+  tenantId?: string;
   hours?: number;
   cycles?: number;
   lastServiceAt?: string;

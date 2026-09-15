@@ -1,4 +1,6 @@
-import { getCurrentUser, requireRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
+import { DEFAULT_TENANT_ID, effectiveTenantId } from "@/lib/tenant";
 import {
   bugReportUserLabel,
   parseJpegBase64,
@@ -32,12 +34,12 @@ function clip(value: string, max: number) {
 }
 
 export async function GET() {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
-  const reports = await listBugReports();
+  const reports = await listBugReports(auth.tenantId);
   return json({
     reports: reports.map((report) => ({
       id: report.id,
@@ -103,9 +105,13 @@ export async function POST(request: Request) {
     screenshot: screenshotBytes,
   };
 
+  const bugTenantId = sessionUser
+    ? effectiveTenantId(sessionUser)
+    : DEFAULT_TENANT_ID;
+
   let stored: Awaited<ReturnType<typeof createBugReport>> | null = null;
   try {
-    stored = await createBugReport(record);
+    stored = await createBugReport(bugTenantId, record);
   } catch (cause) {
     console.error("Failed to store bug report", cause);
   }

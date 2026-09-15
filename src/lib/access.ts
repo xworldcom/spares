@@ -412,13 +412,27 @@ export function accessLabel(
 }
 
 export function canAccessMachine(
-  user: Pick<PublicUser, "role" | "siteIds" | "companyAccess" | "machineIds">,
-  machine: { id?: string; siteId?: string | null; company?: string | null },
+  user: Pick<
+    PublicUser,
+    "role" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
+  >,
+  machine: {
+    id?: string;
+    siteId?: string | null;
+    company?: string | null;
+    tenantId?: string;
+  },
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
 ) {
   if (user.role === "staff") {
+    if (user.tenantId && machine.tenantId && user.tenantId !== machine.tenantId) {
+      return false;
+    }
     return true;
+  }
+  if (user.tenantId && machine.tenantId && user.tenantId !== machine.tenantId) {
+    return false;
   }
   if (machine.id && (user.machineIds ?? []).includes(machine.id)) {
     return true;
@@ -454,6 +468,7 @@ export function toPublicUser(
     email: string;
     name?: string;
     role: Role;
+    tenantId?: string;
     siteIds?: string[];
     companyAccess?: string[];
     machineIds?: string[];
@@ -462,9 +477,18 @@ export function toPublicUser(
   },
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
+  meta?: { platformOwner?: boolean; tenantId?: string },
 ): PublicUser {
+  const tenantId = meta?.tenantId ?? user.tenantId;
+  const platformOwner = meta?.platformOwner;
   if (user.role !== "customer") {
-    return { id: user.id, email: user.email, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      ...(tenantId ? { tenantId } : {}),
+      ...(platformOwner ? { platformOwner: true } : {}),
+    };
   }
   const siteIds = user.siteIds ?? [];
   const companyAccess = user.companyAccess ?? [];
@@ -478,6 +502,8 @@ export function toPublicUser(
     id: user.id,
     email: user.email,
     role: user.role,
+    ...(tenantId ? { tenantId } : {}),
+    ...(platformOwner ? { platformOwner: true } : {}),
     siteIds,
     companyAccess,
     machineIds,

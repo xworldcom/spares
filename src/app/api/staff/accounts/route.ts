@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import {
   createCustomerAccount,
@@ -9,12 +9,12 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
-  const accounts = await listCustomerAccounts();
-  const sites = await listSites();
+  const accounts = await listCustomerAccounts(auth.tenantId);
+  const sites = await listSites(auth.tenantId);
   const rows = accounts.map((account) => ({
     ...account,
     siteCount: sites.filter((site) => site.customerId === account.id).length,
@@ -27,7 +27,7 @@ type CreateBody = {
 };
 
 export async function POST(request: Request) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   }
 
   const name = typeof body.name === "string" ? body.name : "";
-  const created = await createCustomerAccount(name);
+  const created = await createCustomerAccount(name, auth.tenantId);
   if ("error" in created) {
     if (created.error === "taken") {
       return error("A customer with that name already exists", 409);

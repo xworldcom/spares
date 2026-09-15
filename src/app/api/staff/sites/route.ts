@@ -1,16 +1,16 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { createSite, listSites } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
   const customerId = new URL(request.url).searchParams.get("customerId") ?? undefined;
-  return json({ sites: await listSites(customerId ?? undefined) });
+  return json({ sites: await listSites(auth.tenantId, customerId ?? undefined) });
 }
 
 type CreateSiteBody = {
@@ -19,7 +19,7 @@ type CreateSiteBody = {
 };
 
 export async function POST(request: Request) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   const customerId = typeof body.customerId === "string" ? body.customerId.trim() : "";
   const name = typeof body.name === "string" ? body.name : "";
-  const created = await createSite(customerId, name);
+  const created = await createSite(auth.tenantId, customerId, name);
   if ("error" in created) {
     if (created.error === "taken") {
       return error("That site already exists for this customer", 409);

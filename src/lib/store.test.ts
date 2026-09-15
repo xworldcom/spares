@@ -33,6 +33,9 @@ import {
   updateMachineUsage,
   updateTicketStatus,
 } from "./store.ts";
+import { DEFAULT_TENANT_ID } from "./tenant.ts";
+
+const T = DEFAULT_TENANT_ID;
 
 async function isolatedDataDir() {
   const dir = await mkdtemp(path.join(tmpdir(), "spares-store-"));
@@ -71,7 +74,7 @@ describe("owner staff bootstrap", () => {
     await isolatedDataDir();
     process.env.SPARES_OWNER_EMAIL = "kevin@huzevka.com";
     process.env.SPARES_OWNER_PASSWORD = "OwnerPreviewOnly1!";
-    const machines = await listMachines();
+    const machines = await listMachines(T);
     assert.ok(machines.length >= 0);
     const { findUserByEmail } = await import("./store.ts");
     const owner = await findUserByEmail("kevin@huzevka.com");
@@ -99,7 +102,7 @@ describe("listMachines catalog heal", () => {
       }),
     );
 
-    const machines = await listMachines();
+    const machines = await listMachines(T);
     const ids = machines.map((machine) => machine.id).sort();
     assert.deepEqual(ids, [
       FIXTURE_MACHINE_IDS.hardware,
@@ -111,7 +114,7 @@ describe("listMachines catalog heal", () => {
     await isolatedDataDir();
     seedEmptyMachineCatalogForTests(seedUsers);
 
-    const machines = await listMachines();
+    const machines = await listMachines(T);
     assert.ok(machines.some((machine) => machine.id === FIXTURE_MACHINE_IDS.hardware));
     assert.ok(machines.some((machine) => machine.id === FIXTURE_MACHINE_IDS.palletizer));
   });
@@ -120,7 +123,7 @@ describe("listMachines catalog heal", () => {
     await isolatedDataDir();
     seedEmptyMachineCatalogForTests(seedUsers);
 
-    const machines = await listMachines({ heal: true });
+    const machines = await listMachines(T, { heal: true });
     assert.equal(machines.length, 2);
   });
 });
@@ -134,9 +137,9 @@ describe("durable store survives a process hop", () => {
 
   it("keeps quotes, activity, and files on disk after memory is cleared", async () => {
     await isolatedDataDir();
-    await listMachines();
+    await listMachines(T);
 
-    const quote = await createQuote({
+    const quote = await createQuote(T, {
       machineId: FIXTURE_MACHINE_IDS.hardware,
       items: [{ id: "5972K325", qty: 1, name: "Bearing" }],
       customerId: "user-customer",
@@ -144,6 +147,7 @@ describe("durable store survives a process hop", () => {
     });
     await appendQuoteActivity(
       quote.id,
+      T,
       { id: "user-staff", email: "staff@spares.local", role: "staff" },
       "message",
       "Checking lead time.",
@@ -152,7 +156,7 @@ describe("durable store survives a process hop", () => {
 
     resetStoreMemoryForTests();
 
-    const again = await getQuote(quote.id);
+    const again = await getQuote(quote.id, T);
     assert.equal(again?.id, quote.id);
     assert.equal(again?.activities.length, 2);
     assert.equal(again?.activities[1]?.text, "Checking lead time.");
@@ -168,8 +172,8 @@ describe("durable store survives a process hop", () => {
     setPersistenceForTests(remote);
     resetStoreMemoryForTests();
 
-    await listMachines();
-    const quote = await createQuote({
+    await listMachines(T);
+    const quote = await createQuote(T, {
       machineId: FIXTURE_MACHINE_IDS.palletizer,
       items: [{ id: "PN-FRAME-1000", qty: 2, name: "Frame" }],
       customerId: "user-customer",
@@ -177,6 +181,7 @@ describe("durable store survives a process hop", () => {
     });
     await appendQuoteActivity(
       quote.id,
+      T,
       { id: "user-customer", email: "customer@spares.local", role: "customer" },
       "message",
       "Need this on Friday.",
@@ -184,14 +189,14 @@ describe("durable store survives a process hop", () => {
     await saveMachineFile("po-remote.pdf", Buffer.from("PO bytes"));
 
     seedEmptyMachineCatalogForTests(seedUsers);
-    const poisoned = await getQuote(quote.id);
+    const poisoned = await getQuote(quote.id, T);
     assert.equal(poisoned?.id, quote.id);
 
     resetStoreMemoryForTests();
 
-    const machines = await listMachines();
+    const machines = await listMachines(T);
     assert.ok(machines.some((machine) => machine.id === FIXTURE_MACHINE_IDS.hardware));
-    const again = await getQuote(quote.id);
+    const again = await getQuote(quote.id, T);
     assert.equal(again?.activities.at(-1)?.text, "Need this on Friday.");
     assert.equal((await readStoredFile("po-remote.pdf")).toString(), "PO bytes");
   });
@@ -207,7 +212,7 @@ describe("staff part join edits", () => {
   it("saves a mesh assignment and keeps other joined parts pickable", async () => {
     await isolatedDataDir();
 
-    const created = await createMachine({
+    const created = await createMachine(T, {
       name: "Staff QA cell",
       storedFileName: "qa-cell.glb",
       originalFileName: "qa-cell.glb",
@@ -221,7 +226,7 @@ describe("staff part join edits", () => {
       ],
     });
 
-    const updated = await updateMachine(created.id, {
+    const updated = await updateMachine(created.id, T, {
       part: {
         key: "list:PN-BELT-4402",
         partNumber: "PN-BELT-4402",
@@ -244,7 +249,7 @@ describe("staff part join edits", () => {
     );
 
     resetStoreMemoryForTests();
-    const again = await getMachine(created.id);
+    const again = await getMachine(created.id, T);
     assert.equal(again?.parts.find((part) => part.id === "PN-BELT-4402")?.meshName, "PN-GRD-5503");
     assert.equal(again?.parts.find((part) => part.id === "PN-ROLL-2104")?.qty, 2);
   });
@@ -261,7 +266,7 @@ describe("machine care store", () => {
 
   it("persists manuals, tickets, and usage across a memory reset", async () => {
     await isolatedDataDir();
-    const created = await createMachine({
+    const created = await createMachine(T, {
       name: "Care cell",
       storedFileName: "care-cell.glb",
       originalFileName: "care-cell.glb",
@@ -269,7 +274,7 @@ describe("machine care store", () => {
       unmatched: [],
     });
 
-    const manual = await createManual({
+    const manual = await createManual(T, {
       machineId: created.id,
       title: "Operator guide",
       category: "operator",
@@ -285,7 +290,7 @@ describe("machine care store", () => {
       return;
     }
 
-    const ticket = await createTicket({
+    const ticket = await createTicket(T, {
       machineId: created.id,
       title: "Belt slip",
       customerId: "user-customer",
@@ -301,19 +306,25 @@ describe("machine care store", () => {
     if ("error" in ticket) {
       return;
     }
-    await updateTicketStatus(ticket.ticket.id, "in_progress", {
+    await updateTicketStatus(ticket.ticket.id, T, "in_progress", {
       id: "user-staff",
       email: "staff@spares.local",
       role: "staff",
     });
-    await appendTicketActivity(ticket.ticket.id, {
-      id: "user-staff",
-      email: "staff@spares.local",
-      role: "staff",
-    }, "On site Friday.");
+    await appendTicketActivity(
+      ticket.ticket.id,
+      T,
+      {
+        id: "user-staff",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+      "On site Friday.",
+    );
 
     const usage = await updateMachineUsage(
       created.id,
+      T,
       { hours: 1240, cycles: 88000, lastServiceAt: "2026-09-01", notes: "Greased rails" },
       "staff@spares.local",
     );
@@ -325,19 +336,19 @@ describe("machine care store", () => {
     assert.equal(manuals[0]?.title, "Operator guide");
     assert.equal((await readStoredFile("operator-guide.pdf")).toString(), "%PDF-1.4 care");
 
-    const tickets = await listTickets(created.id);
+    const tickets = await listTickets(T, created.id);
     assert.equal(tickets[0]?.status, "in_progress");
     assert.equal(tickets[0]?.activities.at(-1)?.text, "On site Friday.");
 
-    const again = await getMachineUsage(created.id);
+    const again = await getMachineUsage(created.id, T);
     assert.equal(again?.hours, 1240);
     assert.equal(again?.history[0]?.summary.includes("hours"), true);
 
     await deleteMachine(created.id);
     resetStoreMemoryForTests();
     assert.equal((await listManuals(created.id)).length, 0);
-    assert.equal((await listTickets(created.id)).length, 0);
-    assert.equal(await getMachineUsage(created.id), null);
+    assert.equal((await listTickets(T, created.id)).length, 0);
+    assert.equal(await getMachineUsage(created.id, T), null);
   });
 
   it("keeps tickets on the staff queue after a remote catalog heal", async () => {
@@ -358,14 +369,14 @@ describe("machine care store", () => {
     );
     resetStoreMemoryForTests();
 
-    const created = await createMachine({
+    const created = await createMachine(T, {
       name: "Remote care cell",
       storedFileName: "remote-care.glb",
       originalFileName: "remote-care.glb",
       parts: [{ id: "PN-1", name: "Frame", meshName: "PN-1", qty: 1 }],
       unmatched: [],
     });
-    const opened = await createTicket({
+    const opened = await createTicket(T, {
       machineId: created.id,
       title: "Guard rattles",
       customerId: "user-customer",
@@ -389,22 +400,22 @@ describe("machine care store", () => {
     await remote.writeDatabaseJson(JSON.stringify(stale));
     resetStoreMemoryForTests();
 
-    const queued = await listTickets();
-    const byMachine = await listTickets(created.id);
-    const detail = await getTicket(opened.ticket.id);
+    const queued = await listTickets(T);
+    const byMachine = await listTickets(T, created.id);
+    const detail = await getTicket(opened.ticket.id, T);
     assert.equal(queued.some((ticket) => ticket.id === opened.ticket.id), true);
     assert.equal(byMachine.some((ticket) => ticket.id === opened.ticket.id), true);
     assert.equal(detail?.title, "Guard rattles");
     assert.equal(detail?.id, opened.ticket.id);
 
     seedEmptyMachineCatalogForTests(seedUsers);
-    await listMachines({ heal: true });
+    await listMachines(T, { heal: true });
     resetStoreMemoryForTests();
     assert.equal(
-      (await listTickets()).some((ticket) => ticket.id === opened.ticket.id),
+      (await listTickets(T)).some((ticket) => ticket.id === opened.ticket.id),
       true,
     );
-    assert.equal((await getTicket(opened.ticket.id))?.number, opened.ticket.number);
+    assert.equal((await getTicket(opened.ticket.id, T))?.number, opened.ticket.number);
   });
 
   it("keeps ticket messages when care.json lags behind db.json", async () => {
@@ -425,14 +436,14 @@ describe("machine care store", () => {
     );
     resetStoreMemoryForTests();
 
-    const created = await createMachine({
+    const created = await createMachine(T, {
       name: "Chat cell",
       storedFileName: "chat-cell.glb",
       originalFileName: "chat-cell.glb",
       parts: [{ id: "PN-1", name: "Frame", meshName: "PN-1", qty: 1 }],
       unmatched: [],
     });
-    const opened = await createTicket({
+    const opened = await createTicket(T, {
       machineId: created.id,
       title: "Noisy bearing",
       customerId: "user-customer",
@@ -447,11 +458,16 @@ describe("machine care store", () => {
     if ("error" in opened) {
       return;
     }
-    await appendTicketActivity(opened.ticket.id, {
-      id: "user-staff",
-      email: "staff@spares.local",
-      role: "staff",
-    }, "We can visit Tuesday.");
+    await appendTicketActivity(
+      opened.ticket.id,
+      T,
+      {
+        id: "user-staff",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+      "We can visit Tuesday.",
+    );
 
     const care = JSON.parse((await remote.readCareJson()) ?? "{}") as {
       tickets?: { id: string; activities: { text: string }[] }[];
@@ -464,7 +480,7 @@ describe("machine care store", () => {
     await remote.writeCareJson(JSON.stringify(care));
     resetStoreMemoryForTests();
 
-    const detail = await getTicket(opened.ticket.id);
+    const detail = await getTicket(opened.ticket.id, T);
     assert.equal(detail?.activities.at(-1)?.text, "We can visit Tuesday.");
   });
 });
@@ -479,9 +495,9 @@ describe("quote conversation persistence", () => {
 
   it("reloads quote messages for staff and customer accessors", async () => {
     await isolatedDataDir();
-    await listMachines();
+    await listMachines(T);
 
-    const quote = await createQuote({
+    const quote = await createQuote(T, {
       machineId: FIXTURE_MACHINE_IDS.hardware,
       items: [{ id: "5972K325", qty: 1, name: "Bearing" }],
       customerId: "user-customer",
@@ -489,12 +505,14 @@ describe("quote conversation persistence", () => {
     });
     await appendQuoteActivity(
       quote.id,
+      T,
       { id: "user-customer", email: "customer@spares.local", role: "customer" },
       "message",
       "Can you confirm lead time?",
     );
     await appendQuoteActivity(
       quote.id,
+      T,
       { id: "user-staff", email: "staff@spares.local", role: "staff" },
       "message",
       "About two weeks.",
@@ -502,8 +520,8 @@ describe("quote conversation persistence", () => {
 
     resetStoreMemoryForTests();
 
-    const byId = await getQuote(quote.id);
-    const byNumber = await getQuote(String(quote.number));
+    const byId = await getQuote(quote.id, T);
+    const byNumber = await getQuote(String(quote.number, T));
     assert.equal(byId?.activities.at(-1)?.text, "About two weeks.");
     assert.equal(byNumber?.activities.length, byId?.activities.length);
     assert.equal(byNumber?.activities.at(-2)?.text, "Can you confirm lead time?");

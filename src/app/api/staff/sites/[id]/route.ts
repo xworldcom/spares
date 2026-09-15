@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { deleteSite, updateSite } from "@/lib/store";
 
@@ -13,7 +13,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -35,7 +35,7 @@ export async function PATCH(
     return error("name or customerId is required", 400);
   }
 
-  const updated = await updateSite(id, patch);
+  const updated = await updateSite(id, auth.tenantId, patch);
   if ("error" in updated) {
     if (updated.error === "taken") {
       return error("That site already exists for this customer", 409);
@@ -55,13 +55,13 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const removed = await deleteSite(id);
+  const removed = await deleteSite(id, auth.tenantId);
   if ("error" in removed) {
     if (removed.error === "has-machines") {
       return error("Move or remove machines at this site before deleting it", 409);

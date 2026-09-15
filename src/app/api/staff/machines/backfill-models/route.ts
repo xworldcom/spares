@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, json } from "@/lib/http";
 import { isModelFilename } from "@/lib/machines";
 import {
@@ -9,7 +9,7 @@ import {
 import { listMachineModelFiles } from "@/lib/store";
 
 export async function POST() {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -21,7 +21,7 @@ export async function POST() {
     );
   }
 
-  const machines = await listMachineModelFiles();
+  const machines = await listMachineModelFiles(auth.tenantId);
   const results: Array<
     ModelBackfillResult & { machineId: string; machineName: string }
   > = [];

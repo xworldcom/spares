@@ -3,6 +3,7 @@ import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { allowLoginAttempt } from "@/lib/rate-limit";
+import { effectiveTenantId } from "@/lib/tenant";
 import { findUserByEmail, getOrgContext } from "@/lib/store";
 
 type LoginBody = {
@@ -77,13 +78,16 @@ export async function POST(request: Request) {
     return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
-  await setSessionCookie(user.id, user.email);
+  const tenantId = effectiveTenantId(user);
+  await setSessionCookie(user.id, user.email, tenantId);
   if (html) {
     return redirectNoQuery("/machines");
   }
   if (user.role === "customer") {
-    const org = await getOrgContext();
-    return json({ user: toPublicUser(user, org.sites, org.customers) });
+    const org = await getOrgContext(tenantId);
+    return json({
+      user: toPublicUser(user, org.sites, org.customers, { tenantId }),
+    });
   }
-  return json({ user: toPublicUser(user) });
+  return json({ user: toPublicUser(user, [], [], { tenantId }) });
 }

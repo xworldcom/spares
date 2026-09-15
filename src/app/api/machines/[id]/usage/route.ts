@@ -6,6 +6,7 @@ import {
 } from "@/lib/care";
 import { requireStaffMachine } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { tenantIdForUser } from "@/lib/tenant";
 import { getMachineUsage, updateMachineUsage } from "@/lib/store";
 
 type PatchBody = {
@@ -24,7 +25,8 @@ export async function GET(
   if ("error" in access) {
     return access.error;
   }
-  return json({ usage: await getMachineUsage(access.machine.id) });
+  const tenantId = tenantIdForUser(access.user);
+  return json({ usage: await getMachineUsage(access.machine.id, tenantId) });
 }
 
 export async function PATCH(
@@ -78,8 +80,10 @@ export async function PATCH(
     patch.notes = notes.text ?? null;
   }
 
+  const tenantId = tenantIdForUser(access.user);
   const updated = await updateMachineUsage(
     access.machine.id,
+    tenantId,
     patch,
     access.user.email,
   );

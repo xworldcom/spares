@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { toPublicUser } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { bulkUpdateCustomerAccess, getOrgContext } from "@/lib/store";
@@ -9,7 +9,7 @@ type Body = {
 };
 
 export async function POST(request: Request) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -26,8 +26,8 @@ export async function POST(request: Request) {
   const siteIds = Array.isArray(body.siteIds)
     ? body.siteIds.filter((value): value is string => typeof value === "string")
     : [];
-  const users = await bulkUpdateCustomerAccess(userIds, { siteIds });
-  const org = await getOrgContext();
+  const users = await bulkUpdateCustomerAccess(auth.tenantId, userIds, { siteIds });
+  const org = await getOrgContext(auth.tenantId);
   return json({
     customers: users.map((user) => toPublicUser(user, org.sites, org.customers)),
   });

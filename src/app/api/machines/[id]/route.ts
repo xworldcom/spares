@@ -1,4 +1,4 @@
-import { requireRole, requireUser } from "@/lib/auth";
+import { requireTenantStaff, requireTenantUser } from "@/lib/auth/tenant-scope";
 import { canAccessMachine } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
@@ -16,13 +16,16 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireUser();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const [machine, org] = await Promise.all([getMachine(id), getOrgContext()]);
+  const [machine, org] = await Promise.all([
+    getMachine(id, auth.tenantId),
+    getOrgContext(auth.tenantId),
+  ]);
   if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
   }
@@ -32,6 +35,7 @@ export async function GET(
       userId: auth.user.id,
       email: auth.user.email,
       machineId: machine.id,
+      tenantId: auth.tenantId,
     });
   }
 
@@ -56,7 +60,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -100,7 +104,7 @@ export async function PATCH(
     patch.part = parsed;
   }
 
-  const updated = await updateMachine(id, patch);
+  const updated = await updateMachine(id, auth.tenantId, patch);
   if ("error" in updated) {
     if (updated.error === "bad-site") {
       return error("Choose a valid plant", 400);
@@ -114,7 +118,7 @@ export async function PATCH(
     return error("Machine not found", 404);
   }
 
-  const org = await getOrgContext();
+  const org = await getOrgContext(auth.tenantId);
   return json(
     toMachineDetail(
       updated.machine,
@@ -130,13 +134,13 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const deleted = await deleteMachine(id);
+  const deleted = await deleteMachine(id, auth.tenantId);
   if ("error" in deleted) {
     return error("Machine not found", 404);
   }
