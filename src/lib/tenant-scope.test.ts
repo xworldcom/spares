@@ -10,6 +10,8 @@ import {
   createMachine,
   createTenant,
   createTenantStaffUser,
+  createTenantWithOptionalStaff,
+  findUserByEmail,
   getMachine,
   listMachines,
   resetStoreMemoryForTests,
@@ -113,5 +115,34 @@ describe("tenant isolation", () => {
     });
     assert.ok("error" in second);
     assert.equal(second.error, "email-taken");
+  });
+
+  it("assigns first staff to the new tenant id in one write", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("Company B", {
+      email: "companyb-staff@test",
+      passwordHash: await hashPassword("pass"),
+    });
+    assert.ok("tenant" in created);
+    if (!("tenant" in created)) {
+      return;
+    }
+    assert.ok(created.staffUser);
+    assert.equal(created.staffUser?.tenantId, created.tenant.id);
+    assert.notEqual(created.staffUser?.tenantId, DEFAULT_TENANT_ID);
+
+    const loaded = await findUserByEmail("companyb-staff@test");
+    assert.equal(loaded?.tenantId, created.tenant.id);
+
+    const hostMachines = await createMachine(DEFAULT_TENANT_ID, {
+      name: "Host only",
+      storedFileName: "host.glb",
+      originalFileName: "host.glb",
+      parts: [],
+      unmatched: [],
+    });
+    assert.ok(hostMachines.id);
+    const bMachines = await listMachines(created.tenant.id);
+    assert.equal(bMachines.length, 0);
   });
 });

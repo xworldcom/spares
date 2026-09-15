@@ -969,6 +969,16 @@ export function listTenants() {
   });
 }
 
+function tenantNameTaken(db: Database, trimmed: string) {
+  const slugTaken = (db.tenants ?? []).some(
+    (row) => row.slug === newTenantFromName(trimmed).slug,
+  );
+  const nameTaken = (db.tenants ?? []).some(
+    (row) => row.name.toLowerCase() === trimmed.toLowerCase(),
+  );
+  return slugTaken || nameTaken;
+}
+
 export function createTenant(name: string) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -976,13 +986,7 @@ export function createTenant(name: string) {
     if (!trimmed) {
       return { error: "invalid" as const };
     }
-    const slugTaken = (db.tenants ?? []).some(
-      (row) => row.slug === newTenantFromName(trimmed).slug,
-    );
-    const nameTaken = (db.tenants ?? []).some(
-      (row) => row.name.toLowerCase() === trimmed.toLowerCase(),
-    );
-    if (slugTaken || nameTaken) {
+    if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
     const tenant = newTenantFromName(trimmed);
@@ -991,6 +995,46 @@ export function createTenant(name: string) {
       tenants: [...(db.tenants ?? []), tenant],
     });
     return { tenant };
+  });
+}
+
+/** One write so first staff always shares the new tenant row (no heal gap). */
+export function createTenantWithOptionalStaff(
+  name: string,
+  staff?: { email: string; passwordHash: string },
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { error: "invalid" as const };
+    }
+    if (tenantNameTaken(db, trimmed)) {
+      return { error: "taken" as const };
+    }
+    const tenant = newTenantFromName(trimmed);
+    let users = db.users;
+    let staffUser: StoredUser | undefined;
+    if (staff) {
+      const normalized = normalizeEmail(staff.email);
+      if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
+        return { error: "email-taken" as const };
+      }
+      staffUser = {
+        id: randomUUID(),
+        email: normalized,
+        passwordHash: staff.passwordHash,
+        role: "staff",
+        tenantId: tenant.id,
+      };
+      users = [...users, staffUser];
+    }
+    await writeDatabase({
+      ...db,
+      tenants: [...(db.tenants ?? []), tenant],
+      users,
+    });
+    return { tenant, staffUser };
   });
 }
 
@@ -1017,6 +1061,22 @@ export function createTenantStaffUser(
     };
     await writeDatabase({ ...db, users: [...db.users, user] });
     return { user };
+  });
+}
+
+export function listStaffUsersForPlatform() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const tenants = new Map((db.tenants ?? []).map((row) => [row.id, row.name]));
+    return db.users
+      .filter((user) => user.role === "staff" && !user.deletedAt)
+      .map((user) => ({
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId ?? null,
+        tenantName: user.tenantId ? (tenants.get(user.tenantId) ?? user.tenantId) : null,
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
   });
 }
 

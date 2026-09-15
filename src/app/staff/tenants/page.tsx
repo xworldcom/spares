@@ -4,9 +4,24 @@ import { useCallback, useEffect, useState } from "react";
 import type { Tenant } from "@/types";
 import { DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME } from "@/lib/tenant";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
 
 type TenantsResponse = { tenants: Tenant[] };
+
+type CreateTenantResponse = {
+  tenant: Tenant;
+  staffUser?: { id: string; email: string; role: string; tenantId?: string };
+};
+
+type PlatformStaffRow = {
+  id: string;
+  email: string;
+  tenantId: string | null;
+  tenantName: string | null;
+};
+
+type PlatformStaffResponse = { staff: PlatformStaffRow[] };
 
 export default function StaffTenantsPage() {
   return (
@@ -17,11 +32,14 @@ export default function StaffTenantsPage() {
 }
 
 function PlatformTenants() {
+  const { user } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [staffRows, setStaffRows] = useState<PlatformStaffRow[]>([]);
   const [name, setName] = useState("");
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -30,13 +48,17 @@ function PlatformTenants() {
       const data = await apiFetch<TenantsResponse>("/api/platform/tenants");
       setTenants(data.tenants);
       setForbidden(false);
+      if (user?.platformOwner) {
+        const staffData = await apiFetch<PlatformStaffResponse>("/api/platform/staff");
+        setStaffRows(staffData.staff);
+      }
     } catch (cause) {
       if (cause instanceof Error && cause.message.includes("403")) {
         setForbidden(true);
       }
       setError(cause instanceof Error ? cause.message : "Could not load tenants");
     }
-  }, []);
+  }, [user?.platformOwner]);
 
   useEffect(() => {
     void load();
@@ -46,8 +68,9 @@ function PlatformTenants() {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      await apiFetch("/api/platform/tenants", {
+      const result = await apiFetch<CreateTenantResponse>("/api/platform/tenants", {
         method: "POST",
         body: JSON.stringify({
           name,
@@ -58,6 +81,13 @@ function PlatformTenants() {
       setName("");
       setStaffEmail("");
       setStaffPassword("");
+      if (result.staffUser?.tenantId) {
+        setNotice(
+          `Created ${result.tenant.name}. First staff ${result.staffUser.email} → tenantId ${result.staffUser.tenantId}`,
+        );
+      } else {
+        setNotice(`Created ${result.tenant.name} (${result.tenant.id}).`);
+      }
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Create failed");
@@ -119,6 +149,7 @@ function PlatformTenants() {
           />
         </label>
         {error ? <p className="text-danger">{error}</p> : null}
+        {notice ? <p className="text-sm text-muted">{notice}</p> : null}
         <button className="btn-primary" type="submit" disabled={busy}>
           {busy ? "Creating…" : "Create tenant"}
         </button>
@@ -136,6 +167,27 @@ function PlatformTenants() {
           ))}
         </ul>
       </section>
+
+      {user?.platformOwner ? (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold mb-3">Staff accounts (tenant check)</h2>
+          <p className="text-sm text-muted mb-3">
+            First staff from Create tenant must show the new tenant id, not{" "}
+            <code>{DEFAULT_TENANT_ID}</code>.
+          </p>
+          <ul className="stack gap-2">
+            {staffRows.map((row) => (
+              <li key={row.id} className="card p-4 text-sm">
+                <div className="font-medium">{row.email}</div>
+                <div className="text-muted">
+                  {row.tenantName ?? "—"} ·{" "}
+                  <code className="text-xs">{row.tenantId ?? "missing tenantId"}</code>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
 }
