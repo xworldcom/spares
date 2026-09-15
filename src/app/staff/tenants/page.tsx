@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { Tenant } from "@/types";
 import { DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME } from "@/lib/tenant";
@@ -110,6 +111,11 @@ function PlatformTenants() {
 
   return (
     <main className="page-shell">
+      <p className="mb-4">
+        <Link className="text-sm text-muted hover:underline" href="/staff/platform">
+          ← Platform deployments
+        </Link>
+      </p>
       <h1 className="page-title">Host companies</h1>
       <p className="text-muted mb-6">
         Create automation-company tenants on the shared OEE360 platform. Existing Soft Launch →{" "}

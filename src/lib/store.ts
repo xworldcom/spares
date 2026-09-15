@@ -43,6 +43,10 @@ import {
   platformOwnerEmails,
 } from "./tenant.ts";
 import { migrateTenants, newTenantFromName } from "./tenant-migration.ts";
+import {
+  buildPlatformDeploymentRow,
+  type PlatformDeploymentRow,
+} from "./platform-metrics.ts";
 import type { Tenant } from "../types/index.ts";
 import {
   nextTicketNumber,
@@ -1103,6 +1107,99 @@ export function listTenants() {
     return [...(db.tenants ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   });
 }
+
+function platformCatalogSlice(db: Database) {
+  const care = careCollections(db);
+  return {
+    users: db.users,
+    customers: db.customers ?? [],
+    sites: db.sites ?? [],
+    machines: db.machines,
+    quotes: db.quotes,
+    tickets: care.tickets,
+    machineUsage: care.machineUsage,
+  };
+}
+
+export function listPlatformDeployments() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const catalog = platformCatalogSlice(db);
+    const tenants = [...(db.tenants ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+    return tenants.map((tenant) => buildPlatformDeploymentRow(tenant, catalog));
+  });
+}
+
+export function getPlatformDeployment(tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const tenant = (db.tenants ?? []).find((row) => row.id === tenantId);
+    if (!tenant) {
+      return { error: "not-found" as const };
+    }
+    const catalog = platformCatalogSlice(db);
+    const deployment = buildPlatformDeploymentRow(tenant, catalog);
+    const staff = db.users
+      .filter(
+        (user) =>
+          user.role === "staff" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => ({
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId ?? null,
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+    return { deployment, staff };
+  });
+}
+
+export function updateTenantPlatformMeta(
+  tenantId: string,
+  patch: { name?: string; inactive?: boolean },
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const index = (db.tenants ?? []).findIndex((row) => row.id === tenantId);
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const tenants = [...(db.tenants ?? [])];
+    const current = tenants[index];
+    let next: Tenant = { ...current };
+
+    if (typeof patch.name === "string") {
+      const trimmed = patch.name.trim();
+      if (!trimmed) {
+        return { error: "invalid" as const };
+      }
+      if (
+        tenants.some(
+          (row, i) => i !== index && row.name.toLowerCase() === trimmed.toLowerCase(),
+        )
+      ) {
+        return { error: "taken" as const };
+      }
+      next = { ...next, name: trimmed };
+    }
+
+    if (patch.inactive === true) {
+      if (tenantId === DEFAULT_TENANT_ID) {
+        return { error: "invalid" as const };
+      }
+      next = { ...next, inactiveAt: new Date().toISOString() };
+    } else if (patch.inactive === false) {
+      const { inactiveAt: _, ...rest } = next;
+      next = rest as Tenant;
+    }
+
+    tenants[index] = next;
+    await writeDatabase({ ...db, tenants });
+    return { tenant: next };
+  });
+}
+
+export type { PlatformDeploymentRow };
 
 function tenantNameTaken(db: Database, trimmed: string) {
   const slugTaken = (db.tenants ?? []).some(

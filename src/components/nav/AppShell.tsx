@@ -196,8 +196,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     Bug reports
                   </NavLink>
                   {user.platformOwner ? (
-                    <NavLink href="/staff/tenants" hrefs={navHrefs}>
-                      Hosts
+                    <NavLink href="/staff/platform" hrefs={navHrefs}>
+                      Platform
                     </NavLink>
                   ) : null}
                 </>
