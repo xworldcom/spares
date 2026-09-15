@@ -102,12 +102,34 @@ export function LandingStage({ onReady }: { onReady?: () => void }) {
       tryPlay();
     };
 
-    video.addEventListener("playing", onPlaying);
     video.addEventListener("loadedmetadata", onDecodeReady);
     video.addEventListener("loadeddata", onDecodeReady);
     video.addEventListener("canplay", onDecodeReady);
 
     document.addEventListener("visibilitychange", onVisibility);
+
+    const onGesture = () => {
+      retryCount = 0;
+      tryPlay();
+    };
+
+    const gestureOpts: AddEventListenerOptions = { capture: true };
+    document.addEventListener("touchstart", onGesture, { ...gestureOpts, passive: true });
+    document.addEventListener("pointerdown", onGesture, gestureOpts);
+    document.addEventListener("click", onGesture, gestureOpts);
+
+    const stopGestureUnlock = () => {
+      document.removeEventListener("touchstart", onGesture, gestureOpts);
+      document.removeEventListener("pointerdown", onGesture, gestureOpts);
+      document.removeEventListener("click", onGesture, gestureOpts);
+    };
+
+    const onPlayingWithGestureCleanup = () => {
+      stopGestureUnlock();
+      onPlaying();
+    };
+
+    video.addEventListener("playing", onPlayingWithGestureCleanup);
 
     tryPlay();
 
@@ -115,8 +137,9 @@ export function LandingStage({ onReady }: { onReady?: () => void }) {
 
     return () => {
       clearRetry();
+      stopGestureUnlock();
       window.clearTimeout(posterFallback);
-      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("playing", onPlayingWithGestureCleanup);
       video.removeEventListener("loadedmetadata", onDecodeReady);
       video.removeEventListener("loadeddata", onDecodeReady);
       video.removeEventListener("canplay", onDecodeReady);
@@ -125,7 +148,7 @@ export function LandingStage({ onReady }: { onReady?: () => void }) {
   }, [onReady]);
 
   return (
-    <div className="landing-stage" aria-hidden="true">
+    <div className="landing-stage landing-stage--ambient" aria-hidden="true">
       <video
         ref={videoRef}
         className={on ? "is-on" : undefined}

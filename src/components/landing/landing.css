@@ -41,6 +41,21 @@
   -webkit-user-select: none;
 }
 
+@keyframes landing-ken-burns {
+  0% {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: scale(1.1) translate3d(-2.2%, -1%, 0);
+  }
+}
+
+.landing-stage--ambient video {
+  animation: landing-ken-burns 22s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
 .landing-stage video {
   pointer-events: none;
   display: block;
@@ -147,6 +162,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landing-stage--ambient video {
+    animation: none;
+    will-change: auto;
+  }
+
   .landing-stage video,
   .landing-curtain,
   .landing-copy,
