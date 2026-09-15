@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CustomerAccount, Site } from "../types/index.ts";
+import type { CustomerAccount, Site, Tenant } from "../types/index.ts";
 import {
   DEFAULT_TENANT_ID,
   TENANT_SCHEMA_VERSION,
@@ -21,12 +21,7 @@ type TenantView = { id: string; tenantId?: string };
 
 export type TenantSlice = {
   schemaVersion?: number;
-  tenants?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    createdAt: string;
-  }>;
+  tenants?: Tenant[];
   users?: TenantUser[];
   customers?: TenantCustomer[];
   sites?: TenantSite[];
@@ -216,7 +211,7 @@ export function newTenantId() {
   return `tenant-${randomUUID()}`;
 }
 
-export function newTenantFromName(name: string, now = new Date().toISOString()) {
+export function newTenantFromName(name: string, now = new Date().toISOString()): Tenant {
   const trimmed = name.trim();
   const base = slugifyTenant(trimmed);
   return {

@@ -1265,7 +1265,7 @@ export function createTenantWithOptionalStaff(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    let tenant = newTenantFromName(trimmed);
+    let tenant: Tenant = newTenantFromName(trimmed);
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {
