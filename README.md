@@ -112,7 +112,7 @@ There is **no public signup**. Staff create customer accounts. These two users a
 | staff | `staff@spares.local` | `SparesStaff1!` |
 | customer | `customer@spares.local` | `SparesCustomer1!` |
 
-On **Vercel Production**, leave `SPARES_ALLOW_SEED` unset; demo accounts cannot sign in even if `db.json` was copied from Preview. See [docs/soft-launch-security.md](docs/soft-launch-security.md).
+On **Vercel Production**, leave `SPARES_ALLOW_SEED` unset; demo accounts cannot sign in even if `db.json` was copied from Preview. See [docs/soft-launch-security.md](docs/soft-launch-security.md) and [docs/soft-launch-backup.md](docs/soft-launch-backup.md) (ops backup for Blob + Care + R2).
 
 ## Local development
 
@@ -135,7 +135,7 @@ Optional (from T1.2, plus T3 durable store):
   - `AZURE_AD_CLIENT_ID` — Application (client) ID from the Entra app registration.
   - `AZURE_AD_CLIENT_SECRET` — client secret (Certificates & secrets).
   - `AZURE_AD_TENANT_ID` — tenant GUID for single-tenant, or `organizations` (default) for any work/school account, or `common` for work/school and personal Microsoft accounts. OAuth redirect URI (add each host you use): `{origin}/api/auth/microsoft/callback` — e.g. `https://oee360.com/api/auth/microsoft/callback`, `https://www.oee360.com/api/auth/microsoft/callback`, `https://spares-yonder3.vercel.app/api/auth/microsoft/callback`, and `http://localhost:3000/api/auth/microsoft/callback` for local dev. API permissions: Microsoft Graph delegated `openid`, `profile`, `email`, `User.Read`. Existing users are matched by email (case-insensitive); unknown emails see “Ask your admin for access” (no public signup).
-- `BLOB_READ_WRITE_TOKEN` — **required on Vercel** (Preview and Production). Quotes, users, machine metadata, PO PDFs, and bug screenshots live in a private Vercel Blob store (`spares/db.json` + `spares/care.json`). The app fails closed on Vercel without this — no silent `/tmp` fallback. Local `npm run dev` does not need this; it keeps using `./data`.
+- `BLOB_READ_WRITE_TOKEN` — **required on Vercel** (Preview and Production). Quotes, users, machine metadata, PO PDFs, and bug screenshots live in a private Vercel Blob store (`spares/db.json` + `spares/care.json`). The app fails closed on Vercel without this — no silent `/tmp` fallback. Local `npm run dev` does not need this; it keeps using `./data`. **Back up** JSON and small files before risky promotes — [docs/soft-launch-backup.md](docs/soft-launch-backup.md).
 - `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo. Also treated as a **platform owner** unless overridden below.
 - `SPARES_OWNER_PASSWORD` — sets/resets the owner staff password hash on each deploy when paired with `SPARES_OWNER_EMAIL`.
 - `SPARES_PLATFORM_OWNER_EMAILS` — comma-separated emails that may create host-company tenants via `/staff/tenants` or `POST /api/platform/tenants`. Defaults to `SPARES_OWNER_EMAIL` or `kevin@huzevka.com`.
