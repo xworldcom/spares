@@ -28,7 +28,11 @@ async function isolated() {
 }
 
 describe("POST /api/staff/team authorization + store (Quinn PR128)", () => {
-  const envKeys = ["SPARES_OWNER_EMAIL", "SPARES_PLATFORM_OWNER_EMAILS"] as const;
+  const envKeys = [
+    "SPARES_OWNER_EMAIL",
+    "SPARES_PLATFORM_OWNER_EMAILS",
+    "SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS",
+  ] as const;
   const previous: Record<string, string | undefined> = {};
 
   after(() => {
@@ -95,7 +99,7 @@ describe("POST /api/staff/team authorization + store (Quinn PR128)", () => {
     for (const key of envKeys) {
       previous[key] = process.env[key];
     }
-    process.env.SPARES_PLATFORM_OWNER_EMAILS = "kevin@huzevka.com";
+    process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS = "kevin@huzevka.com";
     delete process.env.SPARES_OWNER_EMAIL;
 
     const authz = authorizeStaffTeamPost({

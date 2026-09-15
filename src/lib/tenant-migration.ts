@@ -79,7 +79,7 @@ function isKnownHostStaffEmail(email: string) {
   return normalized === "staff@spares.local";
 }
 
-/** Staff auto-stamped to a satellite tenant when they were left on the host tenant. */
+/** Staff auto-repaired to a satellite tenant when bootstrap email matches. */
 function repairMisassignedStaffUsers(
   users: TenantUser[] | undefined,
   tenants: NonNullable<TenantSlice["tenants"]>,
@@ -87,27 +87,36 @@ function repairMisassignedStaffUsers(
   if (!users?.length) {
     return { users: [], changed: false };
   }
-  const satellites = tenants.filter((row) => row.id !== DEFAULT_TENANT_ID);
-  if (satellites.length === 0) {
+  const byBootstrapEmail = new Map<string, string>();
+  for (const tenant of tenants) {
+    if (tenant.id === DEFAULT_TENANT_ID) {
+      continue;
+    }
+    const bootstrap = tenant.bootstrapStaffEmail?.trim().toLowerCase();
+    if (bootstrap) {
+      byBootstrapEmail.set(bootstrap, tenant.id);
+    }
+  }
+  if (byBootstrapEmail.size === 0) {
     return { users: [...users], changed: false };
   }
-  const satelliteId =
-    satellites.length === 1
-      ? satellites[0].id
-      : [...satellites].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0].id;
   let changed = false;
   const next = users.map((user) => {
     if (user.role !== "staff" || !user.email || isKnownHostStaffEmail(user.email)) {
       return user;
     }
-    if (user.tenantId === satelliteId) {
+    const target = byBootstrapEmail.get(user.email.trim().toLowerCase());
+    if (!target) {
+      return user;
+    }
+    if (user.tenantId === target) {
       return user;
     }
     if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
       return user;
     }
     changed = true;
-    return { ...user, tenantId: satelliteId };
+    return { ...user, tenantId: target };
   });
   return { users: changed ? next : [...users], changed };
 }

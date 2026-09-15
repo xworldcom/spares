@@ -48,12 +48,12 @@ export const DEFAULT_CROSS_TENANT_STAFF_ADMIN = "kevin@huzevka.com";
 
 /**
  * Who may assign staff logins to a tenant other than their own (POST /api/staff/team).
- * Intentionally stricter than {@link isPlatformOwnerEmail}: bootstrap
- * `SPARES_OWNER_EMAIL` (often a Preview QA staff login) does NOT grant cross-tenant staff create,
- * even when Preview mirrors that address into `SPARES_PLATFORM_OWNER_EMAILS`.
+ * Uses {@link process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS} only — not
+ * `SPARES_PLATFORM_OWNER_EMAILS` (platform tenant UI / bootstrap owner lists are broader).
+ * Defaults to Kevin when unset. Bootstrap `SPARES_OWNER_EMAIL` is never granted via this path.
  */
 export function crossTenantStaffAdminEmails(): Set<string> {
-  const explicit = process.env.SPARES_PLATFORM_OWNER_EMAILS?.trim();
+  const explicit = process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS?.trim();
   const emails = explicit
     ? new Set(
         explicit

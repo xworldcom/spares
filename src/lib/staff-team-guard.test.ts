@@ -6,7 +6,11 @@ const HOST = "tenant-oee360-host";
 const SATELLITE = "tenant-3b2926cb-7d5d-458b-a8c6-a3ce32a9c31d";
 
 describe("decideStaffTeamTenant", () => {
-  const envKeys = ["SPARES_OWNER_EMAIL", "SPARES_PLATFORM_OWNER_EMAILS"] as const;
+  const envKeys = [
+    "SPARES_OWNER_EMAIL",
+    "SPARES_PLATFORM_OWNER_EMAILS",
+    "SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS",
+  ] as const;
   const previous: Record<string, string | undefined> = {};
 
   after(() => {
@@ -36,11 +40,11 @@ describe("decideStaffTeamTenant", () => {
     );
   });
 
-  it("allows kevin cross-tenant when SPARES_PLATFORM_OWNER_EMAILS lists kevin", () => {
+  it("allows kevin cross-tenant when SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS lists kevin", () => {
     for (const key of envKeys) {
       previous[key] = process.env[key];
     }
-    process.env.SPARES_PLATFORM_OWNER_EMAILS = "kevin@huzevka.com";
+    process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS = "kevin@huzevka.com";
 
     assert.deepEqual(
       decideStaffTeamTenant({
