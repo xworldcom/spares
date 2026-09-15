@@ -130,8 +130,17 @@ Optional (from T1.2, plus T3 durable store):
 
 - `AUTH_SECRET` — signs the httpOnly session cookie. **Required on Vercel** (Preview and Production). A local-only development default is used when unset off Vercel. Never commit this value.
 - `BLOB_READ_WRITE_TOKEN` — **required on Vercel** (Preview and Production). Quotes, users, machine metadata, PO PDFs, and bug screenshots live in a private Vercel Blob store (`spares/db.json` + `spares/care.json`). The app fails closed on Vercel without this — no silent `/tmp` fallback. Local `npm run dev` does not need this; it keeps using `./data`.
-- `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo.
+- `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo. Also treated as a **platform owner** unless overridden below.
 - `SPARES_OWNER_PASSWORD` — sets/resets the owner staff password hash on each deploy when paired with `SPARES_OWNER_EMAIL`.
+- `SPARES_PLATFORM_OWNER_EMAILS` — comma-separated emails that may create host-company tenants via `/staff/tenants` or `POST /api/platform/tenants`. Defaults to `SPARES_OWNER_EMAIL` or `kevin@huzevka.com`.
+
+### Multi-tenant host companies (MVP)
+
+Several automation companies (“hosts”) can share one OEE360 deployment. Each host’s staff, end-customer org (accounts → sites → machines), quotes, Care, and metadata are isolated by `tenantId` on the existing Blob JSON stores.
+
+- **Soft Launch / Kevin’s data** — on first read after deploy, legacy rows are stamped into tenant **`tenant-oee360-host`** (“OEE360 Host”, slug `oee360-host`). No manual migration script.
+- **Second host** — a platform owner creates a tenant (name + optional first staff login) on **Hosts** (`/staff/tenants`). That staff user signs in like today; Vercel Deployment Protection / SSO on the preview URL is unchanged.
+- **Not in this MVP** — per-tenant domains, billing, marketplace, or tenant-aware Microsoft/Google SSO (sessions already carry `tenantId` for a follow-up).
 - `SPARES_ALLOW_SEED` — set to `true` on **Preview only** to seed demo fixtures (`SparesStaff1!`, Hardware, Palletizer, extra customers). Leave unset/false on Production.
 - `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — optional scoped PAT for staff bug-report GitHub issues (`issues:write`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks.
 - `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**

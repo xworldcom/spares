@@ -332,7 +332,7 @@ describe("machine care store", () => {
 
     resetStoreMemoryForTests();
 
-    const manuals = await listManuals(created.id);
+    const manuals = await listManuals(created.id, T);
     assert.equal(manuals[0]?.title, "Operator guide");
     assert.equal((await readStoredFile("operator-guide.pdf")).toString(), "%PDF-1.4 care");
 
@@ -344,9 +344,9 @@ describe("machine care store", () => {
     assert.equal(again?.hours, 1240);
     assert.equal(again?.history[0]?.summary.includes("hours"), true);
 
-    await deleteMachine(created.id);
+    await deleteMachine(created.id, T);
     resetStoreMemoryForTests();
-    assert.equal((await listManuals(created.id)).length, 0);
+    assert.equal((await listManuals(created.id, T)).length, 0);
     assert.equal((await listTickets(T, created.id)).length, 0);
     assert.equal(await getMachineUsage(created.id, T), null);
   });
@@ -521,7 +521,7 @@ describe("quote conversation persistence", () => {
     resetStoreMemoryForTests();
 
     const byId = await getQuote(quote.id, T);
-    const byNumber = await getQuote(String(quote.number, T));
+    const byNumber = await getQuote(String(quote.number), T);
     assert.equal(byId?.activities.at(-1)?.text, "About two weeks.");
     assert.equal(byNumber?.activities.length, byId?.activities.length);
     assert.equal(byNumber?.activities.at(-2)?.text, "Can you confirm lead time?");

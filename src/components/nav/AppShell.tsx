@@ -195,6 +195,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <NavLink href="/staff/bugs" hrefs={navHrefs}>
                     Bug reports
                   </NavLink>
+                  {user.platformOwner ? (
+                    <NavLink href="/staff/tenants" hrefs={navHrefs}>
+                      Hosts
+                    </NavLink>
+                  ) : null}
                 </>
               ) : (
                 <NavLinkWithBadge

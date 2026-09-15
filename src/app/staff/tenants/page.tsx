@@ -1,0 +1,136 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import type { Tenant } from "@/types";
+import { RequireAuth } from "@/components/auth/RequireAuth";
+import { apiFetch } from "@/lib/api/client";
+
+type TenantsResponse = { tenants: Tenant[] };
+
+export default function StaffTenantsPage() {
+  return (
+    <RequireAuth role="staff">
+      <PlatformTenants />
+    </RequireAuth>
+  );
+}
+
+function PlatformTenants() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [name, setName] = useState("");
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffPassword, setStaffPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await apiFetch<TenantsResponse>("/api/platform/tenants");
+      setTenants(data.tenants);
+      setForbidden(false);
+    } catch (cause) {
+      if (cause instanceof Error && cause.message.includes("403")) {
+        setForbidden(true);
+      }
+      setError(cause instanceof Error ? cause.message : "Could not load tenants");
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function onCreate(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch("/api/platform/tenants", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          staffEmail: staffEmail.trim() || undefined,
+          staffPassword: staffPassword || undefined,
+        }),
+      });
+      setName("");
+      setStaffEmail("");
+      setStaffPassword("");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Create failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (forbidden) {
+    return (
+      <main className="page-shell">
+        <h1 className="page-title">Host companies</h1>
+        <p className="text-muted">Platform owner access is required to manage host tenants.</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="page-shell">
+      <h1 className="page-title">Host companies</h1>
+      <p className="text-muted mb-6">
+        Create automation-company tenants on the shared OEE360 platform. Existing Soft Launch
+        data lives in tenant <code>{tenants[0]?.name ?? "OEE360 Host"}</code>.
+      </p>
+
+      <form className="stack gap-3 max-w-md mb-10" onSubmit={onCreate}>
+        <label className="stack gap-1">
+          <span>Tenant name</span>
+          <input
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            placeholder="Acme Automation"
+          />
+        </label>
+        <label className="stack gap-1">
+          <span>First staff email (optional)</span>
+          <input
+            className="input"
+            type="email"
+            value={staffEmail}
+            onChange={(e) => setStaffEmail(e.target.value)}
+            placeholder="ops@acme-automation.com"
+          />
+        </label>
+        <label className="stack gap-1">
+          <span>Staff password (optional)</span>
+          <input
+            className="input"
+            type="password"
+            value={staffPassword}
+            onChange={(e) => setStaffPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </label>
+        {error ? <p className="text-danger">{error}</p> : null}
+        <button className="btn-primary" type="submit" disabled={busy}>
+          {busy ? "Creating…" : "Create tenant"}
+        </button>
+      </form>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Tenants</h2>
+        <ul className="stack gap-2">
+          {tenants.map((tenant) => (
+            <li key={tenant.id} className="card p-4">
+              <div className="font-medium">{tenant.name}</div>
+              <div className="text-sm text-muted">{tenant.slug}</div>
+              <div className="text-xs text-muted font-mono">{tenant.id}</div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}
