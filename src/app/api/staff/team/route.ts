@@ -2,9 +2,8 @@ import { hashPassword, passwordPolicyError } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { resolveStaffCreateTenantId } from "@/lib/staff-create-scope";
-import { isPlatformOwnerEmail } from "@/lib/tenant";
-import { createTenantStaffUser, listStaffUsersForTenant } from "@/lib/store";
+import { assertStaffTeamCreateAllowed, decideStaffTeamTenant } from "@/lib/staff-team-guard";
+import { createTenantStaffUser, findUserById, listStaffUsersForTenant } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +13,16 @@ export async function GET(request: Request) {
     return auth.error;
   }
   const requestedTenantId = new URL(request.url).searchParams.get("tenantId")?.trim();
-  const platformOwner = isPlatformOwnerEmail(auth.user.email);
-  const tenantPick = resolveStaffCreateTenantId({
-    sessionTenantId: auth.tenantId,
+  const actor = await findUserById(auth.user.id);
+  if (!actor) {
+    return error("Unauthorized", 401);
+  }
+  const tenantPick = decideStaffTeamTenant({
+    actorTenantId: auth.tenantId,
+    actorEmail: actor.email,
     requestedTenantId,
-    platformOwner,
   });
-  if ("error" in tenantPick) {
+  if (!tenantPick.ok) {
     return error("Forbidden", 403);
   }
   const staff = await listStaffUsersForTenant(tenantPick.tenantId);
@@ -60,13 +62,25 @@ export async function POST(request: Request) {
     return error("That email is reserved for demo fixtures. Use a real work address.", 400);
   }
 
-  const platformOwner = isPlatformOwnerEmail(auth.user.email);
-  const tenantPick = resolveStaffCreateTenantId({
-    sessionTenantId: auth.tenantId,
+  const actor = await findUserById(auth.user.id);
+  if (!actor) {
+    return error("Unauthorized", 401);
+  }
+  const tenantPick = decideStaffTeamTenant({
+    actorTenantId: auth.tenantId,
+    actorEmail: actor.email,
     requestedTenantId,
-    platformOwner,
   });
-  if ("error" in tenantPick) {
+  if (!tenantPick.ok) {
+    return error("You can only add staff to your own company", 403);
+  }
+  if (
+    !assertStaffTeamCreateAllowed({
+      actorTenantId: auth.tenantId,
+      actorEmail: actor.email,
+      targetTenantId: tenantPick.tenantId,
+    })
+  ) {
     return error("You can only add staff to your own company", 403);
   }
 

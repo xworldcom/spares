@@ -6,7 +6,7 @@ import { after, describe, it } from "node:test";
 import { hashPassword, verifyPassword } from "./auth/password.ts";
 import { isDemoSeedLoginBlocked } from "./demo-seed-gate.ts";
 import { createMemoryPersistence, setPersistenceForTests } from "./persistence.ts";
-import { resolveStaffCreateTenantId } from "./staff-create-scope.ts";
+import { decideStaffTeamTenant } from "./staff-team-guard.ts";
 import {
   createCustomer,
   createTenantStaffUser,
@@ -64,14 +64,24 @@ describe("real accounts (no demo seeds)", () => {
   });
 
   it("denies cross-tenant staff assignment unless platform owner", () => {
-    assert.deepEqual(
-      resolveStaffCreateTenantId({
-        sessionTenantId: DEFAULT_TENANT_ID,
-        requestedTenantId: "tenant-other",
-        platformOwner: false,
-      }),
-      { error: "forbidden" },
-    );
+    const previousOwner = process.env.SPARES_OWNER_EMAIL;
+    process.env.SPARES_OWNER_EMAIL = "kevin@huzevka.com";
+    try {
+      assert.deepEqual(
+        decideStaffTeamTenant({
+          actorTenantId: DEFAULT_TENANT_ID,
+          actorEmail: "qa-staff-pr128@example.com",
+          requestedTenantId: "tenant-other",
+        }),
+        { ok: false, reason: "forbidden" },
+      );
+    } finally {
+      if (previousOwner === undefined) {
+        delete process.env.SPARES_OWNER_EMAIL;
+      } else {
+        process.env.SPARES_OWNER_EMAIL = previousOwner;
+      }
+    }
   });
 
   it("rejects staff creation when the target company does not exist", async () => {
