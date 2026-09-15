@@ -6,7 +6,60 @@ import {
   MICROSOFT_ACCESS_DENIED_MESSAGE,
   pickMicrosoftEmail,
   resolveMicrosoftLogin,
+  resolveMicrosoftSession,
 } from "./microsoft.ts";
+
+describe("microsoft session tenant resolution", () => {
+  it("stamps effective tenant for host staff with create-time pin", () => {
+    const result = resolveMicrosoftSession({
+      id: "user-1",
+      email: "qa-staff-host5-pr128@example.com",
+      role: "staff",
+      tenantId: "tenant-satellite-drift",
+      staffCreatedTenantId: "tenant-oee360-host",
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      userId: "user-1",
+      email: "qa-staff-host5-pr128@example.com",
+      tenantId: "tenant-oee360-host",
+    });
+  });
+
+  it("stamps satellite tenant for satellite staff", () => {
+    const result = resolveMicrosoftSession({
+      id: "user-2",
+      email: "satellite-staff@test",
+      role: "staff",
+      tenantId: "tenant-satellite-co",
+      staffCreatedTenantId: "tenant-satellite-co",
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      userId: "user-2",
+      email: "satellite-staff@test",
+      tenantId: "tenant-satellite-co",
+    });
+  });
+
+  it("denies unknown email like password login would", () => {
+    assert.deepEqual(resolveMicrosoftSession(null), {
+      ok: false,
+      message: MICROSOFT_ACCESS_DENIED_MESSAGE,
+    });
+  });
+
+  it("denies staff missing tenant scope", () => {
+    assert.deepEqual(
+      resolveMicrosoftSession({
+        id: "user-3",
+        email: "orphan@test",
+        role: "staff",
+      }),
+      { ok: false, message: MICROSOFT_ACCESS_DENIED_MESSAGE },
+    );
+  });
+});
 
 describe("microsoft login resolution", () => {
   it("accepts an active user matched by email", () => {
