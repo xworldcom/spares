@@ -43,6 +43,28 @@ export function isPlatformOwnerEmail(email: string) {
   return platformOwnerEmails().has(email.trim().toLowerCase());
 }
 
+/**
+ * Who may assign staff logins to a tenant other than their own (POST /api/staff/team).
+ * Intentionally stricter than {@link isPlatformOwnerEmail}: bootstrap
+ * `SPARES_OWNER_EMAIL` (often a Preview QA staff login) does NOT grant cross-tenant staff create.
+ */
+export function crossTenantStaffAdminEmails(): Set<string> {
+  const explicit = process.env.SPARES_PLATFORM_OWNER_EMAILS?.trim();
+  if (explicit) {
+    return new Set(
+      explicit
+        .split(",")
+        .map((row) => row.trim().toLowerCase())
+        .filter(Boolean),
+    );
+  }
+  return new Set(["kevin@huzevka.com"]);
+}
+
+export function canAssignStaffAcrossTenants(email: string) {
+  return crossTenantStaffAdminEmails().has(email.trim().toLowerCase());
+}
+
 export function effectiveTenantId(row: { tenantId?: string }) {
   return row.tenantId ?? DEFAULT_TENANT_ID;
 }

@@ -24,6 +24,7 @@ Implementation:
 - `AUTH_SECRET` required on Vercel; local default secret is refused when `VERCEL` is set — same module + `assertManagedRuntimeEnv()` in `src/instrumentation.ts`
 - Login rate limit: 8 attempts / 15 minutes per IP and per email — `src/lib/rate-limit.ts`, `src/app/api/auth/login/route.ts`
 - No public signup; staff create **customer** logins under `POST /api/staff/customers` (People UI) and **staff** logins under `POST /api/staff/team` (Team UI). Demo `@spares.local` addresses cannot be created when seeds are off.
+- Cross-tenant staff create (`tenantId` ≠ actor’s company) is limited to `SPARES_PLATFORM_OWNER_EMAILS` (or default `kevin@huzevka.com`). **`SPARES_OWNER_EMAIL` alone does not grant this** (Preview QA staff can stay bootstrap-only).
 - Passwords must not appear in URLs; client strips credential query keys — `src/lib/auth/safe-url.ts`
 
 ## APIs and roles

@@ -19,12 +19,12 @@ describe("decideStaffTeamTenant", () => {
     }
   });
 
-  it("rejects non–platform owner POST with foreign tenantId (Quinn PR128)", () => {
+  it("rejects Preview QA staff when only SPARES_OWNER_EMAIL is set (Quinn PR128)", () => {
     for (const key of envKeys) {
       previous[key] = process.env[key];
     }
-    process.env.SPARES_OWNER_EMAIL = "kevin@huzevka.com";
-    process.env.SPARES_PLATFORM_OWNER_EMAILS = "kevin@huzevka.com";
+    delete process.env.SPARES_PLATFORM_OWNER_EMAILS;
+    process.env.SPARES_OWNER_EMAIL = "qa-staff-pr128@example.com";
 
     assert.deepEqual(
       decideStaffTeamTenant({
@@ -36,11 +36,11 @@ describe("decideStaffTeamTenant", () => {
     );
   });
 
-  it("allows platform owner to target a satellite tenant", () => {
+  it("allows kevin cross-tenant when SPARES_PLATFORM_OWNER_EMAILS lists kevin", () => {
     for (const key of envKeys) {
       previous[key] = process.env[key];
     }
-    process.env.SPARES_OWNER_EMAIL = "kevin@huzevka.com";
+    process.env.SPARES_PLATFORM_OWNER_EMAILS = "kevin@huzevka.com";
 
     assert.deepEqual(
       decideStaffTeamTenant({
