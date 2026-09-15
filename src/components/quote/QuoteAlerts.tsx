@@ -18,6 +18,9 @@ type QuoteAlertsValue = {
 
 const QuoteAlertsContext = createContext<QuoteAlertsValue | null>(null);
 
+/** Keep tab badges current while the user stays on another page (no window blur). */
+const TAB_ALERT_POLL_MS = 15_000;
+
 export function QuoteAlertsProvider({ children }: { children: React.ReactNode }) {
   const { status, user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -60,6 +63,14 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [refresh]);
+
+  useEffect(() => {
+    if (status !== "signed-in" || !user) {
+      return;
+    }
+    const id = window.setInterval(() => void refresh(), TAB_ALERT_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [refresh, status, user]);
 
   const visibleCount = status === "signed-in" && user ? unreadCount : 0;
   const value = useMemo(

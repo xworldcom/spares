@@ -93,16 +93,19 @@ export function QuoteWorkspace({
       return;
     }
     const next = await getQuote(quoteRef);
+    const { activities, changed } = mergeActivitiesById(quote.activities, next.activities);
+    const touched =
+      changed || quote.status !== next.status || quote.unread !== next.unread;
+    if (!touched) {
+      return;
+    }
+    void refresh();
     setQuote((current) => {
       if (
         !current ||
         (String(current.number) !== quoteRef && current.id !== quoteRef)
       ) {
         return next;
-      }
-      const { activities, changed } = mergeActivitiesById(current.activities, next.activities);
-      if (!changed && current.status === next.status && current.unread === next.unread) {
-        return current;
       }
       return {
         ...current,
@@ -111,7 +114,7 @@ export function QuoteWorkspace({
         unread: next.unread,
       };
     });
-  }, [busy, items, pendingStatus, quote, quoteRef]);
+  }, [busy, items, pendingStatus, quote, quoteRef, refresh]);
 
   useConversationPoll(Boolean(quote && user), pollQuote);
 

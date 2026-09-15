@@ -68,22 +68,23 @@ export function TicketDetail({
       return;
     }
     const next = await getTicket(ticketId);
-    setTicket((current) => {
-      if (!current || current.id !== ticketId) {
-        return next;
-      }
-      const { activities, changed } = mergeActivitiesById(current.activities, next.activities);
-      if (!changed && current.status === next.status && current.unread === next.unread) {
-        return current;
-      }
-      return {
-        ...current,
-        status: next.status,
-        activities,
-        unread: next.unread,
-      };
+    if (!ticket || ticket.id !== ticketId) {
+      setTicket(next);
+      void refreshCareAlerts();
+      return;
+    }
+    const { activities, changed } = mergeActivitiesById(ticket.activities, next.activities);
+    if (!changed && ticket.status === next.status && ticket.unread === next.unread) {
+      return;
+    }
+    void refreshCareAlerts();
+    setTicket({
+      ...ticket,
+      status: next.status,
+      activities,
+      unread: next.unread,
     });
-  }, [busy, ticketId]);
+  }, [busy, ticket, ticketId, refreshCareAlerts]);
 
   useConversationPoll(Boolean(ticket && user), pollTicket);
 
