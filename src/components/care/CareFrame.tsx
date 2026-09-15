@@ -8,14 +8,12 @@ import { getMachine } from "@/lib/api/machines";
 import { careHref } from "@/lib/care";
 
 const TABS: {
-  id: "overview" | "manuals" | "tickets" | "usage";
+  id: "overview" | "manuals" | "tickets";
   label: string;
-  staffOnly?: boolean;
 }[] = [
   { id: "overview", label: "Overview" },
   { id: "manuals", label: "Manuals" },
   { id: "tickets", label: "Tickets" },
-  { id: "usage", label: "Usage", staffOnly: true },
 ];
 
 function tabFromPath(pathname: string) {
@@ -24,9 +22,6 @@ function tabFromPath(pathname: string) {
   }
   if (pathname.includes("/care/tickets")) {
     return "tickets";
-  }
-  if (pathname.includes("/care/usage")) {
-    return "usage";
   }
   return "overview";
 }
@@ -41,7 +36,6 @@ export function CareFrame({
   const { user } = useAuth();
   const pathname = usePathname();
   const current = tabFromPath(pathname);
-  const staff = user?.role === "staff";
   const [machineName, setMachineName] = useState("Machine");
 
   useEffect(() => {
@@ -71,12 +65,12 @@ export function CareFrame({
         <p className="care-kicker">Machine Care</p>
         <h1>{machineName}</h1>
         <p className="spares-muted care-lede">
-          Manuals, service tickets, and plant notes for this machine.
+          Manuals and service tickets for this machine.
         </p>
       </header>
 
       <nav className="care-tabs" aria-label="Care sections">
-        {TABS.filter((tab) => !tab.staffOnly || staff).map((tab) => {
+        {TABS.map((tab) => {
           const href = careHref(machineId, tab.id);
           const active = current === tab.id;
           return (
