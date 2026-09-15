@@ -18,6 +18,8 @@ for (const [stem, filename] of assets) {
     .trim()
     .split("\n")
     .filter(Boolean);
-  const b64 = list.map((name) => readFileSync(join(media, name), "utf8").trim()).join("");
+  const b64 = list
+    .map((name) => readFileSync(join(media, name), "utf8").replace(/\s+/g, ""))
+    .join("");
   writeFileSync(join(outDir, filename), Buffer.from(b64, "base64"));
 }
