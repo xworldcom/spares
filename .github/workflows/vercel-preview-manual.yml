@@ -1,0 +1,47 @@
+# Manual preview deploy for yonder3/spares when Git integration is on the wrong repo.
+# Requires repository secrets: VERCEL_TOKEN (team yonder3 scope).
+name: Manual Vercel preview (yonder3)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git branch, tag, or commit SHA to deploy (preview only)
+        required: true
+        default: 0ec7e601b02053cc3c564e964689eaca41789955
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install and build
+        run: npm ci && npm run build
+
+      - name: Deploy preview to Vercel (yonder3 / spares)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse HEAD)"
+          echo "Deploying commit ${SHA}"
+          npx vercel@59.17.0 deploy --yes \
+            --scope yonder3 \
+            --token "$VERCEL_TOKEN" \
+            --meta "githubCommitSha=${SHA}" \
+            | tee vercel-deployment-url.txt
+
+      - name: Print preview URL
+        run: |
+          echo "Preview URL:"
+          cat vercel-deployment-url.txt
