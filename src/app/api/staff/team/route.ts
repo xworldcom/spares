@@ -3,11 +3,9 @@ import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import {
-  assertStaffTeamCreateAllowed,
+  authorizeStaffTeamPost,
   decideStaffTeamTenant,
-  resolveStaffTeamPostTenant,
 } from "@/lib/staff-team-guard";
-import { canAssignStaffAcrossTenants } from "@/lib/tenant";
 import { createTenantStaffUser, findUserById, listStaffUsersForTenant } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -76,31 +74,13 @@ export async function POST(request: Request) {
     return error("Unauthorized", 401);
   }
   const actorTenantId = actor.tenantId?.trim() ?? "";
-  if (!actorTenantId || actorTenantId !== auth.tenantId) {
-    return error("You can only add staff to your own company", 403);
-  }
-  if (
-    requestedTenantId &&
-    requestedTenantId !== actorTenantId &&
-    !canAssignStaffAcrossTenants(actor.email)
-  ) {
-    return error("You can only add staff to your own company", 403);
-  }
-  const tenantPick = resolveStaffTeamPostTenant({
+  const tenantPick = authorizeStaffTeamPost({
     actorTenantId,
     actorEmail: actor.email,
+    sessionTenantId: auth.tenantId,
     requestedTenantId,
   });
   if (!tenantPick.ok) {
-    return error("You can only add staff to your own company", 403);
-  }
-  if (
-    !assertStaffTeamCreateAllowed({
-      actorTenantId,
-      actorEmail: actor.email,
-      targetTenantId: tenantPick.tenantId,
-    })
-  ) {
     return error("You can only add staff to your own company", 403);
   }
 

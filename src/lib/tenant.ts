@@ -43,22 +43,35 @@ export function isPlatformOwnerEmail(email: string) {
   return platformOwnerEmails().has(email.trim().toLowerCase());
 }
 
+/** Default cross-tenant staff admin when env lists are unset. */
+export const DEFAULT_CROSS_TENANT_STAFF_ADMIN = "kevin@huzevka.com";
+
 /**
  * Who may assign staff logins to a tenant other than their own (POST /api/staff/team).
  * Intentionally stricter than {@link isPlatformOwnerEmail}: bootstrap
- * `SPARES_OWNER_EMAIL` (often a Preview QA staff login) does NOT grant cross-tenant staff create.
+ * `SPARES_OWNER_EMAIL` (often a Preview QA staff login) does NOT grant cross-tenant staff create,
+ * even when Preview mirrors that address into `SPARES_PLATFORM_OWNER_EMAILS`.
  */
 export function crossTenantStaffAdminEmails(): Set<string> {
   const explicit = process.env.SPARES_PLATFORM_OWNER_EMAILS?.trim();
-  if (explicit) {
-    return new Set(
-      explicit
-        .split(",")
-        .map((row) => row.trim().toLowerCase())
-        .filter(Boolean),
-    );
+  const emails = explicit
+    ? new Set(
+        explicit
+          .split(",")
+          .map((row) => row.trim().toLowerCase())
+          .filter(Boolean),
+      )
+    : new Set([DEFAULT_CROSS_TENANT_STAFF_ADMIN]);
+
+  const ownerBootstrap = process.env.SPARES_OWNER_EMAIL?.trim().toLowerCase();
+  if (
+    ownerBootstrap &&
+    ownerBootstrap !== DEFAULT_CROSS_TENANT_STAFF_ADMIN &&
+    emails.has(ownerBootstrap)
+  ) {
+    emails.delete(ownerBootstrap);
   }
-  return new Set(["kevin@huzevka.com"]);
+  return emails;
 }
 
 export function canAssignStaffAcrossTenants(email: string) {

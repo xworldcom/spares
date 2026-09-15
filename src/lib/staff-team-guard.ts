@@ -54,3 +54,51 @@ export function assertStaffTeamCreateAllowed(input: {
   });
   return decision.ok && decision.tenantId === input.targetTenantId;
 }
+
+/** Full POST /api/staff/team authorization (session tenant + DB actor + body tenantId). */
+export function authorizeStaffTeamPost(input: {
+  actorTenantId: string;
+  actorEmail: string;
+  sessionTenantId: string;
+  requestedTenantId?: string | null;
+}): StaffTeamTenantDecision {
+  const actorTenantId = input.actorTenantId.trim();
+  const sessionTenantId = input.sessionTenantId.trim();
+  if (!actorTenantId || actorTenantId !== sessionTenantId) {
+    return { ok: false, reason: "forbidden" };
+  }
+
+  const requested = input.requestedTenantId?.trim();
+  if (
+    requested &&
+    requested !== actorTenantId &&
+    !canAssignStaffAcrossTenants(input.actorEmail)
+  ) {
+    return { ok: false, reason: "forbidden" };
+  }
+
+  const tenantPick = resolveStaffTeamPostTenant({
+    actorTenantId,
+    actorEmail: input.actorEmail,
+    requestedTenantId: input.requestedTenantId,
+  });
+  if (!tenantPick.ok) {
+    return tenantPick;
+  }
+
+  if (
+    !assertStaffTeamCreateAllowed({
+      actorTenantId,
+      actorEmail: input.actorEmail,
+      targetTenantId: tenantPick.tenantId,
+    })
+  ) {
+    return { ok: false, reason: "forbidden" };
+  }
+
+  if (!canAssignStaffAcrossTenants(input.actorEmail)) {
+    return { ok: true, tenantId: actorTenantId };
+  }
+
+  return tenantPick;
+}

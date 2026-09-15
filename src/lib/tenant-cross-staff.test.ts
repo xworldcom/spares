@@ -41,4 +41,16 @@ describe("cross-tenant staff admin emails", () => {
     assert.equal(canAssignStaffAcrossTenants("owner@test"), true);
     assert.equal(canAssignStaffAcrossTenants("qa-staff-pr128@example.com"), false);
   });
+
+  it("Quinn Preview: bootstrap owner mirrored in PLATFORM_OWNER_EMAILS still cannot cross-create staff", () => {
+    for (const key of envKeys) {
+      previous[key] = process.env[key];
+    }
+    process.env.SPARES_OWNER_EMAIL = "qa-staff-pr128@example.com";
+    process.env.SPARES_PLATFORM_OWNER_EMAILS =
+      "qa-staff-pr128@example.com,kevin@huzevka.com";
+
+    assert.equal(canAssignStaffAcrossTenants("qa-staff-pr128@example.com"), false);
+    assert.equal(canAssignStaffAcrossTenants("kevin@huzevka.com"), true);
+  });
 });
