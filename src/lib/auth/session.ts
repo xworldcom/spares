@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import type { PublicUser, Role } from "@/types";
 import { error } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
+import { isPlatformOwnerEmail } from "@/lib/tenant";
 import { findUserByEmail, findUserById, getOrgContext } from "@/lib/store";
 import {
   SESSION_COOKIE,
@@ -13,11 +14,15 @@ import {
 
 export { SESSION_COOKIE, signSession, verifySession } from "@/lib/auth/session-token";
 
-export async function setSessionCookie(userId: string, email?: string) {
+export async function setSessionCookie(
+  userId: string,
+  email?: string,
+  tenantId?: string,
+) {
   const store = await cookies();
   store.set(
     SESSION_COOKIE,
-    signSession(userId, email),
+    signSession(userId, email, tenantId),
     sessionCookieOptions(SESSION_MS / 1000),
   );
 }
@@ -46,15 +51,25 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     return null;
   }
 
-  if (!session.email || session.email !== user.email || session.userId !== user.id) {
-    await setSessionCookie(user.id, user.email);
+  const tenantId = user.tenantId?.trim() || undefined;
+  if (
+    !session.email ||
+    session.email !== user.email ||
+    session.userId !== user.id ||
+    session.tenantId !== tenantId
+  ) {
+    await setSessionCookie(user.id, user.email, tenantId);
   }
 
+  const platformOwner = isPlatformOwnerEmail(user.email);
   if (user.role === "customer") {
-    const { sites, customers } = await getOrgContext();
-    return toPublicUser(user, sites, customers);
+    if (!tenantId) {
+      return toPublicUser(user, [], [], { platformOwner });
+    }
+    const { sites, customers } = await getOrgContext(tenantId);
+    return toPublicUser(user, sites, customers, { platformOwner, tenantId });
   }
-  return toPublicUser(user);
+  return toPublicUser(user, [], [], { platformOwner, tenantId });
 }
 
 export async function requireUser() {

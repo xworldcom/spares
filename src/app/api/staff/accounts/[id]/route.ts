@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import {
   deleteCustomerAccount,
@@ -14,17 +14,20 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const account = await getCustomerAccount(id);
+  const account = await getCustomerAccount(id, auth.tenantId);
   if (!account) {
     return error("Customer not found", 404);
   }
-  const [sites, machines] = await Promise.all([listSites(id), listMachines()]);
+  const [sites, machines] = await Promise.all([
+    listSites(auth.tenantId, id),
+    listMachines(auth.tenantId),
+  ]);
   const machineCounts = new Map<string, number>();
   for (const machine of machines) {
     if (!machine.siteId) {
@@ -49,7 +52,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -60,7 +63,7 @@ export async function PATCH(
     return body;
   }
 
-  const updated = await updateCustomerAccount(id, {
+  const updated = await updateCustomerAccount(id, auth.tenantId, {
     ...(typeof body.name === "string" ? { name: body.name } : {}),
   });
   if ("error" in updated) {
@@ -79,13 +82,13 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const removed = await deleteCustomerAccount(id);
+  const removed = await deleteCustomerAccount(id, auth.tenantId);
   if ("error" in removed) {
     if (removed.error === "has-sites") {
       return error("Remove or reassign all sites before deleting this customer", 409);

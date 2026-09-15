@@ -77,13 +77,21 @@ export async function POST(request: Request) {
     return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
-  await setSessionCookie(user.id, user.email);
+  const tenantId = user.tenantId?.trim() || undefined;
+  if (!tenantId) {
+    return html
+      ? redirectNoQuery("/login")
+      : error("Account is missing a host tenant. Contact support.", 403);
+  }
+  await setSessionCookie(user.id, user.email, tenantId);
   if (html) {
     return redirectNoQuery("/machines");
   }
   if (user.role === "customer") {
-    const org = await getOrgContext();
-    return json({ user: toPublicUser(user, org.sites, org.customers) });
+    const org = await getOrgContext(tenantId);
+    return json({
+      user: toPublicUser(user, org.sites, org.customers, { tenantId }),
+    });
   }
-  return json({ user: toPublicUser(user) });
+  return json({ user: toPublicUser(user, [], [], { tenantId }) });
 }

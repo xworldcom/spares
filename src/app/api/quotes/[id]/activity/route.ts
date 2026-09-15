@@ -3,6 +3,7 @@ import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
 import { MAX_ACTIVITY_TEXT, toPublicQuote } from "@/lib/quotes";
+import { userTenantId } from "@/lib/tenant";
 import { appendQuoteActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -35,8 +36,10 @@ export async function POST(
     return error(verified.error, verified.status);
   }
 
+  const tenantId = userTenantId(access.user);
   const next = await appendQuoteActivity(
     access.quote.id,
+    tenantId,
     actorOf(access.user),
     "message",
     parsed.text,

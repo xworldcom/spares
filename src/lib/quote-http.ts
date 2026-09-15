@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { error } from "@/lib/http";
 import { canViewQuote } from "@/lib/quotes";
+import { effectiveTenantId, tenantIdForUser } from "@/lib/tenant";
 import { getQuote, listMachines } from "@/lib/store";
 import type { PublicUser, QuoteRecord } from "@/types";
 import type { NextResponse } from "next/server";
@@ -17,7 +18,11 @@ export async function requireQuoteAccess(
     return { error: error("Unauthorized", 401) };
   }
 
-  const quote = await getQuote(idOrNumber);
+  const tenantId = tenantIdForUser(user);
+  if (!tenantId) {
+    return { error: error("Forbidden", 403) };
+  }
+  const quote = await getQuote(idOrNumber, tenantId);
   if (!quote) {
     return { error: error("Quote not found", 404) };
   }
@@ -29,7 +34,8 @@ export async function requireQuoteAccess(
 }
 
 export async function machineNameFor(quote: QuoteRecord) {
-  const machines = await listMachines();
+  const tenantId = effectiveTenantId(quote);
+  const machines = await listMachines(tenantId);
   return machines.find((machine) => machine.id === quote.machineId)?.name;
 }
 

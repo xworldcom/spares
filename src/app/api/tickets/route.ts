@@ -1,19 +1,19 @@
 import { canAccessMachine } from "@/lib/access";
-import { requireUser } from "@/lib/auth";
+import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { toPublicTicket } from "@/lib/care";
 import { json } from "@/lib/http";
 import { getOrgContext, listMachines, listTickets } from "@/lib/store";
 
 export async function GET() {
-  const auth = await requireUser();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
 
   const [tickets, machines, org] = await Promise.all([
-    listTickets(),
-    listMachines(),
-    getOrgContext(),
+    listTickets(auth.tenantId),
+    listMachines(auth.tenantId),
+    getOrgContext(auth.tenantId),
   ]);
   const visible = new Map(
     machines

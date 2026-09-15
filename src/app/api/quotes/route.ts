@@ -1,4 +1,4 @@
-import { requireRole, requireUser } from "@/lib/auth";
+import { requireTenantCustomer, requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
 import { canAccessMachine } from "@/lib/access";
@@ -12,12 +12,15 @@ type CreateQuoteBody = {
 };
 
 export async function GET() {
-  const auth = await requireUser();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
 
-  const [quotes, machines] = await Promise.all([listQuotes(), listMachines()]);
+  const [quotes, machines] = await Promise.all([
+    listQuotes(auth.tenantId),
+    listMachines(auth.tenantId),
+  ]);
   const names = new Map(machines.map((machine) => [machine.id, machine.name]));
   const visible =
     auth.user.role === "staff"
@@ -35,7 +38,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireRole("customer");
+  const auth = await requireTenantCustomer();
   if ("error" in auth) {
     return auth.error;
   }
@@ -58,7 +61,10 @@ export async function POST(request: Request) {
   const note =
     typeof body.note === "string" && body.note.trim() ? body.note.trim() : undefined;
 
-  const [machine, org] = await Promise.all([getMachine(machineId), getOrgContext()]);
+  const [machine, org] = await Promise.all([
+    getMachine(machineId, auth.tenantId),
+    getOrgContext(auth.tenantId),
+  ]);
   if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
   }
@@ -83,13 +89,16 @@ export async function POST(request: Request) {
     return next;
   });
 
-  const quote = await createQuote({
+  const created = await createQuote(auth.tenantId, {
     machineId,
     items,
     note,
     customerId: auth.user.id,
     customerEmail: auth.user.email,
   });
+  if ("error" in created) {
+    return error("Machine not found", 404);
+  }
 
-  return json({ quote: toPublicQuote(quote, auth.user, machine.name) }, 201);
+  return json({ quote: toPublicQuote(created, auth.user, machine.name) }, 201);
 }

@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth";
+import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import {
   corsPreflightResponse,
   shouldUseCrossOriginObjectUrl,
@@ -18,13 +18,16 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireUser();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const [machine, org] = await Promise.all([getMachine(id), getOrgContext()]);
+  const [machine, org] = await Promise.all([
+    getMachine(id, auth.tenantId),
+    getOrgContext(auth.tenantId),
+  ]);
   if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
   }

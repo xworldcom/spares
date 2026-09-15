@@ -6,6 +6,7 @@ export const SESSION_MS = 1000 * 60 * 60 * 24 * 7;
 export type SessionPayload = {
   userId: string;
   email?: string;
+  tenantId?: string;
   exp: number;
 };
 
@@ -34,12 +35,13 @@ export function sessionCookieOptions(maxAge: number) {
   };
 }
 
-export function signSession(userId: string, email?: string) {
+export function signSession(userId: string, email?: string, tenantId?: string) {
   const payload = Buffer.from(
     JSON.stringify({
       userId,
       exp: Date.now() + SESSION_MS,
       ...(email ? { email: email.trim().toLowerCase() } : {}),
+      ...(tenantId ? { tenantId } : {}),
     } satisfies SessionPayload),
   ).toString("base64url");
   const signature = createHmac("sha256", sessionSecret()).update(payload).digest("base64url");

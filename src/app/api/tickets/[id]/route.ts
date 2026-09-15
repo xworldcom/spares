@@ -1,6 +1,7 @@
 import { isTicketStatus, toPublicTicket } from "@/lib/care";
 import { actorOf, requireTicketAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { userTenantId } from "@/lib/tenant";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
@@ -16,7 +17,8 @@ export async function GET(
   if ("error" in access) {
     return access.error;
   }
-  await markTicketRead(access.ticket.id, access.user.id);
+  const tenantId = userTenantId(access.user);
+  await markTicketRead(access.ticket.id, tenantId, access.user.id);
   return json({
     ticket: toPublicTicket(access.ticket, access.user, access.machine.name),
   });
@@ -43,8 +45,10 @@ export async function PATCH(
     return error("Choose a valid status", 400);
   }
 
+  const tenantId = userTenantId(access.user);
   const next = await updateTicketStatus(
     access.ticket.id,
+    tenantId,
     body.status,
     actorOf(access.user),
   );

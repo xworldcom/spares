@@ -15,6 +15,7 @@ import {
   toPublicQuote,
   trackingUpdatedActivityText,
 } from "@/lib/quotes";
+import { userTenantId } from "@/lib/tenant";
 import { createQuoteActivity, markQuoteRead, mutateQuote } from "@/lib/store";
 import type { QuoteRecord, QuoteStatus } from "@/types";
 
@@ -36,7 +37,9 @@ export async function GET(
     return access.error;
   }
 
-  const marked = (await markQuoteRead(access.quote.id, access.user.id)) ?? access.quote;
+  const tenantId = userTenantId(access.user);
+  const marked =
+    (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
   return json({
     quote: toPublicQuote(marked, access.user, await machineNameFor(marked)),
   });
@@ -58,6 +61,7 @@ export async function PATCH(
   }
 
   const actor = actorOf(access.user);
+  const tenantId = userTenantId(access.user);
   const now = () => new Date().toISOString();
 
   if (access.user.role === "customer") {
@@ -69,7 +73,7 @@ export async function PATCH(
     if (!canUploadPo(access.quote.status)) {
       return error("PO number can be added after the quote is issued", 403);
     }
-    const next = await mutateQuote(access.quote.id, (quote) => {
+    const next = await mutateQuote(access.quote.id, tenantId, (quote) => {
       if (quote.poNumber === poNumber) {
         return quote;
       }
@@ -142,7 +146,7 @@ export async function PATCH(
     }
   }
 
-  const next = await mutateQuote(access.quote.id, (quote) => {
+  const next = await mutateQuote(access.quote.id, tenantId, (quote) => {
     let updated: QuoteRecord = { ...quote, items, shipments };
     const invoiceNumber =
       typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : quote.invoiceNumber;

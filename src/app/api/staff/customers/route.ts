@@ -1,14 +1,15 @@
-import { hashPassword, passwordPolicyError, requireRole } from "@/lib/auth";
+import { hashPassword, passwordPolicyError } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { createCustomer, getOrgContext, listCustomers } from "@/lib/store";
 
 export async function GET() {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
-  return json({ customers: await listCustomers() });
+  return json({ customers: await listCustomers(auth.tenantId) });
 }
 
 type CreateCustomerBody = {
@@ -21,7 +22,7 @@ type CreateCustomerBody = {
 };
 
 export async function POST(request: Request) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -48,16 +49,21 @@ export async function POST(request: Request) {
     ? body.machineIds.filter((value): value is string => typeof value === "string")
     : [];
   const name = typeof body.name === "string" ? body.name.trim() : undefined;
-  const created = await createCustomer(email, await hashPassword(password), {
-    siteIds,
-    machineIds,
-    ...(name ? { name } : {}),
-  });
+  const created = await createCustomer(
+    auth.tenantId,
+    email,
+    await hashPassword(password),
+    {
+      siteIds,
+      machineIds,
+      ...(name ? { name } : {}),
+    },
+  );
   if ("error" in created) {
     return error("A user with that email already exists", 409);
   }
 
-  const org = await getOrgContext();
+  const org = await getOrgContext(auth.tenantId);
   return json(
     {
       user: toPublicUser(created.user, org.sites, org.customers),

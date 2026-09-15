@@ -18,6 +18,7 @@ import {
   selectManualStoreKind,
   vercelRequiresManualObjectStorageMessage,
 } from "@/lib/manual-storage";
+import { userTenantId } from "@/lib/tenant";
 import { createManual, listManuals } from "@/lib/store";
 import type { PublicMachineManual } from "@/types";
 
@@ -51,7 +52,8 @@ export async function GET(
   if ("error" in access) {
     return access.error;
   }
-  const manuals = await listManuals(access.machine.id);
+  const tenantId = userTenantId(access.user);
+  const manuals = await listManuals(access.machine.id, tenantId);
   return json({ manuals: await toPublic(request, access.machine.id, manuals) });
 }
 
@@ -65,22 +67,30 @@ export async function POST(
     return access.error;
   }
 
+  const tenantId = userTenantId(access.user);
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("multipart/form-data")) {
-    return createFromMultipart(request, access.machine.id, access.user.email);
+    return createFromMultipart(request, access.machine.id, access.user.email, tenantId);
   }
 
   const body = await readJson<CreateBody>(request);
   if (isErrorResponse(body)) {
     return body;
   }
-  return createFromStoredObject(request, access.machine.id, access.user.email, body);
+  return createFromStoredObject(
+    request,
+    access.machine.id,
+    access.user.email,
+    tenantId,
+    body,
+  );
 }
 
 async function createFromStoredObject(
   request: Request,
   machineId: string,
   uploadedByEmail: string,
+  tenantId: string,
   body: CreateBody,
 ) {
   try {
@@ -114,7 +124,7 @@ async function createFromStoredObject(
     }
   }
 
-  const created = await createManual({
+  const created = await createManual(tenantId, {
     machineId,
     title: title.text,
     category: body.category,
@@ -142,6 +152,7 @@ async function createFromMultipart(
   request: Request,
   machineId: string,
   uploadedByEmail: string,
+  tenantId: string,
 ) {
   if (process.env.VERCEL) {
     return error(vercelRequiresManualObjectStorageMessage(), 503);
@@ -175,7 +186,7 @@ async function createFromMultipart(
 
   const storedFileName = `${randomUUID()}${manualExtension(file.name)}`;
   const bytes = Buffer.from(await file.arrayBuffer());
-  const created = await createManual({
+  const created = await createManual(tenantId, {
     machineId,
     title: title.text,
     category,

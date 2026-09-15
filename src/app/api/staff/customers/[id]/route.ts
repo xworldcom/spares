@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { deletePerson, getOrgContext, updatePerson } from "@/lib/store";
 import { toPublicUser } from "@/lib/access";
@@ -14,7 +14,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -48,7 +48,7 @@ export async function PATCH(
     return error("name, email, siteIds, or machineIds is required", 400);
   }
 
-  const updated = await updatePerson(id, {
+  const updated = await updatePerson(id, auth.tenantId, {
     ...(name !== undefined ? { name } : {}),
     ...(email !== undefined ? { email } : {}),
     ...(siteIds !== undefined ? { siteIds } : {}),
@@ -64,7 +64,7 @@ export async function PATCH(
     return error("Person not found", 404);
   }
 
-  const org = await getOrgContext();
+  const org = await getOrgContext(auth.tenantId);
   return json({ user: toPublicUser(updated.user, org.sites, org.customers) });
 }
 
@@ -72,13 +72,13 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const removed = await deletePerson(id);
+  const removed = await deletePerson(id, auth.tenantId);
   if ("error" in removed) {
     return error("Person not found", 404);
   }

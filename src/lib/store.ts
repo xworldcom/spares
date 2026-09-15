@@ -36,6 +36,15 @@ import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.t
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
+  DEFAULT_TENANT_ID,
+  TENANT_SCHEMA_VERSION,
+  belongsToTenant,
+  filterByTenant,
+  platformOwnerEmails,
+} from "./tenant.ts";
+import { migrateTenants, newTenantFromName } from "./tenant-migration.ts";
+import type { Tenant } from "../types/index.ts";
+import {
   nextTicketNumber,
   statusTicketText,
   usageHistoryEntry,
@@ -169,6 +178,7 @@ export type StoredUser = {
   name?: string;
   passwordHash: string;
   role: Role;
+  tenantId?: string;
   siteIds?: string[];
   /** Legacy corporate access; migrated to siteIds on read. */
   companyAccess?: string[];
@@ -185,6 +195,7 @@ export type StoredMachine = {
   unmatched: UnmatchedPart[];
   createdAt: string;
   siteId?: string;
+  tenantId?: string;
   version?: number;
   revisedAt?: string;
 };
@@ -199,6 +210,7 @@ export type StoredBugReport = {
   userAgent: string;
   userEmail?: string;
   userRole?: Role;
+  tenantId?: string;
   logText: string;
   screenshotFileName: string;
   githubIssueUrl?: string;
@@ -216,6 +228,7 @@ type OrgTombstones = {
 
 type Database = {
   schemaVersion?: number;
+  tenants?: Tenant[];
   customers?: CustomerAccount[];
   users: StoredUser[];
   machines: StoredMachine[];
@@ -456,8 +469,9 @@ async function seedUser(input: {
 }
 
 async function emptyDatabase(): Promise<Database> {
-  return {
+  const migrated = migrateTenants({
     schemaVersion: 2,
+    tenants: [],
     customers: [],
     users: [],
     machines: [],
@@ -467,7 +481,8 @@ async function emptyDatabase(): Promise<Database> {
     manuals: [],
     tickets: [],
     machineUsage: [],
-  };
+  });
+  return migrated.db;
 }
 
 async function seedDatabase(): Promise<Database> {
@@ -476,7 +491,7 @@ async function seedDatabase(): Promise<Database> {
     await seedUser(SEED_CUSTOMER),
     ...(await Promise.all(EXTRA_SEED_CUSTOMERS.map((row) => seedUser(row)))),
   ];
-  return migrateOrgTree({
+  const org = migrateOrgTree({
     users,
     machines: [],
     quotes: [],
@@ -487,6 +502,7 @@ async function seedDatabase(): Promise<Database> {
     tickets: [],
     machineUsage: [],
   }).db;
+  return migrateTenants(org).db;
 }
 
 function ownerStaffId(email: string) {
@@ -513,6 +529,7 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
       ...current,
       role: "staff",
       passwordHash,
+      tenantId: current.tenantId ?? DEFAULT_TENANT_ID,
     };
     return { ...db, users };
   }
@@ -525,6 +542,7 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
         email,
         passwordHash,
         role: "staff",
+        tenantId: DEFAULT_TENANT_ID,
       },
     ],
   };
@@ -597,6 +615,61 @@ function withSiteTombstone(db: Database, siteId: string): Database {
   };
 }
 
+function isHostStaffEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (platformOwnerEmails().has(normalized)) {
+    return true;
+  }
+  return normalized === "staff@spares.local";
+}
+
+/** Never let a stale heal drop satellite tenants or re-bind staff to the host tenant. */
+function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUser {
+  const merged = { ...healed, ...latest };
+  if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
+    return merged;
+  }
+  const pickSatellite = (id: string | undefined) =>
+    id && id !== DEFAULT_TENANT_ID ? id : undefined;
+  const tenantId =
+    pickSatellite(latest.tenantId) ??
+    pickSatellite(healed.tenantId) ??
+    latest.tenantId ??
+    healed.tenantId;
+  return { ...merged, tenantId };
+}
+
+function mergeUsersForHeal(healed: StoredUser[], latest: StoredUser[]): StoredUser[] {
+  const map = new Map<string, StoredUser>();
+  for (const user of healed) {
+    map.set(user.id, user);
+  }
+  for (const user of latest) {
+    const previous = map.get(user.id);
+    map.set(user.id, previous ? mergeStaffUserOnHeal(previous, user) : user);
+  }
+  return [...map.values()];
+}
+
+function mergeOrgUsersAndClampTenants(
+  healed: Database,
+  latest: Database,
+  users: StoredUser[],
+): StoredUser[] {
+  return clampSatelliteStaffTenants({
+    ...healed,
+    tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
+    users,
+  }).users;
+}
+
+function mergeTenantsForHeal(
+  healed: Tenant[] | undefined,
+  latest: Tenant[] | undefined,
+): Tenant[] {
+  return unionById([...(healed ?? [])], [...(latest ?? [])]);
+}
+
 /** Org CRUD lives in blob writes — catalog heal must not clobber concurrent deletes. */
 function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
   const latestCare = careCollections(latest);
@@ -605,9 +678,14 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
   return applyCare(
     {
       ...healed,
+      tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
       customers: latest.customers ?? healed.customers,
       sites: latest.sites ?? healed.sites,
-      users: latest.users ?? healed.users,
+      users: mergeOrgUsersAndClampTenants(
+        healed,
+        latest,
+        mergeUsersForHeal(healed.users, latest.users),
+      ),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
@@ -616,8 +694,12 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
   );
 }
 
+function ensureTenants(db: Database): Database {
+  return clampSatelliteStaffTenants(migrateTenants(db).db);
+}
+
 function ensureOrg(db: Database): Database {
-  const migrated = migrateOrgTree(db);
+  const migrated = migrateOrgTree(ensureTenants(db));
   let next = migrated.db;
   const deletedCustomers = tombstonedCustomerIds(next);
   const deletedSites = tombstonedSiteIds(next);
@@ -629,7 +711,10 @@ function ensureOrg(db: Database): Database {
         continue;
       }
       if (!haveCustomers.has(customer.id)) {
-        haveCustomers.set(customer.id, customer);
+        haveCustomers.set(customer.id, {
+          ...customer,
+          tenantId: customer.tenantId ?? DEFAULT_TENANT_ID,
+        });
       }
     }
     for (const site of SEED_SITES) {
@@ -643,7 +728,10 @@ function ensureOrg(db: Database): Database {
       if (customer?.deletedAt || deletedCustomers.has(site.customerId)) {
         continue;
       }
-      haveSites.set(site.id, site);
+      haveSites.set(site.id, {
+        ...site,
+        tenantId: site.tenantId ?? DEFAULT_TENANT_ID,
+      });
     }
   }
   const customers = [...haveCustomers.values()].sort((a, b) => {
@@ -753,17 +841,68 @@ async function withFixtureMachines(db: Database): Promise<Database> {
   if (extras.length === 0) {
     return db;
   }
-  return { ...db, machines: [...db.machines, ...extras] };
+  const stamped = extras.map((machine) => ({
+    ...machine,
+    tenantId: DEFAULT_TENANT_ID,
+  }));
+  return { ...db, machines: [...db.machines, ...stamped] };
 }
 
 function catalogChanged(before: Database, after: Database) {
   return (
     after.machines.length !== before.machines.length ||
     after.users.length !== before.users.length ||
+    (after.tenants?.length ?? 0) !== (before.tenants?.length ?? 0) ||
     (after.sites?.length ?? 0) !== (before.sites?.length ?? 0) ||
     (after.customers?.length ?? 0) !== (before.customers?.length ?? 0) ||
-    after.users.some((user, index) => user.id !== before.users[index]?.id)
+    after.users.some((user, index) => user.id !== before.users[index]?.id) ||
+    staffTenantAssignmentsChanged(before.users, after.users)
   );
+}
+
+function staffTenantAssignmentsChanged(before: StoredUser[], after: StoredUser[]) {
+  const beforeById = new Map(before.map((user) => [user.id, user.tenantId]));
+  return after.some((user) => beforeById.get(user.id) !== user.tenantId);
+}
+
+function bindStaffTenantIds(
+  db: Database,
+  bindings: ReadonlyArray<{ userId: string; tenantId: string }>,
+): Database {
+  if (bindings.length === 0) {
+    return db;
+  }
+  const byId = new Map(bindings.map((row) => [row.userId, row.tenantId]));
+  return {
+    ...db,
+    users: db.users.map((user) => {
+      const tenantId = byId.get(user.id);
+      return tenantId ? { ...user, tenantId } : user;
+    }),
+  };
+}
+
+/** Keep non-host staff off tenant-oee360-host whenever satellite tenants exist. */
+function clampSatelliteStaffTenants(db: Database): Database {
+  const satellites = (db.tenants ?? []).filter((row) => row.id !== DEFAULT_TENANT_ID);
+  if (satellites.length === 0) {
+    return db;
+  }
+  const newestSatelliteId = [...satellites].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  )[0].id;
+  let changed = false;
+  const users = db.users.map((user) => {
+    if (user.role !== "staff" || !user.email || isHostStaffEmail(user.email)) {
+      return user;
+    }
+    if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
+      return user;
+    }
+    changed = true;
+    return { ...user, tenantId: newestSatelliteId };
+  });
+  return changed ? { ...db, users } : db;
 }
 
 /**
@@ -812,6 +951,7 @@ function parseDatabase(
     return {
       db: {
         schemaVersion: parsed.schemaVersion,
+        tenants: parsed.tenants ?? [],
         customers: parsed.customers ?? [],
         users: parsed.users ?? [],
         machines: parsed.machines ?? [],
@@ -865,6 +1005,8 @@ async function readDatabase(): Promise<Database> {
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
     usersRemapped ||
+    staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
+    (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
     (next.customers?.length ?? 0) !== (loaded.db.customers?.length ?? 0) ||
     (next.schemaVersion ?? 1) !== (loaded.db.schemaVersion ?? 1)
@@ -881,7 +1023,26 @@ async function writeCareStore(care: CareStore) {
 }
 
 async function writeDatabase(next: Database) {
-  const normalized = applyCare(next, careCollections(next));
+  const normalized = applyCare(clampSatelliteStaffTenants(next), careCollections(next));
+  memory = normalized;
+  await Promise.all([
+    getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
+    writeCareStore(careCollections(normalized)),
+  ]);
+}
+
+/** Org creates race catalog heals — merge with latest blob before persisting. */
+async function writeDatabaseWithOrgMerge(next: Database) {
+  let merged = clampSatelliteStaffTenants(next);
+  for (let pass = 0; pass < 2; pass++) {
+    const latestRaw = await getPersistence().readDatabaseJson();
+    const loaded = latestRaw ? parseDatabase(latestRaw) : null;
+    if (!loaded?.db) {
+      break;
+    }
+    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, loaded.db));
+  }
+  const normalized = applyCare(merged, careCollections(merged));
   memory = normalized;
   await Promise.all([
     getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
@@ -891,10 +1052,16 @@ async function writeDatabase(next: Database) {
 
 /** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
 async function writeCatalogHeal(next: Database) {
-  const latestRaw = await getPersistence().readDatabaseJson();
-  const loaded = latestRaw ? parseDatabase(latestRaw) : null;
-  const merged = loaded?.db ? mergeOrgCrudFromLatest(next, loaded.db) : next;
-  const kept = await overlayPersistedCare(merged);
+  let merged = next;
+  for (let pass = 0; pass < 2; pass++) {
+    const latestRaw = await getPersistence().readDatabaseJson();
+    const loaded = latestRaw ? parseDatabase(latestRaw) : null;
+    if (!loaded?.db) {
+      break;
+    }
+    merged = mergeOrgCrudFromLatest(merged, loaded.db);
+  }
+  const kept = await overlayPersistedCare(clampSatelliteStaffTenants(merged));
   memory = kept;
   await Promise.all([
     getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2)),
@@ -917,44 +1084,195 @@ export function findUserByEmail(email: string) {
   const normalized = normalizeEmail(email);
   return withLock(async () => {
     const db = await ensureCatalog();
-    return db.users.find((user) => user.email === normalized) ?? null;
+    const matches = db.users.filter(
+      (user) => user.email === normalized && !user.deletedAt,
+    );
+    if (matches.length === 0) {
+      return null;
+    }
+    if (matches.length === 1) {
+      return matches[0];
+    }
+    return null;
   });
 }
 
-export function listCustomers() {
+export function listTenants() {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return db.users
-      .filter((user) => user.role === "customer" && !user.deletedAt)
-      .map((user) => toPublicUser(user, db.sites ?? [], db.customers ?? []))
-      .sort((a, b) => a.email.localeCompare(b.email));
+    return [...(db.tenants ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   });
 }
 
-export function listCustomerAccounts() {
-  return withLock(async () => {
-    const db = await ensureCatalog();
-    return [...(db.customers ?? [])]
-      .filter((row) => !row.deletedAt)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  });
+function tenantNameTaken(db: Database, trimmed: string) {
+  const slugTaken = (db.tenants ?? []).some(
+    (row) => row.slug === newTenantFromName(trimmed).slug,
+  );
+  const nameTaken = (db.tenants ?? []).some(
+    (row) => row.name.toLowerCase() === trimmed.toLowerCase(),
+  );
+  return slugTaken || nameTaken;
 }
 
-export function getCustomerAccount(id: string) {
-  return withLock(async () => {
-    const db = await ensureCatalog();
-    return (db.customers ?? []).find((row) => row.id === id && !row.deletedAt) ?? null;
-  });
-}
-
-export function createCustomerAccount(name: string) {
+export function createTenant(name: string) {
   return withLock(async () => {
     const db = await readDatabase();
     const trimmed = name.trim();
     if (!trimmed) {
       return { error: "invalid" as const };
     }
-    const exists = (db.customers ?? []).some(
+    if (tenantNameTaken(db, trimmed)) {
+      return { error: "taken" as const };
+    }
+    const tenant = newTenantFromName(trimmed);
+    await writeDatabase({
+      ...db,
+      tenants: [...(db.tenants ?? []), tenant],
+    });
+    return { tenant };
+  });
+}
+
+/** One write so first staff always shares the new tenant row (no heal gap). */
+export function createTenantWithOptionalStaff(
+  name: string,
+  staff?: { email: string; passwordHash: string },
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { error: "invalid" as const };
+    }
+    if (tenantNameTaken(db, trimmed)) {
+      return { error: "taken" as const };
+    }
+    const tenant = newTenantFromName(trimmed);
+    let users = db.users;
+    let staffUser: StoredUser | undefined;
+    if (staff) {
+      const normalized = normalizeEmail(staff.email);
+      if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
+        return { error: "email-taken" as const };
+      }
+      staffUser = {
+        id: randomUUID(),
+        email: normalized,
+        passwordHash: staff.passwordHash,
+        role: "staff",
+        tenantId: tenant.id,
+      };
+      users = [...users, staffUser];
+    }
+    const draft = {
+      ...db,
+      schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
+      tenants: [...(db.tenants ?? []), tenant],
+      users,
+    };
+    const migrated = migrateTenants(draft).db;
+    let finalUsers = migrated.users;
+    if (staffUser) {
+      finalUsers = migrated.users.map((user) =>
+        user.id === staffUser!.id ? { ...user, tenantId: tenant.id } : user,
+      );
+      staffUser = { ...staffUser, tenantId: tenant.id };
+    }
+    const payload = bindStaffTenantIds(
+      clampSatelliteStaffTenants({ ...migrated, users: finalUsers }),
+      staffUser ? [{ userId: staffUser.id, tenantId: tenant.id }] : [],
+    );
+    await writeDatabaseWithOrgMerge(payload);
+    return { tenant, staffUser };
+  });
+}
+
+export function createTenantStaffUser(
+  tenantId: string,
+  input: { email: string; passwordHash: string; role: Role },
+) {
+  const normalized = normalizeEmail(input.email);
+  return withLock(async () => {
+    const db = await readDatabase();
+    const tenant = (db.tenants ?? []).find((row) => row.id === tenantId);
+    if (!tenant) {
+      return { error: "bad-tenant" as const };
+    }
+    if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
+      return { error: "email-taken" as const };
+    }
+    const user: StoredUser = {
+      id: randomUUID(),
+      email: normalized,
+      passwordHash: input.passwordHash,
+      role: input.role,
+      tenantId,
+    };
+    await writeDatabase({ ...db, users: [...db.users, user] });
+    return { user };
+  });
+}
+
+export function listStaffUsersForPlatform() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const tenants = new Map((db.tenants ?? []).map((row) => [row.id, row.name]));
+    return db.users
+      .filter((user) => user.role === "staff" && !user.deletedAt)
+      .map((user) => ({
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId ?? null,
+        tenantName: user.tenantId ? (tenants.get(user.tenantId) ?? user.tenantId) : null,
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+  });
+}
+
+export function listCustomers(tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const sites = filterByTenant(db.sites ?? [], tenantId);
+    const customers = filterByTenant(db.customers ?? [], tenantId);
+    return db.users
+      .filter(
+        (user) =>
+          user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => toPublicUser(user, sites, customers))
+      .sort((a, b) => a.email.localeCompare(b.email));
+  });
+}
+
+export function listCustomerAccounts(tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return filterByTenant(db.customers ?? [], tenantId)
+      .filter((row) => !row.deletedAt)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+}
+
+export function getCustomerAccount(id: string, tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const row =
+      (db.customers ?? []).find((row) => row.id === id && !row.deletedAt) ?? null;
+    if (!row || !belongsToTenant(row, tenantId)) {
+      return null;
+    }
+    return row;
+  });
+}
+
+export function createCustomerAccount(name: string, tenantId: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { error: "invalid" as const };
+    }
+    const exists = filterByTenant(db.customers ?? [], tenantId).some(
       (row) => !row.deletedAt && row.name.toLowerCase() === trimmed.toLowerCase(),
     );
     if (exists) {
@@ -964,6 +1282,7 @@ export function createCustomerAccount(name: string) {
       id: `customer-${randomUUID()}`,
       name: trimmed,
       createdAt: new Date().toISOString(),
+      tenantId,
     };
     await writeDatabase({
       ...db,
@@ -973,11 +1292,17 @@ export function createCustomerAccount(name: string) {
   });
 }
 
-export function updateCustomerAccount(id: string, patch: { name?: string }) {
+export function updateCustomerAccount(
+  id: string,
+  tenantId: string,
+  patch: { name?: string },
+) {
   return withLock(async () => {
     const db = await readDatabase();
     const customers = db.customers ?? [];
-    const index = customers.findIndex((row) => row.id === id && !row.deletedAt);
+    const index = customers.findIndex(
+      (row) => row.id === id && !row.deletedAt && belongsToTenant(row, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -986,7 +1311,7 @@ export function updateCustomerAccount(id: string, patch: { name?: string }) {
       if (!trimmed) {
         return { error: "invalid" as const };
       }
-      const taken = customers.some(
+      const taken = filterByTenant(customers, tenantId).some(
         (row) =>
           row.id !== id &&
           !row.deletedAt &&
@@ -1004,11 +1329,13 @@ export function updateCustomerAccount(id: string, patch: { name?: string }) {
   });
 }
 
-export function deleteCustomerAccount(id: string) {
+export function deleteCustomerAccount(id: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
     const customers = db.customers ?? [];
-    const index = customers.findIndex((row) => row.id === id && !row.deletedAt);
+    const index = customers.findIndex(
+      (row) => row.id === id && !row.deletedAt && belongsToTenant(row, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1026,6 +1353,7 @@ export function deleteCustomerAccount(id: string) {
 }
 
 export function createCustomer(
+  tenantId: string,
   email: string,
   passwordHash: string,
   access: {
@@ -1042,13 +1370,18 @@ export function createCustomer(
     if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
       return { error: "email-taken" as const };
     }
-    const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
-    const machineIds = new Set(db.machines.map((machine) => machine.id));
+    const known = new Set(
+      activeSites(filterByTenant(db.sites ?? [], tenantId)).map((site) => site.id),
+    );
+    const machineIds = new Set(
+      filterByTenant(db.machines, tenantId).map((machine) => machine.id),
+    );
     const user: StoredUser = {
       id: randomUUID(),
       email: normalized,
       passwordHash,
       role: "customer",
+      tenantId,
       siteIds: [...new Set((access.siteIds ?? []).filter((id) => known.has(id)))],
       machineIds: [
         ...new Set((access.machineIds ?? []).filter((id) => machineIds.has(id))),
@@ -1060,10 +1393,12 @@ export function createCustomer(
   });
 }
 
-export function deletePerson(userId: string) {
+export function deletePerson(userId: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    const index = db.users.findIndex((user) => user.id === userId);
+    const index = db.users.findIndex(
+      (user) => user.id === userId && belongsToTenant(user, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1078,10 +1413,10 @@ export function deletePerson(userId: string) {
   });
 }
 
-export function listSites(customerId?: string) {
+export function listSites(tenantId: string, customerId?: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    const rows = activeSites(db.sites ?? []);
+    const rows = activeSites(filterByTenant(db.sites ?? [], tenantId));
     if (!customerId) {
       return rows;
     }
@@ -1089,28 +1424,35 @@ export function listSites(customerId?: string) {
   });
 }
 
-export function getOrgContext() {
+export function getOrgContext(tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
     return {
-      sites: activeSites(db.sites ?? []),
-      customers: (db.customers ?? []).filter((row) => !row.deletedAt),
+      sites: activeSites(filterByTenant(db.sites ?? [], tenantId)),
+      customers: filterByTenant(db.customers ?? [], tenantId).filter(
+        (row) => !row.deletedAt,
+      ),
     };
   });
 }
 
-export function getSite(id: string) {
+export function getSite(id: string, tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return activeSites(db.sites ?? []).find((site) => site.id === id) ?? null;
+    const site = activeSites(db.sites ?? []).find((site) => site.id === id) ?? null;
+    if (!site || !belongsToTenant(site, tenantId)) {
+      return null;
+    }
+    return site;
   });
 }
 
-export function createSite(customerId: string, name: string) {
+export function createSite(tenantId: string, customerId: string, name: string) {
   return withLock(async () => {
     const db = await readDatabase();
     const customer = (db.customers ?? []).find(
-      (row) => row.id === customerId && !row.deletedAt,
+      (row) =>
+        row.id === customerId && !row.deletedAt && belongsToTenant(row, tenantId),
     );
     if (!customer) {
       return { error: "bad-customer" as const };
@@ -1119,7 +1461,7 @@ export function createSite(customerId: string, name: string) {
     if (!nextName) {
       return { error: "invalid" as const };
     }
-    const exists = activeSites(db.sites ?? []).some(
+    const exists = activeSites(filterByTenant(db.sites ?? [], tenantId)).some(
       (site) =>
         site.customerId === customerId &&
         site.name.toLowerCase() === nextName.toLowerCase(),
@@ -1132,6 +1474,7 @@ export function createSite(customerId: string, name: string) {
       customerId,
       name: nextName,
       createdAt: new Date().toISOString(),
+      tenantId,
     };
     const sites = [...(db.sites ?? []), site].sort((a, b) =>
       `${a.customerId} ${a.name}`.localeCompare(`${b.customerId} ${b.name}`),
@@ -1143,19 +1486,26 @@ export function createSite(customerId: string, name: string) {
 
 export function updateSite(
   siteId: string,
+  tenantId: string,
   patch: { name?: string; customerId?: string },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
     const sites = db.sites ?? [];
-    const index = sites.findIndex((site) => site.id === siteId && !site.deletedAt);
+    const index = sites.findIndex(
+      (site) =>
+        site.id === siteId && !site.deletedAt && belongsToTenant(site, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
     let next = sites[index];
     if (patch.customerId !== undefined) {
       const customer = (db.customers ?? []).find(
-        (row) => row.id === patch.customerId && !row.deletedAt,
+        (row) =>
+          row.id === patch.customerId &&
+          !row.deletedAt &&
+          belongsToTenant(row, tenantId),
       );
       if (!customer) {
         return { error: "bad-customer" as const };
@@ -1167,7 +1517,7 @@ export function updateSite(
       if (!trimmed) {
         return { error: "invalid" as const };
       }
-      const taken = activeSites(sites).some(
+      const taken = activeSites(filterByTenant(sites, tenantId)).some(
         (site) =>
           site.id !== siteId &&
           site.customerId === next.customerId &&
@@ -1185,11 +1535,14 @@ export function updateSite(
   });
 }
 
-export function deleteSite(siteId: string) {
+export function deleteSite(siteId: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
     const sites = db.sites ?? [];
-    const index = sites.findIndex((site) => site.id === siteId && !site.deletedAt);
+    const index = sites.findIndex(
+      (site) =>
+        site.id === siteId && !site.deletedAt && belongsToTenant(site, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1218,6 +1571,7 @@ export function deleteSite(siteId: string) {
 
 export function updatePerson(
   userId: string,
+  tenantId: string,
   patch: {
     name?: string | null;
     email?: string;
@@ -1228,7 +1582,9 @@ export function updatePerson(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const index = db.users.findIndex((user) => user.id === userId);
+    const index = db.users.findIndex(
+      (user) => user.id === userId && belongsToTenant(user, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1246,7 +1602,11 @@ export function updatePerson(
       }
       if (
         db.users.some(
-          (row) => row.id !== userId && row.email === normalized && !row.deletedAt,
+          (row) =>
+            row.id !== userId &&
+            row.email === normalized &&
+            !row.deletedAt &&
+            belongsToTenant(row, tenantId),
         )
       ) {
         return { error: "email-taken" as const };
@@ -1265,8 +1625,10 @@ export function updatePerson(
     }
 
     if (patch.siteIds !== undefined || patch.machineIds !== undefined) {
-      const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
-      const validMachines = db.machines.map((machine) => ({
+      const known = new Set(
+        activeSites(filterByTenant(db.sites ?? [], tenantId)).map((site) => site.id),
+      );
+      const validMachines = filterByTenant(db.machines, tenantId).map((machine) => ({
         id: machine.id,
         siteId: machine.siteId,
       }));
@@ -1303,16 +1665,24 @@ export const updateCustomerSites = updatePerson;
 
 export function updateMachine(
   machineId: string,
+  tenantId: string,
   patch: { name?: string; siteId?: string | null; part?: StaffPartEdit },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const index = db.machines.findIndex((machine) => machine.id === machineId);
+    const index = db.machines.findIndex(
+      (machine) => machine.id === machineId && belongsToTenant(machine, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
     if (patch.siteId !== undefined && patch.siteId) {
-      if (!(db.sites ?? []).some((site) => site.id === patch.siteId)) {
+      if (
+        !(db.sites ?? []).some(
+          (site) =>
+            site.id === patch.siteId && !site.deletedAt && belongsToTenant(site, tenantId),
+        )
+      ) {
         return { error: "bad-site" as const };
       }
     }
@@ -1368,14 +1738,20 @@ export function updateMachine(
   });
 }
 
-export function updateMachineSite(machineId: string, siteId: string | null) {
-  return updateMachine(machineId, { siteId });
+export function updateMachineSite(
+  machineId: string,
+  tenantId: string,
+  siteId: string | null,
+) {
+  return updateMachine(machineId, tenantId, { siteId });
 }
 
-export function deleteMachine(machineId: string) {
+export function deleteMachine(machineId: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    const index = db.machines.findIndex((machine) => machine.id === machineId);
+    const index = db.machines.findIndex(
+      (machine) => machine.id === machineId && belongsToTenant(machine, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1415,32 +1791,37 @@ export function deleteMachine(machineId: string) {
   });
 }
 
-export function listMachines(options?: { heal?: boolean }) {
+export function listMachines(tenantId: string, options?: { heal?: boolean }) {
   return withLock(async () => {
     if (options?.heal) {
       memory = null;
     }
     const db = await ensureCatalog({ restoreFiles: options?.heal });
-    return db.machines.map((machine) => ({
+    return filterByTenant(db.machines, tenantId).map((machine) => ({
       id: machine.id,
       name: machine.name,
       siteId: machine.siteId,
+      tenantId: machine.tenantId,
       version: machine.version ?? 1,
     }));
   });
 }
 
-export function getMachine(id: string) {
+export function getMachine(id: string, tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return db.machines.find((machine) => machine.id === id) ?? null;
+    const machine = db.machines.find((machine) => machine.id === id) ?? null;
+    if (!machine || !belongsToTenant(machine, tenantId)) {
+      return null;
+    }
+    return machine;
   });
 }
 
-export function listMachineModelFiles() {
+export function listMachineModelFiles(tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return db.machines.map((machine) => ({
+    return filterByTenant(db.machines, tenantId).map((machine) => ({
       id: machine.id,
       name: machine.name,
       storedFileName: machine.storedFileName,
@@ -1473,14 +1854,17 @@ export function seedEmptyMachineCatalogForTests(users: StoredUser[]) {
   };
 }
 
-export function createMachine(input: {
-  name: string;
-  storedFileName: string;
-  originalFileName: string;
-  parts: Part[];
-  unmatched: UnmatchedPart[];
-  siteId?: string;
-}) {
+export function createMachine(
+  tenantId: string,
+  input: {
+    name: string;
+    storedFileName: string;
+    originalFileName: string;
+    parts: Part[];
+    unmatched: UnmatchedPart[];
+    siteId?: string;
+  },
+) {
   return withLock(async () => {
     const db = await readDatabase();
     const machine: StoredMachine = {
@@ -1492,6 +1876,7 @@ export function createMachine(input: {
       unmatched: input.unmatched,
       createdAt: new Date().toISOString(),
       siteId: input.siteId,
+      tenantId,
       version: 1,
     };
     await writeDatabase({ ...db, machines: [...db.machines, machine] });
@@ -1501,6 +1886,7 @@ export function createMachine(input: {
 
 export function replaceMachinePack(
   machineId: string,
+  tenantId: string,
   input: {
     name?: string;
     storedFileName: string;
@@ -1511,7 +1897,9 @@ export function replaceMachinePack(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const index = db.machines.findIndex((machine) => machine.id === machineId);
+    const index = db.machines.findIndex(
+      (machine) => machine.id === machineId && belongsToTenant(machine, tenantId),
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1540,6 +1928,7 @@ export function recordMachineView(input: {
   userId: string;
   email: string;
   machineId: string;
+  tenantId: string;
 }) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -1549,6 +1938,7 @@ export function recordMachineView(input: {
       userId: input.userId,
       email: input.email,
       machineId: input.machineId,
+      tenantId: input.tenantId,
     };
     const machineViews = [view, ...(db.machineViews ?? [])].slice(0, 500);
     await writeDatabase({ ...db, machineViews });
@@ -1556,23 +1946,33 @@ export function recordMachineView(input: {
   });
 }
 
-export function listMachineViews(machineId: string) {
+export function listMachineViews(machineId: string, tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return (db.machineViews ?? []).filter((row) => row.machineId === machineId);
+    return (db.machineViews ?? []).filter(
+      (row) => row.machineId === machineId && belongsToTenant(row, tenantId),
+    );
   });
 }
 
 export function bulkUpdateCustomerAccess(
+  tenantId: string,
   userIds: string[],
   access: { siteIds?: string[]; companyAccess?: string[] },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const known = new Set(activeSites(db.sites ?? []).map((site) => site.id));
+    const known = new Set(
+      activeSites(filterByTenant(db.sites ?? [], tenantId)).map((site) => site.id),
+    );
     const wanted = new Set(userIds);
     const users = db.users.map((user) => {
-      if (!wanted.has(user.id) || user.role !== "customer" || user.deletedAt) {
+      if (
+        !wanted.has(user.id) ||
+        user.role !== "customer" ||
+        user.deletedAt ||
+        !belongsToTenant(user, tenantId)
+      ) {
         return user;
       }
       return {
@@ -1583,7 +1983,11 @@ export function bulkUpdateCustomerAccess(
     });
     await writeDatabase({ ...db, users });
     return users.filter(
-      (user) => wanted.has(user.id) && user.role === "customer" && !user.deletedAt,
+      (user) =>
+        wanted.has(user.id) &&
+        user.role === "customer" &&
+        !user.deletedAt &&
+        belongsToTenant(user, tenantId),
     );
   });
 }
@@ -1609,15 +2013,22 @@ function newActivity(
   return activity;
 }
 
-export function createQuote(input: {
-  machineId: string;
-  items: QuoteItem[];
-  note?: string;
-  customerId: string;
-  customerEmail: string;
-}) {
+export function createQuote(
+  tenantId: string,
+  input: {
+    machineId: string;
+    items: QuoteItem[];
+    note?: string;
+    customerId: string;
+    customerEmail: string;
+  },
+) {
   return withLock(async () => {
     const db = await readDatabase();
+    const machine = db.machines.find((row) => row.id === input.machineId);
+    if (!machine || !belongsToTenant(machine, tenantId)) {
+      return { error: "bad-machine" as const };
+    }
     const now = new Date().toISOString();
     const activity = newActivity(
       { email: input.customerEmail, role: "customer" },
@@ -1634,6 +2045,7 @@ export function createQuote(input: {
       createdAt: now,
       customerEmail: input.customerEmail,
       customerId: input.customerId,
+      tenantId,
       status: "requested",
       shipments: [],
       activities: [activity],
@@ -1644,30 +2056,35 @@ export function createQuote(input: {
   });
 }
 
-export function listQuotes() {
+export function listQuotes(tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    return [...db.quotes]
+    return filterByTenant(db.quotes, tenantId)
       .map((quote) => normalizeStoredQuote(quote))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }
 
-export function getQuote(idOrNumber: string) {
+export function getQuote(idOrNumber: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    return findQuoteInList(db.quotes, idOrNumber);
+    const quote = findQuoteInList(db.quotes, idOrNumber);
+    if (!quote || !belongsToTenant(quote, tenantId)) {
+      return null;
+    }
+    return quote;
   });
 }
 
 export function mutateQuote(
   idOrNumber: string,
+  tenantId: string,
   fn: (quote: QuoteRecord) => QuoteRecord,
 ) {
   return withLock(async () => {
     const db = await readDatabase();
     const current = findQuoteInList(db.quotes, idOrNumber);
-    if (!current) {
+    if (!current || !belongsToTenant(current, tenantId)) {
       return null;
     }
     const next = fn(current);
@@ -1681,12 +2098,13 @@ export function mutateQuote(
 
 export function appendQuoteActivity(
   idOrNumber: string,
+  tenantId: string,
   actor: { email: string; role: Role; id: string },
   kind: QuoteActivity["kind"],
   text: string,
   attachments?: QuoteActivity["attachments"],
 ) {
-  return mutateQuote(idOrNumber, (quote) => {
+  return mutateQuote(idOrNumber, tenantId, (quote) => {
     const activity = newActivity(actor, kind, text, undefined, attachments);
     return {
       ...quote,
@@ -1696,9 +2114,9 @@ export function appendQuoteActivity(
   });
 }
 
-export function markQuoteRead(idOrNumber: string, userId: string) {
+export function markQuoteRead(idOrNumber: string, tenantId: string, userId: string) {
   const now = new Date().toISOString();
-  return mutateQuote(idOrNumber, (quote) => ({
+  return mutateQuote(idOrNumber, tenantId, (quote) => ({
     ...quote,
     lastReadAt: { ...quote.lastReadAt, [userId]: now },
   }));
@@ -1727,40 +2145,49 @@ function newTicketActivity(
   return activity;
 }
 
-export function listManuals(machineId: string) {
+export function listManuals(machineId: string, tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
     return careCollections(db)
-      .manuals.filter((manual) => manual.machineId === machineId)
+      .manuals.filter(
+        (manual) => manual.machineId === machineId && belongsToTenant(manual, tenantId),
+      )
       .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
   });
 }
 
-export function getManual(machineId: string, manualId: string) {
+export function getManual(machineId: string, manualId: string, tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return (
+    const manual =
       careCollections(db).manuals.find(
         (manual) => manual.machineId === machineId && manual.id === manualId,
-      ) ?? null
-    );
+      ) ?? null;
+    if (!manual || !belongsToTenant(manual, tenantId)) {
+      return null;
+    }
+    return manual;
   });
 }
 
-export function createManual(input: {
-  machineId: string;
-  title: string;
-  category: ManualCategory;
-  storedFileName: string;
-  originalFileName: string;
-  contentType: string;
-  sizeBytes?: number;
-  uploadedByEmail: string;
-  bytes?: Buffer;
-}) {
+export function createManual(
+  tenantId: string,
+  input: {
+    machineId: string;
+    title: string;
+    category: ManualCategory;
+    storedFileName: string;
+    originalFileName: string;
+    contentType: string;
+    sizeBytes?: number;
+    uploadedByEmail: string;
+    bytes?: Buffer;
+  },
+) {
   return withLock(async () => {
     const db = await readDatabase();
-    if (!db.machines.some((machine) => machine.id === input.machineId)) {
+    const machine = db.machines.find((machine) => machine.id === input.machineId);
+    if (!machine || !belongsToTenant(machine, tenantId)) {
       return { error: "not-found" as const };
     }
     if (input.bytes?.length) {
@@ -1778,6 +2205,7 @@ export function createManual(input: {
       sizeBytes: input.sizeBytes,
       uploadedAt: now,
       uploadedByEmail: input.uploadedByEmail,
+      tenantId,
     };
     const manuals = [manual, ...careCollections(db).manuals];
     await writeDatabase({ ...db, ...careCollections(db), manuals });
@@ -1785,20 +2213,24 @@ export function createManual(input: {
   });
 }
 
-export function listTickets(machineId?: string) {
+export function listTickets(tenantId: string, machineId?: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    const tickets = careCollections(db).tickets.filter((ticket) =>
-      machineId ? ticket.machineId === machineId : true,
+    const tickets = filterByTenant(careCollections(db).tickets, tenantId).filter(
+      (ticket) => (machineId ? ticket.machineId === machineId : true),
     );
     return tickets.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }
 
-export function getTicket(idOrNumber: string) {
+export function getTicket(idOrNumber: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    return findTicketInList(careCollections(db).tickets, idOrNumber);
+    const ticket = findTicketInList(careCollections(db).tickets, idOrNumber);
+    if (!ticket || !belongsToTenant(ticket, tenantId)) {
+      return null;
+    }
+    return ticket;
   });
 }
 
@@ -1817,17 +2249,21 @@ function findTicketInList(tickets: StoredTicket[], idOrNumber: string) {
   return tickets.find((ticket) => ticket.number === number) ?? null;
 }
 
-export function createTicket(input: {
-  machineId: string;
-  title: string;
-  customerId: string;
-  customerEmail: string;
-  actor: { email: string; role: Role; id: string };
-  note?: string;
-}) {
+export function createTicket(
+  tenantId: string,
+  input: {
+    machineId: string;
+    title: string;
+    customerId: string;
+    customerEmail: string;
+    actor: { email: string; role: Role; id: string };
+    note?: string;
+  },
+) {
   return withLock(async () => {
     const db = await readDatabase();
-    if (!db.machines.some((machine) => machine.id === input.machineId)) {
+    const machine = db.machines.find((machine) => machine.id === input.machineId);
+    if (!machine || !belongsToTenant(machine, tenantId)) {
       return { error: "not-found" as const };
     }
     const now = new Date().toISOString();
@@ -1850,6 +2286,7 @@ export function createTicket(input: {
       createdAt: now,
       customerId: input.customerId,
       customerEmail: input.customerEmail,
+      tenantId,
       activities,
       lastReadAt: { [input.actor.id]: now },
     };
@@ -1864,12 +2301,13 @@ export function createTicket(input: {
 
 function mutateTicket(
   idOrNumber: string,
+  tenantId: string,
   fn: (ticket: StoredTicket) => StoredTicket,
 ) {
   return withLock(async () => {
     const db = await readDatabase();
     const current = findTicketInList(careCollections(db).tickets, idOrNumber);
-    if (!current) {
+    if (!current || !belongsToTenant(current, tenantId)) {
       return null;
     }
     const next = fn(current);
@@ -1883,10 +2321,11 @@ function mutateTicket(
 
 export function updateTicketStatus(
   idOrNumber: string,
+  tenantId: string,
   status: TicketStatus,
   actor: { email: string; role: Role; id: string },
 ) {
-  return mutateTicket(idOrNumber, (ticket) => {
+  return mutateTicket(idOrNumber, tenantId, (ticket) => {
     if (ticket.status === status) {
       return ticket;
     }
@@ -1902,11 +2341,12 @@ export function updateTicketStatus(
 
 export function appendTicketActivity(
   idOrNumber: string,
+  tenantId: string,
   actor: { email: string; role: Role; id: string },
   text: string,
   attachments?: TicketActivity["attachments"],
 ) {
-  return mutateTicket(idOrNumber, (ticket) => {
+  return mutateTicket(idOrNumber, tenantId, (ticket) => {
     const activity = newTicketActivity(actor, "message", text, undefined, attachments);
     return {
       ...ticket,
@@ -1916,21 +2356,24 @@ export function appendTicketActivity(
   });
 }
 
-export function markTicketRead(idOrNumber: string, userId: string) {
+export function markTicketRead(idOrNumber: string, tenantId: string, userId: string) {
   const now = new Date().toISOString();
-  return mutateTicket(idOrNumber, (ticket) => ({
+  return mutateTicket(idOrNumber, tenantId, (ticket) => ({
     ...ticket,
     lastReadAt: { ...ticket.lastReadAt, [userId]: now },
   }));
 }
 
-export function getMachineUsage(machineId: string) {
+export function getMachineUsage(machineId: string, tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return (
+    const row =
       careCollections(db).machineUsage.find((row) => row.machineId === machineId) ??
-      null
-    );
+      null;
+    if (!row || !belongsToTenant(row, tenantId)) {
+      return null;
+    }
+    return row;
   });
 }
 
@@ -1949,6 +2392,7 @@ function pickUsageField<T>(
 
 export function updateMachineUsage(
   machineId: string,
+  tenantId: string,
   patch: {
     hours?: number | null;
     cycles?: number | null;
@@ -1959,7 +2403,8 @@ export function updateMachineUsage(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    if (!db.machines.some((machine) => machine.id === machineId)) {
+    const machine = db.machines.find((machine) => machine.id === machineId);
+    if (!machine || !belongsToTenant(machine, tenantId)) {
       return { error: "not-found" as const };
     }
     const now = new Date().toISOString();
@@ -1979,6 +2424,7 @@ export function updateMachineUsage(
     };
     const next: StoredUsage = {
       machineId,
+      tenantId,
       ...nextValues,
       updatedAt: now,
       updatedByEmail: actorEmail,
@@ -1993,30 +2439,39 @@ export function updateMachineUsage(
   });
 }
 
-export function listBugReports() {
+export function listBugReports(tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    return [...db.bugReports].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return filterByTenant(db.bugReports, tenantId).sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
   });
 }
 
-export function getBugReport(id: string) {
+export function getBugReport(id: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    return db.bugReports.find((report) => report.id === id) ?? null;
+    const report = db.bugReports.find((report) => report.id === id) ?? null;
+    if (!report || !belongsToTenant(report, tenantId)) {
+      return null;
+    }
+    return report;
   });
 }
 
-export function createBugReport(input: {
-  description: string;
-  path: string;
-  userAgent: string;
-  userEmail?: string;
-  userRole?: Role;
-  logText: string;
-  screenshot?: Buffer;
-  githubIssueUrl?: string;
-}) {
+export function createBugReport(
+  tenantId: string,
+  input: {
+    description: string;
+    path: string;
+    userAgent: string;
+    userEmail?: string;
+    userRole?: Role;
+    logText: string;
+    screenshot?: Buffer;
+    githubIssueUrl?: string;
+  },
+) {
   return withLock(async () => {
     const db = await readDatabase();
     const id = randomUUID();
@@ -2032,6 +2487,7 @@ export function createBugReport(input: {
       userAgent: input.userAgent,
       userEmail: input.userEmail,
       userRole: input.userRole,
+      tenantId,
       logText: input.logText,
       screenshotFileName,
       githubIssueUrl: input.githubIssueUrl,

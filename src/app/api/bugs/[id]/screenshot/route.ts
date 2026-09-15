@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error } from "@/lib/http";
 import { getBugReport, readStoredFile } from "@/lib/store";
 
@@ -6,13 +6,13 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
   const { id } = await params;
-  const report = await getBugReport(id);
+  const report = await getBugReport(id, auth.tenantId);
   if (!report?.screenshotFileName) {
     return error("Screenshot not found", 404);
   }
