@@ -6,7 +6,15 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { LandingStage } from "@/components/landing/LandingStage";
 import "./landing.css";
 
-export function LandingScreen({ nextPath = "/machines" }: { nextPath?: string }) {
+export function LandingScreen({
+  nextPath = "/machines",
+  microsoftSignInEnabled = false,
+  authErrorCode = null,
+}: {
+  nextPath?: string;
+  microsoftSignInEnabled?: boolean;
+  authErrorCode?: string | null;
+}) {
   const [entered, setEntered] = useState(false);
 
   const handleReady = useCallback(() => {
@@ -31,7 +39,11 @@ export function LandingScreen({ nextPath = "/machines" }: { nextPath?: string })
             Overall equipment effectiveness, seen all the way around — the
             machine, the spare, the quote, the care.
           </p>
-          <LoginForm nextPath={nextPath} />
+          <LoginForm
+            nextPath={nextPath}
+            microsoftSignInEnabled={microsoftSignInEnabled}
+            authErrorCode={authErrorCode}
+          />
         </div>
       </div>
     </div>

@@ -6,7 +6,15 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { LandingScreen } from "@/components/landing/LandingScreen";
 
 /** Signed-out landing with wallpaper; signed-in users go straight to Machines (no flash). */
-export function LandingPageGate({ nextPath = "/machines" }: { nextPath?: string }) {
+export function LandingPageGate({
+  nextPath = "/machines",
+  microsoftSignInEnabled = false,
+  authErrorCode = null,
+}: {
+  nextPath?: string;
+  microsoftSignInEnabled?: boolean;
+  authErrorCode?: string | null;
+}) {
   const { status, user } = useAuth();
   const router = useRouter();
   const signedIn = status === "signed-in" && user;
@@ -21,5 +29,11 @@ export function LandingPageGate({ nextPath = "/machines" }: { nextPath?: string 
     return null;
   }
 
-  return <LandingScreen nextPath={nextPath} />;
+  return (
+    <LandingScreen
+      nextPath={nextPath}
+      microsoftSignInEnabled={microsoftSignInEnabled}
+      authErrorCode={authErrorCode}
+    />
+  );
 }

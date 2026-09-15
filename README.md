@@ -129,6 +129,10 @@ npm run build
 Optional (from T1.2, plus T3 durable store):
 
 - `AUTH_SECRET` — signs the httpOnly session cookie. **Required on Vercel** (Preview and Production). A local-only development default is used when unset off Vercel. Never commit this value.
+- **Microsoft Entra ID (Sign in with Microsoft)** — optional until go-live. When all three are set, the login screen shows **Sign in with Microsoft** and keeps email/password sign-in.
+  - `AZURE_AD_CLIENT_ID` — Application (client) ID from the Entra app registration.
+  - `AZURE_AD_CLIENT_SECRET` — client secret (Certificates & secrets).
+  - `AZURE_AD_TENANT_ID` — tenant GUID for single-tenant, or `organizations` (default) for any work/school account, or `common` for work/school and personal Microsoft accounts. OAuth redirect URI (add each host you use): `{origin}/api/auth/microsoft/callback` — e.g. `https://oee360.com/api/auth/microsoft/callback`, `https://www.oee360.com/api/auth/microsoft/callback`, `https://spares-yonder3.vercel.app/api/auth/microsoft/callback`, and `http://localhost:3000/api/auth/microsoft/callback` for local dev. API permissions: Microsoft Graph delegated `openid`, `profile`, `email`, `User.Read`. Existing users are matched by email (case-insensitive); unknown emails see “Ask your admin for access” (no public signup).
 - `BLOB_READ_WRITE_TOKEN` — **required on Vercel** (Preview and Production). Quotes, users, machine metadata, PO PDFs, and bug screenshots live in a private Vercel Blob store (`spares/db.json` + `spares/care.json`). The app fails closed on Vercel without this — no silent `/tmp` fallback. Local `npm run dev` does not need this; it keeps using `./data`.
 - `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo. Also treated as a **platform owner** unless overridden below.
 - `SPARES_OWNER_PASSWORD` — sets/resets the owner staff password hash on each deploy when paired with `SPARES_OWNER_EMAIL`.
@@ -152,6 +156,19 @@ Several automation companies (“hosts”) can share one OEE360 deployment. Each
   - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base for **local dev only**. On Vercel, machine models always use short-lived presigned GET URLs (or the credentialed `/file` proxy) so CAD stays private.
   - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, hard-capped at one hour). Presigned PUT tickets for staff uploads expire in 15 minutes.
   - `SPARES_CORS_ORIGINS` — optional comma-separated extra browser origins for model/manual asset CORS (e.g. a Vercel Preview hostname). Soft Launch aliases and localhost are always included.
+
+### Kevin: Entra app for Microsoft sign-in
+
+1. In [Microsoft Entra admin center](https://entra.microsoft.com/), open **Identity** → **Applications** → **App registrations** → **New registration**. Name it (e.g. `oee360 Spares`). Supported account types: choose multi-tenant (`organizations` / work & school) or single tenant as needed.
+2. After create, copy **Application (client) ID** → Vercel `AZURE_AD_CLIENT_ID`. Copy **Directory (tenant) ID** if you want single-tenant → `AZURE_AD_TENANT_ID` (otherwise set `organizations` or `common` on Vercel).
+3. **Certificates & secrets** → **New client secret** → copy value once → Vercel `AZURE_AD_CLIENT_SECRET` (Production; repeat for Preview if needed).
+4. **Authentication** → **Add a platform** → **Web** → Redirect URIs (exact):
+   - `https://oee360.com/api/auth/microsoft/callback`
+   - `https://www.oee360.com/api/auth/microsoft/callback`
+   - `https://spares-yonder3.vercel.app/api/auth/microsoft/callback`
+   - `http://localhost:3000/api/auth/microsoft/callback`
+5. **API permissions** → **Add a permission** → **Microsoft Graph** → **Delegated**: `openid`, `profile`, `email`, `User.Read`. Grant admin consent if your tenant requires it.
+6. In the Vercel **Production** project settings, add `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, and `AZURE_AD_TENANT_ID`, then redeploy. Staff must already exist in Spares with the same email as their Microsoft account.
 
 ### CORS for model assets (Kevin)
 

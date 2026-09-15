@@ -4,12 +4,24 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { errorMessage, isApiError } from "@/lib/api/errors";
+import {
+  MICROSOFT_ACCESS_DENIED_CODE,
+  MICROSOFT_ACCESS_DENIED_MESSAGE,
+} from "@/lib/auth/microsoft-public";
 import { stripCredentialQueryFromLocation } from "@/lib/auth/safe-url";
 import { useHydrated } from "@/lib/use-hydrated";
 
 const LOGIN_ACTION = "/api/auth/login";
 
-export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
+export function LoginForm({
+  nextPath = "/machines",
+  microsoftSignInEnabled = false,
+  authErrorCode = null,
+}: {
+  nextPath?: string;
+  microsoftSignInEnabled?: boolean;
+  authErrorCode?: string | null;
+}) {
   const { login, status, user } = useAuth();
   const router = useRouter();
   const hydrated = useHydrated();
@@ -20,7 +32,17 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
 
   useEffect(() => {
     stripCredentialQueryFromLocation();
-  }, []);
+    if (typeof window === "undefined" || !authErrorCode) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("error")) {
+      params.delete("error");
+      const nextSearch = params.toString();
+      const href = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(window.history.state, "", href);
+    }
+  }, [authErrorCode]);
 
   useEffect(() => {
     if (status === "signed-in" && user) {
@@ -94,6 +116,11 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
           className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
         />
       </div>
+      {authErrorCode === MICROSOFT_ACCESS_DENIED_CODE ? (
+        <p className="text-sm text-[#f0b4b0]" role="alert">
+          {MICROSOFT_ACCESS_DENIED_MESSAGE}
+        </p>
+      ) : null}
       {error ? (
         <p className="text-sm text-[#f0b4b0]" role="alert">
           {error}
@@ -107,6 +134,31 @@ export function LoginForm({ nextPath = "/machines" }: { nextPath?: string }) {
       >
         {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
       </button>
+      {microsoftSignInEnabled ? (
+        <>
+          <p className="login-divider text-center text-[12px] uppercase tracking-[0.14em] text-[rgba(236,234,228,0.45)]">
+            or
+          </p>
+          <a
+            href={`/api/auth/microsoft?next=${encodeURIComponent(nextPath)}`}
+            className="login-microsoft inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold"
+          >
+            <MicrosoftGlyph />
+            Sign in with Microsoft
+          </a>
+        </>
+      ) : null}
     </form>
+  );
+}
+
+function MicrosoftGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true" focusable="false">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+    </svg>
   );
 }
