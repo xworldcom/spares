@@ -19,6 +19,7 @@ const STAFF_NAV_HREFS = [
   "/care",
   "/staff/accounts",
   "/staff/people",
+  "/staff/team",
   "/staff/quotes",
   "/staff/bugs",
 ] as const;
@@ -185,6 +186,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </NavLink>
                   <NavLink href="/staff/people" hrefs={navHrefs}>
                     People
+                  </NavLink>
+                  <NavLink href="/staff/team" hrefs={navHrefs}>
+                    Team
                   </NavLink>
                   <NavLinkWithBadge
                     href="/staff/quotes"

@@ -1,6 +1,6 @@
 import type { PublicUser } from "@/types";
 import { error } from "@/lib/http";
-import { isPlatformOwnerEmail } from "@/lib/tenant";
+import { effectiveStaffTenantId, isPlatformOwnerEmail } from "@/lib/tenant";
 import { findUserById } from "@/lib/store";
 import type { NextResponse } from "next/server";
 import { requireRole, requireUser } from "./session.ts";
@@ -14,7 +14,7 @@ type AuthError = { error: NextResponse };
 
 async function scopeFromStoredUser(user: PublicUser): Promise<AuthError | TenantScope> {
   const stored = await findUserById(user.id);
-  const tenantId = stored?.tenantId?.trim();
+  const tenantId = stored ? effectiveStaffTenantId(stored) : null;
   if (!stored || !tenantId) {
     return { error: error("Forbidden", 403) };
   }

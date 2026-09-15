@@ -85,6 +85,7 @@ describe("tenant migration", () => {
           name: "Company B",
           slug: "company-b",
           createdAt: "2020-01-01T00:00:00.000Z",
+          bootstrapStaffEmail: "companyb-staff@test",
         },
       ],
       users: [
@@ -120,6 +121,7 @@ describe("tenant migration", () => {
           name: "Company B",
           slug: "company-b",
           createdAt: "2020-01-01T00:00:00.000Z",
+          bootstrapStaffEmail: "companyb-staff@test",
         },
       ],
       users: [
@@ -170,6 +172,7 @@ describe("tenant migration", () => {
           name: "Company B",
           slug: "company-b",
           createdAt: "2025-01-01T00:00:00.000Z",
+          bootstrapStaffEmail: "companyb-staff@test",
         },
       ],
       users: [
@@ -224,6 +227,43 @@ describe("tenant migration", () => {
       bugReports: [],
     });
     assert.equal(db.users?.[0]?.tenantId, "tenant-b");
+  });
+
+  it("keeps Soft Launch host-company staff on the host tenant when satellites exist", () => {
+    const { db, changed } = migrateTenants({
+      schemaVersion: 3,
+      tenants: [
+        {
+          id: DEFAULT_TENANT_ID,
+          name: DEFAULT_TENANT_NAME,
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tenant-sat",
+          name: "Satellite Co",
+          slug: "satellite-co",
+          createdAt: "2025-01-01T00:00:00.000Z",
+          bootstrapStaffEmail: "satellite-only@test",
+        },
+      ],
+      users: [
+        {
+          id: "u-host-staff",
+          email: "qa-staff-host4-pr128@example.com",
+          passwordHash: "x",
+          role: "staff",
+          tenantId: DEFAULT_TENANT_ID,
+        },
+      ],
+      customers: [],
+      sites: [],
+      machines: [],
+      quotes: [],
+      bugReports: [],
+    });
+    assert.equal(changed, false);
+    assert.equal(db.users?.[0]?.tenantId, DEFAULT_TENANT_ID);
   });
 
   it("is a no-op when already migrated", () => {

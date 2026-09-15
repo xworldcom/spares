@@ -29,6 +29,7 @@ import {
   statusActivityText,
 } from "./quotes.ts";
 import {
+  FIXTURE_MACHINE_IDS,
   missingFixtureMachines,
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
@@ -39,6 +40,7 @@ import {
   DEFAULT_TENANT_ID,
   TENANT_SCHEMA_VERSION,
   belongsToTenant,
+  canAssignStaffAcrossTenants,
   filterByTenant,
   platformOwnerEmails,
 } from "./tenant.ts";
@@ -176,6 +178,12 @@ const SEED_MACHINE_SITES: Record<string, string> = {
   "hardware-fixture": "site-acme-dayton",
 };
 
+/** Soft Launch demo catalog machines always belong to the host tenant. */
+const HOST_SEED_MACHINE_IDS = new Set<string>([
+  FIXTURE_MACHINE_IDS.hardware,
+  FIXTURE_MACHINE_IDS.palletizer,
+]);
+
 export type StoredUser = {
   id: string;
   email: string;
@@ -183,6 +191,8 @@ export type StoredUser = {
   passwordHash: string;
   role: Role;
   tenantId?: string;
+  /** Set when a staff login is created; pins company scope for non–cross-tenant admins. */
+  staffCreatedTenantId?: string;
   siteIds?: string[];
   /** Legacy corporate access; migrated to siteIds on read. */
   companyAccess?: string[];
@@ -534,6 +544,7 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
       role: "staff",
       passwordHash,
       tenantId: current.tenantId ?? DEFAULT_TENANT_ID,
+      staffCreatedTenantId: current.staffCreatedTenantId ?? DEFAULT_TENANT_ID,
     };
     return { ...db, users };
   }
@@ -547,6 +558,7 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
         passwordHash,
         role: "staff",
         tenantId: DEFAULT_TENANT_ID,
+        staffCreatedTenantId: DEFAULT_TENANT_ID,
       },
     ],
   };
@@ -633,14 +645,17 @@ function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUse
   if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
     return merged;
   }
-  const pickSatellite = (id: string | undefined) =>
-    id && id !== DEFAULT_TENANT_ID ? id : undefined;
-  const tenantId =
-    pickSatellite(latest.tenantId) ??
-    pickSatellite(healed.tenantId) ??
-    latest.tenantId ??
-    healed.tenantId;
-  return { ...merged, tenantId };
+  const pinned =
+    latest.staffCreatedTenantId?.trim() ??
+    healed.staffCreatedTenantId?.trim();
+  if (pinned && !canAssignStaffAcrossTenants(merged.email)) {
+    return { ...merged, tenantId: pinned, staffCreatedTenantId: pinned };
+  }
+  const latestTenant = latest.tenantId?.trim();
+  if (latestTenant) {
+    return { ...merged, tenantId: latestTenant };
+  }
+  return merged;
 }
 
 function mergeUsersForHeal(healed: StoredUser[], latest: StoredUser[]): StoredUser[] {
@@ -755,14 +770,22 @@ function ensureOrg(db: Database): Database {
     return `${a.customerId} ${a.name}`.localeCompare(`${b.customerId} ${b.name}`);
   });
   const machines = next.machines.map((machine) => {
+    let row = machine;
+    if (
+      isSeedAllowed() &&
+      HOST_SEED_MACHINE_IDS.has(machine.id) &&
+      row.tenantId !== DEFAULT_TENANT_ID
+    ) {
+      row = { ...row, tenantId: DEFAULT_TENANT_ID };
+    }
     const seeded = SEED_MACHINE_SITES[machine.id];
     if (seeded && isSeedAllowed()) {
-      return machine.siteId === seeded ? machine : { ...machine, siteId: seeded };
+      return row.siteId === seeded ? row : { ...row, siteId: seeded };
     }
-    if (machine.siteId) {
-      return machine;
+    if (row.siteId) {
+      return row;
     }
-    return seeded ? { ...machine, siteId: seeded } : machine;
+    return seeded ? { ...row, siteId: seeded } : row;
   });
   const users = next.users.map((user) => {
     if (user.deletedAt) {
@@ -863,13 +886,27 @@ function catalogChanged(before: Database, after: Database) {
     (after.sites?.length ?? 0) !== (before.sites?.length ?? 0) ||
     (after.customers?.length ?? 0) !== (before.customers?.length ?? 0) ||
     after.users.some((user, index) => user.id !== before.users[index]?.id) ||
-    staffTenantAssignmentsChanged(before.users, after.users)
+    staffTenantAssignmentsChanged(before.users, after.users) ||
+    hostSeedMachineTenantsChanged(before, after)
   );
 }
 
 function staffTenantAssignmentsChanged(before: StoredUser[], after: StoredUser[]) {
   const beforeById = new Map(before.map((user) => [user.id, user.tenantId]));
   return after.some((user) => beforeById.get(user.id) !== user.tenantId);
+}
+
+function hostSeedMachineTenantsChanged(before: Database, after: Database) {
+  if (!isSeedAllowed()) {
+    return false;
+  }
+  const beforeById = new Map(before.machines.map((machine) => [machine.id, machine.tenantId]));
+  return after.machines.some((machine) => {
+    if (!HOST_SEED_MACHINE_IDS.has(machine.id)) {
+      return false;
+    }
+    return beforeById.get(machine.id) !== machine.tenantId;
+  });
 }
 
 function bindStaffTenantIds(
@@ -889,25 +926,51 @@ function bindStaffTenantIds(
   };
 }
 
-/** Keep non-host staff off tenant-oee360-host whenever satellite tenants exist. */
+function satelliteTenantByBootstrapEmail(db: Database) {
+  const map = new Map<string, string>();
+  for (const tenant of db.tenants ?? []) {
+    if (tenant.id === DEFAULT_TENANT_ID) {
+      continue;
+    }
+    const bootstrap = tenant.bootstrapStaffEmail?.trim().toLowerCase();
+    if (bootstrap) {
+      map.set(bootstrap, tenant.id);
+    }
+  }
+  return map;
+}
+
+/**
+ * Move satellite bootstrap staff off the host tenant when catalog heal left them on
+ * tenant-oee360-host. Host-company staff (no bootstrap binding) stay on the host tenant.
+ */
 function clampSatelliteStaffTenants(db: Database): Database {
-  const satellites = (db.tenants ?? []).filter((row) => row.id !== DEFAULT_TENANT_ID);
-  if (satellites.length === 0) {
+  const byBootstrapEmail = satelliteTenantByBootstrapEmail(db);
+  if (byBootstrapEmail.size === 0) {
     return db;
   }
-  const newestSatelliteId = [...satellites].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  )[0].id;
   let changed = false;
   const users = db.users.map((user) => {
     if (user.role !== "staff" || !user.email || isHostStaffEmail(user.email)) {
       return user;
     }
+    const pinned = user.staffCreatedTenantId?.trim();
+    if (pinned) {
+      if (user.tenantId === pinned) {
+        return user;
+      }
+      changed = true;
+      return { ...user, tenantId: pinned };
+    }
     if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
       return user;
     }
+    const target = byBootstrapEmail.get(normalizeEmail(user.email));
+    if (!target || user.tenantId === target) {
+      return user;
+    }
     changed = true;
-    return { ...user, tenantId: newestSatelliteId };
+    return { ...user, tenantId: target };
   });
   return changed ? { ...db, users } : db;
 }
@@ -1247,11 +1310,12 @@ export function createTenantWithOptionalStaff(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const tenant = newTenantFromName(trimmed);
+    let tenant: Tenant = newTenantFromName(trimmed);
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {
       const normalized = normalizeEmail(staff.email);
+      tenant = { ...tenant, bootstrapStaffEmail: normalized };
       if (db.users.some((user) => user.email === normalized && !user.deletedAt)) {
         return { error: "email-taken" as const };
       }
@@ -1261,6 +1325,7 @@ export function createTenantWithOptionalStaff(
         passwordHash: staff.passwordHash,
         role: "staff",
         tenantId: tenant.id,
+        staffCreatedTenantId: tenant.id,
       };
       users = [...users, staffUser];
     }
@@ -1307,9 +1372,14 @@ export function createTenantStaffUser(
       passwordHash: input.passwordHash,
       role: input.role,
       tenantId,
+      staffCreatedTenantId: tenantId,
     };
-    await writeDatabase({ ...db, users: [...db.users, user] });
-    return { user };
+    const payload = { ...db, users: [...db.users, user] };
+    await writeDatabaseWithOrgMerge(payload);
+    const persisted = (memory ?? (await readDatabase())).users.find(
+      (row) => row.id === user.id,
+    );
+    return { user: persisted ?? user };
   });
 }
 
@@ -1324,6 +1394,23 @@ export function listStaffUsersForPlatform() {
         email: user.email,
         tenantId: user.tenantId ?? null,
         tenantName: user.tenantId ? (tenants.get(user.tenantId) ?? user.tenantId) : null,
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+  });
+}
+
+export function listStaffUsersForTenant(tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return db.users
+      .filter(
+        (user) =>
+          user.role === "staff" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => ({
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId ?? null,
       }))
       .sort((a, b) => a.email.localeCompare(b.email));
   });
@@ -1891,13 +1978,29 @@ export function deleteMachine(machineId: string, tenantId: string) {
   });
 }
 
+function machinesForTenantListing(db: Database, tenantId: string) {
+  let rows = filterByTenant(db.machines, tenantId);
+  if (!isSeedAllowed() || tenantId !== DEFAULT_TENANT_ID) {
+    return rows;
+  }
+  const seen = new Set(rows.map((row) => row.id));
+  for (const machine of db.machines) {
+    if (!HOST_SEED_MACHINE_IDS.has(machine.id) || seen.has(machine.id)) {
+      continue;
+    }
+    rows = [...rows, { ...machine, tenantId: DEFAULT_TENANT_ID }];
+    seen.add(machine.id);
+  }
+  return rows;
+}
+
 export function listMachines(tenantId: string, options?: { heal?: boolean }) {
   return withLock(async () => {
     if (options?.heal) {
       memory = null;
     }
     const db = await ensureCatalog({ restoreFiles: options?.heal });
-    return filterByTenant(db.machines, tenantId).map((machine) => ({
+    return machinesForTenantListing(db, tenantId).map((machine) => ({
       id: machine.id,
       name: machine.name,
       siteId: machine.siteId,

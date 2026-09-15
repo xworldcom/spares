@@ -8,6 +8,8 @@ export type Tenant = {
   createdAt: string;
   /** When set, tenant is marked inactive for platform admin (data unchanged). */
   inactiveAt?: string;
+  /** First staff login created with this tenant; used to repair heal mis-assignments to the host tenant. */
+  bootstrapStaffEmail?: string;
 };
 
 export type CustomerAccount = {

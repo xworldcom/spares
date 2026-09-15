@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CustomerAccount, Site } from "../types/index.ts";
+import type { CustomerAccount, Site, Tenant } from "../types/index.ts";
 import {
   DEFAULT_TENANT_ID,
   TENANT_SCHEMA_VERSION,
@@ -8,7 +8,12 @@ import {
   slugifyTenant,
 } from "./tenant.ts";
 
-type TenantUser = { tenantId?: string; role?: string; email?: string };
+type TenantUser = {
+  tenantId?: string;
+  role?: string;
+  email?: string;
+  staffCreatedTenantId?: string;
+};
 type TenantCustomer = CustomerAccount & { tenantId?: string };
 type TenantSite = Site & { tenantId?: string };
 type TenantMachine = { id: string; tenantId?: string };
@@ -21,12 +26,7 @@ type TenantView = { id: string; tenantId?: string };
 
 export type TenantSlice = {
   schemaVersion?: number;
-  tenants?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    createdAt: string;
-  }>;
+  tenants?: Tenant[];
   users?: TenantUser[];
   customers?: TenantCustomer[];
   sites?: TenantSite[];
@@ -84,7 +84,7 @@ function isKnownHostStaffEmail(email: string) {
   return normalized === "staff@spares.local";
 }
 
-/** Staff auto-stamped to a satellite tenant when they were left on the host tenant. */
+/** Staff auto-repaired to a satellite tenant when bootstrap email matches. */
 function repairMisassignedStaffUsers(
   users: TenantUser[] | undefined,
   tenants: NonNullable<TenantSlice["tenants"]>,
@@ -92,27 +92,44 @@ function repairMisassignedStaffUsers(
   if (!users?.length) {
     return { users: [], changed: false };
   }
-  const satellites = tenants.filter((row) => row.id !== DEFAULT_TENANT_ID);
-  if (satellites.length === 0) {
+  const byBootstrapEmail = new Map<string, string>();
+  for (const tenant of tenants) {
+    if (tenant.id === DEFAULT_TENANT_ID) {
+      continue;
+    }
+    const bootstrap = tenant.bootstrapStaffEmail?.trim().toLowerCase();
+    if (bootstrap) {
+      byBootstrapEmail.set(bootstrap, tenant.id);
+    }
+  }
+  if (byBootstrapEmail.size === 0) {
     return { users: [...users], changed: false };
   }
-  const satelliteId =
-    satellites.length === 1
-      ? satellites[0].id
-      : [...satellites].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0].id;
   let changed = false;
   const next = users.map((user) => {
     if (user.role !== "staff" || !user.email || isKnownHostStaffEmail(user.email)) {
       return user;
     }
-    if (user.tenantId === satelliteId) {
+    const pinned = user.staffCreatedTenantId?.trim();
+    if (pinned) {
+      if (user.tenantId === pinned) {
+        return user;
+      }
+      changed = true;
+      return { ...user, tenantId: pinned };
+    }
+    const target = byBootstrapEmail.get(user.email.trim().toLowerCase());
+    if (!target) {
+      return user;
+    }
+    if (user.tenantId === target) {
       return user;
     }
     if (user.tenantId && user.tenantId !== DEFAULT_TENANT_ID) {
       return user;
     }
     changed = true;
-    return { ...user, tenantId: satelliteId };
+    return { ...user, tenantId: target };
   });
   return { users: changed ? next : [...users], changed };
 }
@@ -173,7 +190,17 @@ export function migrateTenants<T extends TenantSlice>(
   if (repaired.changed) {
     changed = true;
   }
-  const usersFinal = repaired.users;
+  const usersFinal = repaired.users.map((user) => {
+    if (
+      user.role === "staff" &&
+      user.tenantId === DEFAULT_TENANT_ID &&
+      !user.staffCreatedTenantId?.trim()
+    ) {
+      changed = true;
+      return { ...user, staffCreatedTenantId: DEFAULT_TENANT_ID };
+    }
+    return user;
+  });
   const customers = stampRows(db.customers);
   const sites = stampRows(db.sites);
   const machines = stampRows(db.machines);
@@ -216,7 +243,7 @@ export function newTenantId() {
   return `tenant-${randomUUID()}`;
 }
 
-export function newTenantFromName(name: string, now = new Date().toISOString()) {
+export function newTenantFromName(name: string, now = new Date().toISOString()): Tenant {
   const trimmed = name.trim();
   const base = slugifyTenant(trimmed);
   return {

@@ -139,6 +139,7 @@ Optional (from T1.2, plus T3 durable store):
 - `SPARES_OWNER_EMAIL` — on boot, upserts a **staff** user for this email (e.g. `kevin@huzevka.com`). Pair with `SPARES_OWNER_PASSWORD`; the password is never stored in the repo. Also treated as a **platform owner** unless overridden below.
 - `SPARES_OWNER_PASSWORD` — sets/resets the owner staff password hash on each deploy when paired with `SPARES_OWNER_EMAIL`.
 - `SPARES_PLATFORM_OWNER_EMAILS` — comma-separated emails that may create host-company tenants via `/staff/tenants` or `POST /api/platform/tenants`. Defaults to `SPARES_OWNER_EMAIL` or `kevin@huzevka.com`.
+- `SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS` — comma-separated emails that may assign staff logins to a company other than their own via `POST /api/staff/team`. Defaults to `kevin@huzevka.com` only (does not inherit `SPARES_PLATFORM_OWNER_EMAILS`).
 
 ### Multi-tenant host companies (MVP)
 
@@ -264,7 +265,8 @@ The UI calls these routes with `credentials: "include"`:
 - `POST /api/auth/login` JSON `{ email, password }` → `{ user }`
 - `POST /api/auth/logout`
 - `GET /api/auth/me` → `{ user }`
-- `POST /api/staff/customers` — staff creates customer accounts
+- `POST /api/staff/customers` — staff creates customer people (email/password + site/machine access)
+- `POST /api/staff/team` — staff (or platform owner with `tenantId`) creates staff logins for the host or a satellite company
 - `POST /api/machines` — staff pack create. On Preview (Blob attached) the GLB is uploaded client → private Blob, then this route receives `name`, `partsList`, `storedFileName`, and optional `siteId`. Multipart `model` is the local fallback.
 - `POST /api/machines/model-upload` — staff-only Vercel Blob client-token endpoint for the GLB
 - `POST /api/machines/:id/pack` — same pack payload as create, replaces the model + join

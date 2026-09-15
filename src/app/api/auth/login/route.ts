@@ -4,6 +4,7 @@ import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { allowLoginAttempt } from "@/lib/rate-limit";
+import { effectiveStaffTenantId } from "@/lib/tenant";
 import { findUserByEmail, getOrgContext } from "@/lib/store";
 
 type LoginBody = {
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
     return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
-  const tenantId = user.tenantId?.trim() || undefined;
+  const tenantId = effectiveStaffTenantId(user) ?? undefined;
   if (!tenantId) {
     return html
       ? redirectNoQuery("/login")

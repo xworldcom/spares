@@ -43,6 +43,58 @@ export function isPlatformOwnerEmail(email: string) {
   return platformOwnerEmails().has(email.trim().toLowerCase());
 }
 
+/** Default cross-tenant staff admin when env lists are unset. */
+export const DEFAULT_CROSS_TENANT_STAFF_ADMIN = "kevin@huzevka.com";
+
+/**
+ * Who may assign staff logins to a tenant other than their own (POST /api/staff/team).
+ * Uses {@link process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS} only — not
+ * `SPARES_PLATFORM_OWNER_EMAILS` (platform tenant UI / bootstrap owner lists are broader).
+ * Defaults to Kevin when unset. Bootstrap `SPARES_OWNER_EMAIL` is never granted via this path.
+ */
+export function crossTenantStaffAdminEmails(): Set<string> {
+  const explicit = process.env.SPARES_CROSS_TENANT_STAFF_ADMIN_EMAILS?.trim();
+  const emails = explicit
+    ? new Set(
+        explicit
+          .split(",")
+          .map((row) => row.trim().toLowerCase())
+          .filter(Boolean),
+      )
+    : new Set([DEFAULT_CROSS_TENANT_STAFF_ADMIN]);
+
+  const ownerBootstrap = process.env.SPARES_OWNER_EMAIL?.trim().toLowerCase();
+  if (
+    ownerBootstrap &&
+    ownerBootstrap !== DEFAULT_CROSS_TENANT_STAFF_ADMIN &&
+    emails.has(ownerBootstrap)
+  ) {
+    emails.delete(ownerBootstrap);
+  }
+  return emails;
+}
+
+export function canAssignStaffAcrossTenants(email: string) {
+  return crossTenantStaffAdminEmails().has(email.trim().toLowerCase());
+}
+
+/** Staff login/API scope — create-time tenant pin beats catalog heal drift (non–cross-tenant admins). */
+export function effectiveStaffTenantId(user: {
+  role?: string;
+  email?: string;
+  tenantId?: string;
+  staffCreatedTenantId?: string;
+}) {
+  if (user.role !== "staff") {
+    return user.tenantId?.trim() || null;
+  }
+  const pinned = user.staffCreatedTenantId?.trim();
+  if (pinned && !canAssignStaffAcrossTenants(user.email ?? "")) {
+    return pinned;
+  }
+  return user.tenantId?.trim() || null;
+}
+
 export function effectiveTenantId(row: { tenantId?: string }) {
   return row.tenantId ?? DEFAULT_TENANT_ID;
 }
