@@ -17,3 +17,5 @@ ffmpeg -y -i public/landing/oee360-stage.mp4 -vframes 1 -q:v 2 public/landing/oe
 ```
 
 Overlay copy lives in `src/components/landing/LandingScreen.tsx`.
+
+Playback is driven in `src/components/landing/LandingStage.tsx`: muted inline loop with imperative `play()` retries on decode/visibility. **iOS Low Power Mode** can still block autoplay; the poster remains as fallback.
