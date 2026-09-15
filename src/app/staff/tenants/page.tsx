@@ -112,8 +112,8 @@ function PlatformTenants() {
     <main className="page-shell">
       <h1 className="page-title">Host companies</h1>
       <p className="text-muted mb-6">
-        Create automation-company tenants on the shared OEE360 platform. Existing Soft Launch
-        data lives in tenant <code>{hostTenant}</code> (
+        Create automation-company tenants on the shared OEE360 platform. Existing Soft Launch →{" "}
+        <code>{hostTenant}</code> (
         <code className="text-xs">{DEFAULT_TENANT_ID}</code>).
       </p>
 

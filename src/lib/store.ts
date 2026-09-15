@@ -39,6 +39,7 @@ import {
   DEFAULT_TENANT_ID,
   belongsToTenant,
   filterByTenant,
+  platformOwnerEmails,
 } from "./tenant.ts";
 import { migrateTenants, newTenantFromName } from "./tenant-migration.ts";
 import type { Tenant } from "../types/index.ts";
@@ -613,6 +614,50 @@ function withSiteTombstone(db: Database, siteId: string): Database {
   };
 }
 
+function isHostStaffEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (platformOwnerEmails().has(normalized)) {
+    return true;
+  }
+  return normalized === "staff@spares.local";
+}
+
+/** Never let a stale heal drop satellite tenants or re-bind staff to the host tenant. */
+function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUser {
+  const merged = { ...healed, ...latest };
+  if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
+    return merged;
+  }
+  const healedTenant = healed.tenantId;
+  const latestTenant = latest.tenantId;
+  const tenantId =
+    healedTenant && healedTenant !== DEFAULT_TENANT_ID
+      ? healedTenant
+      : latestTenant && latestTenant !== DEFAULT_TENANT_ID
+        ? latestTenant
+        : latestTenant ?? healedTenant;
+  return { ...merged, tenantId };
+}
+
+function mergeUsersForHeal(healed: StoredUser[], latest: StoredUser[]): StoredUser[] {
+  const map = new Map<string, StoredUser>();
+  for (const user of healed) {
+    map.set(user.id, user);
+  }
+  for (const user of latest) {
+    const previous = map.get(user.id);
+    map.set(user.id, previous ? mergeStaffUserOnHeal(previous, user) : user);
+  }
+  return [...map.values()];
+}
+
+function mergeTenantsForHeal(
+  healed: Tenant[] | undefined,
+  latest: Tenant[] | undefined,
+): Tenant[] {
+  return unionById([...(healed ?? [])], [...(latest ?? [])]);
+}
+
 /** Org CRUD lives in blob writes — catalog heal must not clobber concurrent deletes. */
 function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
   const latestCare = careCollections(latest);
@@ -621,10 +666,10 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
   return applyCare(
     {
       ...healed,
-      tenants: latest.tenants ?? healed.tenants,
+      tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
       customers: latest.customers ?? healed.customers,
       sites: latest.sites ?? healed.sites,
-      users: latest.users ?? healed.users,
+      users: mergeUsersForHeal(healed.users, latest.users),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
@@ -791,6 +836,7 @@ function catalogChanged(before: Database, after: Database) {
   return (
     after.machines.length !== before.machines.length ||
     after.users.length !== before.users.length ||
+    (after.tenants?.length ?? 0) !== (before.tenants?.length ?? 0) ||
     (after.sites?.length ?? 0) !== (before.sites?.length ?? 0) ||
     (after.customers?.length ?? 0) !== (before.customers?.length ?? 0) ||
     after.users.some((user, index) => user.id !== before.users[index]?.id)
@@ -897,6 +943,7 @@ async function readDatabase(): Promise<Database> {
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
     usersRemapped ||
+    (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
     (next.customers?.length ?? 0) !== (loaded.db.customers?.length ?? 0) ||
     (next.schemaVersion ?? 1) !== (loaded.db.schemaVersion ?? 1)
@@ -923,9 +970,15 @@ async function writeDatabase(next: Database) {
 
 /** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
 async function writeCatalogHeal(next: Database) {
-  const latestRaw = await getPersistence().readDatabaseJson();
-  const loaded = latestRaw ? parseDatabase(latestRaw) : null;
-  const merged = loaded?.db ? mergeOrgCrudFromLatest(next, loaded.db) : next;
+  let merged = next;
+  for (let pass = 0; pass < 2; pass++) {
+    const latestRaw = await getPersistence().readDatabaseJson();
+    const loaded = latestRaw ? parseDatabase(latestRaw) : null;
+    if (!loaded?.db) {
+      break;
+    }
+    merged = mergeOrgCrudFromLatest(merged, loaded.db);
+  }
   const kept = await overlayPersistedCare(merged);
   memory = kept;
   await Promise.all([

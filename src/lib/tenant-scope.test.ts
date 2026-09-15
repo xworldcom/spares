@@ -14,7 +14,9 @@ import {
   findUserByEmail,
   getMachine,
   listMachines,
+  listTenants,
   resetStoreMemoryForTests,
+  writeCatalogHealForTests,
 } from "./store.ts";
 import { DEFAULT_TENANT_ID, tenantIdForUser } from "./tenant.ts";
 import { hashPassword } from "./auth/password.ts";
@@ -144,5 +146,60 @@ describe("tenant isolation", () => {
     assert.ok(hostMachines.id);
     const bMachines = await listMachines(created.tenant.id);
     assert.equal(bMachines.length, 0);
+  });
+
+  it("keeps a new tenant and staff tenantId when a stale catalog heal runs afterward", async () => {
+    await isolated();
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        schemaVersion: 3,
+        tenants: [
+          {
+            id: DEFAULT_TENANT_ID,
+            name: "OEE360 Host",
+            slug: "oee360-host",
+            createdAt: "2020-01-01T00:00:00.000Z",
+          },
+        ],
+        users: [
+          {
+            id: "user-staff",
+            email: "staff@spares.local",
+            passwordHash: "x",
+            role: "staff" as const,
+            tenantId: DEFAULT_TENANT_ID,
+          },
+        ],
+        machines: [],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+      }),
+    );
+
+    const staleHeal = JSON.parse((await persistence.readDatabaseJson()) ?? "{}");
+    resetStoreMemoryForTests();
+
+    const created = await createTenantWithOptionalStaff("Company B", {
+      email: "companyb-staff@test",
+      passwordHash: await hashPassword("pass"),
+    });
+    assert.ok("tenant" in created);
+    if (!("tenant" in created)) {
+      return;
+    }
+
+    resetStoreMemoryForTests();
+    await writeCatalogHealForTests(staleHeal);
+
+    resetStoreMemoryForTests();
+    const tenants = await listTenants();
+    assert.ok(tenants.some((row) => row.id === created.tenant.id));
+    const loaded = await findUserByEmail("companyb-staff@test");
+    assert.equal(loaded?.tenantId, created.tenant.id);
+    assert.notEqual(loaded?.tenantId, DEFAULT_TENANT_ID);
   });
 });
