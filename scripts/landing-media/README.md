@@ -1,11 +1,19 @@
-# Landing loop
+# Landing wallpaper
 
-Wallpaper is a 10s 960×540 H.264 clip (~81 KB, ~66 kbps).
+Signed-out `/` and `/login` use a full-bleed loop from:
 
-`predev` / `prebuild` join the `.b64` parts listed in `*.files`
-(whitespace is ignored) and write:
+- `public/landing/oee360-stage.mp4` (~250 KB web H.264, 960×540, 10s)
+- `public/landing/oee360-stage.jpg` (poster for `prefers-reduced-motion` and first paint)
 
-- `public/landing/oee360-stage.mp4`
-- `public/landing/oee360-stage.jpg`
+Both files are **committed** so Vercel builds do not depend on base64 join steps.
 
-Decoded binaries are gitignored. Overlay copy stays in `LandingScreen.tsx`.
+To refresh from a source clip (e.g. `login-bg.mp4`):
+
+```bash
+ffmpeg -y -i login-bg.mp4 -an -c:v libx264 -profile:v high -pix_fmt yuv420p \
+  -movflags +faststart -vf "scale=960:-2" -crf 24 -preset slow -t 10 \
+  public/landing/oee360-stage.mp4
+ffmpeg -y -i public/landing/oee360-stage.mp4 -vframes 1 -q:v 2 public/landing/oee360-stage.jpg
+```
+
+Overlay copy lives in `src/components/landing/LandingScreen.tsx`.

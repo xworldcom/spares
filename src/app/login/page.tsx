@@ -1,4 +1,4 @@
-import { LandingScreen } from "@/components/landing/LandingScreen";
+import { LandingPageGate } from "@/components/landing/LandingPageGate";
 
 export default async function LoginPage({
   searchParams,
@@ -9,5 +9,5 @@ export default async function LoginPage({
   const nextPath =
     next && next.startsWith("/") && !next.startsWith("//") ? next : "/machines";
 
-  return <LandingScreen nextPath={nextPath} />;
+  return <LandingPageGate nextPath={nextPath} />;
 }

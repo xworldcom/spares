@@ -43,11 +43,6 @@ next-env.d.ts
 # local file-backed store (users, machines, uploaded models)
 /data
 
-# landing loop binaries are decoded at predev/prebuild
-/public/landing/*.mp4
-/public/landing/*.webm
-/public/landing/*.jpg
-
 # SolidWorks add-in build
 /solidworks-addin/**/bin/
 /solidworks-addin/**/obj/
