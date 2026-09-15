@@ -144,6 +144,19 @@
   opacity: 0.4;
 }
 
+.login-microsoft {
+  color: var(--spares-on-login);
+  background: rgba(16, 17, 20, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.22);
+  text-decoration: none;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.login-microsoft:hover {
+  background: rgba(16, 17, 20, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.35);
+}
+
 .row-on-ink {
   background: var(--spares-ink);
   color: var(--spares-on-ink);
