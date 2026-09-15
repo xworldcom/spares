@@ -149,6 +149,83 @@ describe("tenant migration", () => {
     assert.equal(db.users?.[1]?.tenantId, "tenant-b");
   });
 
+  it("repairs host-stamped satellite staff when multiple satellite tenants exist", () => {
+    const { db, changed } = migrateTenants({
+      schemaVersion: 3,
+      tenants: [
+        {
+          id: DEFAULT_TENANT_ID,
+          name: DEFAULT_TENANT_NAME,
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tenant-b-old",
+          name: "Company B old",
+          slug: "company-b-old",
+          createdAt: "2020-01-02T00:00:00.000Z",
+        },
+        {
+          id: "tenant-b-new",
+          name: "Company B",
+          slug: "company-b",
+          createdAt: "2025-01-01T00:00:00.000Z",
+        },
+      ],
+      users: [
+        {
+          id: "u-b",
+          email: "companyb-staff@test",
+          passwordHash: "x",
+          role: "staff",
+          tenantId: DEFAULT_TENANT_ID,
+        },
+      ],
+      customers: [],
+      sites: [],
+      machines: [],
+      quotes: [],
+      bugReports: [],
+    });
+    assert.equal(changed, true);
+    assert.equal(db.users?.[0]?.tenantId, "tenant-b-new");
+  });
+
+  it("preserves explicit satellite staff tenantId during initial schema migration", () => {
+    const { db } = migrateTenants({
+      schemaVersion: 2,
+      tenants: [
+        {
+          id: DEFAULT_TENANT_ID,
+          name: DEFAULT_TENANT_NAME,
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tenant-b",
+          name: "Company B",
+          slug: "company-b",
+          createdAt: "2025-01-01T00:00:00.000Z",
+        },
+      ],
+      users: [
+        {
+          id: "u-b",
+          email: "companyb-staff@test",
+          passwordHash: "x",
+          role: "staff",
+          tenantId: "tenant-b",
+        },
+      ],
+      customers: [],
+      sites: [],
+      machines: [],
+      quotes: [],
+      bugReports: [],
+    });
+    assert.equal(db.users?.[0]?.tenantId, "tenant-b");
+  });
+
   it("is a no-op when already migrated", () => {
     const input = {
       schemaVersion: 3,

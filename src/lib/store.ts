@@ -37,6 +37,7 @@ import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
   DEFAULT_TENANT_ID,
+  TENANT_SCHEMA_VERSION,
   belongsToTenant,
   filterByTenant,
   platformOwnerEmails,
@@ -628,14 +629,13 @@ function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUse
   if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
     return merged;
   }
-  const healedTenant = healed.tenantId;
-  const latestTenant = latest.tenantId;
+  const pickSatellite = (id: string | undefined) =>
+    id && id !== DEFAULT_TENANT_ID ? id : undefined;
   const tenantId =
-    healedTenant && healedTenant !== DEFAULT_TENANT_ID
-      ? healedTenant
-      : latestTenant && latestTenant !== DEFAULT_TENANT_ID
-        ? latestTenant
-        : latestTenant ?? healedTenant;
+    pickSatellite(latest.tenantId) ??
+    pickSatellite(healed.tenantId) ??
+    latest.tenantId ??
+    healed.tenantId;
   return { ...merged, tenantId };
 }
 
@@ -1082,11 +1082,21 @@ export function createTenantWithOptionalStaff(
       };
       users = [...users, staffUser];
     }
-    await writeDatabase({
+    const draft = {
       ...db,
+      schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
       tenants: [...(db.tenants ?? []), tenant],
       users,
-    });
+    };
+    const migrated = migrateTenants(draft).db;
+    let finalUsers = migrated.users;
+    if (staffUser) {
+      finalUsers = migrated.users.map((user) =>
+        user.id === staffUser!.id ? { ...user, tenantId: tenant.id } : user,
+      );
+      staffUser = { ...staffUser, tenantId: tenant.id };
+    }
+    await writeDatabase({ ...migrated, users: finalUsers });
     return { tenant, staffUser };
   });
 }

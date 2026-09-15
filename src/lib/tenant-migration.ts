@@ -84,7 +84,7 @@ function isKnownHostStaffEmail(email: string) {
   return normalized === "staff@spares.local";
 }
 
-/** Staff auto-stamped to the host tenant while a single satellite tenant exists. */
+/** Staff auto-stamped to a satellite tenant when they were left on the host tenant. */
 function repairMisassignedStaffUsers(
   users: TenantUser[] | undefined,
   tenants: NonNullable<TenantSlice["tenants"]>,
@@ -93,10 +93,13 @@ function repairMisassignedStaffUsers(
     return { users: [], changed: false };
   }
   const satellites = tenants.filter((row) => row.id !== DEFAULT_TENANT_ID);
-  if (satellites.length !== 1) {
+  if (satellites.length === 0) {
     return { users: [...users], changed: false };
   }
-  const satelliteId = satellites[0].id;
+  const satelliteId =
+    satellites.length === 1
+      ? satellites[0].id
+      : [...satellites].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0].id;
   let changed = false;
   const next = users.map((user) => {
     if (user.role !== "staff" || !user.email || isKnownHostStaffEmail(user.email)) {
@@ -149,7 +152,11 @@ export function migrateTenants<T extends TenantSlice>(
       return [];
     }
     if (initial) {
-      return stamp(rows, tenantId);
+      const { rows: next, changed: rowChanged } = stampMissing(rows, tenantId);
+      if (rowChanged) {
+        changed = true;
+      }
+      return next;
     }
     if (multiTenant) {
       return [...rows];
