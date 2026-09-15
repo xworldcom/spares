@@ -48,3 +48,4 @@ Baseline security headers on all routes — `next.config.ts` (`X-Content-Type-Op
 - Microsoft Entra / SSO env (`AZURE_AD_*`) — [#119](https://github.com/xworldcom/spares/issues/119)
 - Disabling Vercel Deployment Protection or public go-live
 - Periodic `AUTH_SECRET` rotation (ops)
+- **Blob / Care / R2 backups** — manual ops cadence — [soft-launch-backup.md](./soft-launch-backup.md)
