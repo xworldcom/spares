@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { TicketStatusChip } from "@/components/care/TicketStatusChip";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
@@ -14,12 +13,10 @@ import { siteLabel } from "@/lib/access";
 import type { CareOverview, ServiceTicket } from "@/types";
 
 export function CareOverviewPanel({ machineId }: { machineId: string }) {
-  const { user } = useAuth();
   const [overview, setOverview] = useState<CareOverview | null>(null);
   const [recent, setRecent] = useState<ServiceTicket[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const staff = user?.role === "staff";
 
   useEffect(() => {
     let cancelled = false;
@@ -81,19 +78,6 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
           </span>
           <span className="care-stat-meta">{overview.ticketsTotal} total</span>
         </Link>
-        {staff ? (
-          <Link href={careHref(machineId, "usage")} className="care-stat">
-            <span className="care-stat-value">
-              {overview.usage?.hours ?? "—"}
-            </span>
-            <span className="care-stat-label">Hours</span>
-            <span className="care-stat-meta">
-              {overview.usage?.lastServiceAt
-                ? `Serviced ${formatDay(overview.usage.lastServiceAt)}`
-                : "No service date yet"}
-            </span>
-          </Link>
-        ) : null}
       </section>
 
       {plant ? <p className="spares-muted text-sm">{plant}</p> : null}
