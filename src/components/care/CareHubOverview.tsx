@@ -75,7 +75,7 @@ export function CareHubOverview() {
           <span className="care-stat-label">
             {machines.length === 1 ? "Machine" : "Machines"}
           </span>
-          <span className="care-stat-meta">Manuals and usage per machine</span>
+          <span className="care-stat-meta">Manuals and tickets per machine</span>
         </div>
       </section>
 
@@ -96,7 +96,7 @@ export function CareHubOverview() {
                   <div className="min-w-0 flex-1">
                     <p className="care-row-title">{machine.name}</p>
                     <p className="spares-muted truncate text-sm">
-                      Manuals, tickets, and notes
+                      Manuals and tickets
                     </p>
                   </div>
                   <span className="spares-muted text-lg" aria-hidden="true">›</span>
