@@ -51,6 +51,7 @@ export function QuoteActivityFeed({
   threadId,
   title = "Conversation",
   subtitle,
+  layout = "card",
 }: {
   activities: QuoteActivity[];
   role: Role;
@@ -61,6 +62,8 @@ export function QuoteActivityFeed({
   threadId: string;
   title?: string;
   subtitle?: string;
+  /** `sheet` fills the conversation sheet body; `card` keeps the legacy capped thread. */
+  layout?: "card" | "sheet";
 }) {
   const [text, setText] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -170,13 +173,20 @@ export function QuoteActivityFeed({
   const sendDisabled =
     busy || uploading || (!text.trim() && pendingFiles.length === 0);
 
+  const cardClass =
+    layout === "sheet" ? "imsg-card imsg-card--sheet" : "imsg-card";
+  const threadClass =
+    layout === "sheet" ? "imsg-thread imsg-thread--fill" : "imsg-thread";
+
   return (
-    <section className="imsg-card">
-      <header className="imsg-header">
-        <h2>{title}</h2>
-        {subtitle ? <p>{subtitle}</p> : null}
-      </header>
-      <ol ref={scrollerRef} className="imsg-thread">
+    <section className={cardClass}>
+      {layout === "sheet" ? null : (
+        <header className="imsg-header">
+          <h2>{title}</h2>
+          {subtitle ? <p>{subtitle}</p> : null}
+        </header>
+      )}
+      <ol ref={scrollerRef} className={threadClass}>
         {activities.length === 0 ? (
           <li className="imsg-empty">No messages yet.</li>
         ) : (

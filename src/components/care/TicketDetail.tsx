@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
+import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
+import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import {
@@ -162,6 +164,13 @@ export function TicketDetail({
 
   const threadReady = ticket.id === ticketId;
   const ticketsBack = backHref ?? careHref(machineId, "tickets");
+  const peek =
+    threadReady && user
+      ? conversationPeekLine(ticket.activities, {
+          email: user.email,
+          role: user.role,
+        })
+      : { text: "Loading…", unreadHint: false };
 
   return (
     <div className="care-stack">
@@ -191,16 +200,25 @@ export function TicketDetail({
           {error}
         </p>
       ) : null}
-      <QuoteActivityFeed
-        activities={threadReady ? ticket.activities : []}
-        role={user.role}
-        selfEmail={user.email}
-        busy={busy || !threadReady}
-        onSend={onSend}
-        threadKind="ticket"
-        threadId={ticket.id}
+      {embedded ? null : <div className="conversation-sheet-spacer" aria-hidden="true" />}
+      <ConversationSheet
         title="Notes"
-      />
+        peekLine={peek.text}
+        unread={ticket.unread}
+        layout={embedded ? "inline" : "overlay"}
+      >
+        <QuoteActivityFeed
+          activities={threadReady ? ticket.activities : []}
+          role={user.role}
+          selfEmail={user.email}
+          busy={busy || !threadReady}
+          onSend={onSend}
+          threadKind="ticket"
+          threadId={ticket.id}
+          title="Notes"
+          layout="sheet"
+        />
+      </ConversationSheet>
     </div>
   );
 }

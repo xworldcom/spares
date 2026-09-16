@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
+import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { QuoteLines } from "@/components/quote/QuoteLines";
 import { QuotePoPanel } from "@/components/quote/QuotePoPanel";
@@ -193,6 +195,13 @@ export function QuoteWorkspace({
   const threadReady =
     String(quote.number) === quoteRef || quote.id === quoteRef;
 
+  const peek = threadReady
+    ? conversationPeekLine(quote.activities, {
+        email: user.email,
+        role,
+      })
+    : { text: "Loading…", unreadHint: false };
+
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
   const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
@@ -253,7 +262,7 @@ export function QuoteWorkspace({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="quote-workspace mx-auto w-full max-w-5xl space-y-5">
       <div>
         <Link
           href={listHref}
@@ -414,15 +423,25 @@ export function QuoteWorkspace({
         />
       ) : null}
 
-      <QuoteActivityFeed
-        activities={threadReady ? quote.activities : []}
-        role={role}
-        selfEmail={user.email}
-        busy={busy || !threadReady}
-        onSend={sendActivity}
-        threadKind="quote"
-        threadId={quote.id}
-      />
+      <div className="conversation-sheet-spacer" aria-hidden="true" />
+
+      <ConversationSheet
+        title="Conversation"
+        peekLine={peek.text}
+        unread={quote.unread}
+        layout="overlay"
+      >
+        <QuoteActivityFeed
+          activities={threadReady ? quote.activities : []}
+          role={role}
+          selfEmail={user.email}
+          busy={busy || !threadReady}
+          onSend={sendActivity}
+          threadKind="quote"
+          threadId={quote.id}
+          layout="sheet"
+        />
+      </ConversationSheet>
 
       {role === "staff" && (statusDirty || itemsDirty) ? (
         <div

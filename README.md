@@ -112,6 +112,8 @@ There is **no public signup**. Staff create customer accounts. These two users a
 | staff | `staff@spares.local` | `SparesStaff1!` |
 | customer | `customer@spares.local` | `SparesCustomer1!` |
 
+**Quinn — quote ConversationSheet smoke (Preview):** With `SPARES_ALLOW_SEED=true`, sign in as **staff**, open **`/staff/quotes`** (auto-seeds one idempotent QA quote), or `POST /api/staff/quotes/preview-fixture` with the session cookie. Open quote id **`quote-preview-qa-conversation`** on the host tenant. Fixture note text marks it as QA-only; Production never seeds (`SPARES_ALLOW_SEED` off).
+
 On **Vercel Production**, leave `SPARES_ALLOW_SEED` unset; demo accounts cannot sign in even if `db.json` was copied from Preview. See [docs/soft-launch-security.md](docs/soft-launch-security.md) and [docs/soft-launch-backup.md](docs/soft-launch-backup.md) (ops backup for Blob + Care + R2).
 
 ## Local development
