@@ -49,6 +49,10 @@ import {
   buildPlatformDeploymentRow,
   type PlatformDeploymentRow,
 } from "./platform-metrics.ts";
+import {
+  buildPlatformDirectory,
+  type DirectoryEntry,
+} from "./platform-directory.ts";
 import type { Tenant } from "../types/index.ts";
 import {
   nextTicketNumber,
@@ -1196,6 +1200,19 @@ export function listPlatformDeployments() {
   });
 }
 
+export function listPlatformDirectory() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return buildPlatformDirectory({
+      tenants: db.tenants ?? [],
+      customers: db.customers ?? [],
+      users: db.users,
+    });
+  });
+}
+
+export type { DirectoryEntry };
+
 export function getPlatformDeployment(tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
@@ -1251,7 +1268,7 @@ export function updateTenantPlatformMeta(
 
     if (patch.inactive === true) {
       if (tenantId === DEFAULT_TENANT_ID) {
-        return { error: "invalid" as const };
+        return { error: "host-immutable" as const };
       }
       next = { ...next, inactiveAt: new Date().toISOString() };
     } else if (patch.inactive === false) {

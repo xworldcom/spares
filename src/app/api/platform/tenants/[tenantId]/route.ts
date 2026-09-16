@@ -38,6 +38,9 @@ export async function PATCH(request: Request, context: Params) {
     if (updated.error === "taken") {
       return error("A tenant with that name already exists", 409);
     }
+    if (updated.error === "host-immutable") {
+      return error("The Soft Launch host cannot be suspended", 400);
+    }
     return error("Invalid tenant name", 400);
   }
   return json({ tenant: updated.tenant });
