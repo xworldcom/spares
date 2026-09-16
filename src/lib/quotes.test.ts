@@ -170,20 +170,49 @@ describe("normalizeStoredQuote", () => {
     assert.equal(quote.activities[0]?.attachments?.[0]?.filename, "photo.png");
   });
 
-  it("keeps invoiceNumber and tenantId so a catalog load cannot drop them", () => {
-    const quote = normalizeStoredQuote({
+  it("round-trips every QuoteRecord field through a catalog load", () => {
+    const full = {
       id: "q6",
       number: 6,
       machineId: "m1",
-      items: [{ id: "A", qty: 1 }],
+      items: [{ id: "A", qty: 2, name: "Bearing", sellPrice: 12.5, supplierCost: 4 }],
+      note: "freight $75",
       createdAt: "2026-01-01T00:00:00.000Z",
       customerEmail: "c@example.test",
       customerId: "cust-1",
-      invoiceNumber: "INV-1042",
       tenantId: "tenant-other-host",
-    } as never);
+      status: "closed" as const,
+      poNumber: "PO-1",
+      poStoredFileName: "po-1.pdf",
+      poOriginalFileName: "po.pdf",
+      poUploadedAt: "2026-01-02T00:00:00.000Z",
+      shipments: [
+        {
+          id: "ship-1",
+          trackingNumber: "1Z999",
+          carrier: "UPS" as const,
+        },
+      ],
+      activities: [
+        {
+          id: "act-1",
+          at: "2026-01-01T00:00:00.000Z",
+          actorRole: "staff" as const,
+          actorEmail: "s@example.test",
+          kind: "status" as const,
+          text: "Closed",
+        },
+      ],
+      lastReadAt: { "cust-1": "2026-01-02T00:00:00.000Z" },
+      invoiceNumber: "INV-1042",
+    };
+    const quote = normalizeStoredQuote(full as never);
+    assert.deepEqual(Object.keys(quote).sort(), Object.keys(full).sort());
     assert.equal(quote.invoiceNumber, "INV-1042");
     assert.equal(quote.tenantId, "tenant-other-host");
+    assert.equal(quote.poNumber, "PO-1");
+    assert.equal(quote.note, "freight $75");
+    assert.equal(quote.shipments[0]?.carrier, "UPS");
   });
 });
 

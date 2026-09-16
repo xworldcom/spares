@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-16T06:08:00.000Z",
+  "base": "https://oee360.com",
+  "quoteId": "b03fa31d-440f-4845-8b64-a8da371491f1",
+  "roleA": "crawl-20260916-0524@spares.test",
+  "roleB": "crawl-20260916-b@spares.test",
+  "note": "No file uploaded. Probes requireQuoteAccess on quote 2 attachment routes.",
+  "results": {
+    "A GET /api/quotes/2/attachments/upload": 200,
+    "B GET /api/quotes/2/attachments/upload": 403,
+    "A GET fake stored file": 404,
+    "B GET fake stored file": 403,
+    "B GET /api/quotes/2": 403
+  }
+}

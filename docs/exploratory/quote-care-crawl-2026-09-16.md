@@ -1,10 +1,20 @@
 # Quote, Care, and isolation crawl (16 Sep 2026)
 
-Production `https://oee360.com` at tip `a0413ca`. Shared Blob. Throwaway accounts only. No Vercel SSO. No customer invites. Payment stayed PO-only.
+Production `https://oee360.com`. The crawl treated the deploy as `origin/main` `a0413ca`. The app does not expose a build SHA, so that match is inferred. Shared Blob. Throwaway accounts only. No Vercel SSO. No customer invites. Payment stayed PO-only.
 
-This is a findings report, not a product redesign. Isolation CODE RED items stay unfixed so Tess can route them. Two one-liners landed in this branch and are not on Production yet.
+This is a findings report, not a product redesign. Care CR1 through CR9 stay unfixed so Tess can route the product call. CR10 and the numeric Care URL one-liners landed in this branch and are not on Production yet.
 
-**Side effect.** The first isolation harness posted one probe message on ticket 4 (`PR96 Care attachment smoke`, `kevin@huzevka.com`). That write is itself proof of the hole. Do not treat it as a real customer note.
+**Side effects that remain on Production.**
+
+- Probe message on Kevin's ticket 4 (`PR96 Care attachment smoke`).
+- Quote 2 walked to Closed with invented prices and PO `CRAWL-16-524`.
+- Invoice PATCH on quote 2. The number did not persist.
+- Service note on Palletizer usage.
+- Directory names set to Crawl Hunt A and Crawl Hunt B.
+- Live throwaways still able to sign in. `pr139-smoke-20260915-2316@spares.test`, `crawl-20260916-staff@spares.test`, `crawl-20260916-0524@spares.test`, `crawl-20260916-b@spares.test`.
+- Soft-deleted `crawl-wide-person-20260916@spares.test` cannot sign in.
+
+Do not treat the ticket 4 probe as a real customer note. Do not deactivate protected demos.
 
 ## Accounts
 
@@ -15,7 +25,7 @@ This is a findings report, not a product redesign. Isolation CODE RED items stay
 | Customer A | `crawl-20260916-0524@spares.test` | Sites Dayton + Fort Worth. Machines Hardware fixture + Palletizer. |
 | Customer B | `crawl-20260916-b@spares.test` | Palletizer only. No sites. |
 | Soft-deleted | `crawl-wide-person-20260916@spares.test` | Created then `DELETE`. Login after delete 401. |
-| Not used | `kevin@huzevka.com` | Password path worked. Microsoft SSO skipped. |
+| Not used | `kevin@huzevka.com` | Never signed in. Password was out of bounds. Microsoft SSO skipped. |
 
 Do not deactivate `buyer@acme.test`, `customer@spares.local`, or other demo rows.
 
@@ -24,7 +34,7 @@ Do not deactivate `buyer@acme.test`, `customer@spares.local`, or other demo rows
 | Id | Number | What |
 | --- | --- | --- |
 | `b03fa31d-440f-4845-8b64-a8da371491f1` | 2 | Crawl A Hardware fixture quote. Walked Requested through Closed. PO `CRAWL-16-524`. Prices $12.50 and $340. Freight in a line note ($75). Tracking `1Z999CRAWL00000000` UPS. |
-| quote 3 | 3 | Second request. Concurrent staff PATCH left it `in_review`. Staff could not overlay invented part ids that were not on the quote (HTTP 400). |
+| quote 3 | 3 | Second request. Two concurrent staff PATCH calls both returned 200. The GET after that race was `in_review`. A later price PATCH used part ids that were not on the quote and got HTTP 400. |
 | `quote-preview-qa-conversation` | 1 | Existing Acme QA quote. Customers could not read it. |
 | `ac03a328-b1a4-42ee-860b-a92112f9ab35` | 5 | Crawl A Palletizer Care ticket. Staff set In progress. Two-way notes exist. |
 | `6abe3ee4-ce58-41da-8f27-a15bbf3ea041` | 4 | Kevin Hardware fixture ticket. Customer A listed, opened, posted, and downloaded the JPEG. |
@@ -33,15 +43,15 @@ Do not deactivate `buyer@acme.test`, `customer@spares.local`, or other demo rows
 
 | Feature | People / customer | Staff / host | Platform owner |
 | --- | --- | --- | --- |
-| Password login | Pass. Bad password shows Invalid email or password. | Pass. Second throwaway staff also Pass. | Not run (no Kevin password) |
+| Password login | Pass. Bad password shows Invalid email or password. | Pass. Second throwaway staff also Pass. | Not run. Kevin was not signed in. |
 | Logout | `POST /api/auth/logout` 200. Next `GET /api/auth/me` with the same JWT still 200. | Same session design. | — |
 | Machines catalog / 3D / List Add | Pass after wait. Cards and detail often start on Loading. | Same blank-card / Loading flash. | — |
 | Request quote | Pass (quotes 2 and 3). | Staff prices and statuses via API. | — |
 | Quote chat sheet | Pass after load. Desktop overlay has no ×. Handle exists. | Staff detail loads after wait. | — |
-| Quote lifecycle | Pass via API on quote 2. Customer sees $12.50 and $340 after Quoted. PO and tracking show. | Pass. Statuses are free clicks. Concurrent PATCH both 200. Last status `in_review`. | — |
+| Quote lifecycle | Pass via API on quote 2. Customer sees $12.50 and $340 after Quoted. PO and tracking show. | Pass. Statuses are free clicks. One concurrent PATCH sample both 200. GET after that sample was `in_review`. | — |
 | Invoice number | Missing after staff PATCH 200. | Missing on GET after PATCH 200. Root is `normalizeStoredQuote` dropping the field. | — |
-| Care tickets + chat | Create and reply work. **Leaks other customers in list, detail, write, overview, machine list, and attachments.** Numeric URL `/care/tickets/5` shows an empty sheet. UUID URL shows the thread. | Staff can reply and change status. List is machine-wide. | — |
-| Attachments | Chat attach exists. Customer A downloaded Kevin's ticket 4 JPEG (HTTP 200). Quote 2 had no chat file. First file input on a quote page is the PO PDF field. | — | — |
+| Care tickets + chat | Create and reply work. Machine-shared tickets are visible across customers who share the machine. Numeric URL `/care/tickets/5` shows an empty sheet. UUID URL shows the thread. | Staff can reply and change status. List is machine-wide. | — |
+| Attachments | Customer A downloaded Kevin's ticket 4 JPEG (HTTP 200). Quote 2 upload and download stay on `customerId`. B got 403 on A's quote attachment routes. First file input on a quote page is the PO PDF field. | — | — |
 | Nav / empty / error | Customer tabs Machines / Care / Quotes. Service tab says Wrong role This page is for staff only. | Staff chrome includes Directory, Quotes, Bug reports. Platform hidden in More. | — |
 | Directory chips / tabs / drill-in | 403 on staff APIs. | All / Staff / Customers / People. Search `#tenant-directory-search`. People rows link to `/staff/directory/:id`. Staff rows are not links. Customers tab can sit on skeleton bars. PATCH name on A and B 200. | API 403 for host staff |
 | Create staff / customer / person | 403 | Customer A+B, wide person, and staff create 201. Duplicate email 409. Soft-delete then login 401. Missing person DELETE 404. | — |
@@ -53,7 +63,7 @@ Do not deactivate `buyer@acme.test`, `customer@spares.local`, or other demo rows
 | Bugs | GET `/api/bugs` 403 | GET 200, 1 report. `/staff/bugs` renders. | — |
 | Cross-host isolation | No second tenant. | Foreign `tenantId` on team APIs 403. | Blocked. Owner session required to create a host. |
 | Soft-delete | Login after delete 401. | DELETE throwaway 200. | — |
-| Concurrent writes | — | Two PATCH on quote 3 both 200. Store last-write-wins. | — |
+| Concurrent writes | — | Two PATCH on quote 3 both 200. One sample. GET after that sample was `in_review`. | — |
 | Blob catalog clobber | — | `normalizeStoredQuote` dropped `tenantId` and `invoiceNumber` on every catalog read. Fixed in this branch. | Not live-proven on a second host |
 
 ## CODE RED isolation
@@ -78,9 +88,9 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
 }
 ```
 
-Live count on Production. **9 CODE RED**, all the same machine-scope hole, plus one latent catalog finding (CR10) that this branch guards.
+Live count on Production. **Nine endpoints, one machine-scope rule.** Care copy on `/care` says "work tickets across your plant" and "Across every machine you can access." A and B were both granted Palletizer. Quotes filter by `customerId`. Care does not. That difference is measured. Whether it is a leak or the product is Tess's call. The nine rows below are the endpoints that share that rule. Do not treat the count as nine independent bugs.
 
-Leave CR1 through CR9 as findings. A one-line `customerId` filter would close them if plant-shared tickets are not the intended product. That is Tess's call.
+CR10 is a separate catalog-load hole. This branch keeps `tenantId` and `invoiceNumber`. It is not live-proven on a second host.
 
 ### CR1. Customer lists other customers' Care tickets
 
@@ -88,8 +98,8 @@ Leave CR1 through CR9 as findings. A one-line `customerId` filter would close th
 - Role A. `crawl-20260916-0524@spares.test`
 - Role B. `kevin@huzevka.com`, `customer@spares.local`, `staff@spares.local`
 - Steps. Sign in as A. `GET /api/tickets`
-- Expected. Only tickets A opened
-- Actual. Four foreign tickets, including ticket 4 title `PR96 Care attachment smoke` and Kevin's email
+- Expected if tickets are private per customer. Only tickets A opened
+- Actual. Four other customers' tickets, including ticket 4 title `PR96 Care attachment smoke` and Kevin's email. The hub copy says tickets across every machine you can access.
 - Proof. `docs/exploratory/evidence/crawl-20260916/isolation-report.json` id `cust-a-lists-foreign-tickets`. UI. `docs/exploratory/evidence/crawl-20260916-wide/u05-care-ticket-number.png`
 
 ### CR2. Customer opens another customer's ticket
@@ -183,7 +193,7 @@ Leave CR1 through CR9 as findings. A one-line `customerId` filter would close th
 
 ## What held
 
-- Quote list and detail stay on `customerId`. A could not read quote 1 or `quote-preview-qa-conversation`. B could not read quote 2.
+- Quote list and detail stay on `customerId`. A could not read quote 1 or `quote-preview-qa-conversation`. B could not read quote 2. B `GET /api/quotes/2` 403. B `GET /api/quotes/2/attachments/upload` 403. B `GET` of a fake quote attachment 403. A `GET` of that fake file 404. No file was uploaded. The download of a real quote chat file was not exercised.
 - B could not `GET /api/machines/hardware-fixture` (404), `/file` (404), or `/manuals` (404). Machine grants work.
 - Customer calls to `/api/staff/*`, `/api/platform/*`, `/api/bugs`, model-upload, pack, and usage returned 401/403/404. Customer `PATCH /api/tickets/5` status 403.
 - Host staff platform tenants, directory, staff, deployments, and directory user all 403. Second staff user same 403.
@@ -200,7 +210,7 @@ Leave CR1 through CR9 as findings. A one-line `customerId` filter would close th
 
 ## Blocker
 
-None that stop login or quote create for throwaway users. Treat the nine live Care leaks as the ship-stoppers.
+None that stop login or quote create for throwaway users. Care CR1 through CR9 are one product question. Do not treat them as nine ship-stoppers until Tess decides whether plant-shared tickets are intended.
 
 ## Major
 
@@ -224,14 +234,14 @@ None that stop login or quote create for throwaway users. Treat the nine live Ca
 
 - Steps. Sign in. Screenshot `/machines` at about 1.6s
 - Expected. Machine names visible as soon as the heading is up
-- Actual. Loading machines… Empty cards until names arrive
+- Actual. One headless run on a cloud VM showed Loading machines… at about 1.6s. No network baseline.
 - Screenshots. `u01-machines.png`, earlier `s01-staff-machines.png`
 
 ### M4. Staff Directory and several pages sit on loading or skeleton
 
 - Steps. Staff `/staff/directory`, `/staff/directory?type=customer`, `/staff/quotes/2` at 1.4s to 3s
 - Expected. Rows and quote within a second
-- Actual. "Loading directory…", skeleton bars on Customers, "Loading quote…" until a heading wait. `/staff/team` and `/staff/people` are Directory query aliases and do load.
+- Actual. One headless run showed "Loading directory…", skeleton bars on Customers, and "Loading quote…" until a heading wait. `/staff/team` and `/staff/people` are Directory query aliases and do load. Directory drill-in to a person page was not captured.
 - Screenshots. `w01-directory.png`, `w17-directory-no-links.png`
 
 ### M5. Desktop overlay has no ×. Collapse can hang
@@ -262,11 +272,11 @@ None that stop login or quote create for throwaway users. Treat the nine live Ca
 - Fix in this branch. Match number or id, same as `QuoteWorkspace`. Not on Production until this ships.
 - Screenshots. `u05-care-ticket-number.png`, `u07-machine-ticket-number.png`, `u19-care-uuid-wait.png`
 
-### M9. Staff cannot add a part that was not on the quote
+### M9. Staff PATCH cannot add a part that was not on the quote
 
 - Steps. Staff `PATCH /api/quotes/3` with invented line ids `5972K325` and `6331K32`
-- Expected. Pricing saved, or a clear UI to add lines
-- Actual. HTTP 400 `cannot add a part that was not on this quote`. `mergeQuoteItems` is create-then-price only.
+- Expected. HTTP 400 if those ids were not on the quote
+- Actual. HTTP 400 `cannot add a part that was not on this quote`. That matches `mergeQuoteItems`. The crawl did not open a staff UI to add a new line.
 - Proof. wide-report coverage `price quote 3` 400
 
 ## Minor
@@ -302,11 +312,15 @@ JSON transcripts live under `docs/exploratory/evidence/crawl-20260916/` and `doc
 
 ## One-liners in this branch
 
-- `normalizeStoredQuote` keeps `invoiceNumber` and `tenantId`.
-- `TicketDetail` and `TicketsWorkspace` treat a numeric ticket URL as ready, same as quotes.
+- `normalizeStoredQuote` keeps `invoiceNumber` and `tenantId`. A test now asserts every `QuoteRecord` key survives a catalog load.
+- `ticketRefMatches` treats a numeric Care URL as ready. `TicketDetail` and `TicketsWorkspace` use it. Covered in `src/lib/care.test.ts`.
 
-Isolation CODE RED stays unfixed.
+Care CR1 through CR9 stay unfixed. CR10 is guarded in this branch.
 
 ## Platform gap
 
-Host staff cannot create a second install. Cross-host catalog leaks were not exercised live. Same-host Care leaks are enough to treat isolation as broken for customers who share a machine. CR10 is the Blob path that would mix host quotes if a second tenant's rows lost `tenantId`.
+Host staff cannot create a second install. Cross-host catalog leaks were not exercised live. Same-host Care is machine-scoped for every customer who can open that machine.
+
+## Review notes
+
+[Trail review](7fa377fb-5492-465e-a77e-a2447e6b20d4) on claude-fable-5.1 flagged the plant-shared premise, leftover throwaways, the inferred deploy SHA, the Kevin-password contradiction, the missing M8 test, the instance-level catalog test, the skipped quote-attachment probe, and one-sample claims. This revision answers those. The TSV still has reconstructed timestamps from commit time. Untracked local verify-oee360 evidence was not committed.

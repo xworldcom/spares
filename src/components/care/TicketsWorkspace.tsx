@@ -18,6 +18,7 @@ import { errorMessage } from "@/lib/api/errors";
 import {
   hubTicketHref,
   machineTicketsHref,
+  ticketRefMatches,
 } from "@/lib/care";
 import type { ServiceTicket } from "@/types";
 
@@ -98,10 +99,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
   const selected = ticketId
-    ? tickets.find(
-        (ticket) =>
-          ticket.id === ticketId || String(ticket.number) === String(ticketId),
-      ) ?? null
+    ? tickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ?? null
     : null;
 
   const listPanel = (

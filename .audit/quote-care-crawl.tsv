@@ -8,3 +8,6 @@ ts	phase	decision	why	evidence	result
 2026-09-16T05:50:03Z	wide-ui	numeric /care/tickets/5 shows empty sheet, UUID shows the thread	TicketDetail compared UUID only	docs/exploratory/evidence/crawl-20260916-wide/u05-care-ticket-number.png	M8 live
 2026-09-16T05:52:00Z	one-liner	kept invoiceNumber and tenantId in normalizeStoredQuote, matched numeric ticket URLs	obvious field keep and same pattern as QuoteWorkspace	src/lib/quotes.ts src/components/care/TicketDetail.tsx	tests green, not on Production
 2026-09-16T05:52:00Z	platform	second host still blocked	host staff 403 on platform create	wide-report platform coverage	blocked
+2026-09-16T06:06:00Z	review	folded trail-review flags into the findings	CR1-9 are one machine-scope question. leftover throwaways listed. Kevin never signed in. SHA inferred	docs/exploratory/quote-care-crawl-2026-09-16.md	open
+2026-09-16T06:08:00Z	probe	B 403 on A quote 2 attachment routes without uploading a file	quote access is customerId. Care attachment used ticket access	docs/exploratory/evidence/crawl-20260916-wide/quote-attachment-probe.json	held
+2026-09-16T06:09:00Z	tests	ticketRefMatches plus QuoteRecord key round-trip	reviewer said M8 had no test and the catalog keep was instance-level	src/lib/care.test.ts src/lib/quotes.test.ts	43 pass
