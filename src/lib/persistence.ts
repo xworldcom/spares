@@ -1,9 +1,28 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { BLOB_CARE_PATH, BLOB_DB_PATH, BLOB_FILES_PREFIX } from "./blob-paths.ts";
+import { BLOB_FILES_PREFIX, blobCarePath, blobDbPath } from "./blob-paths.ts";
 import { isManagedRuntime } from "./production-env.ts";
 
 export type StoreKind = "fs" | "blob" | "memory";
+
+/**
+ * A JSON read failed for a reason other than "the object does not exist yet".
+ *
+ * Callers must never treat this as an empty store: reseeding on a transient Blob error
+ * overwrites every user, machine, and quote with fresh fixtures.
+ */
+export class PersistenceReadError extends Error {
+  readonly pathname: string;
+
+  constructor(pathname: string, options?: { cause?: unknown }) {
+    super(
+      `Could not read ${pathname} from durable storage. Refusing to overwrite it with a fresh catalog.`,
+      options,
+    );
+    this.name = "PersistenceReadError";
+    this.pathname = pathname;
+  }
+}
 
 export type Persistence = {
   kind: StoreKind;
@@ -117,22 +136,14 @@ function fsPersistence(root: string): Persistence {
   return {
     kind: "fs",
     async readDatabaseJson() {
-      try {
-        return await readFile(dbFile, "utf8");
-      } catch {
-        return null;
-      }
+      return readJsonFile(dbFile);
     },
     async writeDatabaseJson(json) {
       await mkdir(filesRoot, { recursive: true });
       await writeFile(dbFile, json);
     },
     async readCareJson() {
-      try {
-        return await readFile(careFile, "utf8");
-      } catch {
-        return null;
-      }
+      return readJsonFile(careFile);
     },
     async writeCareJson(json) {
       await mkdir(filesRoot, { recursive: true });
@@ -159,16 +170,28 @@ function fsPersistence(root: string): Persistence {
   };
 }
 
+/** Missing files are a first boot; anything else must not look like an empty store. */
+async function readJsonFile(file: string) {
+  try {
+    return await readFile(file, "utf8");
+  } catch (cause) {
+    if ((cause as { code?: string })?.code === "ENOENT") {
+      return null;
+    }
+    throw new PersistenceReadError(file, { cause });
+  }
+}
+
 function blobPersistence(): Persistence {
   return {
     kind: "blob",
     async readDatabaseJson() {
-      const bytes = await readBlob(BLOB_DB_PATH);
+      const bytes = await readJsonBlob(blobDbPath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeDatabaseJson(json) {
       const { put } = await import("@vercel/blob");
-      await put(BLOB_DB_PATH, json, {
+      await put(blobDbPath(), json, {
         access: "private",
         addRandomSuffix: false,
         allowOverwrite: true,
@@ -178,12 +201,12 @@ function blobPersistence(): Persistence {
       });
     },
     async readCareJson() {
-      const bytes = await readBlob(BLOB_CARE_PATH);
+      const bytes = await readJsonBlob(blobCarePath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeCareJson(json) {
       const { put } = await import("@vercel/blob");
-      await put(BLOB_CARE_PATH, json, {
+      await put(blobCarePath(), json, {
         access: "private",
         addRandomSuffix: false,
         allowOverwrite: true,
@@ -192,7 +215,12 @@ function blobPersistence(): Persistence {
       });
     },
     async readFileBytes(name) {
-      return readBlob(blobFilePath(name));
+      // Binaries are re-uploadable; a failed read stays "missing" as before.
+      try {
+        return await readBlob(blobFilePath(name));
+      } catch {
+        return null;
+      }
     },
     async writeFileBytes(name, bytes) {
       const { put } = await import("@vercel/blob");
@@ -241,14 +269,45 @@ function contentTypeFor(name: string) {
 }
 
 async function readBlob(pathname: string): Promise<Buffer | null> {
-  try {
-    const { get } = await import("@vercel/blob");
-    const result = await get(pathname, { access: "private", useCache: false });
-    if (!result || result.statusCode !== 200) {
-      return null;
-    }
-    return Buffer.from(await new Response(result.stream).arrayBuffer());
-  } catch {
+  const { get } = await import("@vercel/blob");
+  const result = await get(pathname, { access: "private", useCache: false });
+  if (!result) {
     return null;
   }
+  if (result.statusCode !== 200) {
+    throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
+  }
+  return Buffer.from(await new Response(result.stream).arrayBuffer());
+}
+
+function isMissingBlob(cause: unknown) {
+  return cause instanceof Error && cause.name === "BlobNotFoundError";
+}
+
+const JSON_READ_ATTEMPTS = 3;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Catalog JSON is the source of truth for logins, so a rate limit or a dropped socket
+ * must surface as an error rather than as "no catalog yet". Retry first, then throw.
+ */
+async function readJsonBlob(pathname: string): Promise<Buffer | null> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= JSON_READ_ATTEMPTS; attempt++) {
+    try {
+      return await readBlob(pathname);
+    } catch (cause) {
+      if (isMissingBlob(cause)) {
+        return null;
+      }
+      lastError = cause;
+      if (attempt < JSON_READ_ATTEMPTS) {
+        await delay(150 * attempt);
+      }
+    }
+  }
+  throw new PersistenceReadError(pathname, { cause: lastError });
 }
