@@ -315,6 +315,40 @@ describe("staff logins survive heals, races, and storage hiccups", () => {
     assert.equal(row?.tenantName, "Satellite Co");
   });
 
+  it("staff whose host row is missing stay listed and keep their tenant scope", async () => {
+    await softLaunch({
+      db: softLaunchDb({
+        tenants: [
+          {
+            id: HOST,
+            name: "JMP",
+            slug: "oee360-host",
+            createdAt: "2020-01-01T00:00:00.000Z",
+          },
+        ],
+        users: [
+          {
+            id: "user-orphan-staff",
+            email: "ops@satellite.test",
+            passwordHash: await hashPassword("SatellitePass1!"),
+            role: "staff",
+            tenantId: "tenant-vanished",
+            staffCreatedTenantId: "tenant-vanished",
+          },
+        ],
+      }),
+    });
+
+    const staff = await listStaffUsersForPlatform();
+    const row = staff.find((entry) => entry.email === "ops@satellite.test");
+    assert.equal(row?.tenantId, "tenant-vanished");
+    const loaded = await findUserByEmail("ops@satellite.test");
+    assert.ok(loaded, "an orphaned staff row must still be able to sign in");
+    assert.equal(effectiveStaffTenantId(loaded!), "tenant-vanished");
+    const directory = await listPlatformDirectory();
+    assert.ok(directory.some((entry) => entry.email === "ops@satellite.test"));
+  });
+
   it("a concurrent create of the same address is refused instead of duplicated", async () => {
     await softLaunch();
     const staleSnapshot = (await store.raw()) ?? "{}";
