@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
+import { blobCarePath, blobDbPath } from "./blob-paths.ts";
 import {
   createMemoryPersistence,
   safeStoredFileName,
@@ -40,6 +41,24 @@ describe("persistence selection", () => {
   it("honors an injected backend", () => {
     setPersistenceForTests(createMemoryPersistence());
     assert.equal(selectStoreKind(), "memory");
+  });
+});
+
+describe("blob catalog paths", () => {
+  after(() => {
+    delete process.env.SPARES_BLOB_NAMESPACE;
+  });
+
+  it("keeps the historical paths when no namespace is set", () => {
+    delete process.env.SPARES_BLOB_NAMESPACE;
+    assert.equal(blobDbPath(), "spares/db.json");
+    assert.equal(blobCarePath(), "spares/care.json");
+  });
+
+  it("isolates an environment that opts into a namespace", () => {
+    process.env.SPARES_BLOB_NAMESPACE = "Preview QA";
+    assert.equal(blobDbPath(), "spares/preview-qa/db.json");
+    assert.equal(blobCarePath(), "spares/preview-qa/care.json");
   });
 });
 

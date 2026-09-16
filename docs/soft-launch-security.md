@@ -18,6 +18,23 @@ Implementation:
 
 **Kevin-only:** turning on `SPARES_ALLOW_SEED` on Production would re-enable demo data and logins. Do not set it on the Production environment in Vercel.
 
+While seeds are on, catalog heal keeps `staff@spares.local` and `customer@spares.local` present (re-added when absent, un-deactivated when a stored row was soft-deleted) and the platform refuses to deactivate or rename them. The heal only ever touches those two addresses — real staff and customer logins are never added, edited, or removed by it, and are never resurrected after a deliberate deactivate.
+
+## Durable catalog: logins must not disappear
+
+`db.json` holds every login, so the store treats it as authoritative rather than disposable:
+
+- A catalog read that fails (Blob rate limit, dropped socket, expired token) is retried and then raised as `PersistenceReadError`. It is **never** treated as "no catalog yet" — that used to reseed fixtures over every user, machine, and quote.
+- Unparseable catalog JSON raises `CatalogUnreadableError` instead of being overwritten, so the document stays restorable from [soft-launch-backup.md](./soft-launch-backup.md).
+- A catalog with **zero** users is valid (seeds off, no owner yet) and is healed in place instead of reseeded.
+- Every write merges users, host tenants, customer accounts, sites, and org tombstones against the latest stored copy. A concurrent request — another instance, or a Preview smoke sharing the same Blob store — can no longer drop people created since it read. Soft deletes still win, so a stale writer cannot resurrect a removed person.
+- Creating a login, or renaming one, loses to a concurrent writer that already used the address. Two live rows for one email make sign-in ambiguous and `findUserByEmail` fails closed for both people.
+- Renaming a host (e.g. **OEE360 Host** → **JMP**) only changes the tenant's display name. Staff and customer rows stay bound to the tenant **id** (`tenant-oee360-host`), so sessions, `staffCreatedTenantId` pins, and Directory rows follow the rename instead of orphaning.
+
+### `SPARES_BLOB_NAMESPACE` (Preview vs Soft Launch isolation)
+
+Preview deployments and Soft Launch share `BLOB_READ_WRITE_TOKEN`, so a Preview QA smoke that renames a host or deactivates a login writes straight into Soft Launch data (this is how the Soft Launch host showed up renamed on Preview). Set `SPARES_BLOB_NAMESPACE` on the deployments that must stay isolated — `SPARES_BLOB_NAMESPACE=preview-qa` reads and writes `spares/preview-qa/db.json` and `spares/preview-qa/care.json`. Leaving it unset keeps the historical `spares/db.json` paths, so **Soft Launch needs no data migration**; only give the namespace to the environment you want to fork off, and back both up first.
+
 ## Auth and sessions
 
 - Session cookie `spares_session`: `HttpOnly`, `Secure` on Vercel, `SameSite=Lax` — `src/lib/auth/session-token.ts`

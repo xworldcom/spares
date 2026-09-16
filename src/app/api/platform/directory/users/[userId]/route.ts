@@ -8,6 +8,7 @@ import {
   mutatePlatformDirectoryUser,
   removePlatformDirectoryUser,
 } from "@/lib/store";
+import { isProtectedDemoSeedLogin } from "@/lib/demo-seed-gate";
 import { isPlatformOwnerEmail } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
@@ -51,13 +52,19 @@ export async function GET(
       name: row.name,
       siteId: row.siteId,
     })),
-    protectedLogin: user.role === "staff" && isProtectedStaffLogin(user.email),
+    protectedLogin: isProtectedLogin(user),
   });
 }
 
-function isProtectedStaffLogin(email: string) {
-  const normalized = email.trim().toLowerCase();
-  return normalized === "staff@spares.local" || isPlatformOwnerEmail(normalized);
+function isProtectedLogin(user: { role: string; email: string }) {
+  const normalized = user.email.trim().toLowerCase();
+  if (isProtectedDemoSeedLogin(normalized)) {
+    return true;
+  }
+  return (
+    user.role === "staff" &&
+    (normalized === "staff@spares.local" || isPlatformOwnerEmail(normalized))
+  );
 }
 
 export async function PATCH(

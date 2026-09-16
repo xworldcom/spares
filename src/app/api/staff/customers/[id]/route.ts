@@ -61,6 +61,9 @@ export async function PATCH(
     if (updated.error === "bad-email") {
       return error("Email is required", 400);
     }
+    if (updated.error === "protected") {
+      return error("That demo login is protected and cannot be changed", 400);
+    }
     return error("Person not found", 404);
   }
 
@@ -80,6 +83,9 @@ export async function DELETE(
   const { id } = await params;
   const removed = await deletePerson(id, auth.tenantId);
   if ("error" in removed) {
+    if (removed.error === "protected") {
+      return error("That demo login is protected and cannot be removed", 400);
+    }
     return error("Person not found", 404);
   }
   return json({ ok: true });

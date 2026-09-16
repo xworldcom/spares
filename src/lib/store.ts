@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { hashPassword } from "./auth/password.ts";
+import { hashPassword, verifyPassword } from "./auth/password.ts";
+import {
+  liveEmailConflict,
+  mergeIdLists,
+  mergeRowsForWrite,
+  mergeUsersForWrite,
+} from "./catalog-merge.ts";
 import {
   compressModelGlb,
   validateLargeModelCompression,
@@ -34,6 +40,7 @@ import {
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
 import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.ts";
+import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -545,25 +552,32 @@ async function ensureOwnerStaff(db: Database): Promise<Database> {
   if (!email || !password) {
     return db;
   }
-  const passwordHash = await hashPassword(password);
   const index = db.users.findIndex(
     (user) => normalizeEmail(user.email) === email,
   );
   if (index >= 0) {
     const current = db.users[index];
-    if (current.role === "staff" && current.passwordHash === passwordHash) {
+    // Hashes are salted, so compare by verifying — hashing again never matches and would
+    // rewrite the owner row (and race other writers) on every single catalog read.
+    if (
+      current.role === "staff" &&
+      !current.deletedAt &&
+      (await verifyPassword(password, current.passwordHash))
+    ) {
       return db;
     }
     const users = db.users.slice();
+    const { deletedAt: _reactivated, ...live } = current;
     users[index] = {
-      ...current,
+      ...live,
       role: "staff",
-      passwordHash,
+      passwordHash: await hashPassword(password),
       tenantId: current.tenantId ?? DEFAULT_TENANT_ID,
       staffCreatedTenantId: current.staffCreatedTenantId ?? DEFAULT_TENANT_ID,
     };
     return { ...db, users };
   }
+  const passwordHash = await hashPassword(password);
   return {
     ...db,
     users: [
@@ -641,16 +655,46 @@ async function ensureBuiltinDemoStaff(db: Database): Promise<Database> {
   return { ...db, users };
 }
 
+/** Documented demo customer login; only this row is added when missing (never real logins). */
+async function ensureBuiltinDemoCustomer(db: Database): Promise<Database> {
+  if (!isSeedAllowed()) {
+    return db;
+  }
+  const seed = SEED_CUSTOMER;
+  const index = db.users.findIndex((user) => normalizeEmail(user.email) === seed.email);
+  if (index >= 0) {
+    return db;
+  }
+  const usedIds = new Set(db.users.map((user) => user.id));
+  const id = usedIds.has(seed.id) ? randomUUID() : seed.id;
+  return {
+    ...db,
+    users: [
+      ...db.users,
+      {
+        ...(await seedUser({ ...seed, id })),
+        tenantId: DEFAULT_TENANT_ID,
+      },
+    ],
+  };
+}
+
 function stabilizeSeedUsers(db: Database): Database {
   const idByEmail = new Map<string, string>([
     [SEED_STAFF.email, SEED_STAFF.id],
     [SEED_CUSTOMER.email, SEED_CUSTOMER.id],
     ...EXTRA_SEED_CUSTOMERS.map((row) => [row.email, row.id] as const),
   ]);
+  const takenIds = new Map(db.users.map((user) => [user.id, user.email]));
   const remap = new Map<string, string>();
   const users = db.users.map((user) => {
     const stable = idByEmail.get(user.email);
     if (!stable || user.id === stable) {
+      return user;
+    }
+    // Never collide with a different person already holding the canonical id.
+    const holder = takenIds.get(stable);
+    if (holder !== undefined && holder !== user.email) {
       return user;
     }
     remap.set(user.id, stable);
@@ -761,8 +805,10 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
     {
       ...healed,
       tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
-      customers: latest.customers ?? healed.customers,
-      sites: latest.sites ?? healed.sites,
+      // Latest wins per row (the blob is newer than this heal's snapshot) but rows only
+      // one side knows about are kept, so neither side loses a create.
+      customers: mergeRowsForWrite(healed.customers ?? [], latest.customers ?? []),
+      sites: mergeRowsForWrite(healed.sites ?? [], latest.sites ?? []),
       users: mergeOrgUsersAndClampTenants(
         healed,
         latest,
@@ -770,7 +816,7 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       ),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
-      orgTombstones: latest.orgTombstones ?? healed.orgTombstones,
+      orgTombstones: mergeOrgTombstones(healed.orgTombstones, latest.orgTombstones),
     },
     care,
   );
@@ -1047,8 +1093,8 @@ async function stabilizeCatalogUsers(db: Database): Promise<Database> {
     return await ensureOwnerStaff(db);
   }
   return await ensureOwnerStaff(
-    await ensureExtraCustomers(
-      await ensureBuiltinDemoStaff(stabilizeSeedUsers(db)),
+    await ensureBuiltinDemoCustomer(
+      await ensureBuiltinDemoStaff(await ensureExtraCustomers(stabilizeSeedUsers(db))),
     ),
   );
 }
@@ -1074,12 +1120,27 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
   return kept;
 }
 
-function parseDatabase(
-  raw: string,
-): { db: Database; numbersAssigned: boolean } | null {
+type LoadedDatabase = { db: Database; numbersAssigned: boolean };
+
+/**
+ * The stored catalog could not be understood. Never reseed on this — an unreadable or
+ * half-written `db.json` is recoverable from a backup, an overwritten one is not.
+ */
+export class CatalogUnreadableError extends Error {
+  constructor() {
+    super(
+      "Stored catalog JSON could not be parsed. Refusing to overwrite it — restore db.json from a backup (docs/soft-launch-backup.md).",
+    );
+    this.name = "CatalogUnreadableError";
+  }
+}
+
+function parseDatabase(raw: string): LoadedDatabase | null {
   try {
     const parsed = JSON.parse(raw) as Database;
-    if (!parsed.users?.length) {
+    // An empty user list is a valid catalog (seeds off, no owner yet). Only a document
+    // that is not a catalog at all is rejected.
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.users)) {
       return null;
     }
     const rawQuotes = parsed.quotes ?? [];
@@ -1108,23 +1169,43 @@ function parseDatabase(
   }
 }
 
+/** Throws {@link CatalogUnreadableError} rather than treating bad JSON as an empty store. */
+async function loadPersistedSnapshot(): Promise<LoadedDatabase | null> {
+  const raw = await getPersistence().readDatabaseJson();
+  if (raw === null) {
+    return null;
+  }
+  const loaded = parseDatabase(raw);
+  if (!loaded) {
+    throw new CatalogUnreadableError();
+  }
+  return loaded;
+}
+
 async function readDatabase(): Promise<Database> {
   logStoreKind();
   if (memory && trustProcessMemory()) {
     return memory;
   }
 
-  const raw = await getPersistence().readDatabaseJson();
-  const loaded = raw ? parseDatabase(raw) : null;
+  const loaded = await loadPersistedSnapshot();
   if (!loaded) {
     const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
     const seeded = await overlayPersistedCare(
       await withFixtureMachines(await ensureOwnerStaff(base)),
     );
+    // Another instance may have created the catalog while we were building fixtures.
+    const appeared = await loadPersistedSnapshot();
+    if (appeared) {
+      return await healLoadedDatabase(appeared);
+    }
     await writeDatabase(seeded);
     return seeded;
   }
+  return await healLoadedDatabase(loaded);
+}
 
+async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
   const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
   const next = await overlayPersistedCare(
     ensureOrg(
@@ -1157,7 +1238,7 @@ async function writeCareStore(care: CareStore) {
   await getPersistence().writeCareJson(JSON.stringify(care, null, 2));
 }
 
-async function writeDatabase(next: Database) {
+async function persistDatabase(next: Database) {
   const normalized = applyCare(clampSatelliteStaffTenants(next), careCollections(next));
   memory = normalized;
   await Promise.all([
@@ -1166,35 +1247,93 @@ async function writeDatabase(next: Database) {
   ]);
 }
 
+function mergeOrgTombstones(
+  latest: OrgTombstones | undefined,
+  next: OrgTombstones | undefined,
+): OrgTombstones | undefined {
+  const customerIds = mergeIdLists(latest?.customerIds, next?.customerIds);
+  const siteIds = mergeIdLists(latest?.siteIds, next?.siteIds);
+  if (!customerIds && !siteIds) {
+    return undefined;
+  }
+  return {
+    ...(customerIds ? { customerIds } : {}),
+    ...(siteIds ? { siteIds } : {}),
+  };
+}
+
+/**
+ * Keep people, hosts, and the org tree that landed in the store after this request read
+ * it. Without this, an unrelated write (a machine view, a quote, a Preview smoke renaming
+ * a host) silently dropped every login created since its own snapshot.
+ */
+async function mergeIdentityWithLatest(next: Database): Promise<Database> {
+  const latest = (await loadPersistedSnapshot())?.db;
+  if (!latest) {
+    return next;
+  }
+  return {
+    ...next,
+    tenants: mergeRowsForWrite(latest.tenants ?? [], next.tenants ?? []),
+    users: mergeUsersForWrite(latest.users, next.users),
+    customers: mergeRowsForWrite(latest.customers ?? [], next.customers ?? []),
+    sites: mergeRowsForWrite(latest.sites ?? [], next.sites ?? []),
+    orgTombstones: mergeOrgTombstones(latest.orgTombstones, next.orgTombstones),
+  };
+}
+
+async function writeDatabase(next: Database) {
+  await persistDatabase(await mergeIdentityWithLatest(next));
+}
+
+type LoginWriteResult = { ok: true } | { error: "email-taken" };
+
+/**
+ * Creating or renaming a login has to lose to a concurrent writer that already used the
+ * address: two live rows with one email make `findUserByEmail` ambiguous and sign-in
+ * fails closed for both people.
+ */
+async function writeDatabaseWithLogin(
+  next: Database,
+  login: { id: string; email: string },
+): Promise<LoginWriteResult> {
+  const merged = await mergeIdentityWithLatest(next);
+  if (liveEmailConflict(merged.users, login)) {
+    return { error: "email-taken" };
+  }
+  await persistDatabase(merged);
+  return { ok: true };
+}
+
 /** Org creates race catalog heals — merge with latest blob before persisting. */
-async function writeDatabaseWithOrgMerge(next: Database) {
+async function writeDatabaseWithOrgMerge(
+  next: Database,
+  login?: { id: string; email: string },
+): Promise<LoginWriteResult> {
   let merged = clampSatelliteStaffTenants(next);
   for (let pass = 0; pass < 2; pass++) {
-    const latestRaw = await getPersistence().readDatabaseJson();
-    const loaded = latestRaw ? parseDatabase(latestRaw) : null;
-    if (!loaded?.db) {
+    const latest = (await loadPersistedSnapshot())?.db;
+    if (!latest) {
       break;
     }
-    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, loaded.db));
+    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, latest));
   }
-  const normalized = applyCare(merged, careCollections(merged));
-  memory = normalized;
-  await Promise.all([
-    getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
-    writeCareStore(careCollections(normalized)),
-  ]);
+  if (login && liveEmailConflict(merged.users, login)) {
+    return { error: "email-taken" };
+  }
+  await persistDatabase(merged);
+  return { ok: true };
 }
 
 /** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
 async function writeCatalogHeal(next: Database) {
   let merged = next;
   for (let pass = 0; pass < 2; pass++) {
-    const latestRaw = await getPersistence().readDatabaseJson();
-    const loaded = latestRaw ? parseDatabase(latestRaw) : null;
-    if (!loaded?.db) {
+    const latest = (await loadPersistedSnapshot())?.db;
+    if (!latest) {
       break;
     }
-    merged = mergeOrgCrudFromLatest(merged, loaded.db);
+    merged = mergeOrgCrudFromLatest(merged, latest);
   }
   const kept = await overlayPersistedCare(clampSatelliteStaffTenants(merged));
   memory = kept;
@@ -1425,7 +1564,13 @@ export function createTenantWithOptionalStaff(
       clampSatelliteStaffTenants({ ...migrated, users: finalUsers }),
       staffUser ? [{ userId: staffUser.id, tenantId: tenant.id }] : [],
     );
-    await writeDatabaseWithOrgMerge(payload);
+    const written = await writeDatabaseWithOrgMerge(
+      payload,
+      staffUser ? { id: staffUser.id, email: staffUser.email } : undefined,
+    );
+    if ("error" in written) {
+      return { error: "email-taken" as const };
+    }
     return { tenant, staffUser };
   });
 }
@@ -1453,7 +1598,13 @@ export function createTenantStaffUser(
       staffCreatedTenantId: tenantId,
     };
     const payload = { ...db, users: [...db.users, user] };
-    await writeDatabaseWithOrgMerge(payload);
+    const written = await writeDatabaseWithOrgMerge(payload, {
+      id: user.id,
+      email: user.email,
+    });
+    if ("error" in written) {
+      return { error: "email-taken" as const };
+    }
     const persisted = (memory ?? (await readDatabase())).users.find(
       (row) => row.id === user.id,
     );
@@ -1653,7 +1804,13 @@ export function createCustomer(
       ],
       ...(trimmedName ? { name: trimmedName } : {}),
     };
-    await writeDatabase({ ...db, users: [...db.users, user] });
+    const written = await writeDatabaseWithLogin(
+      { ...db, users: [...db.users, user] },
+      { id: user.id, email: user.email },
+    );
+    if ("error" in written) {
+      return { error: "email-taken" as const };
+    }
     return { user };
   });
 }
@@ -1670,6 +1827,9 @@ export function deletePerson(userId: string, tenantId: string) {
     const user = db.users[index];
     if (user.role !== "customer") {
       return { error: "not-customer" as const };
+    }
+    if (isProtectedDemoSeedLogin(user.email)) {
+      return { error: "protected" as const };
     }
     const users = db.users.slice();
     users[index] = { ...user, deletedAt: new Date().toISOString() };
@@ -1751,7 +1911,13 @@ export function updateStaffProfile(
 
     const users = db.users.slice();
     users[index] = next;
-    await writeDatabase({ ...db, users });
+    const written = await writeDatabaseWithLogin({ ...db, users }, {
+      id: next.id,
+      email: next.email,
+    });
+    if ("error" in written) {
+      return { error: "email-taken" as const };
+    }
     return { user: next };
   });
 }
@@ -2007,6 +2173,9 @@ export function updatePerson(
       if (!normalized) {
         return { error: "bad-email" as const };
       }
+      if (normalized !== user.email && isProtectedDemoSeedLogin(user.email)) {
+        return { error: "protected" as const };
+      }
       if (
         db.users.some(
           (row) =>
@@ -2062,7 +2231,13 @@ export function updatePerson(
 
     const users = db.users.slice();
     users[index] = next;
-    await writeDatabase({ ...db, users });
+    const written = await writeDatabaseWithLogin({ ...db, users }, {
+      id: next.id,
+      email: next.email,
+    });
+    if ("error" in written) {
+      return { error: "email-taken" as const };
+    }
     return { user: next };
   });
 }
