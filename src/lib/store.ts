@@ -823,6 +823,7 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       orgTombstones: mergeOrgTombstones(healed.orgTombstones, latest.orgTombstones),
+      platformSettings: latest.platformSettings ?? healed.platformSettings,
     },
     care,
   );
@@ -1286,6 +1287,7 @@ async function mergeIdentityWithLatest(next: Database): Promise<Database> {
     customers: mergeRowsForWrite(latest.customers ?? [], next.customers ?? []),
     sites: mergeRowsForWrite(latest.sites ?? [], next.sites ?? []),
     orgTombstones: mergeOrgTombstones(latest.orgTombstones, next.orgTombstones),
+    platformSettings: next.platformSettings ?? latest.platformSettings,
   };
 }
 
@@ -1445,7 +1447,7 @@ export function getPlatformDeployment(tenantId: string) {
 }
 
 export async function getPlatformSignInSettingsFromCatalog(): Promise<PlatformSignInSettings> {
-  const db = await ensureCatalog();
+  const db = await readDatabase();
   return db.platformSettings ?? {};
 }
 

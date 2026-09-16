@@ -8,7 +8,11 @@ import {
   readPasswordLoginEnvOverride,
 } from "./password-login.server.ts";
 import { createMemoryPersistence, setPersistenceForTests } from "../persistence.ts";
-import { resetStoreMemoryForTests, updatePlatformSignInSettings } from "../store.ts";
+import {
+  resetStoreMemoryForTests,
+  updatePlatformSignInSettings,
+  writeCatalogHealForTests,
+} from "../store.ts";
 
 describe("password login policy", () => {
   const envKeys = ["PASSWORD_LOGIN"] as const;
@@ -109,5 +113,33 @@ describe("password login API gate", () => {
     }
     const options = await getSignInOptions();
     assert.equal(options.passwordLoginEnabled, false);
+  });
+
+  it("persists disable in db.json after memory reset", async () => {
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await updatePlatformSignInSettings({ passwordLoginEnabled: false });
+    resetStoreMemoryForTests();
+    const raw = await persistence.readDatabaseJson();
+    assert.match(raw ?? "", /"passwordLoginEnabled"\s*:\s*false/);
+    const allowed = await assertPasswordLoginAllowed();
+    assert.equal(allowed.ok, false);
+  });
+
+  it("catalog heal does not drop platformSettings already on blob", async () => {
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await updatePlatformSignInSettings({ passwordLoginEnabled: false });
+    const raw = await persistence.readDatabaseJson();
+    assert.ok(raw);
+    const snapshot = JSON.parse(raw!) as { platformSettings?: { passwordLoginEnabled?: boolean } };
+    const staleHeal = { ...snapshot };
+    delete staleHeal.platformSettings;
+    await writeCatalogHealForTests(staleHeal as never);
+    resetStoreMemoryForTests();
+    const allowed = await assertPasswordLoginAllowed();
+    assert.equal(allowed.ok, false);
   });
 });

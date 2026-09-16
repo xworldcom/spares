@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -23,6 +24,7 @@ export default function PlatformSignInSettingsPage() {
 }
 
 function PlatformSignInSettings() {
+  const router = useRouter();
   const { user } = useAuth();
   const [settings, setSettings] = useState<SignInSettingsResponse | null>(null);
   const [allowPassword, setAllowPassword] = useState(true);
@@ -71,6 +73,7 @@ function PlatformSignInSettings() {
       setSettings(data);
       setAllowPassword(data.passwordLoginStoredEnabled);
       setSaved(true);
+      router.refresh();
     } catch (cause) {
       setError(errorMessage(cause, "Save failed"));
     } finally {
