@@ -1,6 +1,11 @@
 import { hashPassword } from "@/lib/auth";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import {
+  mapCreateTenantStoreError,
+  parseCreatePlatformTenantBody,
+  type CreatePlatformTenantBody,
+} from "@/lib/platform-tenant-create";
 import { createTenantWithOptionalStaff, listTenants } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -14,50 +19,34 @@ export async function GET() {
   return json({ tenants });
 }
 
-type CreateBody = {
-  name?: unknown;
-  staffEmail?: unknown;
-  staffPassword?: unknown;
-};
-
 export async function POST(request: Request) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
   }
 
-  const body = await readJson<CreateBody>(request);
+  const body = await readJson<CreatePlatformTenantBody>(request);
   if (isErrorResponse(body)) {
     return body;
   }
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  if (!name) {
-    return error("Tenant name is required", 400);
+  const parsed = parseCreatePlatformTenantBody(body);
+  if (!parsed.ok) {
+    return error(parsed.message, parsed.status);
   }
 
-  const staffEmail =
-    typeof body.staffEmail === "string" ? body.staffEmail.trim() : "";
-  const staffPassword =
-    typeof body.staffPassword === "string" ? body.staffPassword : "";
-
   const created = await createTenantWithOptionalStaff(
-    name,
-    staffEmail && staffPassword
+    parsed.value.name,
+    parsed.value.staff
       ? {
-          email: staffEmail,
-          passwordHash: await hashPassword(staffPassword),
+          email: parsed.value.staff.email,
+          passwordHash: await hashPassword(parsed.value.staff.password),
         }
       : undefined,
   );
-  if ("error" in created) {
-    if (created.error === "taken") {
-      return error("A tenant with that name already exists", 409);
-    }
-    if (created.error === "email-taken") {
-      return error("Staff email is already in use", 409);
-    }
-    return error("Tenant name is required", 400);
+  if ("error" in created && created.error) {
+    const mapped = mapCreateTenantStoreError(created.error);
+    return error(mapped.message, mapped.status);
   }
 
   const staffUser = created.staffUser

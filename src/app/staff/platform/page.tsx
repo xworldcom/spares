@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
+import { isForbidden, errorMessage } from "@/lib/api/errors";
 import type { Tenant } from "@/types";
 
 type DeploymentRow = {
@@ -58,10 +59,10 @@ function PlatformHub() {
       setForbidden(false);
       setError(null);
     } catch (cause) {
-      if (cause instanceof Error && cause.message.includes("403")) {
+      if (isForbidden(cause)) {
         setForbidden(true);
       } else {
-        setError(cause instanceof Error ? cause.message : "Could not load deployments");
+        setError(errorMessage(cause, "Could not load deployments"));
       }
     } finally {
       setLoading(false);
@@ -92,7 +93,7 @@ function PlatformHub() {
           </p>
         </div>
         <Link className="btn-secondary text-sm" href="/staff/tenants">
-          Create tenant
+          Add new host tenant
         </Link>
       </div>
 
