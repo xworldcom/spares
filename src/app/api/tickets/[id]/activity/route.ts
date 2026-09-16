@@ -4,6 +4,7 @@ import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
 import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
+import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
 import { appendTicketActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -46,6 +47,27 @@ export async function POST(
   if (!next) {
     return error("Ticket not found", 404);
   }
+
+  void notifyMachineChatUpdate({
+    tenantId,
+    sender: {
+      id: access.user.id,
+      email: access.user.email,
+      name: access.user.name,
+    },
+    text: parsed.text,
+    attachmentCount: parsed.attachments?.length ?? 0,
+    context: {
+      kind: "care",
+      ticketId: next.id,
+      ticketNumber: next.number,
+      ticketTitle: next.title,
+      machineId: next.machineId,
+      machineName: access.machine.name,
+    },
+  }).catch((cause) => {
+    console.error("care chat email notify failed", cause);
+  });
 
   return json(
     { ticket: toPublicTicket(next, access.user, access.machine.name) },
