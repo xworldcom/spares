@@ -12,5 +12,6 @@ describe("directory URL helpers", () => {
   it("builds directory hrefs", () => {
     assert.equal(directoryHref("all"), "/staff/directory");
     assert.equal(directoryHref("staff"), "/staff/directory?type=staff");
+    assert.equal(directoryHref("person"), "/staff/directory?type=person");
   });
 });
