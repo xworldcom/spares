@@ -311,6 +311,13 @@ export function usageHistoryEntry(
   };
 }
 
+export function ticketRefMatches(
+  ticket: { id: string; number?: number },
+  ticketId: string,
+) {
+  return ticket.id === ticketId || String(ticket.number) === String(ticketId);
+}
+
 export function ticketHref(machineId: string, ticketId: string) {
   return `/machines/${machineId}/care/tickets/${ticketId}`;
 }

@@ -1,0 +1,424 @@
+{
+  "quoteId": "b03fa31d-440f-4845-8b64-a8da371491f1",
+  "ticketId": "ac03a328-b1a4-42ee-860b-a92112f9ab35",
+  "log": [
+    {
+      "name": "cust msg 1",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\"},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature DC motor\"}],\"cre"
+    },
+    {
+      "name": "staff msg 1",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"freight $75 inv"
+    },
+    {
+      "name": "cust msg 2",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\"},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature DC motor\"}],\"cre"
+    },
+    {
+      "name": "staff in_review",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"freight $75 inv"
+    },
+    {
+      "name": "staff pricing",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff msg 2",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff quoted",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "cust sees quoted",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature"
+    },
+    {
+      "name": "cust po",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature"
+    },
+    {
+      "name": "cust msg 3",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature"
+    },
+    {
+      "name": "staff po_received",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff confirmed",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff ordered",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff shipped",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff delivered",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff invoice",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff closed",
+      "status": 200,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "staff msg 3",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 inv"
+    },
+    {
+      "name": "cust msg 4",
+      "status": 201,
+      "excerpt": "{\"quote\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature"
+    },
+    {
+      "name": "cust ticket msg 1",
+      "status": 201,
+      "excerpt": "{\"ticket\":{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"open\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\""
+    },
+    {
+      "name": "staff ticket msg 1",
+      "status": 201,
+      "excerpt": "{\"ticket\":{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"open\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\""
+    },
+    {
+      "name": "staff ticket progress",
+      "status": 200,
+      "excerpt": "{\"ticket\":{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"in_progress\",\"createdAt\":\"2026-09-16T05:30:35."
+    }
+  ],
+  "customerQuote": {
+    "status": 200,
+    "quoteStatus": "closed",
+    "poNumber": "CRAWL-16-524",
+    "itemPrices": [
+      12.5,
+      340
+    ],
+    "activities": [
+      {
+        "kind": "status",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Status set to Requested."
+      },
+      {
+        "kind": "pricing",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Pricing updated."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Pricing."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer UI-API 1. Need the bearing this week on the Dayton fixture."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Staff 1. In review. Bearing is $12.50, motor $340, freight $75 invented."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer 2. Those prices work. Can you issue the quote?"
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to In review."
+      },
+      {
+        "kind": "pricing",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Pricing updated."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Pricing."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Staff 2. Moving to Quoted so you can send PO CRAWL-16-524."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Quoted."
+      },
+      {
+        "kind": "po",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "PO number set to CRAWL-16-524"
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer 3. PO CRAWL-16-524 entered. Please confirm."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to PO received."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Confirmed."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Ordered."
+      },
+      {
+        "kind": "shipment",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Shipped — tracking 1Z999CRAWL00000000 (UPS)"
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Delivered."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Closed."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Staff 3. Closed. Tracking 1Z999CRAWL00000000. Invoice INV-CRAWL-16."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer 4. Thanks. Receiving the closed quote on our side."
+      }
+    ]
+  },
+  "staffQuote": {
+    "status": 200,
+    "quoteStatus": "closed",
+    "activities": [
+      {
+        "kind": "status",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Status set to Requested."
+      },
+      {
+        "kind": "pricing",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Pricing updated."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Pricing."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer UI-API 1. Need the bearing this week on the Dayton fixture."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Staff 1. In review. Bearing is $12.50, motor $340, freight $75 invented."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer 2. Those prices work. Can you issue the quote?"
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to In review."
+      },
+      {
+        "kind": "pricing",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Pricing updated."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Pricing."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Staff 2. Moving to Quoted so you can send PO CRAWL-16-524."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Quoted."
+      },
+      {
+        "kind": "po",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "PO number set to CRAWL-16-524"
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer 3. PO CRAWL-16-524 entered. Please confirm."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to PO received."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Confirmed."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Ordered."
+      },
+      {
+        "kind": "shipment",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Shipped — tracking 1Z999CRAWL00000000 (UPS)"
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Delivered."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to Closed."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Staff 3. Closed. Tracking 1Z999CRAWL00000000. Invoice INV-CRAWL-16."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Customer 4. Thanks. Receiving the closed quote on our side."
+      }
+    ]
+  },
+  "ticket": {
+    "status": 200,
+    "ticketStatus": "in_progress",
+    "activities": [
+      {
+        "kind": "status",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Status set to Open"
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Throwaway ticket from crawl-20260916-0524 to test B isolation."
+      },
+      {
+        "kind": "message",
+        "role": "customer",
+        "email": "crawl-20260916-0524@spares.test",
+        "text": "Care customer 1. Isolation ticket chatter follow-up."
+      },
+      {
+        "kind": "message",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Care staff 1. Logged. We will check the palletizer on the next visit."
+      },
+      {
+        "kind": "status",
+        "role": "staff",
+        "email": "pr139-smoke-20260915-2316@spares.test",
+        "text": "Status set to In progress"
+      }
+    ]
+  },
+  "pricesVisibleAfterQuoted": true,
+  "customerActivityCount": 21,
+  "staffActivityCount": 21
+}

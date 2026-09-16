@@ -20,6 +20,7 @@ import {
   parseOptionalNumber,
   statusTicketText,
   ticketHref,
+  ticketRefMatches,
   ticketIsOpen,
   ticketStepState,
   toPublicTicket,
@@ -86,6 +87,14 @@ describe("care tickets", () => {
     assert.equal(hubTicketHref("t1"), "/care/tickets/t1");
     assert.equal(machineTicketsHref("m1"), "/machines/m1/care/tickets");
     assert.equal(machineTicketsHref("m1", "t1"), "/machines/m1/care/tickets/t1");
+  });
+
+  it("matches a ticket URL by UUID or by number", () => {
+    const ticket = { id: "ac03a328-b1a4-42ee-860b-a92112f9ab35", number: 5 };
+    assert.equal(ticketRefMatches(ticket, ticket.id), true);
+    assert.equal(ticketRefMatches(ticket, "5"), true);
+    assert.equal(ticketRefMatches(ticket, "4"), false);
+    assert.equal(ticketRefMatches(ticket, "other"), false);
   });
 
   it("counts unread tickets for tab badges", () => {

@@ -1,0 +1,340 @@
+{
+  "generatedAt": "2026-09-16T05:30:57.288Z",
+  "base": "https://oee360.com",
+  "accounts": {
+    "staff": "pr139-smoke-20260915-2316@spares.test",
+    "customerA": "crawl-20260916-0524@spares.test",
+    "customerB": "crawl-20260916-b@spares.test",
+    "quoteId": "b03fa31d-440f-4845-8b64-a8da371491f1",
+    "quoteNumber": 2,
+    "ticketId": "ac03a328-b1a4-42ee-860b-a92112f9ab35"
+  },
+  "findingCounts": {
+    "CODE_RED": 5
+  },
+  "findings": [
+    {
+      "severity": "CODE_RED",
+      "id": "cust-a-lists-foreign-tickets",
+      "title": "Customer A lists Care tickets owned by other customers",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "kevin@huzevka.com,customer@spares.local,staff@spares.local",
+      "steps": [
+        "GET /api/tickets as customer A (has hardware-fixture + palletizer)"
+      ],
+      "expected": "only tickets A opened, or tickets scoped to A",
+      "actual": "4 foreign tickets: 4 kevin@huzevka.com PR96 Care attachment smoke | 3 customer@spares.local QA soft-launch ticket | 2 customer@spares.local Testing | 1 staff@spares.local Care MVP re-smoke Sep 11 2026",
+      "urls": [
+        "GET /api/tickets"
+      ],
+      "response": "{\"count\":4,\"foreign\":[{\"id\":\"6abe3ee4-ce58-41da-8f27-a15bbf3ea041\",\"number\":4,\"email\":\"kevin@huzevka.com\",\"title\":\"PR96 Care attachment smoke\",\"machineId\":\"hardware-fixture\"},{\"id\":\"463406de-3acb-4e22-93b3-56ee950ea603\",\"number\":3,\"email\":\"customer@spares.local\",\"title\":\"QA soft-launch ticket\",\"machineId\":\"palletizer\"},{\"id\":\"2512ffab-d03e-483c-9bdb-49ed391c502e\",\"number\":2,\"email\":\"customer@spares.local\",\"title\":\"Testing\",\"machineId\":\"palletizer\"},{\"id\":\"7feabc65-5ad3-4e70-8acf-8a202e439278\",\"n…"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-a-reads-foreign-ticket",
+      "title": "Customer A can open another customer's ticket detail",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "kevin@huzevka.com",
+      "steps": [
+        "GET /api/tickets/6abe3ee4-ce58-41da-8f27-a15bbf3ea041"
+      ],
+      "expected": "404",
+      "actual": "200 {\"ticket\":{\"id\":\"6abe3ee4-ce58-41da-8f27-a15bbf3ea041\",\"number\":4,\"machineId\":\"hardware-fixture\",\"machineName\":\"Hardware fixture\",\"title\":\"PR96 Care attachment smoke\",\"status\":\"waiting_on_customer\",\"createdAt\":\"2026-09-14T02:18:17.201Z\",\"customerEmail\":\"kevin@huzevka.com\",\"activities\":[{\"id\":\"022f3b9b-63a2-4100-8785-c2587cc6ee14\",\"at\":\"2026-09-14T02:18:17.201Z\",\"actorRole\":\"staff\",\"actorEmail\":\"kevin@huzevka.com\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"3f8ab16b-7d54-4ae6-a862-be8f0a3…",
+      "urls": [
+        "GET /api/tickets/6abe3ee4-ce58-41da-8f27-a15bbf3ea041"
+      ],
+      "response": "{\"ticket\":{\"id\":\"6abe3ee4-ce58-41da-8f27-a15bbf3ea041\",\"number\":4,\"machineId\":\"hardware-fixture\",\"machineName\":\"Hardware fixture\",\"title\":\"PR96 Care attachment smoke\",\"status\":\"waiting_on_customer\",\"createdAt\":\"2026-09-14T02:18:17.201Z\",\"customerEmail\":\"kevin@huzevka.com\",\"activities\":[{\"id\":\"022f3b9b-63a2-4100-8785-c2587cc6ee14\",\"at\":\"2026-09-14T02:18:17.201Z\",\"actorRole\":\"staff\",\"actorEmail\":\"kevin@huzevka.com\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"3f8ab16b-7d54-4ae6-a862-be8f0a3…"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-a-writes-foreign-ticket",
+      "title": "Customer A can post on another customer's Care ticket",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "kevin@huzevka.com",
+      "steps": [
+        "POST /api/tickets/6abe3ee4-ce58-41da-8f27-a15bbf3ea041/activity"
+      ],
+      "expected": "403 or 404",
+      "actual": "201 {\"ticket\":{\"id\":\"6abe3ee4-ce58-41da-8f27-a15bbf3ea041\",\"number\":4,\"machineId\":\"hardware-fixture\",\"machineName\":\"Hardware fixture\",\"title\":\"PR96 Care attachment smoke\",\"status\":\"waiting_on_customer\",\"createdAt\":\"2026-09-14T02:18:17.201Z\",\"customerEmail\":\"kevin@huzevka.com\",\"activities\":[{\"id\":\"022f3b9b-63a2-4100-8785-c2587cc6ee14\",\"at\":\"2026-09-14T02:18:17.201Z\",\"actorRole\":\"staff\",\"actorEmail\":\"kevin@huzevka.com\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"3f8ab16b-7d54-4ae6-a862-be8f0a3…",
+      "urls": [
+        "POST /api/tickets/6abe3ee4-ce58-41da-8f27-a15bbf3ea041/activity"
+      ],
+      "response": "{\"ticket\":{\"id\":\"6abe3ee4-ce58-41da-8f27-a15bbf3ea041\",\"number\":4,\"machineId\":\"hardware-fixture\",\"machineName\":\"Hardware fixture\",\"title\":\"PR96 Care attachment smoke\",\"status\":\"waiting_on_customer\",\"createdAt\":\"2026-09-14T02:18:17.201Z\",\"customerEmail\":\"kevin@huzevka.com\",\"activities\":[{\"id\":\"022f3b9b-63a2-4100-8785-c2587cc6ee14\",\"at\":\"2026-09-14T02:18:17.201Z\",\"actorRole\":\"staff\",\"actorEmail\":\"kevin@huzevka.com\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"3f8ab16b-7d54-4ae6-a862-be8f0a3…"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-b-lists-a-ticket",
+      "title": "Customer B lists Customer A's palletizer ticket",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "crawl-20260916-b@spares.test",
+      "steps": [
+        "A POST /api/machines/palletizer/tickets",
+        "B GET /api/tickets"
+      ],
+      "expected": "B does not see A's ticket",
+      "actual": "{\"leaked\":[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"open\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-45a0-ae96-f2578168da38\",\"at\":\"2026-09-16T05:30:35.323Z\",\"actorRole\":\"customer\",\"actorEmail\":\"crawl-20260916-0524@spares.test\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"cf26a3a9-4214-4d4…",
+      "urls": [
+        "GET /api/tickets"
+      ],
+      "response": "{\"tickets\":[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"open\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-45a0-ae96-f2578168da38\",\"at\":\"2026-09-16T05:30:35.323Z\",\"actorRole\":\"customer\",\"actorEmail\":\"crawl-20260916-0524@spares.test\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"cf26a3a9-4214-4d…"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-b-reads-a-ticket",
+      "title": "Customer B can open Customer A's ticket",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "crawl-20260916-b@spares.test",
+      "steps": [
+        "B GET /api/tickets/ac03a328-b1a4-42ee-860b-a92112f9ab35"
+      ],
+      "expected": "404",
+      "actual": "200 {\"ticket\":{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"open\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-45a0-ae96-f2578168da38\",\"at\":\"2026-09-16T05:30:35.323Z\",\"actorRole\":\"customer\",\"actorEmail\":\"crawl-20260916-0524@spares.test\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"cf26a3a9-4214-4d46…",
+      "urls": [
+        "GET /api/tickets/ac03a328-b1a4-42ee-860b-a92112f9ab35"
+      ],
+      "response": "{\"ticket\":{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"open\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-45a0-ae96-f2578168da38\",\"at\":\"2026-09-16T05:30:35.323Z\",\"actorRole\":\"customer\",\"actorEmail\":\"crawl-20260916-0524@spares.test\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"cf26a3a9-4214-4d46…"
+    }
+  ],
+  "coverage": [
+    {
+      "level": "anon",
+      "feature": "GET /api/auth/me",
+      "result": "ok",
+      "note": "status 401"
+    },
+    {
+      "level": "staff",
+      "feature": "login",
+      "result": "ok",
+      "note": "pr139-smoke-20260915-2316@spares.test"
+    },
+    {
+      "level": "staff",
+      "feature": "me",
+      "result": "ok",
+      "note": "{\"user\":{\"id\":\"0105372d-9237-4785-865c-fc22f5f462b6\",\"email\":\"pr139-smoke-20260915-2316@spares.test\",\"role\":\"staff\",\"tenantId\":\"tenant-oee360-host\"}}"
+    },
+    {
+      "level": "customer",
+      "feature": "login A",
+      "result": "ok",
+      "note": "crawl-20260916-0524@spares.test"
+    },
+    {
+      "level": "staff",
+      "feature": "create customer B",
+      "result": "ok",
+      "note": "201"
+    },
+    {
+      "level": "staff",
+      "feature": "duplicate email",
+      "result": "ok",
+      "note": "409"
+    },
+    {
+      "level": "customer",
+      "feature": "login B",
+      "result": "ok",
+      "note": "crawl-20260916-b@spares.test"
+    },
+    {
+      "level": "staff",
+      "feature": "list machines",
+      "result": "ok",
+      "note": "hardware-fixture,palletizer"
+    },
+    {
+      "level": "customer",
+      "feature": "list machines A",
+      "result": "ok",
+      "note": "hardware-fixture,palletizer"
+    },
+    {
+      "level": "customer",
+      "feature": "list machines B",
+      "result": "ok",
+      "note": "palletizer"
+    },
+    {
+      "level": "customer",
+      "feature": "machine IDOR B→hardware-fixture",
+      "result": "ok",
+      "note": "404"
+    },
+    {
+      "level": "customer",
+      "feature": "list quotes A",
+      "result": "ok",
+      "note": "n=0"
+    },
+    {
+      "level": "customer",
+      "feature": "quote IDOR A→QA fixture",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "quote IDOR A→/1",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "list tickets A",
+      "result": "ok",
+      "note": "n=4"
+    },
+    {
+      "level": "customer",
+      "feature": "ticket write IDOR",
+      "result": "fail",
+      "note": "201"
+    },
+    {
+      "level": "customer",
+      "feature": "create ticket A on palletizer",
+      "result": "ok",
+      "note": "201"
+    },
+    {
+      "level": "customer",
+      "feature": "ticket IDOR B→A",
+      "result": "fail",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "create quote A",
+      "result": "ok",
+      "note": "201 b03fa31d-440f-4845-8b64-a8da371491f1"
+    },
+    {
+      "level": "customer",
+      "feature": "quote IDOR B→A",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/staff/customers",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/staff/accounts",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/staff/sites",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/staff/team",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "POST /api/staff/quotes/preview-fixture",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/platform/tenants",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/platform/directory",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET /api/platform/staff",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "platform",
+      "feature": "host staff GET tenants",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "platform",
+      "feature": "host staff POST tenant",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "platform",
+      "feature": "host staff GET directory",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "staff",
+      "feature": "team list other tenantId",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "staff",
+      "feature": "team create other tenantId",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "PATCH usage",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "staff",
+      "feature": "list customers",
+      "result": "ok",
+      "note": "n=7"
+    },
+    {
+      "level": "staff",
+      "feature": "read A quote",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "price A quote",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "prices hidden before quoted",
+      "result": "ok",
+      "note": "pricing"
+    },
+    {
+      "level": "staff",
+      "feature": "quotes tenant scope",
+      "result": "ok",
+      "note": "n=2"
+    },
+    {
+      "level": "customer",
+      "feature": "logout",
+      "result": "fail",
+      "note": "200/200"
+    }
+  ]
+}

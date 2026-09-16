@@ -1,0 +1,465 @@
+{
+  "generatedAt": "2026-09-16T05:48:02.361Z",
+  "base": "https://oee360.com",
+  "findingCounts": {
+    "CODE_RED": 4,
+    "major": 1
+  },
+  "findings": [
+    {
+      "severity": "CODE_RED",
+      "id": "cust-a-reads-foreign-ticket-attachment",
+      "title": "Customer A can download another customer's Care attachment",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "kevin@huzevka.com",
+      "steps": [
+        "GET /api/tickets/6abe3ee4-ce58-41da-8f27-a15bbf3ea041/attachments/chat-2d010ceb-0b04-4807-b7f2-e26e5b2d7f96.jpg"
+      ],
+      "expected": "403 or 404",
+      "actual": "200",
+      "urls": [
+        "GET /api/tickets/6abe3ee4-ce58-41da-8f27-a15bbf3ea041/attachments/chat-2d010ceb-0b04-4807-b7f2-e26e5b2d7f96.jpg"
+      ],
+      "response": "[redacted binary attachment body, HTTP 200 image/jpeg]"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-a-care-overview-foreign",
+      "title": "Customer A care overview lists other customers' tickets",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "customer@spares.local,staff@spares.local",
+      "steps": [
+        "GET /api/machines/palletizer/care"
+      ],
+      "expected": "only own tickets, or tickets scoped to A",
+      "actual": "[{\"id\":\"463406de-3acb-4e22-93b3-56ee950ea603\",\"email\":\"customer@spares.local\",\"title\":\"QA soft-launch ticket\"},{\"id\":\"2512ffab-d03e-483c-9bdb-49ed391c502e\",\"email\":\"customer@spares.local\",\"title\":\"Testing\"},{\"id\":\"7feabc65-5ad3-4e70-8acf-8a202e439278\",\"email\":\"staff@spares.local\",\"title\":\"Care MVP re-smoke Sep 11 2026\"}]",
+      "urls": [
+        "GET /api/machines/palletizer/care"
+      ],
+      "response": "{\"overview\":{\"machine\":{\"id\":\"palletizer\",\"name\":\"Palletizer\",\"siteId\":\"site-cargill-ftw\",\"company\":\"Cargill\",\"siteName\":\"Fort Worth\"},\"manuals\":0,\"ticketsOpen\":4,\"ticketsTotal\":4},\"recentTickets\":[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"in_progress\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-4\u2026"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-b-care-overview-sees-a",
+      "title": "Customer B care overview lists Customer A's tickets",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "crawl-20260916-b@spares.test",
+      "steps": [
+        "GET /api/machines/palletizer/care as B"
+      ],
+      "expected": "B does not see A's tickets",
+      "actual": "[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"title\":\"Crawl A palletizer isolation ticket\"}]",
+      "urls": [
+        "GET /api/machines/palletizer/care"
+      ],
+      "response": "{\"overview\":{\"machine\":{\"id\":\"palletizer\",\"name\":\"Palletizer\",\"siteId\":\"site-cargill-ftw\",\"company\":\"Cargill\",\"siteName\":\"Fort Worth\"},\"manuals\":0,\"ticketsOpen\":4,\"ticketsTotal\":4},\"recentTickets\":[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"in_progress\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-4\u2026"
+    },
+    {
+      "severity": "CODE_RED",
+      "id": "cust-b-machine-tickets-see-a",
+      "title": "Customer B machine ticket list includes Customer A's tickets",
+      "roleA": "crawl-20260916-0524@spares.test",
+      "roleB": "crawl-20260916-b@spares.test",
+      "steps": [
+        "GET /api/machines/palletizer/tickets as B"
+      ],
+      "expected": "only B's tickets",
+      "actual": "[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"email\":\"crawl-20260916-0524@spares.test\"}]",
+      "urls": [
+        "GET /api/machines/palletizer/tickets"
+      ],
+      "response": "{\"tickets\":[{\"id\":\"ac03a328-b1a4-42ee-860b-a92112f9ab35\",\"number\":5,\"machineId\":\"palletizer\",\"machineName\":\"Palletizer\",\"title\":\"Crawl A palletizer isolation ticket\",\"status\":\"in_progress\",\"createdAt\":\"2026-09-16T05:30:35.323Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"activities\":[{\"id\":\"c927f36a-1c6e-45a0-ae96-f2578168da38\",\"at\":\"2026-09-16T05:30:35.323Z\",\"actorRole\":\"customer\",\"actorEmail\":\"crawl-20260916-0524@spares.test\",\"kind\":\"status\",\"text\":\"Status set to Open\"},{\"id\":\"cf26a3a9-\u2026"
+    },
+    {
+      "severity": "major",
+      "id": "invoice-still-dropped",
+      "title": "Invoice number still omitted after PATCH 200",
+      "roleA": "pr139-smoke-20260915-2316@spares.test",
+      "steps": [
+        "PATCH /api/quotes/2 invoiceNumber",
+        "GET /api/quotes/2"
+      ],
+      "expected": "INV-CRAWL-WIDE-16",
+      "actual": "{\"staff\":{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 invented\"},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature DC motor\",\"sellPrice\":340,\"supplierCost\":210}],\"createdAt\":\"2026-09-16T05:30:39.430Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"status\":\"closed\",\"shipments\":[{\"id\":\"2d780464-1708-410f-9d84-5845bdee9332\",\"trackingNumber\":\"\u2026",
+      "urls": [
+        "PATCH /api/quotes/2",
+        "GET /api/quotes/2"
+      ],
+      "response": "{\"id\":\"b03fa31d-440f-4845-8b64-a8da371491f1\",\"number\":2,\"machineId\":\"hardware-fixture\",\"items\":[{\"id\":\"5972K325\",\"qty\":1,\"name\":\"Shielded ball bearing\",\"sellPrice\":12.5,\"supplierCost\":4.2,\"note\":\"Freight $75 invented\"},{\"id\":\"6331K32\",\"qty\":1,\"name\":\"Miniature DC motor\",\"sellPrice\":340,\"supplierCost\":210}],\"createdAt\":\"2026-09-16T05:30:39.430Z\",\"customerEmail\":\"crawl-20260916-0524@spares.test\",\"status\":\"closed\",\"shipments\":[{\"id\":\"2d780464-1708-410f-9d84-5845bdee9332\",\"trackingNumber\":\"1Z999CRAW\u2026"
+    }
+  ],
+  "coverage": [
+    {
+      "level": "staff",
+      "feature": "login",
+      "result": "ok",
+      "note": "pr139-smoke-20260915-2316@spares.test"
+    },
+    {
+      "level": "customer",
+      "feature": "login A",
+      "result": "ok",
+      "note": "crawl-20260916-0524@spares.test"
+    },
+    {
+      "level": "customer",
+      "feature": "login B",
+      "result": "ok",
+      "note": "crawl-20260916-b@spares.test"
+    },
+    {
+      "level": "staff",
+      "feature": "me",
+      "result": "ok",
+      "note": "{\"id\":\"0105372d-9237-4785-865c-fc22f5f462b6\",\"email\":\"pr139-smoke-20260915-2316@spares.test\",\"role\":\"staff\",\"tenantId\":\"tenant-oee360-host\"}"
+    },
+    {
+      "level": "customer",
+      "feature": "me A",
+      "result": "ok",
+      "note": "49c0ecb9-f798-4ae8-beab-d13435d5b9c0"
+    },
+    {
+      "level": "customer",
+      "feature": "me B",
+      "result": "ok",
+      "note": "12c4754e-33aa-4b43-b6fe-078a16b5c362"
+    },
+    {
+      "level": "customer",
+      "feature": "list tickets A",
+      "result": "ok",
+      "note": "n=5"
+    },
+    {
+      "level": "customer",
+      "feature": "GET ticket by number",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "GET ticket by UUID",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "foreign ticket attachment",
+      "result": "fail",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "care overview A",
+      "result": "ok",
+      "note": "recent=4"
+    },
+    {
+      "level": "customer",
+      "feature": "care overview B",
+      "result": "ok",
+      "note": "recent=4"
+    },
+    {
+      "level": "customer",
+      "feature": "machine tickets B",
+      "result": "ok",
+      "note": "n=4"
+    },
+    {
+      "level": "customer",
+      "feature": "machine file B\u2192hardware-fixture",
+      "result": "ok",
+      "note": "404"
+    },
+    {
+      "level": "customer",
+      "feature": "machine file A hardware-fixture",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "manuals B\u2192hardware-fixture",
+      "result": "ok",
+      "note": "404"
+    },
+    {
+      "level": "customer",
+      "feature": "manuals A palletizer",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "GET usage",
+      "result": "ok",
+      "note": "GET /api/machines/palletizer/usage 403"
+    },
+    {
+      "level": "customer",
+      "feature": "POST pack",
+      "result": "ok",
+      "note": "POST /api/machines/palletizer/pack 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET model-upload",
+      "result": "ok",
+      "note": "GET /api/machines/model-upload 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET staff tickets",
+      "result": "ok",
+      "note": "GET /api/staff/tickets 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET accounts",
+      "result": "ok",
+      "note": "GET /api/staff/accounts 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET sites",
+      "result": "ok",
+      "note": "GET /api/staff/sites 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET bugs",
+      "result": "ok",
+      "note": "GET /api/bugs 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET platform staff",
+      "result": "ok",
+      "note": "GET /api/platform/staff 403"
+    },
+    {
+      "level": "customer",
+      "feature": "GET deployments",
+      "result": "ok",
+      "note": "GET /api/platform/deployments 403"
+    },
+    {
+      "level": "customer",
+      "feature": "POST backfill",
+      "result": "ok",
+      "note": "POST /api/staff/machines/backfill-models 403"
+    },
+    {
+      "level": "customer",
+      "feature": "PATCH ticket status",
+      "result": "ok",
+      "note": "PATCH /api/tickets/5 403"
+    },
+    {
+      "level": "staff",
+      "feature": "GET usage",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "PATCH usage notes",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "list staff tickets",
+      "result": "ok",
+      "note": "n=5"
+    },
+    {
+      "level": "staff",
+      "feature": "list team",
+      "result": "ok",
+      "note": "n=4"
+    },
+    {
+      "level": "staff",
+      "feature": "list accounts",
+      "result": "ok",
+      "note": "n=3"
+    },
+    {
+      "level": "staff",
+      "feature": "get account",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "list sites",
+      "result": "ok",
+      "note": "n=4"
+    },
+    {
+      "level": "staff",
+      "feature": "list people",
+      "result": "ok",
+      "note": "n=7"
+    },
+    {
+      "level": "staff",
+      "feature": "directory PATCH A",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "directory PATCH B",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "create person",
+      "result": "ok",
+      "note": "201"
+    },
+    {
+      "level": "staff",
+      "feature": "soft-delete person",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "customer",
+      "feature": "login after soft-delete",
+      "result": "ok",
+      "note": "401"
+    },
+    {
+      "level": "staff",
+      "feature": "delete missing person",
+      "result": "ok",
+      "note": "404"
+    },
+    {
+      "level": "staff",
+      "feature": "delete protected demo",
+      "result": "skip",
+      "note": "not attempted"
+    },
+    {
+      "level": "staff",
+      "feature": "list quotes",
+      "result": "ok",
+      "note": "n=3"
+    },
+    {
+      "level": "staff",
+      "feature": "concurrent quote PATCH",
+      "result": "ok",
+      "note": "200/200"
+    },
+    {
+      "level": "staff",
+      "feature": "quote after concurrent write",
+      "result": "ok",
+      "note": "in_review"
+    },
+    {
+      "level": "staff",
+      "feature": "invoice persist after PATCH",
+      "result": "fail",
+      "note": "omitted"
+    },
+    {
+      "level": "customer",
+      "feature": "quote attachment B\u2192A",
+      "result": "skip",
+      "note": "no attachment on quote 2"
+    },
+    {
+      "level": "staff",
+      "feature": "list bugs",
+      "result": "ok",
+      "note": "n=1"
+    },
+    {
+      "level": "staff",
+      "feature": "GET model-upload",
+      "result": "ok",
+      "note": "{\"clientUpload\":false,\"s3Upload\":true,\"maxBytes\":268435456,\"vercelRuntime\":true}"
+    },
+    {
+      "level": "platform",
+      "feature": "host staff GET platform staff",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "platform",
+      "feature": "host staff GET deployments",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "platform",
+      "feature": "host staff GET platform directory user",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "staff",
+      "feature": "machine views",
+      "result": "ok",
+      "note": "200"
+    },
+    {
+      "level": "staff",
+      "feature": "preview fixture",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "staff",
+      "feature": "second staff login",
+      "result": "ok",
+      "note": "crawl-20260916-staff@spares.test"
+    },
+    {
+      "level": "staff",
+      "feature": "second staff platform tenants",
+      "result": "ok",
+      "note": "403"
+    },
+    {
+      "level": "customer",
+      "feature": "care reply A",
+      "result": "ok",
+      "note": "201"
+    },
+    {
+      "level": "staff",
+      "feature": "care reply staff",
+      "result": "ok",
+      "note": "201"
+    },
+    {
+      "level": "staff",
+      "feature": "price quote 3",
+      "result": "fail",
+      "note": "400"
+    },
+    {
+      "level": "customer",
+      "feature": "quote 3 prices after quoted",
+      "result": "fail",
+      "note": "in_review"
+    },
+    {
+      "level": "customer",
+      "feature": "logout then me",
+      "result": "fail",
+      "note": "200/200"
+    }
+  ]
+}

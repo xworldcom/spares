@@ -938,6 +938,12 @@ export function normalizeStoredQuote(
   if (typeof record.poUploadedAt === "string" && record.poUploadedAt) {
     next.poUploadedAt = record.poUploadedAt;
   }
+  if (typeof record.invoiceNumber === "string" && record.invoiceNumber.trim()) {
+    next.invoiceNumber = record.invoiceNumber.trim();
+  }
+  if (typeof record.tenantId === "string" && record.tenantId.trim()) {
+    next.tenantId = record.tenantId.trim();
+  }
 
   return next;
 }

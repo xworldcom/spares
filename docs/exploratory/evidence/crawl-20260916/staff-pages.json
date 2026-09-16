@@ -1,0 +1,129 @@
+[
+  {
+    "href": "/machines",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\n1\nBug reports\n\nPRIVATE\n\nSign out\nMachines\n\nOpen a pack to inspect the model and request a quote.\n\nLoading machines…",
+    "url": "https://oee360.com/machines"
+  },
+  {
+    "href": "/staff/quotes",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nQuotes\n\nShared workspace with the customer. Price lines, then PO, then ship.\n\nLoading quotes…",
+    "url": "https://oee360.com/staff/quotes"
+  },
+  {
+    "href": "/staff/quotes/2",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\n\nLoading quote…",
+    "url": "https://oee360.com/staff/quotes/2"
+  },
+  {
+    "href": "/care",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\n‹\nMachines\n\nCARE\n\nService hub\n\nPick a machine, browse manuals, and work tickets across your plant.\n\nOverview\nTickets\n\nLoading Care…",
+    "url": "https://oee360.com/care"
+  },
+  {
+    "href": "/staff/directory",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nDirectory\n\nCustomer companies, staff logins, and customer people for this install. Open any row to view or edit that record.\n\nAll\nStaff\nCustomers\nPeople\nSearch directory\n\nLoading directory…",
+    "url": "https://oee360.com/staff/directory"
+  },
+  {
+    "href": "/staff/directory?type=staff",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nDirectory\n\nCustomer companies, staff logins, and customer people for this install. Open any row to view or edit that record.\n\nAll\nStaff\nCustomers\nPeople\nSearch directory",
+    "url": "https://oee360.com/staff/directory?type=staff"
+  },
+  {
+    "href": "/staff/directory?type=customer",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nDirectory\n\nCustomer companies, staff logins, and customer people for this install. Open any row to view or edit that record.\n\nAll\nStaff\nCustomers\nPeople\nSearch directory",
+    "url": "https://oee360.com/staff/directory?type=customer"
+  },
+  {
+    "href": "/staff/directory?type=person",
+    "title": "OEE360",
+    "text": "OEE\n360\n\nPRIVATE\n\nSign in\n\nChecking your session…",
+    "url": "https://oee360.com/staff/directory?type=person"
+  },
+  {
+    "href": "/machines/palletizer/care/service",
+    "title": "OEE360",
+    "text": "OEE\n360\n\nPRIVATE\n\nSign in\n\nChecking your session…",
+    "url": "https://oee360.com/machines/palletizer/care/service"
+  },
+  {
+    "href": "/staff/platform",
+    "title": "OEE360",
+    "text": "OEE\n360\n\nPRIVATE\n\nSign in\n\nChecking your session…",
+    "url": "https://oee360.com/staff/platform"
+  },
+  {
+    "href": "/staff/tenants",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\n1\nBug reports\n\nPRIVATE\n\nSign out\nHost companies\n\nPlatform owner access is required to manage host tenants.",
+    "url": "https://oee360.com/staff/tenants"
+  },
+  {
+    "href": "/machines/new",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nUpload pack\n\nAdd a 3D model and parts list for a machine. Using SolidWorks? Start with the macro below.\n\n1 · WHERE IT LIVES\n\nMachine name\nCUSTOMER\nSITE\n\nFROM SOLIDWORKS\n\nPublish to Spares macro\nDownload the m",
+    "url": "https://oee360.com/machines/new"
+  },
+  {
+    "href": "/staff/bugs",
+    "title": "OEE360",
+    "text": "OEE\n360\n\nPRIVATE\n\nSign in\n\nChecking your session…",
+    "url": "https://oee360.com/staff/bugs"
+  },
+  {
+    "href": "/staff/accounts",
+    "title": "OEE360",
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nDirectory\n\nCustomer companies, staff logins, and customer people for this install. Open any row to view or edit that record.\n\nAll\nStaff\nCustomers\nPeople\nSearch directory",
+    "url": "https://oee360.com/staff/directory?type=customer"
+  },
+  {
+    "more": 1
+  },
+  {
+    "moreLinks": [
+      {
+        "href": "/machines",
+        "text": "OEE360"
+      },
+      {
+        "href": "/care",
+        "text": "Care"
+      },
+      {
+        "href": "/staff/directory",
+        "text": "Directory"
+      },
+      {
+        "href": "/staff/quotes",
+        "text": "Quotes"
+      },
+      {
+        "href": "/staff/bugs",
+        "text": "Bug reports"
+      },
+      {
+        "href": "/staff/directory",
+        "text": "Directory"
+      },
+      {
+        "href": "/staff/bugs",
+        "text": "Bug reports"
+      },
+      {
+        "href": "/care",
+        "text": "Care"
+      },
+      {
+        "href": "/staff/quotes",
+        "text": "Quotes"
+      }
+    ]
+  }
+]

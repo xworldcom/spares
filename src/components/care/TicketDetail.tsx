@@ -16,7 +16,7 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
-import { careHref } from "@/lib/care";
+import { careHref, ticketRefMatches } from "@/lib/care";
 import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ChatAttachment, ServiceTicket, TicketStatus } from "@/types";
@@ -70,7 +70,7 @@ export function TicketDetail({
       return;
     }
     const next = await getTicket(ticketId);
-    if (!ticket || ticket.id !== ticketId) {
+    if (!ticket || !ticketRefMatches(ticket, ticketId)) {
       setTicket(next);
       void refreshCareAlerts();
       return;
@@ -162,7 +162,7 @@ export function TicketDetail({
     return <LoadingState label="Loading ticket…" />;
   }
 
-  const threadReady = ticket.id === ticketId;
+  const threadReady = ticketRefMatches(ticket, ticketId);
   const ticketsBack = backHref ?? careHref(machineId, "tickets");
   const peek =
     threadReady && user

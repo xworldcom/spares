@@ -1,0 +1,13 @@
+ts	phase	decision	why	evidence	result
+2026-09-16T05:29:55Z	accounts	kept pr139 staff and created crawl-20260916-0524 plus B palletizer-only	need two customers on one host to prove Care/quote isolation without Kevin SSO	evidence later from isolation script	open
+2026-09-16T05:38:14Z	isolation	proved Care tickets are machine-scoped not customer-scoped	quotes already filter by customerId so this is a missing guard not a total auth collapse	docs/exploratory/evidence/crawl-20260916/isolation-report.json	5 CODE RED
+2026-09-16T05:38:14Z	lifecycle	walked quote 2 Requested through Closed with fake prices and PO CRAWL-16-524	need a real two-sided thread Tess can open	docs/exploratory/evidence/crawl-20260916/conversation-report.json	closed
+2026-09-16T05:38:14Z	platform	skipped second host create	host staff is 403 on POST /api/platform/tenants and Kevin password was out of bounds	isolation-report platform coverage	blocked
+2026-09-16T05:38:14Z	fix-scope	left Care isolation unfixed	may be intentional plant-shared tickets. Tess routes CODE RED	docs/exploratory/quote-care-crawl-2026-09-16.md	open
+2026-09-16T05:48:02Z	wide-api	proved Care leaks on overview, machine list, and Kevin JPEG download	same machine-scope hole as CR1-5, new endpoints	docs/exploratory/evidence/crawl-20260916-wide/wide-report.json	9 live CODE RED
+2026-09-16T05:50:03Z	wide-ui	numeric /care/tickets/5 shows empty sheet, UUID shows the thread	TicketDetail compared UUID only	docs/exploratory/evidence/crawl-20260916-wide/u05-care-ticket-number.png	M8 live
+2026-09-16T05:52:00Z	one-liner	kept invoiceNumber and tenantId in normalizeStoredQuote, matched numeric ticket URLs	obvious field keep and same pattern as QuoteWorkspace	src/lib/quotes.ts src/components/care/TicketDetail.tsx	tests green, not on Production
+2026-09-16T05:52:00Z	platform	second host still blocked	host staff 403 on platform create	wide-report platform coverage	blocked
+2026-09-16T06:06:00Z	review	folded trail-review flags into the findings	CR1-9 are one machine-scope question. leftover throwaways listed. Kevin never signed in. SHA inferred	docs/exploratory/quote-care-crawl-2026-09-16.md	open
+2026-09-16T06:08:00Z	probe	B 403 on A quote 2 attachment routes without uploading a file	quote access is customerId. Care attachment used ticket access	docs/exploratory/evidence/crawl-20260916-wide/quote-attachment-probe.json	held
+2026-09-16T06:09:00Z	tests	ticketRefMatches plus QuoteRecord key round-trip	reviewer said M8 had no test and the catalog keep was instance-level	src/lib/care.test.ts src/lib/quotes.test.ts	43 pass
