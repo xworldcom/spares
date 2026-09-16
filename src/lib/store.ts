@@ -594,6 +594,53 @@ async function ensureExtraCustomers(db: Database): Promise<Database> {
   return { ...db, users: [...db.users, ...extras] };
 }
 
+/** Preview catalog heal must keep the demo staff login on the Soft Launch host. */
+async function ensureBuiltinDemoStaff(db: Database): Promise<Database> {
+  if (!isSeedAllowed()) {
+    return db;
+  }
+  const email = normalizeEmail(SEED_STAFF.email);
+  const index = db.users.findIndex((user) => normalizeEmail(user.email) === email);
+  const seeded = await seedUser(SEED_STAFF);
+  const canonical: StoredUser = {
+    ...seeded,
+    tenantId: DEFAULT_TENANT_ID,
+    staffCreatedTenantId: DEFAULT_TENANT_ID,
+  };
+  if (index < 0) {
+    const users = db.users.filter((user) => user.id !== SEED_STAFF.id);
+    return { ...db, users: [...users, canonical] };
+  }
+  const current = db.users[index];
+  let next: StoredUser = current;
+  if (current.deletedAt) {
+    const { deletedAt: _removed, ...rest } = current;
+    next = rest as StoredUser;
+  }
+  if (
+    !current.deletedAt &&
+    current.id === SEED_STAFF.id &&
+    current.role === "staff" &&
+    (current.tenantId ?? DEFAULT_TENANT_ID) === DEFAULT_TENANT_ID &&
+    (current.staffCreatedTenantId ?? DEFAULT_TENANT_ID) === DEFAULT_TENANT_ID &&
+    current.passwordHash === canonical.passwordHash
+  ) {
+    return db;
+  }
+  const patched: StoredUser = {
+    ...next,
+    id: SEED_STAFF.id,
+    email: SEED_STAFF.email,
+    role: "staff",
+    tenantId: DEFAULT_TENANT_ID,
+    staffCreatedTenantId: DEFAULT_TENANT_ID,
+    passwordHash: canonical.passwordHash,
+  };
+  const users = db.users.slice();
+  users[index] = patched;
+  return { ...db, users };
+}
+
 function stabilizeSeedUsers(db: Database): Database {
   const idByEmail = new Map<string, string>([
     [SEED_STAFF.email, SEED_STAFF.id],
@@ -1000,7 +1047,9 @@ async function stabilizeCatalogUsers(db: Database): Promise<Database> {
     return await ensureOwnerStaff(db);
   }
   return await ensureOwnerStaff(
-    await ensureExtraCustomers(stabilizeSeedUsers(db)),
+    await ensureExtraCustomers(
+      await ensureBuiltinDemoStaff(stabilizeSeedUsers(db)),
+    ),
   );
 }
 
