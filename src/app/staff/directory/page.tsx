@@ -8,7 +8,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { CreatePersonForm } from "@/components/staff/CreatePersonForm";
 import { HostTenantDirectory } from "@/components/staff/HostTenantDirectory";
 import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
-import { AccountsList } from "@/components/staff/AccountsList";
 import { apiFetch } from "@/lib/api/client";
 import { createCustomerAccount } from "@/lib/api/auth";
 import { errorMessage, isForbidden } from "@/lib/api/errors";
@@ -28,8 +27,8 @@ type SortKey = "name" | "type" | "host";
 const TYPE_FILTERS: Array<{ value: TypeFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "host", label: "Hosts" },
-  { value: "customer", label: "Customers" },
   { value: "staff", label: "Staff" },
+  { value: "customer", label: "Customers" },
   { value: "person", label: "People" },
 ];
 
@@ -42,10 +41,27 @@ const TYPE_LABELS: Record<DirectoryEntryType, string> = {
 
 const TYPE_ORDER: Record<DirectoryEntryType, number> = {
   host: 0,
-  customer: 1,
-  staff: 2,
+  staff: 1,
+  customer: 2,
   person: 3,
 };
+
+const DIRECTORY_CREATE_CHIP =
+  "btn-soft inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-medium";
+
+function directoryEntryHref(entry: DirectoryEntry): string | null {
+  switch (entry.type) {
+    case "host":
+      return `/staff/platform/${encodeURIComponent(entry.id)}`;
+    case "customer":
+      return `/staff/accounts/${encodeURIComponent(entry.id)}`;
+    case "staff":
+    case "person":
+      return `/staff/directory/${encodeURIComponent(entry.id)}`;
+    default:
+      return null;
+  }
+}
 
 function sortValue(entry: DirectoryEntry, key: SortKey): string | number {
   switch (key) {
@@ -116,6 +132,12 @@ function PlatformDirectory() {
   useEffect(() => {
     void load();
   }, [load, reloadKey]);
+
+  useEffect(() => {
+    setCreatingPerson(false);
+    setCreatingCustomer(false);
+    setCreatingStaff(false);
+  }, [type]);
 
   function setType(next: TypeFilter) {
     router.replace(directoryHref(next), { scroll: false });
@@ -197,107 +219,76 @@ function PlatformDirectory() {
   ];
 
   function renderRows(rows: DirectoryEntry[], includeHostColumn: boolean) {
-    return rows.map((entry) => (
-      <tr key={`${entry.type}:${entry.id}`} className="border-b border-white/5">
-        <td className="py-2.5 pr-4">
-          {entry.type === "host" ? (
-            <Link
-              className="font-medium hover:underline"
-              href={`/staff/platform/${encodeURIComponent(entry.id)}`}
-            >
-              {entry.name}
-            </Link>
-          ) : entry.type === "customer" ? (
-            <Link
-              className="font-medium hover:underline"
-              href={`/staff/accounts/${encodeURIComponent(entry.id)}`}
-            >
-              {entry.name}
-            </Link>
-          ) : entry.type === "person" || entry.type === "staff" ? (
-            <Link
-              className="font-medium hover:underline"
-              href={`/staff/directory/${encodeURIComponent(entry.id)}`}
-            >
-              {entry.name}
-            </Link>
-          ) : (
+    return rows.map((entry) => {
+      const href = directoryEntryHref(entry);
+      return (
+        <tr
+          key={`${entry.type}:${entry.id}`}
+          className="border-b border-white/5 cursor-pointer hover:bg-white/[0.03]"
+          onClick={() => {
+            if (href) {
+              router.push(href);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (!href) {
+              return;
+            }
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              router.push(href);
+            }
+          }}
+          tabIndex={href ? 0 : undefined}
+          role={href ? "link" : undefined}
+        >
+          <td className="py-2.5 pr-4">
             <span className="font-medium">{entry.name}</span>
-          )}
-          {entry.email && entry.email !== entry.name ? (
-            <div className="text-xs text-muted">{entry.email}</div>
-          ) : null}
-        </td>
-        <td className="py-2.5 pr-4 text-muted whitespace-nowrap">
-          {TYPE_LABELS[entry.type]}
-          {entry.type === "host" && entry.suspended ? (
-            <span className="ml-2 text-xs text-amber-400/90">Suspended</span>
-          ) : null}
-        </td>
-        {includeHostColumn ? (
-          <td className="py-2.5 pr-4 whitespace-nowrap">
-            <Link
-              className="text-muted hover:underline"
-              href={`/staff/platform/${encodeURIComponent(entry.hostId)}`}
-            >
-              {entry.hostName}
-            </Link>
+            {entry.email && entry.email !== entry.name ? (
+              <div className="text-xs text-muted">{entry.email}</div>
+            ) : null}
           </td>
-        ) : null}
-      </tr>
-    ));
+          <td className="py-2.5 pr-4 text-muted whitespace-nowrap">
+            {TYPE_LABELS[entry.type]}
+            {entry.type === "host" && entry.suspended ? (
+              <span className="ml-2 text-xs text-amber-400/90">Suspended</span>
+            ) : null}
+          </td>
+          {includeHostColumn ? (
+            <td
+              className="py-2.5 pr-4 whitespace-nowrap"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {entry.type === "host" ? (
+                <span className="text-muted">{entry.hostName}</span>
+              ) : (
+                <Link
+                  className="text-muted hover:underline"
+                  href={`/staff/platform/${encodeURIComponent(entry.hostId)}`}
+                >
+                  {entry.hostName}
+                </Link>
+              )}
+            </td>
+          ) : null}
+        </tr>
+      );
+    });
   }
 
-  const showTable = type !== "staff" && type !== "person" && type !== "customer";
+  const showGroupByHost = type === "all" || type === "host";
 
   return (
     <main className="page-shell">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="page-title">Directory</h1>
-          <p className="text-muted mt-1 max-w-2xl">
-            Find anything across every host install — companies, customers, staff logins, and
-            customer people. Open a person or staff row to edit profile, access, or deactivate.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link className="btn-secondary text-sm" href="/staff/platform">
-            Hosts
-          </Link>
-          {type === "all" || type === "person" ? (
-            <button
-              type="button"
-              className="btn-primary text-sm"
-              aria-expanded={creatingPerson}
-              onClick={() => setCreatingPerson((open) => !open)}
-            >
-              {creatingPerson ? "Close" : "New person"}
-            </button>
-          ) : null}
-          {type === "all" || type === "customer" ? (
-            <button
-              type="button"
-              className="btn-primary text-sm"
-              aria-expanded={creatingCustomer}
-              onClick={() => setCreatingCustomer((open) => !open)}
-            >
-              {creatingCustomer ? "Close" : "New customer"}
-            </button>
-          ) : null}
-          {type === "all" || type === "staff" ? (
-            <button
-              type="button"
-              className="btn-primary text-sm"
-              aria-expanded={creatingStaff}
-              onClick={() => setCreatingStaff((open) => !open)}
-            >
-              {creatingStaff ? "Close" : "New staff"}
-            </button>
-          ) : null}
-        </div>
+      <div className="mb-6">
+        <h1 className="page-title">Directory</h1>
+        <p className="text-muted mt-1 max-w-2xl">
+          Find anything across every host install — hosts, staff logins, customer companies, and
+          people. Open any row to view or edit that record.
+        </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Filter by type" className="flex rounded-full bg-white/5 p-1">
           {TYPE_FILTERS.map((option) => (
             <button
@@ -315,35 +306,71 @@ function PlatformDirectory() {
             </button>
           ))}
         </div>
-        {showTable ? (
-          <>
-            <label className="sr-only" htmlFor="directory-search">
-              Search directory
-            </label>
-            <input
-              id="directory-search"
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name, email, or host"
-              className="spares-field h-11 w-full max-w-sm rounded-2xl border-0 px-4 text-[15px] outline-none"
-            />
-            <button
-              type="button"
-              aria-pressed={groupByHost}
-              onClick={() => setGroupByHost((current) => !current)}
-              className={groupByHost ? "btn-secondary text-sm" : "btn-soft text-sm"}
-            >
-              Group by host
-            </button>
-            <p className="text-sm text-muted tabular-nums">
-              {visible.length} {visible.length === 1 ? "entry" : "entries"}
-            </p>
-          </>
-        ) : null}
       </div>
 
-      {creatingPerson ? (
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor="directory-search">
+          Search directory
+        </label>
+        <input
+          id="directory-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search name, email, or host"
+          className="spares-field h-11 min-w-[12rem] flex-1 rounded-2xl border-0 px-4 text-[15px] outline-none"
+        />
+        {type === "host" ? (
+          <Link className={DIRECTORY_CREATE_CHIP} href="/staff/tenants">
+            New Host
+          </Link>
+        ) : null}
+        {type === "customer" ? (
+          <button
+            type="button"
+            className={DIRECTORY_CREATE_CHIP}
+            aria-expanded={creatingCustomer}
+            onClick={() => setCreatingCustomer((open) => !open)}
+          >
+            {creatingCustomer ? "Close" : "New Customer"}
+          </button>
+        ) : null}
+        {type === "staff" ? (
+          <button
+            type="button"
+            className={DIRECTORY_CREATE_CHIP}
+            aria-expanded={creatingStaff}
+            onClick={() => setCreatingStaff((open) => !open)}
+          >
+            {creatingStaff ? "Close" : "New Staff"}
+          </button>
+        ) : null}
+        {type === "person" ? (
+          <button
+            type="button"
+            className={DIRECTORY_CREATE_CHIP}
+            aria-expanded={creatingPerson}
+            onClick={() => setCreatingPerson((open) => !open)}
+          >
+            {creatingPerson ? "Close" : "New Person"}
+          </button>
+        ) : null}
+        {showGroupByHost ? (
+          <button
+            type="button"
+            aria-pressed={groupByHost}
+            onClick={() => setGroupByHost((current) => !current)}
+            className={groupByHost ? "btn-secondary text-sm" : "btn-soft text-sm"}
+          >
+            Group by host
+          </button>
+        ) : null}
+        <p className="text-sm text-muted tabular-nums">
+          {visible.length} {visible.length === 1 ? "entry" : "entries"}
+        </p>
+      </div>
+
+      {type === "person" && creatingPerson ? (
         <CreatePersonForm
           onCreated={() => {
             refresh();
@@ -353,7 +380,7 @@ function PlatformDirectory() {
         />
       ) : null}
 
-      {creatingCustomer ? (
+      {type === "customer" && creatingCustomer ? (
         <form onSubmit={(event) => void handleCreateCustomer(event)} className="catalog-create mb-6">
           <div className="catalog-create-copy">
             <h2 className="text-lg font-semibold">New customer company</h2>
@@ -382,55 +409,27 @@ function PlatformDirectory() {
         </form>
       ) : null}
 
-      {creatingStaff ? (
+      {type === "staff" && creatingStaff ? (
         <div className="mb-6">
-          <StaffTeamPanel onCreated={() => {
-            refresh();
-            setCreatingStaff(false);
-          }} />
+          <StaffTeamPanel
+            embed="create-only"
+            onCreated={() => {
+              refresh();
+              setCreatingStaff(false);
+            }}
+            onCancel={() => setCreatingStaff(false)}
+          />
         </div>
       ) : null}
 
-      {loading && showTable ? <p className="text-muted">Loading directory…</p> : null}
+      {loading ? <p className="text-muted">Loading directory…</p> : null}
       {error ? (
         <p className="text-danger mb-3" role="alert">
           {error}
         </p>
       ) : null}
 
-      {type === "customer" ? <AccountsList reloadKey={reloadKey} /> : null}
-
-      {type === "person" && !loading ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-muted">
-                {columns.map((column) => (
-                  <th key={column.key} className="py-2 pr-4 font-medium">{column.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>{renderRows(visible, true)}</tbody>
-          </table>
-        </div>
-      ) : null}
-
-      {type === "staff" && !creatingStaff && !loading ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-muted">
-                {columns.map((column) => (
-                  <th key={column.key} className="py-2 pr-4 font-medium">{column.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>{renderRows(visible, true)}</tbody>
-          </table>
-        </div>
-      ) : null}
-
-      {showTable && grouped ? (
+      {!loading && grouped ? (
         <div className="stack gap-8">
           {grouped.map(([hostId, group]) => (
             <section key={hostId}>
@@ -451,7 +450,7 @@ function PlatformDirectory() {
         </div>
       ) : null}
 
-      {showTable && !grouped ? (
+      {!loading && !grouped ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>

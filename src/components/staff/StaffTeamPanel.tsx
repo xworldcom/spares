@@ -17,10 +17,15 @@ import type { Tenant } from "@/types";
 export function StaffTeamPanel({
   fixedTenantId,
   onCreated,
+  onCancel,
+  embed,
 }: {
   /** Platform owner detail pages pin staff to one tenant. */
   fixedTenantId?: string;
   onCreated?: () => void;
+  onCancel?: () => void;
+  /** Directory embed: render only the create form (no list or toolbar). */
+  embed?: "create-only";
 }) {
   const { user } = useAuth();
   const [staff, setStaff] = useState<StaffTeamMember[]>([]);
@@ -28,7 +33,7 @@ export function StaffTeamPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(embed === "create-only");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantId, setTenantId] = useState("");
@@ -101,10 +106,13 @@ export function StaffTeamPanel({
   }
 
   if (loading) {
+    if (embed === "create-only") {
+      return <CatalogSkeleton variant="person" count={1} />;
+    }
     return <CatalogSkeleton variant="person" count={3} />;
   }
 
-  if (error && staff.length === 0) {
+  if (error && staff.length === 0 && embed !== "create-only") {
     return (
       <ErrorState
         title="Failed to load team"
@@ -114,26 +122,7 @@ export function StaffTeamPanel({
     );
   }
 
-  return (
-    <section className="catalog-stack">
-      <div className="catalog-page-intro catalog-page-intro-split">
-        <div>
-          <h2 className="text-lg font-semibold">Staff logins</h2>
-          <p className="text-sm text-muted">
-            Real email and password — not the demo <code>staff@spares.local</code> account.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn-primary catalog-toolbar-action"
-          aria-expanded={creating}
-          onClick={() => setCreating((open) => !open)}
-        >
-          {creating ? "Close" : "New staff"}
-        </button>
-      </div>
-
-      {creating ? (
+  const createForm = creating ? (
         <form onSubmit={(event) => void handleCreate(event)} className="catalog-create">
           <div className="catalog-create-grid">
             {showTenantPicker ? (
@@ -195,7 +184,10 @@ export function StaffTeamPanel({
             <button
               type="button"
               className="btn-soft inline-flex h-12 items-center justify-center rounded-full px-5 text-[15px] font-semibold"
-              onClick={() => setCreating(false)}
+              onClick={() => {
+                setCreating(false);
+                onCancel?.();
+              }}
             >
               Cancel
             </button>
@@ -208,7 +200,32 @@ export function StaffTeamPanel({
             </button>
           </div>
         </form>
-      ) : null}
+  ) : null;
+
+  if (embed === "create-only") {
+    return <section className="catalog-stack">{createForm}</section>;
+  }
+
+  return (
+    <section className="catalog-stack">
+      <div className="catalog-page-intro catalog-page-intro-split">
+        <div>
+          <h2 className="text-lg font-semibold">Staff logins</h2>
+          <p className="text-sm text-muted">
+            Real email and password — not the demo <code>staff@spares.local</code> account.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary catalog-toolbar-action"
+          aria-expanded={creating}
+          onClick={() => setCreating((open) => !open)}
+        >
+          {creating ? "Close" : "New staff"}
+        </button>
+      </div>
+
+      {createForm}
 
       {notice ? (
         <p className="text-sm text-[#8ee0a8]" role="status">
