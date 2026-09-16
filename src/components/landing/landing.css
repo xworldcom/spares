@@ -335,8 +335,29 @@
   line-height: 1.6;
 }
 
-.landing-demo {
+.landing-demo-scrub {
+  position: relative;
   margin-top: 1.75rem;
+}
+
+.landing-demo-scrub:not([data-reduce-motion]) {
+  height: calc(100vh + var(--landing-demo-scrub-extra, 168vh));
+}
+
+.landing-demo-scrub-pin {
+  position: sticky;
+  top: max(0.75rem, env(safe-area-inset-top, 0px));
+  z-index: 1;
+  padding-bottom: 1.25rem;
+}
+
+.landing-demo-scrub[data-reduce-motion] .landing-demo-scrub-pin {
+  position: relative;
+  top: auto;
+}
+
+.landing-demo {
+  margin-top: 0;
 }
 
 .landing-demo-pair {
@@ -469,6 +490,17 @@
   margin-top: 0.85rem;
   padding: 0.35rem 0.15rem 0.15rem;
   overflow: auto;
+}
+
+.landing-demo-thread[data-scrubbed] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  overscroll-behavior: none;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
 }
 
 .landing-cell {

@@ -1,33 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  DEMO_QUOTE_DURATION_MS,
-  demoClockElapsed,
-  type MarketingPerspective,
-} from "@/lib/ui/landing-demo";
-
-export function useLandingDemoClock(perspective: MarketingPerspective) {
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setReduceMotion(reduce);
-    if (reduce) {
-      setElapsedMs(DEMO_QUOTE_DURATION_MS);
-      return;
-    }
-
-    const started = performance.now();
-    const id = window.setInterval(() => {
-      setElapsedMs(performance.now() - started);
-    }, 90);
-    return () => window.clearInterval(id);
-  }, [perspective]);
-
-  return { elapsedMs, reduceMotion };
-}
+import type { MarketingPerspective } from "@/lib/ui/landing-demo";
 
 export function LandingDemoPerspective({
   perspective,

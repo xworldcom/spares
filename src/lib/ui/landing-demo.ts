@@ -177,15 +177,37 @@ export function demoOtherLabel(perspective: MarketingPerspective) {
   return perspective === "customer" ? "Staff" : DEMO_PLANT;
 }
 
-export function demoClockElapsed(
+/** Extra viewport height scrolled while the demo pair stays pinned (reading pace). */
+export const DEMO_SCRUB_EXTRA_VH = 168;
+
+export function clampDemoScrollProgress(progress: number) {
+  return Math.min(1, Math.max(0, progress));
+}
+
+/** Map a pinned section's position to scrub progress 0→1. */
+export function demoSectionScrollProgress(
+  sectionTop: number,
+  sectionHeight: number,
+  viewportHeight: number,
+  stickyTop = 0,
+) {
+  const scrollable = sectionHeight - viewportHeight;
+  if (scrollable <= 0) {
+    return sectionTop <= stickyTop ? 1 : 0;
+  }
+  const scrolled = stickyTop - sectionTop;
+  return clampDemoScrollProgress(scrolled / scrollable);
+}
+
+export function demoElapsedFromProgress(
   reduceMotion: boolean,
-  elapsedMs: number,
+  progress: number,
   durationMs: number,
 ) {
   if (reduceMotion) {
     return durationMs;
   }
-  return elapsedMs % (durationMs + 1400);
+  return clampDemoScrollProgress(progress) * durationMs;
 }
 
 function asActivity(beat: Extract<DemoBeat, { kind: "message" | "system" }>): QuoteActivity {

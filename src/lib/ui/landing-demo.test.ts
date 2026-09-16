@@ -7,7 +7,9 @@ import {
   DEMO_QUOTE_SCRIPT,
   DEMO_TICKET_DURATION_MS,
   DEMO_TICKET_SCRIPT,
-  demoClockElapsed,
+  clampDemoScrollProgress,
+  demoElapsedFromProgress,
+  demoSectionScrollProgress,
   DEMO_PLANT,
   demoOtherLabel,
   demoSelf,
@@ -19,6 +21,7 @@ const MARKETING_FILES = [
   "src/components/landing/LandingMarketing.tsx",
   "src/components/landing/LandingProductDemo.tsx",
   "src/components/landing/LandingDemoPerspective.tsx",
+  "src/components/landing/LandingDemoScrub.tsx",
   "src/components/landing/LandingScreen.tsx",
   "src/components/landing/LandingScrollPeek.tsx",
   "src/components/landing/LandingCell.tsx",
@@ -86,17 +89,29 @@ describe("reduceDemoClock", () => {
   });
 });
 
-describe("demoClockElapsed", () => {
-  it("holds the finished frame when motion is reduced", () => {
-    assert.equal(demoClockElapsed(true, 10, DEMO_QUOTE_DURATION_MS), DEMO_QUOTE_DURATION_MS);
-    assert.ok(
-      demoClockElapsed(false, 50_000, DEMO_QUOTE_DURATION_MS) < DEMO_QUOTE_DURATION_MS + 1400,
-    );
+describe("demo scroll scrub", () => {
+  it("maps section scroll to 0→1 progress", () => {
+    const vh = 800;
+    const height = 800 + 1200;
+    assert.equal(demoSectionScrollProgress(0, height, vh), 0);
+    assert.equal(demoSectionScrollProgress(-1200, height, vh), 1);
+    assert.equal(demoSectionScrollProgress(-600, height, vh), 0.5);
+    assert.equal(clampDemoScrollProgress(1.2), 1);
+    assert.equal(clampDemoScrollProgress(-0.1), 0);
   });
 
-  it("loops on the ticket duration independently", () => {
-    assert.ok(
-      demoClockElapsed(false, 40_000, DEMO_TICKET_DURATION_MS) < DEMO_TICKET_DURATION_MS + 1400,
+  it("holds the finished frame when motion is reduced", () => {
+    assert.equal(
+      demoElapsedFromProgress(true, 0.2, DEMO_QUOTE_DURATION_MS),
+      DEMO_QUOTE_DURATION_MS,
+    );
+    assert.equal(
+      demoElapsedFromProgress(false, 0.5, DEMO_QUOTE_DURATION_MS),
+      DEMO_QUOTE_DURATION_MS / 2,
+    );
+    assert.equal(
+      demoElapsedFromProgress(false, 1, DEMO_TICKET_DURATION_MS),
+      DEMO_TICKET_DURATION_MS,
     );
   });
 });
