@@ -6,7 +6,11 @@ import { LandingCell } from "@/components/landing/LandingCell";
 import { LandingDemoPerspective } from "@/components/landing/LandingDemoPerspective";
 import { LandingDemoScrub } from "@/components/landing/LandingDemoScrub";
 import { LandingProductDemo } from "@/components/landing/LandingProductDemo";
-import type { MarketingPerspective } from "@/lib/ui/landing-demo";
+import {
+  DEMO_QUOTE_DURATION_MS,
+  DEMO_TICKET_DURATION_MS,
+  type MarketingPerspective,
+} from "@/lib/ui/landing-demo";
 
 export function LandingMarketing() {
   const [perspective, setPerspective] = useState<MarketingPerspective>("customer");
@@ -21,15 +25,15 @@ export function LandingMarketing() {
           progress language maintenance already uses on a tablet.
         </p>
 
-        <LandingDemoScrub>
-          {({ quoteElapsedMs, ticketElapsedMs, reduceMotion }) => (
-            <div className="landing-demo">
-              <LandingDemoPerspective
-                perspective={perspective}
-                onPerspectiveChange={setPerspective}
-              />
+        <div className="landing-demo">
+          <LandingDemoPerspective
+            perspective={perspective}
+            onPerspectiveChange={setPerspective}
+          />
 
-              <div className="landing-demo-pair">
+          <div className="landing-demo-scrub-stack">
+            <LandingDemoScrub durationMs={DEMO_QUOTE_DURATION_MS} ariaLabel="Parts quote demo">
+              {({ elapsedMs, reduceMotion }) => (
                 <div className="landing-demo-block">
                   <h3 className="landing-demo-block-title">Parts quotes</h3>
                   <p className="landing-demo-block-lede">
@@ -38,12 +42,16 @@ export function LandingMarketing() {
                   <LandingProductDemo
                     variant="quote"
                     perspective={perspective}
-                    elapsedMs={quoteElapsedMs}
+                    elapsedMs={elapsedMs}
                     reduceMotion={reduceMotion}
                     scrubbed
                   />
                 </div>
+              )}
+            </LandingDemoScrub>
 
+            <LandingDemoScrub durationMs={DEMO_TICKET_DURATION_MS} ariaLabel="Machine Care demo">
+              {({ elapsedMs, reduceMotion }) => (
                 <div className="landing-demo-block">
                   <h3 className="landing-demo-block-title">Machine Care</h3>
                   <p className="landing-demo-block-lede">
@@ -52,15 +60,15 @@ export function LandingMarketing() {
                   <LandingProductDemo
                     variant="ticket"
                     perspective={perspective}
-                    elapsedMs={ticketElapsedMs}
+                    elapsedMs={elapsedMs}
                     reduceMotion={reduceMotion}
                     scrubbed
                   />
                 </div>
-              </div>
-            </div>
-          )}
-        </LandingDemoScrub>
+              )}
+            </LandingDemoScrub>
+          </div>
+        </div>
       </section>
 
       <section className="landing-section landing-section--cell">
