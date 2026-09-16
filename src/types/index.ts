@@ -301,11 +301,19 @@ export type ServiceTicket = {
   unread: boolean;
 };
 
+export type ServiceVisitSnapshot = {
+  hours?: number;
+  cycles?: number;
+  lastServiceAt?: string;
+  notes?: string;
+};
+
 export type UsageHistoryEntry = {
   id: string;
   at: string;
   actorEmail: string;
   summary: string;
+  snapshot?: ServiceVisitSnapshot;
 };
 
 export type MachineUsage = {

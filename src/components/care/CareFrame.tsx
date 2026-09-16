@@ -8,14 +8,14 @@ import { getMachine } from "@/lib/api/machines";
 import { careHref } from "@/lib/care";
 
 const TABS: {
-  id: "overview" | "manuals" | "tickets" | "usage";
+  id: "overview" | "manuals" | "tickets" | "service";
   label: string;
   staffOnly?: boolean;
 }[] = [
   { id: "overview", label: "Overview" },
   { id: "manuals", label: "Manuals" },
   { id: "tickets", label: "Tickets" },
-  { id: "usage", label: "Usage", staffOnly: true },
+  { id: "service", label: "Service", staffOnly: true },
 ];
 
 function tabFromPath(pathname: string) {
@@ -25,8 +25,8 @@ function tabFromPath(pathname: string) {
   if (pathname.includes("/care/tickets")) {
     return "tickets";
   }
-  if (pathname.includes("/care/usage")) {
-    return "usage";
+  if (pathname.includes("/care/service") || pathname.includes("/care/usage")) {
+    return "service";
   }
   return "overview";
 }

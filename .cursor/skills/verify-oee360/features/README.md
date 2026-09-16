@@ -32,6 +32,7 @@ Each feature file uses one intro paragraph and four H2 sections: `Sub-features`,
 
 - [Email and password sign-in](./login.md) — landing login, session cookie, redirect to Machines.
 - [Machines catalog and 3D pack](./machines.md) — list machines, open viewer, pick a part (read-only).
+- [Machine Care — Service log](./machine-service.md) — staff service visit form, save, and edit-history detail (staff).
 - [Quotes workspace and Care chat sheet](./quotes.md) — staff quote list and conversation fixture (Preview/local seeds).
 - [Staff directory and platform hosts](./staff-directory-platform.md) — directory list and hosts platform (staff).
 - [Staff create customer login](./staff-create-customer.md) — People UI creates a customer (local disposable store only).

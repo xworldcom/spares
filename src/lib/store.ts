@@ -3143,6 +3143,7 @@ export function updateMachineUsage(
     const historyEntry = {
       ...usageHistoryEntry(actorEmail, summary, now),
       id: randomUUID(),
+      snapshot: { ...nextValues },
     };
     const next: StoredUsage = {
       machineId,

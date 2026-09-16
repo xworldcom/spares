@@ -82,11 +82,11 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
           <span className="care-stat-meta">{overview.ticketsTotal} total</span>
         </Link>
         {staff ? (
-          <Link href={careHref(machineId, "usage")} className="care-stat">
+          <Link href={careHref(machineId, "service")} className="care-stat">
             <span className="care-stat-value">
               {overview.usage?.hours ?? "—"}
             </span>
-            <span className="care-stat-label">Hours</span>
+            <span className="care-stat-label">Service</span>
             <span className="care-stat-meta">
               {overview.usage?.lastServiceAt
                 ? `Serviced ${formatDay(overview.usage.lastServiceAt)}`
