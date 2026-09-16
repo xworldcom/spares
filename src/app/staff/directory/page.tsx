@@ -168,7 +168,7 @@ function PlatformDirectory() {
           ) : (
             <span className="font-medium">{entry.name}</span>
           )}
-          {entry.email ? (
+          {entry.email && entry.email !== entry.name ? (
             <div className="text-xs text-muted">{entry.email}</div>
           ) : null}
         </td>
