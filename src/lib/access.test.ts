@@ -69,6 +69,37 @@ describe("site access", () => {
     assert.equal(canAccessMachine(ftw, {}, sites, accounts), false);
   });
 
+  it("denies a satellite customer a host machine even when the machine id is granted", () => {
+    const satellite = {
+      role: "customer" as const,
+      tenantId: "tenant-satellite",
+      siteIds: [],
+      machineIds: ["palletizer"],
+    };
+    assert.equal(
+      canAccessMachine(
+        satellite,
+        { id: "palletizer", siteId: "site-cargill-ftw" },
+        sites,
+        accounts,
+      ),
+      false,
+    );
+    assert.equal(
+      canAccessMachine(
+        satellite,
+        {
+          id: "palletizer",
+          siteId: "site-cargill-ftw",
+          tenantId: DEFAULT_TENANT_ID,
+        },
+        sites,
+        accounts,
+      ),
+      false,
+    );
+  });
+
   it("lets a person through on a single machine grant", () => {
     const guest = {
       role: "customer" as const,

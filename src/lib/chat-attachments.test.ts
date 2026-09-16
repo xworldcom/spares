@@ -19,6 +19,8 @@ describe("chat-attachments", () => {
     assert.equal(isBlockedChatFilename("script.js"), true);
     assert.equal(isBlockedChatFilename("photo.jpg"), false);
     assert.equal(isBlockedChatFilename("spec.pdf"), false);
+    assert.equal(isBlockedChatFilename("page.html"), true);
+    assert.equal(isBlockedChatFilename("icon.svg"), true);
   });
 
   it("enforces the 1 GB size limit", () => {

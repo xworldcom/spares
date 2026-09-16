@@ -1,0 +1,15 @@
+ts	phase	decision	why	evidence	result
+2026-09-16T12:40:00Z	frame	Treat Care tickets as machine-shared and hunt host isolation instead	Kevin said plant-shared Care is product intent	docs/security/pentest-2026-09-16.md	open
+2026-09-16T12:45:00Z	frame	Prove isolation with a rerunnable store test plus HTTP scripts	A reviewer can rerun the check instead of trusting a one-off crawl	src/lib/isolation-matrix.test.ts	open
+2026-09-16T13:00:00Z	fix	Refuse login rename when latest catalog already holds the email	mergeUsersForWrite can drop the other live row as a stale twin	src/lib/catalog-merge.ts loginRenameConflicts	open
+2026-09-16T13:05:00Z	fix	Compare customer grants to effectiveTenantId	A machine missing tenantId used to skip the host check	src/lib/access.ts canAccessMachine	open
+2026-09-16T13:10:00Z	fix	Reject browser login POST when Origin is another site	SameSite=Lax does not stop login CSRF	src/lib/cors.ts isSameOriginRequest	open
+2026-09-16T13:40:00Z	fix	Stop org migrate from lowering schemaVersion to 2	That made tenant migrate restamp satellite rows onto the host	src/lib/org-migration.ts normalizeOrgTree	isolation-matrix green
+2026-09-16T13:42:00Z	fix	Tenant migrate only fills missing tenantId	Initial stamp was overwriting satellite machines	src/lib/tenant-migration.ts stampMissing	tests green
+2026-09-16T13:10:00Z	verify	Local HTTP matrix 67/67 after rate-limit-aware rerun	Fresh disposable store on :3020 with owner@pentest.local	docs/security/evidence/http-isolation-local.json	pass
+2026-09-16T13:15:00Z	verify	Production anonymous probe 26/26	No credentials. Demo seeds 401. Callback 303. No ACAO on evil Origin	docs/security/evidence/prod-anon.json	pass
+2026-09-16T13:20:00Z	fix	Reject foreign Origin on anonymous bug POST	Login widget stays same-origin; stops browser CSRF into GitHub	src/app/api/bugs/route.ts	open
+2026-09-16T13:25:00Z	verify	Satellite cannot patch host person; deleted email is null	Store matrix, not HTTP only	src/lib/isolation-matrix.test.ts	open
+2026-09-16T13:30:00Z	fix	Refuse pack/manual bind when another row already names the object	Existence in R2 is not ownership; delete was unscoped	src/lib/stored-file-claim.ts	open
+2026-09-16T13:32:00Z	fix	Sanitize Microsoft next against backslash and encoded slashes	WHATWG URL can turn /\\host into an off-site Location	src/lib/auth/microsoft.ts sanitizeNextPath	open
+2026-09-16T13:34:00Z	fix	Chat keys cannot be attached or overwritten across threads	Proxy and activity POST treated any existing chat/uuid as free	src/lib/chat-attachment-http.ts	open

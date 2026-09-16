@@ -16,6 +16,7 @@ import {
   ModelPackError,
   saveMachineFile,
 } from "@/lib/store";
+import { StoredFileClaimedError } from "@/lib/stored-file-claim";
 
 export const maxDuration = 120;
 
@@ -84,14 +85,22 @@ export async function POST(request: Request) {
     return error("Choose a valid site", 400);
   }
 
-  const machine = await createMachine(auth.tenantId, {
-    name: pack.name,
-    storedFileName: pack.storedFileName,
-    originalFileName: pack.originalFileName,
-    parts: joined.parts,
-    unmatched: joined.unmatched,
-    siteId: pack.siteId,
-  });
+  let machine;
+  try {
+    machine = await createMachine(auth.tenantId, {
+      name: pack.name,
+      storedFileName: pack.storedFileName,
+      originalFileName: pack.originalFileName,
+      parts: joined.parts,
+      unmatched: joined.unmatched,
+      siteId: pack.siteId,
+    });
+  } catch (cause) {
+    if (cause instanceof StoredFileClaimedError) {
+      return error(cause.message, 409);
+    }
+    throw cause;
+  }
 
   return json(
     toMachineDetail(

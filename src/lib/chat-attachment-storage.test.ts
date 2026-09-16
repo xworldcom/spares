@@ -180,6 +180,17 @@ describe("chat-attachment-storage", () => {
     assert.ok(map.has(`chat/${storedFileName}`));
   });
 
+  it("refuses to overwrite an existing chat object", async () => {
+    const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440099.png";
+    const map = new Map<string, Buffer>();
+    setTestChatS3Objects(map);
+    await putChatAttachmentObject(storedFileName, new Uint8Array([1]), "image/png");
+    await assert.rejects(
+      () => putChatAttachmentObject(storedFileName, new Uint8Array([9]), "image/png"),
+    );
+    assert.deepEqual([...map.get(`chat/${storedFileName}`)!], [1]);
+  });
+
   it("writes test objects under chat/", async () => {
     const storedFileName = "chat-550e8400-e29b-41d4-a716-446655440000.pdf";
     await writeChatAttachmentForTests(storedFileName, Buffer.from("pdf"));

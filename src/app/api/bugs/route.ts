@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
+import { isSameOriginRequest } from "@/lib/cors";
 import { DEFAULT_TENANT_ID, tenantIdForUser } from "@/lib/tenant";
 import {
   bugReportUserLabel,
@@ -60,6 +61,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return error("Origin not allowed", 403);
+  }
   if (!allowRateLimit(`bugs:${clientIp(request)}`, 5, 60_000)) {
     return error("Too many bug reports. Try again in a minute.", 429);
   }

@@ -1,5 +1,5 @@
 import type { CustomerAccount, MachineSummary, PublicUser, Role, Site } from "@/types";
-import { belongsToTenant } from "./tenant.ts";
+import { belongsToTenant, effectiveTenantId } from "./tenant.ts";
 import {
   customerAllSitesLabel,
   customerForSite,
@@ -432,7 +432,7 @@ export function canAccessMachine(
     }
     return belongsToTenant(machine, user.tenantId);
   }
-  if (user.tenantId && machine.tenantId && user.tenantId !== machine.tenantId) {
+  if (user.tenantId && user.tenantId !== effectiveTenantId(machine)) {
     return false;
   }
   if (machine.id && (user.machineIds ?? []).includes(machine.id)) {

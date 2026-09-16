@@ -21,7 +21,14 @@ import {
   vercelRequiresChatObjectStorageMessage,
 } from "./chat-attachment-storage.ts";
 import { error, json } from "./http.ts";
+import { chatAttachmentKeyClaimed } from "./store.ts";
+import { StoredFileClaimedError } from "./stored-file-claim.ts";
 import type { ChatAttachment } from "../types/index.ts";
+
+const CHAT_STORAGE_CLIENT_ERROR = "Could not store the attachment.";
+const CHAT_DOWNLOAD_CLIENT_ERROR = "Could not open this attachment.";
+const CHAT_UPLOAD_CLIENT_ERROR = "Could not start the attachment upload.";
+const CHAT_COMPLETE_CLIENT_ERROR = "Could not complete the multipart upload.";
 
 export function chatUploadAvailability() {
   return json({
@@ -82,9 +89,11 @@ export async function handleChatAttachmentUploadPost(
     }
     return json(planned.ticket);
   } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : "Could not start the attachment upload.";
-    return error(message, 400);
+    if (cause instanceof StoredFileClaimedError) {
+      return error(cause.message, 409);
+    }
+    console.error("chat attachment upload plan failed", cause);
+    return error(CHAT_UPLOAD_CLIENT_ERROR, 400);
   }
 }
 
@@ -170,9 +179,11 @@ export async function handleChatAttachmentProxyPost(
       r2Key: chatObjectKey(storedFileName),
     });
   } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : "Could not store the attachment.";
-    return error(message, 400);
+    if (cause instanceof StoredFileClaimedError) {
+      return error(cause.message, 409);
+    }
+    console.error("chat attachment proxy store failed", cause);
+    return error(CHAT_STORAGE_CLIENT_ERROR, 400);
   }
 }
 
@@ -225,9 +236,11 @@ export async function handleChatAttachmentCompletePost(
     });
     return json({ ok: true, storedFileName, r2Key: chatObjectKey(storedFileName) });
   } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : "Could not complete the multipart upload.";
-    return error(message, 400);
+    if (cause instanceof StoredFileClaimedError) {
+      return error(cause.message, 409);
+    }
+    console.error("chat attachment multipart complete failed", cause);
+    return error(CHAT_COMPLETE_CLIENT_ERROR, 400);
   }
 }
 
@@ -245,14 +258,14 @@ export async function handleChatAttachmentDownloadGet(
     const { downloadUrl } = await createChatAttachmentDownloadUrl(storedFileName);
     return Response.redirect(downloadUrl, 302);
   } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : "Could not open this attachment.";
-    return error(message, 503);
+    console.error("chat attachment download failed", cause);
+    return error(CHAT_DOWNLOAD_CLIENT_ERROR, 503);
   }
 }
 
 export async function verifyActivityAttachments(
   attachments: ChatAttachment[],
+  except?: { quoteId?: string; ticketId?: string },
 ): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
   if (!attachments.length) {
     return { ok: true };
@@ -281,6 +294,13 @@ export async function verifyActivityAttachments(
         ok: false,
         error: `Attachment ${attachment.filename} size does not match the uploaded file.`,
         status: 400,
+      };
+    }
+    if (await chatAttachmentKeyClaimed(attachment.r2Key, except)) {
+      return {
+        ok: false,
+        error: "That attachment is already on another conversation.",
+        status: 409,
       };
     }
   }

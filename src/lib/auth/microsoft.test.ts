@@ -7,6 +7,7 @@ import {
   pickMicrosoftEmail,
   resolveMicrosoftLogin,
   resolveMicrosoftSession,
+  sanitizeNextPath,
 } from "./microsoft.ts";
 
 describe("microsoft session tenant resolution", () => {
@@ -114,5 +115,19 @@ describe("microsoft oauth state", () => {
     const token = createMicrosoftOAuthState("http://localhost:3000", "/");
     const [payload] = token.split(".");
     assert.equal(decodeMicrosoftOAuthState(`${payload}.bad-signature`), null);
+  });
+
+  it("keeps same-origin next paths and rejects host-switching ones", () => {
+    assert.equal(sanitizeNextPath("/machines"), "/machines");
+    assert.equal(sanitizeNextPath("/staff/quotes?tab=1"), "/staff/quotes?tab=1");
+    assert.equal(sanitizeNextPath("//evil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("/\\evil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("/%2f%2fevil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("https://evil.example.test"), "/machines");
+    const token = createMicrosoftOAuthState(
+      "http://localhost:3000",
+      "/\\evil.example.test",
+    );
+    assert.equal(decodeMicrosoftOAuthState(token)?.next, "/machines");
   });
 });

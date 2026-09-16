@@ -18,6 +18,7 @@ import {
   validateChatUploadInput,
 } from "./chat-attachments.ts";
 import { shouldUseCrossOriginObjectUrl } from "./cors.ts";
+import { StoredFileClaimedError } from "./stored-file-claim.ts";
 import {
   isS3Configured,
   modelDownloadUrlTtlSeconds,
@@ -165,8 +166,14 @@ export async function putChatAttachmentObject(
   const name = safeChatStoredFileName(storedFileName);
   const key = chatObjectKey(name);
   if (testS3Objects) {
+    if (testS3Objects.has(key)) {
+      throw new StoredFileClaimedError("chat");
+    }
     testS3Objects.set(key, Buffer.from(body));
     return;
+  }
+  if (await chatAttachmentExists(storedFileName)) {
+    throw new StoredFileClaimedError("chat");
   }
   await getS3Client().send(
     new PutObjectCommand({
