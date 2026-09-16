@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
+import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import {
   machinesFamilyActive,
   staffMachinesMenuLinks,
@@ -99,6 +100,7 @@ export function MobileTabBar() {
   const { user } = useAuth();
   const { unreadCount: careUnreadCount } = useCareAlerts();
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
+  const { newCount: inquiryNewCount } = usePlatformInquiryAlerts();
   const pathname = usePathname();
   const [moreForPath, setMoreForPath] = useState<string | null>(null);
   const [machinesForPath, setMachinesForPath] = useState<string | null>(null);
@@ -113,12 +115,14 @@ export function MobileTabBar() {
     "/staff/quotes",
     "/staff/bugs",
     "/staff/platform",
+    "/staff/platform/inquiries",
   ] as const;
   const moreActive =
     user?.role === "staff" &&
     (isNavActive(pathname, "/staff/directory", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs) ||
-      isNavActive(pathname, "/staff/platform", staffHrefs));
+      isNavActive(pathname, "/staff/platform", staffHrefs) ||
+      isNavActive(pathname, "/staff/platform/inquiries", staffHrefs));
   const moreOpen = moreForPath === pathname;
   const machinesMenuOpen = machinesForPath === pathname;
   const staffMachinesActive = machinesFamilyActive(pathname, staffHrefs);
@@ -175,12 +179,25 @@ export function MobileTabBar() {
               Bug reports
             </Link>
             {user.platformOwner ? (
-              <Link
-                href="/staff/platform"
-                className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-              >
-                Platform
-              </Link>
+              <>
+                <Link
+                  href="/staff/platform"
+                  className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+                >
+                  Platform
+                </Link>
+                <Link
+                  href="/staff/platform/inquiries"
+                  className="flex min-h-12 items-center justify-between gap-2 rounded-2xl px-4 text-[16px] font-medium"
+                >
+                  Inquiries
+                  {inquiryNewCount > 0 ? (
+                    <span className="btn-accent inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">
+                      {inquiryNewCount > 9 ? "9+" : inquiryNewCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </>
             ) : null}
           </div>
         </div>

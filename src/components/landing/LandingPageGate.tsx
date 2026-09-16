@@ -11,11 +11,13 @@ export function LandingPageGate({
   microsoftSignInEnabled = false,
   passwordLoginEnabled = true,
   authErrorCode = null,
+  showMarketing = false,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
   passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
+  showMarketing?: boolean;
 }) {
   const { status, user } = useAuth();
   const router = useRouter();
@@ -37,6 +39,7 @@ export function LandingPageGate({
       microsoftSignInEnabled={microsoftSignInEnabled}
       passwordLoginEnabled={passwordLoginEnabled}
       authErrorCode={authErrorCode}
+      showMarketing={showMarketing}
     />
   );
 }

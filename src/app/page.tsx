@@ -9,6 +9,7 @@ export default async function Home() {
     <LandingPageGate
       microsoftSignInEnabled={signIn.microsoftSignInEnabled}
       passwordLoginEnabled={signIn.passwordLoginEnabled}
+      showMarketing
     />
   );
 }
