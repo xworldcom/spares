@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "body": {
+    "user": {
+      "id": "user-staff",
+      "email": "staff@spares.local",
+      "role": "staff",
+      "tenantId": "tenant-oee360-host"
+    }
+  }
+}

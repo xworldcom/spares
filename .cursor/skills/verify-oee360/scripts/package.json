@@ -1,0 +1,8 @@
+{
+  "name": "verify-oee360-harness",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "1.51.1"
+  }
+}

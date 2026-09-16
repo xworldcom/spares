@@ -1,0 +1,13 @@
+- banner:
+  - link "OEE360": OEE 360
+  - paragraph: Private
+  - button "Report bug"
+- main:
+  - paragraph: Private
+  - text: OEE360
+  - paragraph: Overall equipment effectiveness, seen all the way around — the machine, the spare, the quote, the care.
+  - text: Email
+  - textbox "Email"
+  - text: Password
+  - textbox "Password"
+  - button "Sign in" [disabled]

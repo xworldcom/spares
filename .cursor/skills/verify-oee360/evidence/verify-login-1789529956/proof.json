@@ -1,0 +1,15 @@
+{
+  "feature": "login",
+  "entryPoint": "api login",
+  "runId": "verify-login-1789529956",
+  "baseUrl": "http://127.0.0.1:3010",
+  "dataDir": "/tmp/oee360-verify-verify-login-1789529956",
+  "artifacts": [
+    "login-me-anonymous.json",
+    "login-api.json",
+    "login-me-authenticated.json",
+    "login-machines.json",
+    "login.aria.txt"
+  ],
+  "constraints": "Local disposable SPARES_DATA_DIR; demo staff only. Production oee360.com blocks staff@spares.local."
+}
