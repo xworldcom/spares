@@ -50,7 +50,7 @@ export async function POST(
     return error("Quote not found", 404);
   }
 
-  const machineName = await machineNameFor(next);
+  const machineName = (await machineNameFor(next)) ?? "Machine";
   void notifyMachineChatUpdate({
     tenantId,
     sender: {
