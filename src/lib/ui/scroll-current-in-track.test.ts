@@ -1,0 +1,46 @@
+import assert from "node:assert/strict";
+import { afterEach, test } from "node:test";
+import { scrollCurrentInTrack } from "./scroll-current-in-track.ts";
+
+const originalWindow = globalThis.window;
+
+afterEach(() => {
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: originalWindow,
+  });
+});
+
+test("scrollCurrentInTrack centers the current step on the track", () => {
+  const calls: Array<{ left: number; behavior: string }> = [];
+  const current = { offsetLeft: 200, offsetWidth: 40 };
+  const track = {
+    clientWidth: 120,
+    querySelector: () => current,
+    scrollTo: (opts: { left: number; behavior: string }) => {
+      calls.push(opts);
+    },
+  };
+
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { matchMedia: () => ({ matches: true }) },
+  });
+
+  scrollCurrentInTrack(track as unknown as HTMLElement);
+
+  assert.deepEqual(calls, [{ left: 160, behavior: "auto" }]);
+});
+
+test("scrollCurrentInTrack no-ops without a current step", () => {
+  const calls: unknown[] = [];
+  const track = {
+    querySelector: () => null,
+    scrollTo: (opts: unknown) => {
+      calls.push(opts);
+    },
+  };
+
+  scrollCurrentInTrack(track as unknown as HTMLElement);
+  assert.deepEqual(calls, []);
+});

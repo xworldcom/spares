@@ -7,6 +7,7 @@ import {
   TICKET_STATUS_SHORT,
   ticketStepState,
 } from "@/lib/care";
+import { scrollCurrentInTrack } from "@/lib/ui/scroll-current-in-track";
 import type { TicketStatus } from "@/types";
 
 export function TicketStatusStrip({
@@ -23,10 +24,7 @@ export function TicketStatusStrip({
   const trackRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
-    const current = trackRef.current?.querySelector<HTMLElement>(
-      '[data-state="current"]',
-    );
-    current?.scrollIntoView({ inline: "center", block: "nearest" });
+    scrollCurrentInTrack(trackRef.current);
   }, [status]);
 
   return (

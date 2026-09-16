@@ -8,6 +8,7 @@ import {
   quoteStatusCaption,
   quoteStepState,
 } from "@/lib/quotes";
+import { scrollCurrentInTrack } from "@/lib/ui/scroll-current-in-track";
 import type { QuoteStatus, Role } from "@/types";
 
 export function QuoteStatusStrip({
@@ -27,10 +28,7 @@ export function QuoteStatusStrip({
   const trackRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
-    const current = trackRef.current?.querySelector<HTMLElement>(
-      '[data-state="current"]',
-    );
-    current?.scrollIntoView({ inline: "center", block: "nearest" });
+    scrollCurrentInTrack(trackRef.current);
   }, [status]);
 
   return (
