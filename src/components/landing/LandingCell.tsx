@@ -1,34 +1,21 @@
 "use client";
 
-import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
-import { OrbitStage } from "@/components/landing/OrbitStage";
-
-class CellStageGuard extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.warn("landing cell stage failed", error, info.componentStack);
-  }
-
-  render() {
-    if (this.state.failed) {
-      return null;
-    }
-    return this.props.children;
-  }
-}
+import { useEffect, useState, type ComponentType } from "react";
 
 export function LandingCell() {
-  const [webgl, setWebgl] = useState(false);
+  const [Stage, setStage] = useState<ComponentType<{ interactive?: boolean }> | null>(null);
 
   useEffect(() => {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
-    setWebgl(Boolean(gl));
+    if (!gl) {
+      return;
+    }
+    void import("@/components/landing/OrbitStage")
+      .then((mod) => setStage(() => mod.OrbitStage))
+      .catch(() => {
+        setStage(null);
+      });
   }, []);
 
   return (
@@ -39,11 +26,7 @@ export function LandingCell() {
         <span className="landing-cell-block landing-cell-block--arm" />
         <span className="landing-cell-block landing-cell-block--load" />
       </div>
-      {webgl ? (
-        <CellStageGuard>
-          <OrbitStage interactive />
-        </CellStageGuard>
-      ) : null}
+      {Stage ? <Stage interactive /> : null}
     </div>
   );
 }

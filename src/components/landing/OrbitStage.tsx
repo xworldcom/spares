@@ -142,4 +142,3 @@ export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
   );
 }
 
-useGLTF.preload(MODEL);
