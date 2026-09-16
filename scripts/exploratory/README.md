@@ -16,5 +16,7 @@ export OEE360_CUST_B_PASSWORD=...
 - `crawl-oee360-conversation.mjs` quote and Care message plus status walk
 - `crawl-oee360-ui.cjs` Playwright customer and staff UI
 - `crawl-oee360-staff-pages.cjs` staff Directory, Service, Platform screenshots
+- `crawl-oee360-wide.mjs` remaining staff, customer, and platform APIs
+- `crawl-oee360-ui-wide.cjs` numeric Care URLs, Directory drill-in, mobile, desktop collapse
 
 Playwright comes from `.cursor/skills/verify-oee360/scripts` (`npm install` there). Set `NODE_PATH` to that `node_modules`.

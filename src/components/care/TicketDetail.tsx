@@ -162,7 +162,8 @@ export function TicketDetail({
     return <LoadingState label="Loading ticket…" />;
   }
 
-  const threadReady = ticket.id === ticketId;
+  const threadReady =
+    ticket.id === ticketId || String(ticket.number) === String(ticketId);
   const ticketsBack = backHref ?? careHref(machineId, "tickets");
   const peek =
     threadReady && user

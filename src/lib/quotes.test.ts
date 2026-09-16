@@ -169,6 +169,22 @@ describe("normalizeStoredQuote", () => {
     assert.equal(quote.activities.length, 1);
     assert.equal(quote.activities[0]?.attachments?.[0]?.filename, "photo.png");
   });
+
+  it("keeps invoiceNumber and tenantId so a catalog load cannot drop them", () => {
+    const quote = normalizeStoredQuote({
+      id: "q6",
+      number: 6,
+      machineId: "m1",
+      items: [{ id: "A", qty: 1 }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "c@example.test",
+      customerId: "cust-1",
+      invoiceNumber: "INV-1042",
+      tenantId: "tenant-other-host",
+    } as never);
+    assert.equal(quote.invoiceNumber, "INV-1042");
+    assert.equal(quote.tenantId, "tenant-other-host");
+  });
 });
 
 describe("status and visibility", () => {

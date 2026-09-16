@@ -98,7 +98,10 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
   const selected = ticketId
-    ? tickets.find((ticket) => ticket.id === ticketId) ?? null
+    ? tickets.find(
+        (ticket) =>
+          ticket.id === ticketId || String(ticket.number) === String(ticketId),
+      ) ?? null
     : null;
 
   const listPanel = (
