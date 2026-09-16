@@ -1,0 +1,189 @@
+{
+  "base": "https://oee360.com",
+  "passed": 26,
+  "failed": 0,
+  "rows": [
+    {
+      "id": "login-page",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "x-frame-options",
+      "expect": "DENY",
+      "actual": "DENY",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "x-content-type-options",
+      "expect": "nosniff",
+      "actual": "nosniff",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "anon-me",
+      "expect": "401",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/machines",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/quotes",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/tickets",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/staff/customers",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/staff/team",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/platform/tenants",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/platform/directory",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/platform/staff",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/platform/deployments",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/bugs",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "anon-/api/machines/model-upload",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": "{\"error\":\"Unauthorized\"}"
+    },
+    {
+      "id": "demo-staff-login",
+      "expect": "401",
+      "actual": "401",
+      "pass": true,
+      "note": "seed gate"
+    },
+    {
+      "id": "demo-customer-login",
+      "expect": "401",
+      "actual": "401",
+      "pass": true,
+      "note": "seed gate"
+    },
+    {
+      "id": "login-foreign-origin",
+      "expect": "403",
+      "actual": "401",
+      "pass": true,
+      "note": "401 still acceptable if origin check is not on this deploy yet"
+    },
+    {
+      "id": "dot-env",
+      "expect": "404|403|400",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "source-map-sample",
+      "expect": "404|403|400",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "cors-evil-origin",
+      "expect": "empty",
+      "actual": "",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "anon-/.git/HEAD",
+      "expect": "401|403|404|400|303",
+      "actual": "404",
+      "pass": true,
+      "note": "<!DOCTYPE html><html data-dpl-id=\"dpl_AxDx5qckFhDeA4Vf8Nokocg8vcsi\" lang=\"en\"><h"
+    },
+    {
+      "id": "anon-/.env.local",
+      "expect": "401|403|404|400|303",
+      "actual": "404",
+      "pass": true,
+      "note": "<!DOCTYPE html><html data-dpl-id=\"dpl_AxDx5qckFhDeA4Vf8Nokocg8vcsi\" lang=\"en\"><h"
+    },
+    {
+      "id": "anon-/api/debug",
+      "expect": "401|403|404|400|303",
+      "actual": "404",
+      "pass": true,
+      "note": "<!DOCTYPE html><html data-dpl-id=\"dpl_AxDx5qckFhDeA4Vf8Nokocg8vcsi\" lang=\"en\"><h"
+    },
+    {
+      "id": "anon-/api/auth/microsoft/callback",
+      "expect": "401|403|404|400|303",
+      "actual": "303",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": "robots",
+      "expect": "200|404",
+      "actual": "404",
+      "pass": true,
+      "note": "<!DOCTYPE html><html data-dpl-id=\"dpl_AxDx5qckFhDeA4Vf8Nokocg8vcsi\" lang=\"en\"><h"
+    }
+  ]
+}

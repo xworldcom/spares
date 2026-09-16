@@ -14,6 +14,8 @@ import {
   createTenant,
   createTenantStaffUser,
   createTicket,
+  deletePerson,
+  findUserByEmail,
   getMachine,
   getQuote,
   getTicket,
@@ -217,5 +219,29 @@ describe("two-host isolation matrix", () => {
     );
     assert.ok("user" in created);
     assert.deepEqual(created.user.machineIds, []);
+  });
+
+  it("refuses satellite staff updates to a host person id", async () => {
+    await isolated();
+    const satellite = await createTenant("Patch Host");
+    assert.ok("tenant" in satellite);
+    if (!("tenant" in satellite)) {
+      return;
+    }
+    const hostPerson = await createCustomer(
+      DEFAULT_TENANT_ID,
+      "host-person@host.test",
+      await hashPassword("IsolationHost1!"),
+    );
+    assert.ok("user" in hostPerson);
+    const patched = await updatePerson(hostPerson.user.id, satellite.tenant.id, {
+      name: "Stolen",
+    });
+    assert.ok("error" in patched);
+    assert.equal(patched.error, "not-found");
+
+    const removed = await deletePerson(hostPerson.user.id, DEFAULT_TENANT_ID);
+    assert.ok("ok" in removed);
+    assert.equal(await findUserByEmail("host-person@host.test"), null);
   });
 });

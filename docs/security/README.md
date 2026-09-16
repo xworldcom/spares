@@ -2,6 +2,8 @@
 
 The September 2026 isolation review lives in [pentest-2026-09-16.md](./pentest-2026-09-16.md).
 
+Evidence from the disposable local HTTP matrix and the production anonymous probe lives in [evidence/](./evidence/).
+
 Rerun the checks from the repo root.
 
 ```bash

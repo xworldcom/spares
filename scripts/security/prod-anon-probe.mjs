@@ -111,6 +111,31 @@ async function main() {
   const allow = cors.headers["access-control-allow-origin"] || "";
   row("cors-evil-origin", "empty", allow, allow === "", allow);
 
+  for (const path of [
+    "/.git/HEAD",
+    "/.env.local",
+    "/api/debug",
+    "/api/auth/microsoft/callback",
+  ]) {
+    const got = await probe("GET", path);
+    row(
+      `anon-${path}`,
+      "401|403|404|400|303",
+      String(got.status),
+      got.status >= 400 || got.status === 303,
+      got.text.slice(0, 80),
+    );
+  }
+
+  const robots = await probe("GET", "/robots.txt");
+  row(
+    "robots",
+    "200|404",
+    String(robots.status),
+    robots.status === 200 || robots.status === 404,
+    robots.text.slice(0, 80),
+  );
+
   const report = {
     base: BASE,
     passed: rows.filter((item) => item.pass).length,

@@ -25,6 +25,8 @@ node scripts/security/http-isolation-matrix.mjs --base-url http://127.0.0.1:3020
 
 Seed staff and customers are `staff@spares.local` / `customer@spares.local` / `buyer@acme.test` with the README preview passwords. Production rejects those logins.
 
+Login is limited to 8 attempts per IP per 15 minutes in one Node process. Restart the disposable app (or wait) before a second full matrix run.
+
 ## Production anonymous probe
 
 ```bash
