@@ -208,6 +208,9 @@ function PlatformHosts() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link className="btn-secondary text-sm" href="/staff/platform/sign-in">
+            Sign-in
+          </Link>
           <Link className="btn-secondary text-sm" href="/staff/directory">
             Directory
           </Link>

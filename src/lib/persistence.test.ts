@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
-import { blobCarePath, blobDbPath } from "./blob-paths.ts";
+import { blobCarePath, blobDbPath, blobPlatformSettingsPath } from "./blob-paths.ts";
 import {
   createMemoryPersistence,
   safeStoredFileName,
@@ -53,12 +53,14 @@ describe("blob catalog paths", () => {
     delete process.env.SPARES_BLOB_NAMESPACE;
     assert.equal(blobDbPath(), "spares/db.json");
     assert.equal(blobCarePath(), "spares/care.json");
+    assert.equal(blobPlatformSettingsPath(), "spares/platform-settings.json");
   });
 
   it("isolates an environment that opts into a namespace", () => {
     process.env.SPARES_BLOB_NAMESPACE = "Preview QA";
     assert.equal(blobDbPath(), "spares/preview-qa/db.json");
     assert.equal(blobCarePath(), "spares/preview-qa/care.json");
+    assert.equal(blobPlatformSettingsPath(), "spares/preview-qa/platform-settings.json");
   });
 });
 
@@ -80,9 +82,11 @@ describe("memory persistence", () => {
     const store = createMemoryPersistence();
     await store.writeDatabaseJson('{"ok":true}');
     await store.writeCareJson('{"tickets":[]}');
+    await store.writePlatformSettingsJson('{"passwordLoginEnabled":false}');
     await store.writeFileBytes("part.glb", Buffer.from("glb"));
     assert.equal(await store.readDatabaseJson(), '{"ok":true}');
     assert.equal(await store.readCareJson(), '{"tickets":[]}');
+    assert.equal(await store.readPlatformSettingsJson(), '{"passwordLoginEnabled":false}');
     assert.equal((await store.readFileBytes("part.glb"))?.toString(), "glb");
     assert.equal(await store.readFileBytes("missing.bin"), null);
     await store.deleteFileBytes("part.glb");

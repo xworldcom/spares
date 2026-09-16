@@ -88,8 +88,14 @@ import type {
   TicketStatus,
   UnmatchedPart,
 } from "../types/index.ts";
+import {
+  readPersistedPlatformSignInSettings,
+  writePersistedPlatformSignInSettings,
+  type PlatformSignInSettings,
+} from "./platform-settings-persistence.ts";
 
 export { filesDir, getDataDir } from "./persistence.ts";
+export type { PlatformSignInSettings };
 
 export const SEED_STAFF = {
   id: "user-staff",
@@ -277,6 +283,8 @@ type Database = {
   tickets?: StoredTicket[];
   machineUsage?: StoredUsage[];
   orgTombstones?: OrgTombstones;
+  /** Legacy; sign-in policy lives in platform-settings.json. */
+  platformSettings?: PlatformSignInSettings;
 };
 
 type CareStore = {
@@ -817,6 +825,7 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       orgTombstones: mergeOrgTombstones(healed.orgTombstones, latest.orgTombstones),
+      platformSettings: latest.platformSettings ?? healed.platformSettings,
     },
     care,
   );
@@ -1159,6 +1168,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
         orgTombstones: parsed.orgTombstones,
+        platformSettings: parsed.platformSettings,
       },
       numbersAssigned: rawQuotes.some(
         (quote) => typeof quote.number !== "number" || quote.number < 1,
@@ -1279,6 +1289,7 @@ async function mergeIdentityWithLatest(next: Database): Promise<Database> {
     customers: mergeRowsForWrite(latest.customers ?? [], next.customers ?? []),
     sites: mergeRowsForWrite(latest.sites ?? [], next.sites ?? []),
     orgTombstones: mergeOrgTombstones(latest.orgTombstones, next.orgTombstones),
+    platformSettings: next.platformSettings ?? latest.platformSettings,
   };
 }
 
@@ -1434,6 +1445,31 @@ export function getPlatformDeployment(tenantId: string) {
       }))
       .sort((a, b) => a.email.localeCompare(b.email));
     return { deployment, staff };
+  });
+}
+
+export async function getPlatformSignInSettingsFromCatalog(): Promise<PlatformSignInSettings> {
+  const sidecar = await readPersistedPlatformSignInSettings();
+  if (sidecar) {
+    return sidecar;
+  }
+  const legacy = (await readDatabase()).platformSettings;
+  if (legacy?.passwordLoginEnabled !== undefined) {
+    await writePersistedPlatformSignInSettings(legacy);
+    return legacy;
+  }
+  return {};
+}
+
+export function updatePlatformSignInSettings(patch: { passwordLoginEnabled: boolean }) {
+  return withLock(async () => {
+    const current = await getPlatformSignInSettingsFromCatalog();
+    const nextSettings: PlatformSignInSettings = {
+      ...current,
+      passwordLoginEnabled: patch.passwordLoginEnabled,
+    };
+    await writePersistedPlatformSignInSettings(nextSettings);
+    return { settings: nextSettings };
   });
 }
 

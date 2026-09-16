@@ -9,10 +9,12 @@ import { LandingScreen } from "@/components/landing/LandingScreen";
 export function LandingPageGate({
   nextPath = "/machines",
   microsoftSignInEnabled = false,
+  passwordLoginEnabled = true,
   authErrorCode = null,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
+  passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
 }) {
   const { status, user } = useAuth();
@@ -33,6 +35,7 @@ export function LandingPageGate({
     <LandingScreen
       nextPath={nextPath}
       microsoftSignInEnabled={microsoftSignInEnabled}
+      passwordLoginEnabled={passwordLoginEnabled}
       authErrorCode={authErrorCode}
     />
   );
