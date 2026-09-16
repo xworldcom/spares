@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
+import { StaffMachinesDesktopNav } from "@/components/nav/MachinesNavMenu";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
@@ -167,9 +168,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="hidden min-w-0 flex-1 items-center overflow-x-auto lg:flex"
               aria-label="Main"
             >
-              <NavLink href="/machines" hrefs={navHrefs}>
-                Machines
-              </NavLink>
+              {user.role === "staff" ? (
+                <StaffMachinesDesktopNav hrefs={navHrefs} />
+              ) : (
+                <NavLink href="/machines" hrefs={navHrefs}>
+                  Machines
+                </NavLink>
+              )}
               <NavLinkWithBadge
                 href="/care"
                 hrefs={navHrefs}
@@ -178,9 +183,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
               {user.role === "staff" ? (
                 <>
-                  <NavLink href="/machines/new" hrefs={navHrefs}>
-                    Upload
-                  </NavLink>
                   <NavLink href="/staff/accounts" hrefs={navHrefs}>
                     Customers
                   </NavLink>
