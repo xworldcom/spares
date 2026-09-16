@@ -55,7 +55,7 @@ Require JSON `ok: true`. Checks `GET /login` and anonymous `GET /api/auth/me` (4
 
 ## Drive
 
-**Browser (first run installs Chromium under `scripts/node_modules`)**
+**Harness:** HTTP API via `control-oee360 api` (cookie jar in `.run-state/cookies.txt`) plus optional Playwright browser snapshots. First browser run installs Chromium under `scripts/node_modules`.
 
 ```bash
 cd .cursor/skills/verify-oee360/scripts && npm install --omit=dev
