@@ -1,0 +1,6 @@
+ts	phase	decision	why	evidence	result
+2026-09-16T05:29:55Z	accounts	kept pr139 staff and created crawl-20260916-0524 plus B palletizer-only	need two customers on one host to prove Care/quote isolation without Kevin SSO	evidence later from isolation script	open
+2026-09-16T05:38:14Z	isolation	proved Care tickets are machine-scoped not customer-scoped	quotes already filter by customerId so this is a missing guard not a total auth collapse	docs/exploratory/evidence/crawl-20260916/isolation-report.json	5 CODE RED
+2026-09-16T05:38:14Z	lifecycle	walked quote 2 Requested through Closed with fake prices and PO CRAWL-16-524	need a real two-sided thread Tess can open	docs/exploratory/evidence/crawl-20260916/conversation-report.json	closed
+2026-09-16T05:38:14Z	platform	skipped second host create	host staff is 403 on POST /api/platform/tenants and Kevin password was out of bounds	isolation-report platform coverage	blocked
+2026-09-16T05:38:14Z	fix-scope	left Care isolation unfixed	may be intentional plant-shared tickets. Tess routes CODE RED	docs/exploratory/quote-care-crawl-2026-09-16.md	open

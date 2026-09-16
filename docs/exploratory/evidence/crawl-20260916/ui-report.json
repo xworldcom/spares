@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-09-16T05:34:51.780Z",
+  "quoteUrl": "https://oee360.com/quotes/2",
+  "staffQuoteUrl": "https://oee360.com/staff/quotes/2",
+  "shots": [
+    "/workspace/docs/exploratory/evidence/crawl-20260916/01-customer-machines.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/02-customer-hardware-fixture.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/02b-customer-hardware-list.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/03-customer-quote-sent.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/04-customer-quote-detail.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/05-customer-sheet-expanded.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/06-customer-after-messages.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/zz-cust-abort.png",
+    "/workspace/docs/exploratory/evidence/crawl-20260916/zz-staff-abort.png"
+  ],
+  "findingCounts": {
+    "major": 1
+  },
+  "findings": [
+    {
+      "severity": "major",
+      "id": "ui-crawl-abort",
+      "title": "UI crawl threw before finishing every page",
+      "steps": [
+        "Playwright UI crawl"
+      ],
+      "expected": "all phases complete",
+      "actual": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[aria-label=\"Collapse conversation\"]').first()\n    - locator resolved to <button type=\"button\" aria-label=\"Collapse conversation\" class=\"snap-sheet-handle quote-sheet-handle\"></button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    56 × waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n"
+    }
+  ],
+  "coverage": [
+    {
+      "level": "customer",
+      "feature": "login → Machines",
+      "result": "ok",
+      "note": "Machines"
+    },
+    {
+      "level": "customer",
+      "feature": "open Hardware fixture",
+      "result": "ok",
+      "note": "https://oee360.com/machines/hardware-fixture"
+    },
+    {
+      "level": "customer",
+      "feature": "request quote",
+      "result": "ok",
+      "note": "https://oee360.com/quotes/2"
+    },
+    {
+      "level": "customer",
+      "feature": "own bubbles after send",
+      "result": "ok",
+      "note": "own=7 other=3"
+    }
+  ],
+  "custErrors": [
+    "console Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "staffErrors": []
+}
