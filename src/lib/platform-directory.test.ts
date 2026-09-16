@@ -8,13 +8,17 @@ import {
   filterDirectoryEntries,
   type DirectoryEntry,
 } from "./platform-directory.ts";
-import { setPersistenceForTests } from "./persistence.ts";
+import { createMemoryPersistence, setPersistenceForTests } from "./persistence.ts";
 import {
   createCustomer,
   createCustomerAccount,
   createTenantWithOptionalStaff,
+  getPlatformDirectoryUser,
   listPlatformDirectory,
+  mutatePlatformDirectoryUser,
+  removePlatformDirectoryUser,
   resetStoreMemoryForTests,
+  SEED_STAFF,
   updateTenantPlatformMeta,
 } from "./store.ts";
 import { DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME, defaultTenantRecord } from "./tenant.ts";
@@ -113,6 +117,12 @@ describe("platform directory", () => {
       ],
     );
 
+    const staff = ofType(entries, "staff");
+    assert.deepEqual(
+      staff.map((row) => [row.name, row.email, row.hostId]),
+      [["staff@acme.test", "staff@acme.test", "tenant-acme"]],
+    );
+
     const people = ofType(entries, "person");
     assert.deepEqual(
       people.map((row) => [row.name, row.email, row.hostId]),
@@ -120,11 +130,6 @@ describe("platform directory", () => {
         ["kevin-customer@host.test", "kevin-customer@host.test", DEFAULT_TENANT_ID],
         ["Olive Operator", "operator@plastics.test", "tenant-acme"],
       ],
-    );
-    // Staff logins are managed per host, never listed as directory people.
-    assert.equal(
-      entries.some((row) => row.email === "staff@acme.test"),
-      false,
     );
   });
 
@@ -207,6 +212,7 @@ describe("platform directory", () => {
         ["customer", "Satellite Customer"],
         ["host", "Directory Co"],
         ["person", "Satellite Person"],
+        ["staff", "dir-staff@test"],
       ],
     );
 
@@ -219,10 +225,153 @@ describe("platform directory", () => {
       hostRows.some((row) => row.name === "Satellite Person"),
       false,
     );
-    // Staff created with the tenant never leaks into the directory as a person.
     assert.equal(
-      entries.some((row) => row.email === "dir-staff@test"),
-      false,
+      entries.some((row) => row.type === "staff" && row.email === "dir-staff@test"),
+      true,
+    );
+  });
+
+  it("platform directory user APIs edit and deactivate staff and customers", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("People Co", {
+      email: "people-staff@test",
+      passwordHash: await hashPassword("password-1"),
+    });
+    assert.ok("tenant" in created);
+    const tenantId = created.tenant.id;
+    assert.ok(created.staffUser);
+
+    const person = await createCustomer(
+      tenantId,
+      "people-customer@test",
+      await hashPassword("password-2"),
+      { name: "People Customer" },
+    );
+    assert.ok("user" in person);
+
+    const staffLocated = await getPlatformDirectoryUser(created.staffUser!.id);
+    assert.ok(!("error" in staffLocated));
+    assert.equal(staffLocated.tenantId, tenantId);
+
+    const renamed = await mutatePlatformDirectoryUser(created.staffUser!.id, {
+      name: "People Staff",
+    });
+    assert.ok(!("error" in renamed));
+    assert.equal(renamed.user.name, "People Staff");
+
+    const customerPatch = await mutatePlatformDirectoryUser(person.user.id, {
+      email: "people-customer-renamed@test",
+    });
+    assert.ok(!("error" in customerPatch));
+    assert.equal(customerPatch.user.email, "people-customer-renamed@test");
+
+    const removedStaff = await removePlatformDirectoryUser(created.staffUser!.id);
+    assert.deepEqual(removedStaff, { ok: true });
+    const gone = await getPlatformDirectoryUser(created.staffUser!.id);
+    assert.deepEqual(gone, { error: "not-found" });
+  });
+
+  it("Preview heal restores demo staff@spares.local without touching real host staff", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "spares-directory-seed-"));
+    process.env.SPARES_DATA_DIR = dir;
+    process.env.SPARES_ALLOW_SEED = "true";
+    delete process.env.VERCEL;
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    await mkdir(path.join(dir, "files"), { recursive: true });
+    resetStoreMemoryForTests();
+
+    const passwordHash = await hashPassword("KevinRealPass1!");
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        schemaVersion: 3,
+        tenants: [defaultTenantRecord()],
+        users: [
+          {
+            id: "user-kevin-staff",
+            email: "kevin@huzevka.com",
+            passwordHash,
+            role: "staff",
+            tenantId: DEFAULT_TENANT_ID,
+            staffCreatedTenantId: DEFAULT_TENANT_ID,
+            name: "Kevin",
+          },
+          {
+            id: "user-smoke-staff",
+            email: "smoke.staff@spares.test",
+            passwordHash,
+            role: "staff",
+            tenantId: DEFAULT_TENANT_ID,
+            staffCreatedTenantId: DEFAULT_TENANT_ID,
+          },
+        ],
+        machines: [],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+        customers: [],
+      }),
+    );
+
+    resetStoreMemoryForTests();
+    const entries = await listPlatformDirectory();
+    const demoStaff = entries.find(
+      (row) => row.type === "staff" && row.email === SEED_STAFF.email,
+    );
+    assert.ok(demoStaff, "demo staff should be healed onto the Soft Launch host");
+    assert.equal(demoStaff.hostId, DEFAULT_TENANT_ID);
+    assert.equal(demoStaff.hostName, DEFAULT_TENANT_NAME);
+
+    const kevin = entries.find((row) => row.type === "staff" && row.email === "kevin@huzevka.com");
+    assert.ok(kevin);
+    assert.equal(kevin.name, "Kevin");
+    assert.ok(
+      entries.some((row) => row.type === "staff" && row.email === "smoke.staff@spares.test"),
+    );
+
+    const protectedDelete = await removePlatformDirectoryUser(SEED_STAFF.id);
+    assert.deepEqual(protectedDelete, { error: "protected" });
+  });
+
+  it("Preview heal resurrects a soft-deleted demo staff@spares.local row", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "spares-directory-seed-"));
+    process.env.SPARES_DATA_DIR = dir;
+    process.env.SPARES_ALLOW_SEED = "true";
+    delete process.env.VERCEL;
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    await mkdir(path.join(dir, "files"), { recursive: true });
+    resetStoreMemoryForTests();
+
+    const passwordHash = await hashPassword("x");
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        schemaVersion: 3,
+        tenants: [defaultTenantRecord()],
+        users: [
+          {
+            id: SEED_STAFF.id,
+            email: SEED_STAFF.email,
+            passwordHash,
+            role: "staff",
+            tenantId: DEFAULT_TENANT_ID,
+            staffCreatedTenantId: DEFAULT_TENANT_ID,
+            deletedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        machines: [],
+        quotes: [],
+        bugReports: [],
+        sites: [],
+        customers: [],
+      }),
+    );
+
+    resetStoreMemoryForTests();
+    const entries = await listPlatformDirectory();
+    assert.ok(
+      entries.some((row) => row.type === "staff" && row.email === SEED_STAFF.email),
+      "soft-deleted demo staff should reappear after catalog heal",
     );
   });
 
