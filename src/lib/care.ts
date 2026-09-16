@@ -8,6 +8,7 @@ import type {
   ServiceTicketRecord,
   Site,
   TicketActivity,
+  TicketCustomerReadReceipt,
   TicketStatus,
   UsageHistoryEntry,
 } from "../types/index.ts";
@@ -247,12 +248,65 @@ export function countUnreadTickets<
   return tickets.filter((ticket) => isTicketUnreadForUser(ticket, user)).length;
 }
 
+export function ticketLatestActivityAt(
+  ticket: Pick<ServiceTicketRecord, "activities">,
+) {
+  return ticket.activities.at(-1)?.at;
+}
+
+/** True when a customer user's read watermark covers the latest ticket activity. */
+export function isCustomerReadThroughTicket(
+  ticket: Pick<ServiceTicketRecord, "activities" | "lastReadAt">,
+  customerUserId: string,
+) {
+  const latest = ticketLatestActivityAt(ticket);
+  if (!latest) {
+    return false;
+  }
+  const readAt = ticket.lastReadAt[customerUserId];
+  if (!readAt) {
+    return false;
+  }
+  return readAt >= latest;
+}
+
+export function customerReadReceiptsForTicket(
+  ticket: ServiceTicketRecord,
+  customerUsers: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[],
+): TicketCustomerReadReceipt[] {
+  const latest = ticketLatestActivityAt(ticket);
+  if (!latest) {
+    return [];
+  }
+  const byId = new Map(customerUsers.map((row) => [row.id, row]));
+  const receipts: TicketCustomerReadReceipt[] = [];
+  for (const [userId, readAt] of Object.entries(ticket.lastReadAt)) {
+    const customer = byId.get(userId);
+    if (!customer || customer.role !== "customer") {
+      continue;
+    }
+    if (readAt >= latest) {
+      receipts.push({
+        userId,
+        email: customer.email,
+        name: customer.name,
+        readAt,
+      });
+    }
+  }
+  receipts.sort((a, b) => a.email.localeCompare(b.email));
+  return receipts;
+}
+
 export function toPublicTicket(
   ticket: ServiceTicketRecord,
-  user: Pick<PublicUser, "id">,
+  user: Pick<PublicUser, "id" | "role">,
   machineName?: string,
+  options?: {
+    customerUsers?: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[];
+  },
 ): ServiceTicket {
-  return {
+  const base: ServiceTicket = {
     id: ticket.id,
     number: ticket.number,
     machineId: ticket.machineId,
@@ -264,6 +318,13 @@ export function toPublicTicket(
     activities: ticket.activities,
     unread: isTicketUnreadForUser(ticket, user),
   };
+  if (user.role === "staff" && options?.customerUsers) {
+    const receipts = customerReadReceiptsForTicket(ticket, options.customerUsers);
+    if (receipts.length > 0) {
+      base.customerReadReceipts = receipts;
+    }
+  }
+  return base;
 }
 
 export function usageSummary(

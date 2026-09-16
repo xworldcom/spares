@@ -161,6 +161,13 @@ export async function postTicketActivity(
   return data.ticket;
 }
 
+export async function patchTicketRead(id: string) {
+  const data = await apiFetch<TicketResponse>(`/api/tickets/${id}/read`, {
+    method: "PATCH",
+  });
+  return data.ticket;
+}
+
 export async function getMachineUsage(machineId: string) {
   const data = await apiFetch<UsageResponse>(`/api/machines/${machineId}/usage`);
   return data.usage;

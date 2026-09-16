@@ -13,7 +13,7 @@ import { errorMessage } from "@/lib/api/errors";
 import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
-import type { ChatAttachment, QuoteActivity, Role } from "@/types";
+import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
 
 export type ActivitySendInput = {
   text: string;
@@ -41,6 +41,28 @@ function OtherAvatar({ email }: { email: string }) {
   );
 }
 
+function CustomerReadReceipts({
+  receipts,
+}: {
+  receipts: TicketCustomerReadReceipt[];
+}) {
+  if (receipts.length === 0) {
+    return null;
+  }
+  return (
+    <li className="imsg-read-receipts" aria-label="Read by customers">
+      {receipts.map((row) => (
+        <span key={row.userId} className="imsg-read-receipt" title={row.email}>
+          <span className="imsg-avatar">{initialsFromEmail(row.email)}</span>
+          <span className="imsg-read-receipt-name">
+            {row.name?.trim() || displayNameFromEmail(row.email)}
+          </span>
+        </span>
+      ))}
+    </li>
+  );
+}
+
 export function QuoteActivityFeed({
   activities,
   role,
@@ -52,6 +74,7 @@ export function QuoteActivityFeed({
   title = "Conversation",
   subtitle,
   layout = "card",
+  customerReadReceipts,
 }: {
   activities: QuoteActivity[];
   role: Role;
@@ -64,6 +87,8 @@ export function QuoteActivityFeed({
   subtitle?: string;
   /** `sheet` fills the conversation sheet body; `card` keeps the legacy capped thread. */
   layout?: "card" | "sheet";
+  /** Staff-only Care ticket read receipts (customers on thread). */
+  customerReadReceipts?: TicketCustomerReadReceipt[];
 }) {
   const [text, setText] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -276,6 +301,9 @@ export function QuoteActivityFeed({
             );
           })
         )}
+        {customerReadReceipts?.length ? (
+          <CustomerReadReceipts receipts={customerReadReceipts} />
+        ) : null}
       </ol>
       <form
         className="imsg-composer"

@@ -1286,6 +1286,38 @@ html.spares-embed .spares-app-stage {
   font-size: 11px;
 }
 
+.imsg-read-receipts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0.35rem 0.5rem 0.15rem;
+  padding: 0;
+  list-style: none;
+}
+
+.imsg-read-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--spares-muted);
+  font-size: 11px;
+}
+
+.imsg-read-receipt-name {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imsg-read-receipt .imsg-avatar {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 8px;
+}
+
 .imsg-avatar,
 .imsg-avatar-spacer {
   display: inline-flex;

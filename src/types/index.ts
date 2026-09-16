@@ -288,6 +288,14 @@ export type ServiceTicketRecord = {
   lastReadAt: Record<string, string>;
 };
 
+/** Customer read receipt on a Care ticket (staff-only in API responses). */
+export type TicketCustomerReadReceipt = {
+  userId: string;
+  email: string;
+  name?: string;
+  readAt: string;
+};
+
 export type ServiceTicket = {
   id: string;
   number: number;
@@ -299,6 +307,8 @@ export type ServiceTicket = {
   customerEmail: string;
   activities: TicketActivity[];
   unread: boolean;
+  /** Present for staff when at least one customer has read through the latest activity. */
+  customerReadReceipts?: TicketCustomerReadReceipt[];
 };
 
 export type ServiceVisitSnapshot = {

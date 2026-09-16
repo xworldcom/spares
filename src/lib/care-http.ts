@@ -1,9 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
-import { canAccessCareMachine, canManageCare } from "@/lib/care";
+import { canAccessCareMachine, canManageCare, customerReadReceiptsForTicket, toPublicTicket } from "@/lib/care";
 import { error } from "@/lib/http";
-import { tenantIdForUser } from "@/lib/tenant";
-import { getMachine, getOrgContext, getTicket, type StoredMachine } from "@/lib/store";
-import type { PublicUser, ServiceTicketRecord } from "@/types";
+import { tenantIdForUser, userTenantId } from "@/lib/tenant";
+import { getMachine, getOrgContext, getTicket, listCustomers, type StoredMachine } from "@/lib/store";
+import type { PublicUser, ServiceTicket, ServiceTicketRecord, TicketCustomerReadReceipt } from "@/types";
 import type { NextResponse } from "next/server";
 
 export type MachineAccess =
@@ -69,4 +69,26 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
 
 export function actorOf(user: PublicUser) {
   return { id: user.id, email: user.email, role: user.role };
+}
+
+export async function staffCustomerUsers(tenantId: string) {
+  return listCustomers(tenantId);
+}
+
+export async function publicTicketForUser(
+  ticket: ServiceTicketRecord,
+  user: PublicUser,
+  machineName: string,
+): Promise<ServiceTicket> {
+  const tenantId = userTenantId(user);
+  const customerUsers = user.role === "staff" ? await staffCustomerUsers(tenantId) : undefined;
+  return toPublicTicket(ticket, user, machineName, { customerUsers });
+}
+
+export async function ticketReadReceiptsForStaff(
+  ticket: ServiceTicketRecord,
+  tenantId: string,
+): Promise<TicketCustomerReadReceipt[]> {
+  const customerUsers = await staffCustomerUsers(tenantId);
+  return customerReadReceiptsForTicket(ticket, customerUsers);
 }

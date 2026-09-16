@@ -18,8 +18,25 @@ import {
 import { errorMessage } from "@/lib/api/errors";
 import { careHref, ticketRefMatches } from "@/lib/care";
 import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { useTicketReadWatermark } from "@/lib/hooks/useTicketReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
-import type { ChatAttachment, ServiceTicket, TicketStatus } from "@/types";
+import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
+
+function sameReadReceipts(
+  a: TicketCustomerReadReceipt[] | undefined,
+  b: TicketCustomerReadReceipt[] | undefined,
+) {
+  if (!a?.length && !b?.length) {
+    return true;
+  }
+  if (!a || !b || a.length !== b.length) {
+    return false;
+  }
+  return a.every(
+    (row, index) =>
+      row.userId === b[index]?.userId && row.readAt === b[index]?.readAt,
+  );
+}
 
 export function TicketDetail({
   machineId,
@@ -76,7 +93,12 @@ export function TicketDetail({
       return;
     }
     const { activities, changed } = mergeActivitiesById(ticket.activities, next.activities);
-    if (!changed && ticket.status === next.status && ticket.unread === next.unread) {
+    if (
+      !changed &&
+      ticket.status === next.status &&
+      ticket.unread === next.unread &&
+      sameReadReceipts(ticket.customerReadReceipts, next.customerReadReceipts)
+    ) {
       return;
     }
     void refreshCareAlerts();
@@ -85,8 +107,16 @@ export function TicketDetail({
       status: next.status,
       activities,
       unread: next.unread,
+      customerReadReceipts: next.customerReadReceipts,
     });
   }, [busy, ticket, ticketId, refreshCareAlerts]);
+
+  const threadBump =
+    ticket?.activities.at(-1)?.at ?? ticket?.activities.at(-1)?.id ?? ticketId;
+  const watermarkReady = Boolean(
+    ticket && user && user.role === "customer" && ticketRefMatches(ticket, ticketId),
+  );
+  useTicketReadWatermark(watermarkReady, ticketId, threadBump);
 
   useConversationPoll(Boolean(ticket && user), pollTicket);
 
@@ -217,6 +247,7 @@ export function TicketDetail({
           threadId={ticket.id}
           title="Notes"
           layout="sheet"
+          customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
         />
       </ConversationSheet>
     </div>
