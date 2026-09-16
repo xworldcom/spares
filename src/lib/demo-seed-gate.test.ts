@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { isBuiltinDemoSeedEmail, isDemoSeedLoginBlocked } from "./demo-seed-gate.ts";
+import {
+  isBuiltinDemoSeedEmail,
+  isDemoSeedLoginBlocked,
+  isProtectedDemoSeedLogin,
+} from "./demo-seed-gate.ts";
 
 describe("demo seed login gate", () => {
   const envKeys = ["VERCEL", "SPARES_ALLOW_SEED"] as const;
@@ -39,5 +43,18 @@ describe("demo seed login gate", () => {
     delete process.env.VERCEL;
     delete process.env.SPARES_ALLOW_SEED;
     assert.equal(isDemoSeedLoginBlocked("staff@spares.local"), false);
+  });
+
+  it("protects the two documented demo logins only while seeds are on", () => {
+    process.env.VERCEL = "1";
+    process.env.SPARES_ALLOW_SEED = "true";
+    assert.equal(isProtectedDemoSeedLogin("staff@spares.local"), true);
+    assert.equal(isProtectedDemoSeedLogin(" Customer@spares.local "), true);
+    // Extra QA customers and every real login stay deletable.
+    assert.equal(isProtectedDemoSeedLogin("buyer@acme.test"), false);
+    assert.equal(isProtectedDemoSeedLogin("ops@jmp-solutions.test"), false);
+
+    process.env.SPARES_ALLOW_SEED = "false";
+    assert.equal(isProtectedDemoSeedLogin("staff@spares.local"), false);
   });
 });
