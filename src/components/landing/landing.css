@@ -335,9 +335,16 @@
   line-height: 1.6;
 }
 
+.landing-demo-scrub-stack {
+  margin-top: 1.1rem;
+}
+
 .landing-demo-scrub {
   position: relative;
-  margin-top: 1.75rem;
+}
+
+.landing-demo-scrub-stack > .landing-demo-scrub + .landing-demo-scrub {
+  margin-top: 0;
 }
 
 .landing-demo-scrub:not([data-reduce-motion]) {
@@ -360,18 +367,8 @@
   margin-top: 0;
 }
 
-.landing-demo-pair {
-  display: grid;
-  gap: 2rem;
-  margin-top: 1.1rem;
-}
-
-@media (min-width: 960px) {
-  .landing-demo-pair {
-    grid-template-columns: 1fr 1fr;
-    gap: 1.35rem;
-    align-items: start;
-  }
+.landing-demo-scrub-pin .landing-demo-block {
+  max-width: 40rem;
 }
 
 .landing-demo-block-title {
@@ -492,15 +489,23 @@
   overflow: auto;
 }
 
-.landing-demo-thread[data-scrubbed] {
+.landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed] {
   display: flex;
+  height: 22rem;
+  max-height: 22rem;
   flex-direction: column;
   justify-content: flex-end;
   overflow: hidden;
+  overflow-y: hidden;
   overscroll-behavior: none;
   pointer-events: none;
   touch-action: none;
   user-select: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+.landing-demo-stage .quote-progress-track {
+  overflow-x: hidden;
 }
 
 .landing-cell {

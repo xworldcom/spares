@@ -177,8 +177,11 @@ export function demoOtherLabel(perspective: MarketingPerspective) {
   return perspective === "customer" ? "Staff" : DEMO_PLANT;
 }
 
-/** Extra viewport height scrolled while the demo pair stays pinned (reading pace). */
+/** Extra viewport height scrolled while one demo chapter stays pinned (reading pace). */
 export const DEMO_SCRUB_EXTRA_VH = 168;
+
+/** Matches `.landing-demo-scrub-pin { top: max(0.75rem, …) }` for scroll progress. */
+export const DEMO_SCRUB_STICKY_TOP_PX = 12;
 
 export function clampDemoScrollProgress(progress: number) {
   return Math.min(1, Math.max(0, progress));

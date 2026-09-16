@@ -116,6 +116,17 @@ describe("demo scroll scrub", () => {
   });
 });
 
+describe("landing scrub layout", () => {
+  it("pins one demo chapter at a time with a single progress strip each", () => {
+    const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
+    assert.equal((marketing.match(/<LandingDemoScrub/g) ?? []).length, 2);
+    assert.equal(marketing.includes("landing-demo-pair"), false);
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.ok(css.includes(".landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed]"));
+    assert.ok(css.includes("overflow-y: hidden"));
+  });
+});
+
 describe("marketing copy", () => {
   it("keeps Platform and host-admin language out of home marketing", () => {
     for (const file of MARKETING_FILES) {
