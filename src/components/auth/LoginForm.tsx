@@ -8,6 +8,11 @@ import {
   MICROSOFT_ACCESS_DENIED_CODE,
   MICROSOFT_ACCESS_DENIED_MESSAGE,
 } from "@/lib/auth/microsoft-public";
+import {
+  PASSWORD_LOGIN_DISABLED_CODE,
+  PASSWORD_LOGIN_DISABLED_MESSAGE,
+  PASSWORD_LOGIN_UNAVAILABLE_MESSAGE,
+} from "@/lib/auth/password-login";
 import { stripCredentialQueryFromLocation } from "@/lib/auth/safe-url";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -16,10 +21,12 @@ const LOGIN_ACTION = "/api/auth/login";
 export function LoginForm({
   nextPath = "/machines",
   microsoftSignInEnabled = false,
+  passwordLoginEnabled = true,
   authErrorCode = null,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
+  passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
 }) {
   const { login, status, user } = useAuth();
@@ -80,45 +87,59 @@ export function LoginForm({
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (!hydrated || submitting) {
+        if (!passwordLoginEnabled || !hydrated || submitting) {
           return;
         }
         void handleSubmit();
       }}
     >
-      <div>
-        <label htmlFor="email" className="login-label block text-[13px] font-medium">
-          Email
-        </label>
-        <input
-          ref={emailRef}
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          required
-          defaultValue=""
-          className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
-        />
-      </div>
-      <div>
-        <label htmlFor="password" className="login-label block text-[13px] font-medium">
-          Password
-        </label>
-        <input
-          ref={passwordRef}
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          defaultValue=""
-          className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
-        />
-      </div>
+      {!passwordLoginEnabled && !microsoftSignInEnabled ? (
+        <p className="text-sm text-[#f0b4b0]" role="alert">
+          {PASSWORD_LOGIN_UNAVAILABLE_MESSAGE}
+        </p>
+      ) : null}
+      {passwordLoginEnabled ? (
+        <>
+          <div>
+            <label htmlFor="email" className="login-label block text-[13px] font-medium">
+              Email
+            </label>
+            <input
+              ref={emailRef}
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="username"
+              required
+              defaultValue=""
+              className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="login-label block text-[13px] font-medium">
+              Password
+            </label>
+            <input
+              ref={passwordRef}
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              defaultValue=""
+              className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
+            />
+          </div>
+        </>
+      ) : null}
       {authErrorCode === MICROSOFT_ACCESS_DENIED_CODE ? (
         <p className="text-sm text-[#f0b4b0]" role="alert">
           {MICROSOFT_ACCESS_DENIED_MESSAGE}
+        </p>
+      ) : null}
+      {authErrorCode === PASSWORD_LOGIN_DISABLED_CODE ? (
+        <p className="text-sm text-[#f0b4b0]" role="alert">
+          {PASSWORD_LOGIN_DISABLED_MESSAGE}
         </p>
       ) : null}
       {error ? (
@@ -126,19 +147,23 @@ export function LoginForm({
           {error}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={!hydrated || submitting}
-        aria-disabled={!hydrated || submitting}
-        className="login-submit mt-2 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-40"
-      >
-        {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
-      </button>
+      {passwordLoginEnabled ? (
+        <button
+          type="submit"
+          disabled={!hydrated || submitting}
+          aria-disabled={!hydrated || submitting}
+          className="login-submit mt-2 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-40"
+        >
+          {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
+        </button>
+      ) : null}
       {microsoftSignInEnabled ? (
         <>
-          <p className="login-divider text-center text-[12px] uppercase tracking-[0.14em] text-[rgba(236,234,228,0.45)]">
-            or
-          </p>
+          {passwordLoginEnabled ? (
+            <p className="login-divider text-center text-[12px] uppercase tracking-[0.14em] text-[rgba(236,234,228,0.45)]">
+              or
+            </p>
+          ) : null}
           <a
             href={`/api/auth/microsoft?next=${encodeURIComponent(nextPath)}`}
             className="login-microsoft inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold"

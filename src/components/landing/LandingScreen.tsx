@@ -9,10 +9,12 @@ import "./landing.css";
 export function LandingScreen({
   nextPath = "/machines",
   microsoftSignInEnabled = false,
+  passwordLoginEnabled = true,
   authErrorCode = null,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
+  passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
 }) {
   const [entered, setEntered] = useState(false);
@@ -42,6 +44,7 @@ export function LandingScreen({
           <LoginForm
             nextPath={nextPath}
             microsoftSignInEnabled={microsoftSignInEnabled}
+            passwordLoginEnabled={passwordLoginEnabled}
             authErrorCode={authErrorCode}
           />
         </div>

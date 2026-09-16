@@ -263,6 +263,11 @@ type OrgTombstones = {
   siteIds?: string[];
 };
 
+export type PlatformSignInSettings = {
+  /** When false, only Microsoft SSO (if configured) may sign in. Omitted means enabled. */
+  passwordLoginEnabled?: boolean;
+};
+
 type Database = {
   schemaVersion?: number;
   tenants?: Tenant[];
@@ -277,6 +282,7 @@ type Database = {
   tickets?: StoredTicket[];
   machineUsage?: StoredUsage[];
   orgTombstones?: OrgTombstones;
+  platformSettings?: PlatformSignInSettings;
 };
 
 type CareStore = {
@@ -1159,6 +1165,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
         orgTombstones: parsed.orgTombstones,
+        platformSettings: parsed.platformSettings,
       },
       numbersAssigned: rawQuotes.some(
         (quote) => typeof quote.number !== "number" || quote.number < 1,
@@ -1434,6 +1441,24 @@ export function getPlatformDeployment(tenantId: string) {
       }))
       .sort((a, b) => a.email.localeCompare(b.email));
     return { deployment, staff };
+  });
+}
+
+export async function getPlatformSignInSettingsFromCatalog(): Promise<PlatformSignInSettings> {
+  const db = await ensureCatalog();
+  return db.platformSettings ?? {};
+}
+
+export function updatePlatformSignInSettings(patch: { passwordLoginEnabled: boolean }) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const current = db.platformSettings ?? {};
+    const nextSettings: PlatformSignInSettings = {
+      ...current,
+      passwordLoginEnabled: patch.passwordLoginEnabled,
+    };
+    await writeDatabase({ ...db, platformSettings: nextSettings });
+    return { settings: nextSettings };
   });
 }
 
