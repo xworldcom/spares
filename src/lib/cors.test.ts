@@ -3,6 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import {
   corsPreflightResponse,
   isAllowedModelAssetOrigin,
+  isSameOriginRequest,
   r2CorsOrigins,
   rejectDisallowedOrigin,
   shouldUseCrossOriginObjectUrl,
@@ -76,6 +77,23 @@ describe("model asset CORS allowlist", () => {
     const response = rejectDisallowedOrigin(request);
     assert.ok(response);
     assert.equal(response.status, 403);
+  });
+
+  it("treats a missing Origin as same-origin and blocks a foreign Origin", () => {
+    const local = new Request("https://oee360.com/api/auth/login", {
+      method: "POST",
+    });
+    const same = new Request("https://oee360.com/api/auth/login", {
+      method: "POST",
+      headers: { Origin: "https://oee360.com" },
+    });
+    const foreign = new Request("https://oee360.com/api/auth/login", {
+      method: "POST",
+      headers: { Origin: "https://evil.example.test" },
+    });
+    assert.equal(isSameOriginRequest(local), true);
+    assert.equal(isSameOriginRequest(same), true);
+    assert.equal(isSameOriginRequest(foreign), false);
   });
 
   it("answers OPTIONS preflight only for allowed origins", () => {

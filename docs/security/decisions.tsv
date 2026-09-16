@@ -1,0 +1,8 @@
+ts	phase	decision	why	evidence	result
+2026-09-16T12:40:00Z	frame	Treat Care tickets as machine-shared and hunt host isolation instead	Kevin said plant-shared Care is product intent	docs/security/pentest-2026-09-16.md	open
+2026-09-16T12:45:00Z	frame	Prove isolation with a rerunnable store test plus HTTP scripts	A reviewer can rerun the check instead of trusting a one-off crawl	src/lib/isolation-matrix.test.ts	open
+2026-09-16T13:00:00Z	fix	Refuse login rename when latest catalog already holds the email	mergeUsersForWrite can drop the other live row as a stale twin	src/lib/catalog-merge.ts loginRenameConflicts	open
+2026-09-16T13:05:00Z	fix	Compare customer grants to effectiveTenantId	A machine missing tenantId used to skip the host check	src/lib/access.ts canAccessMachine	open
+2026-09-16T13:10:00Z	fix	Reject browser login POST when Origin is another site	SameSite=Lax does not stop login CSRF	src/lib/cors.ts isSameOriginRequest	open
+2026-09-16T13:40:00Z	fix	Stop org migrate from lowering schemaVersion to 2	That made tenant migrate restamp satellite rows onto the host	src/lib/org-migration.ts normalizeOrgTree	isolation-matrix green
+2026-09-16T13:42:00Z	fix	Tenant migrate only fills missing tenantId	Initial stamp was overwriting satellite machines	src/lib/tenant-migration.ts stampMissing	tests green

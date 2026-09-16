@@ -126,7 +126,7 @@ export function migrateOrgTree<T extends OrgSlice>(db: T): { db: T; changed: boo
   return {
     db: normalizeOrgTree({
       ...db,
-      schemaVersion: ORG_SCHEMA_VERSION,
+      schemaVersion: Math.max(db.schemaVersion ?? 1, ORG_SCHEMA_VERSION),
       customers,
       sites,
       users,
@@ -156,7 +156,7 @@ export function normalizeOrgTree<T extends OrgSlice>(db: T): T {
     });
   return {
     ...db,
-    schemaVersion: ORG_SCHEMA_VERSION,
+    schemaVersion: Math.max(db.schemaVersion ?? 1, ORG_SCHEMA_VERSION),
     customers,
     sites,
   };

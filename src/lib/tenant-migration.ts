@@ -39,24 +39,6 @@ export type TenantSlice = {
   machineViews?: TenantView[];
 };
 
-function stamp<T extends { tenantId?: string }>(
-  rows: readonly T[] | undefined,
-  tenantId: string,
-): T[] {
-  if (!rows?.length) {
-    return [];
-  }
-  let changed = false;
-  const next = rows.map((row) => {
-    if (row.tenantId === tenantId) {
-      return row;
-    }
-    changed = true;
-    return { ...row, tenantId };
-  });
-  return changed ? next : [...rows];
-}
-
 /** Legacy rows keep an explicit tenant; never overwrite an existing tenantId. */
 function stampMissing<T extends { tenantId?: string }>(
   rows: readonly T[] | undefined,
@@ -153,9 +135,6 @@ export function migrateTenants<T extends TenantSlice>(
   const stampRows = <R extends { tenantId?: string }>(
     rows: readonly R[] | undefined,
   ): R[] => {
-    if (initial) {
-      return stamp(rows, tenantId);
-    }
     const { rows: next, changed: rowChanged } = stampMissing(rows, tenantId);
     if (rowChanged) {
       changed = true;

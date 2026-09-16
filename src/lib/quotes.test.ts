@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   assignMissingQuoteNumbers,
+  findQuoteInList,
   canEditTracking,
   canUploadPo,
   invoiceVisible,
@@ -513,6 +514,24 @@ describe("quotePricingComplete", () => {
     assert.equal(quotePricingComplete([{ id: "A", qty: 1, sellPrice: 0 }]), false);
     assert.equal(quotePricingComplete([{ id: "A", qty: 1 }]), false);
     assert.equal(quotePricingComplete([]), false);
+  });
+});
+
+describe("findQuoteInList", () => {
+  it("resolves a numeric id only inside the list it is given", () => {
+    const host = {
+      id: "quote-host",
+      number: 1,
+      tenantId: "tenant-oee360-host",
+    } as QuoteRecord;
+    const satellite = {
+      id: "quote-sat",
+      number: 1,
+      tenantId: "tenant-sat",
+    } as QuoteRecord;
+    assert.equal(findQuoteInList([host, satellite], "1")?.id, "quote-host");
+    assert.equal(findQuoteInList([satellite], "1")?.id, "quote-sat");
+    assert.equal(findQuoteInList([satellite], "quote-host"), null);
   });
 });
 

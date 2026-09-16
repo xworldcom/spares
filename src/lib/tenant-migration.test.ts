@@ -23,6 +23,45 @@ describe("tenant migration", () => {
     assert.equal(db.machines?.[0]?.tenantId, DEFAULT_TENANT_ID);
   });
 
+  it("keeps a satellite machine when the catalog is still on schema 2", () => {
+    const { db } = migrateTenants({
+      schemaVersion: 2,
+      tenants: [
+        {
+          id: DEFAULT_TENANT_ID,
+          name: DEFAULT_TENANT_NAME,
+          slug: "oee360-host",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tenant-b",
+          name: "Company B",
+          slug: "company-b",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      users: [],
+      customers: [],
+      sites: [],
+      machines: [
+        {
+          id: "m-sat",
+          name: "Sat line",
+          storedFileName: "s.glb",
+          originalFileName: "s.glb",
+          parts: [],
+          unmatched: [],
+          createdAt: "2020-01-01T00:00:00.000Z",
+          tenantId: "tenant-b",
+        },
+      ],
+      quotes: [],
+      bugReports: [],
+    });
+    assert.equal(db.schemaVersion, 3);
+    assert.equal(db.machines?.[0]?.tenantId, "tenant-b");
+  });
+
   it("backfills missing tenantId on rows without overwriting other tenants", () => {
     const { db, changed } = migrateTenants({
       schemaVersion: 3,
