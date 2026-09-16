@@ -92,10 +92,6 @@ export function liveEmailConflict(
   );
 }
 
-/**
- * Login create/rename must refuse an address another live row already holds,
- * including when mergeUsersForWrite would drop that other row as a "stale twin".
- */
 export function loginRenameConflicts(
   latestUsers: readonly MergeableUser[] | undefined,
   mergedUsers: readonly MergeableUser[],

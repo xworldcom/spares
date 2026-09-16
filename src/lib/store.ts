@@ -71,6 +71,12 @@ import {
 } from "./care.ts";
 import { deleteManualFile, writeManualFile } from "./manual-storage.ts";
 import { isSeedAllowed } from "./production-env.ts";
+import {
+  StoredFileClaimedError,
+  chatKeyClaimed,
+  manualFileNameClaimed,
+  modelFileNameClaimed,
+} from "./stored-file-claim.ts";
 import type {
   MachineManual,
   MachineUsage,
@@ -2425,9 +2431,13 @@ export function deleteMachine(machineId: string, tenantId: string) {
       tickets,
       machineUsage,
     });
-    await deleteStoredFile(machine.storedFileName);
+    if (!modelFileNameClaimed(machines, machine.storedFileName)) {
+      await deleteStoredFile(machine.storedFileName);
+    }
     for (const manual of removedManuals) {
-      await deleteManualFile(manual.storedFileName);
+      if (!manualFileNameClaimed(manuals, manual.storedFileName)) {
+        await deleteManualFile(manual.storedFileName);
+      }
     }
     return { ok: true as const };
   });
@@ -2526,6 +2536,9 @@ export function createMachine(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
+    if (modelFileNameClaimed(db.machines, input.storedFileName)) {
+      throw new StoredFileClaimedError("model");
+    }
     const machine: StoredMachine = {
       id: randomUUID(),
       name: input.name,
@@ -2564,6 +2577,9 @@ export function replaceMachinePack(
     }
     const current = db.machines[index];
     const previousFileName = current.storedFileName;
+    if (modelFileNameClaimed(db.machines, input.storedFileName, machineId)) {
+      return { error: "file-taken" as const };
+    }
     const machines = db.machines.slice();
     machines[index] = {
       ...current,
@@ -2576,7 +2592,10 @@ export function replaceMachinePack(
       revisedAt: new Date().toISOString(),
     };
     await writeDatabase({ ...db, machines });
-    if (previousFileName !== input.storedFileName) {
+    if (
+      previousFileName !== input.storedFileName &&
+      !modelFileNameClaimed(machines, previousFileName)
+    ) {
       await deleteStoredFile(previousFileName);
     }
     return { machine: machines[index] };
@@ -2969,6 +2988,9 @@ export function createManual(
     if (!machine || !belongsToTenant(machine, tenantId)) {
       return { error: "not-found" as const };
     }
+    if (manualFileNameClaimed(careCollections(db).manuals, input.storedFileName)) {
+      return { error: "file-taken" as const };
+    }
     if (input.bytes?.length) {
       await writeManualFile(input.storedFileName, input.bytes);
     }
@@ -2989,6 +3011,16 @@ export function createManual(
     const manuals = [manual, ...careCollections(db).manuals];
     await writeDatabase({ ...db, ...careCollections(db), manuals });
     return { manual };
+  });
+}
+
+export function chatAttachmentKeyClaimed(
+  r2Key: string,
+  except?: { quoteId?: string; ticketId?: string },
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return chatKeyClaimed(db.quotes ?? [], careCollections(db).tickets, r2Key, except);
   });
 }
 

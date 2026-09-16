@@ -26,6 +26,7 @@ import {
   resetStoreMemoryForTests,
   updatePerson,
 } from "./store.ts";
+import { StoredFileClaimedError } from "./stored-file-claim.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 async function isolated() {
@@ -243,5 +244,32 @@ describe("two-host isolation matrix", () => {
     const removed = await deletePerson(hostPerson.user.id, DEFAULT_TENANT_ID);
     assert.ok("ok" in removed);
     assert.equal(await findUserByEmail("host-person@host.test"), null);
+  });
+
+  it("refuses a satellite machine that reuses a host stored file name", async () => {
+    await isolated();
+    const satellite = await createTenant("File Host");
+    assert.ok("tenant" in satellite);
+    if (!("tenant" in satellite)) {
+      return;
+    }
+    await createMachine(DEFAULT_TENANT_ID, {
+      name: "Host fixture",
+      storedFileName: "palletizer.glb",
+      originalFileName: "palletizer.glb",
+      parts: [],
+      unmatched: [],
+    });
+    await assert.rejects(
+      () =>
+        createMachine(satellite.tenant.id, {
+          name: "Stolen fixture",
+          storedFileName: "palletizer.glb",
+          originalFileName: "palletizer.glb",
+          parts: [],
+          unmatched: [],
+        }),
+      (cause: unknown) => cause instanceof StoredFileClaimedError,
+    );
   });
 });

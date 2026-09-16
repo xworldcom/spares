@@ -75,6 +75,9 @@ export async function POST(
     unmatched: joined.unmatched,
   });
   if ("error" in updated) {
+    if (updated.error === "file-taken") {
+      return error("That model file is already attached to another machine.", 409);
+    }
     return error("Machine not found", 404);
   }
   const org = await getOrgContext(auth.tenantId);

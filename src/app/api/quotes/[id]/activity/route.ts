@@ -32,7 +32,9 @@ export async function POST(
     return error(parsed.error, 400);
   }
 
-  const verified = await verifyActivityAttachments(parsed.attachments);
+  const verified = await verifyActivityAttachments(parsed.attachments, {
+    quoteId: access.quote.id,
+  });
   if (!verified.ok) {
     return error(verified.error, verified.status);
   }

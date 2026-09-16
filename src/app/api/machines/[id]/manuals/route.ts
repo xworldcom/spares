@@ -135,6 +135,9 @@ async function createFromStoredObject(
     uploadedByEmail,
   });
   if ("error" in created) {
+    if (created.error === "file-taken") {
+      return error("That file is already attached to another manual.", 409);
+    }
     return error("Machine not found", 404);
   }
   return json(
@@ -198,6 +201,9 @@ async function createFromMultipart(
     bytes,
   });
   if ("error" in created) {
+    if (created.error === "file-taken") {
+      return error("That file is already attached to another manual.", 409);
+    }
     return error("Machine not found", 404);
   }
   return json(
