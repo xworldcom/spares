@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { TicketStatusChip } from "@/components/care/TicketStatusChip";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
 import { QuoteStatusChip } from "@/components/quote/QuoteStatusChip";
@@ -11,8 +11,8 @@ import {
   DEMO_PLANT,
   DEMO_QUOTE_TITLE,
   DEMO_TICKET_TITLE,
-  demoClockElapsed,
   demoDurationMs,
+  demoElapsedFromProgress,
   demoOtherLabel,
   demoScript,
   reduceDemoClock,
@@ -25,6 +25,8 @@ type LandingProductDemoProps = {
   perspective: MarketingPerspective;
   elapsedMs: number;
   reduceMotion: boolean;
+  /** Scroll-scrubbed marketing demo: no inner thread scroll or enter animations. */
+  scrubbed?: boolean;
 };
 
 export function LandingProductDemo({
@@ -32,25 +34,19 @@ export function LandingProductDemo({
   perspective,
   elapsedMs,
   reduceMotion,
+  scrubbed = false,
 }: LandingProductDemoProps) {
   const durationMs = demoDurationMs(variant);
   const script = demoScript(variant);
-  const clockMs = demoClockElapsed(reduceMotion, elapsedMs, durationMs);
+  const clockMs = scrubbed
+    ? elapsedMs
+    : demoElapsedFromProgress(reduceMotion, 1, durationMs);
   const state = useMemo(
     () => reduceDemoClock(script, clockMs, perspective),
     [script, clockMs, perspective],
   );
   const otherLabel = demoOtherLabel(perspective);
-  const enteringId = reduceMotion ? null : state.rows.at(-1)?.id;
-  const threadRef = useRef<HTMLOListElement>(null);
-
-  useEffect(() => {
-    const thread = threadRef.current;
-    if (!thread) {
-      return;
-    }
-    thread.scrollTop = thread.scrollHeight;
-  }, [state.rows.length, perspective]);
+  const enteringId = scrubbed || reduceMotion ? null : state.rows.at(-1)?.id;
 
   const isQuote = variant === "quote";
 
@@ -79,7 +75,11 @@ export function LandingProductDemo({
         <TicketStatusStrip status={state.ticketStatus} editable={false} />
       )}
 
-      <ol ref={threadRef} className="imsg-thread landing-demo-thread" aria-live="polite">
+      <ol
+        className="imsg-thread landing-demo-thread"
+        aria-live={scrubbed ? "off" : "polite"}
+        data-scrubbed={scrubbed || undefined}
+      >
         {state.rows.map((row) => {
           if (row.kind === "system") {
             return (
