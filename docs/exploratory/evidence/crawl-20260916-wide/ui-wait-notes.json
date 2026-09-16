@@ -1,0 +1,26 @@
+[
+  {
+    "href": "/quotes/2",
+    "text": "OEE\n360\nMachines\nCare\n3\nQuotes\n\nPRIVATE\n\nSign out\n← Quotes\nQuote 2 · Hardware fixture\n\nSep 16, 2026 · Crawl A isolation quote. Need-by invented. Freight note $75.\n\n✓\nRequested\n✓\nIn review\n✓\nPricing\n✓\nQuoted\n✓\nPO received\n✓\nConfirmed\n✓\nOrdered\n✓\nShipped\n✓\nDelivered\nClosed\n\nClosed.\n\nLines\n\nShielded ball bearing\n\nQty\n1\nSell\n$12.50\nLead time\n—\nLine\n$12.50\n\nMiniature DC motor\n\nQty\n1\nSell\n$340.00\nLead time\n—\nLine\n$340.00\n\nTotal $352.50\n\nPurchase order\n\nCRAWL-16-524\n\nPO number\nPDF\nSave PO number\nInvoic",
+    "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u18-quote-2-wait.png"
+  },
+  {
+    "desktopCollapse": 1
+  },
+  {
+    "href": "/care/tickets/uuid",
+    "text": "OEE\n360\nMachines\nCare\n4\nQuotes\n\nPRIVATE\n\nSign out\n‹\nMachines\n\nCARE\n\nService hub\n\nPick a machine, browse manuals, and work tickets across your plant.\n\nOverview\nTickets\nTickets\n\nAcross every machine you can access.\n\nNew ticket\n\nTicket 5 · Crawl A palletizer isolation ticket\n\nSep 16, 2026 · Palletizer\n\nIn progress\n\nTicket 4 · PR96 Care attachment smoke\n\nSep 14, 2026 · Hardware fixture\n\nWaiting on customer\n\nTicket 3 · QA soft-launch ticket\n\nSep 12, 2026 · Palletizer\n\nOpen\n\nTicket 2 · Testing\n\nSep 11",
+    "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u19-care-uuid-wait.png"
+  },
+  {
+    "mobileMore": 0
+  },
+  {
+    "personLinkCount": 0
+  },
+  {
+    "personHref": null,
+    "text": "OEE\n360\nMachines\n▾\nCare\nDirectory\nQuotes\nBug reports\n\nPRIVATE\n\nSign out\nDirectory\n\nCustomer companies, staff logins, and customer people for this install. Open any row to view or edit that record.\n\nAll\nStaff\nCustomers\nPeople\nSearch directory",
+    "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w17-directory-no-links.png"
+  }
+]

@@ -1,0 +1,404 @@
+{
+  "generatedAt": "2026-09-16T05:50:03.021Z",
+  "base": "https://oee360.com",
+  "personHref": "/staff/directory",
+  "findingCounts": {
+    "major": 1
+  },
+  "findings": [
+    {
+      "severity": "major",
+      "id": "desktop-collapse-missing",
+      "title": "Desktop overlay sheet has no Collapse conversation control",
+      "steps": [
+        "Customer /quotes/2 at 1440px"
+      ],
+      "expected": "× or Collapse conversation",
+      "actual": "no aria-label Collapse conversation"
+    }
+  ],
+  "coverage": [
+    {
+      "level": "anon",
+      "feature": "bad login",
+      "result": "ok",
+      "note": "OEE 360 PRIVATE PRIVATE OEE360 Overall equipment effectiveness, seen all the way around — the machine, the spare, the quote, the care. Email Password Invalid email or password Sign in OR Sign in with Microsoft"
+    },
+    {
+      "level": "customer",
+      "feature": "/machines",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out Machines Open a pack to inspect the model and request a quote. Loading machines…"
+    },
+    {
+      "level": "customer",
+      "feature": "/machines/hardware-fixture",
+      "result": "ok",
+      "note": "‹ Machines Machines Care Quotes PRIVATE Sign out Loading machine…"
+    },
+    {
+      "level": "customer",
+      "feature": "/care",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets L"
+    },
+    {
+      "level": "customer",
+      "feature": "/care/tickets",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets T"
+    },
+    {
+      "level": "customer",
+      "feature": "/care/tickets/5",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets T"
+    },
+    {
+      "level": "customer",
+      "feature": "/care/tickets/ac03a328-b1a4-42ee-860b-a92112f9ab35",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets T"
+    },
+    {
+      "level": "customer",
+      "feature": "/machines/palletizer/care/tickets/5",
+      "result": "ok",
+      "note": "OEE 360 Machines Care 4 Quotes PRIVATE Sign out ‹ 3D model MACHINE CARE Palletizer Manuals, service tickets, and plant notes for this machine. Overview Manuals "
+    },
+    {
+      "level": "customer",
+      "feature": "/quotes",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out Quotes Requested from a machine. Prices and PO upload appear after quoted. Loading quotes…"
+    },
+    {
+      "level": "customer",
+      "feature": "/quotes/2",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out Loading quote…"
+    },
+    {
+      "level": "customer",
+      "feature": "/quotes/3",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out Loading quote…"
+    },
+    {
+      "level": "customer",
+      "feature": "/machines/palletizer/care/service",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ 3D model MACHINE CARE Machine Manuals, service tickets, and plant notes for this machine. Overview Manuals Ticke"
+    },
+    {
+      "level": "customer",
+      "feature": "/machines/palletizer/care/manuals",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ 3D model MACHINE CARE Machine Manuals, service tickets, and plant notes for this machine. Overview Manuals Ticke"
+    },
+    {
+      "level": "customer",
+      "feature": "care numeric URL sheet",
+      "result": "ok",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every "
+    },
+    {
+      "level": "customer",
+      "feature": "care UUID URL sheet",
+      "result": "fail",
+      "note": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every "
+    },
+    {
+      "level": "customer",
+      "feature": "desktop collapse control",
+      "result": "fail",
+      "note": "count=0"
+    },
+    {
+      "level": "customer",
+      "feature": "mobile More",
+      "result": "fail",
+      "note": "0"
+    },
+    {
+      "level": "customer",
+      "feature": "mobile collapse control",
+      "result": "ok",
+      "note": "1"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/directory",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/directory",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/team",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open a"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/people",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open a"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/customers",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open a"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/accounts",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open a"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/tickets",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your"
+    },
+    {
+      "level": "staff",
+      "feature": "/machines/palletizer/care/service",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ‹ 3D model MACHINE CARE Palletizer Manuals, service tickets, and plant notes for this ma"
+    },
+    {
+      "level": "staff",
+      "feature": "/machines/new",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Upload pack Add a 3D model and parts list for a machine. Using SolidWorks? Start with th"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/tenants",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Host companies Platform owner access is required to manage host tenants."
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/platform",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Hosts Platform owner access is required to manage hosts."
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/bugs",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care Directory Quotes Bug reports PRIVATE Sign out Bug reports Preview reports from anyone, including the login screen. Screenshots are captu"
+    },
+    {
+      "level": "staff",
+      "feature": "/staff/quotes/2",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ← Quotes Quote 2 · Hardware fixture Sep 16, 2026 · crawl-20260916-0524@spares.test · Cra"
+    },
+    {
+      "level": "staff",
+      "feature": "/care/tickets/5",
+      "result": "ok",
+      "note": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your"
+    },
+    {
+      "level": "staff",
+      "feature": "mobile More hides Platform",
+      "result": "ok",
+      "note": "OEE 360 Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search direc"
+    }
+  ],
+  "notes": [
+    {
+      "role": "customer",
+      "href": "/machines",
+      "url": "https://oee360.com/machines",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out Machines Open a pack to inspect the model and request a quote. Loading machines…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u01-machines.png"
+    },
+    {
+      "role": "customer",
+      "href": "/machines/hardware-fixture",
+      "url": "https://oee360.com/machines/hardware-fixture",
+      "text": "‹ Machines Machines Care Quotes PRIVATE Sign out Loading machine…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u02-machine-hw.png"
+    },
+    {
+      "role": "customer",
+      "href": "/care",
+      "url": "https://oee360.com/care",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Loading Care…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u03-care-hub.png"
+    },
+    {
+      "role": "customer",
+      "href": "/care/tickets",
+      "url": "https://oee360.com/care/tickets",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every machine you can access. New ticket Loading tickets… Select a ticket Pick a ticket from the list to read notes and update status.",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u04-care-tickets.png"
+    },
+    {
+      "role": "customer",
+      "href": "/care/tickets/5",
+      "url": "https://oee360.com/care/tickets/5",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every machine you can access. New ticket Ticket 5 · Crawl A palletizer isolation ticket Sep 16, 2026 · Palletizer In progress Ticket 4 · PR96 Care attachment smoke Sep 14, 2026 · Hardware fixture Waiting on customer Ticket 3 ·",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u05-care-ticket-number.png"
+    },
+    {
+      "role": "customer",
+      "href": "/care/tickets/ac03a328-b1a4-42ee-860b-a92112f9ab35",
+      "url": "https://oee360.com/care/tickets/ac03a328-b1a4-42ee-860b-a92112f9ab35",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every machine you can access. New ticket Loading tickets… Loading ticket…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u06-care-ticket-uuid.png"
+    },
+    {
+      "role": "customer",
+      "href": "/machines/palletizer/care/tickets/5",
+      "url": "https://oee360.com/machines/palletizer/care/tickets/5",
+      "text": "OEE 360 Machines Care 4 Quotes PRIVATE Sign out ‹ 3D model MACHINE CARE Palletizer Manuals, service tickets, and plant notes for this machine. Overview Manuals Tickets Tickets Service history for this machine. New ticket Ticket 5 · Crawl A palletizer isolation ticket Sep 16, 2026 In progress Ticket 3 · QA soft-launch ticket Sep 12, 2026 Open Ticket 2 · Testing Sep 11, 2026 Open Ticket 1 · Care MVP",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u07-machine-ticket-number.png"
+    },
+    {
+      "role": "customer",
+      "href": "/quotes",
+      "url": "https://oee360.com/quotes",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out Quotes Requested from a machine. Prices and PO upload appear after quoted. Loading quotes…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u08-quotes.png"
+    },
+    {
+      "role": "customer",
+      "href": "/quotes/2",
+      "url": "https://oee360.com/quotes/2",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out Loading quote…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u09-quote-2.png"
+    },
+    {
+      "role": "customer",
+      "href": "/quotes/3",
+      "url": "https://oee360.com/quotes/3",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out Loading quote…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u10-quote-3.png"
+    },
+    {
+      "role": "customer",
+      "href": "/machines/palletizer/care/service",
+      "url": "https://oee360.com/machines/palletizer/care/service",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ 3D model MACHINE CARE Machine Manuals, service tickets, and plant notes for this machine. Overview Manuals Tickets Wrong role This page is for staff only.",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u11-care-service-cust.png"
+    },
+    {
+      "role": "customer",
+      "href": "/machines/palletizer/care/manuals",
+      "url": "https://oee360.com/machines/palletizer/care/manuals",
+      "text": "OEE 360 Machines Care Quotes PRIVATE Sign out ‹ 3D model MACHINE CARE Machine Manuals, service tickets, and plant notes for this machine. Overview Manuals Tickets Loading manuals…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/u12-care-manuals.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/directory",
+      "url": "https://oee360.com/staff/directory",
+      "text": "OEE 360 Machines ▾ Care Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search directory Loading directory…",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w01-directory.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/directory",
+      "url": "https://oee360.com/staff/directory",
+      "text": "OEE 360 Machines ▾ Care Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search directory Name Type Acme Customer Buyer buyer@acme.test Person Cargill Customer Corp corp@cargill.test Person Crawl Hunt A crawl-20260916-0524@spares.test Person Crawl Hunt",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w02-directory-person.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/team",
+      "url": "https://oee360.com/staff/directory?type=staff",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search directory Staff logins Real email and password — not the demo staff@spares.local account. New staff crawl-20260916-staff@spares.test kevin@huzevka.com pr139-smoke-2026091",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w03-team.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/people",
+      "url": "https://oee360.com/staff/directory?type=person",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search directory New Person Search people 7 people PERSON CONTACT ACCESS BU Buyer NAME EMAIL Save details Acme · Dayton Access for buyer@acme.test CUSTOMER SITES Dayton MACHINES",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w04-people.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/customers",
+      "url": "https://oee360.com/staff/directory?type=person",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search directory New Person Search people 7 people PERSON CONTACT ACCESS BU Buyer NAME EMAIL Save details Acme · Dayton Access for buyer@acme.test CUSTOMER SITES Dayton MACHINES",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w05-customers.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/accounts",
+      "url": "https://oee360.com/staff/directory?type=customer",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Directory Customer companies, staff logins, and customer people for this install. Open any row to view or edit that record. All Staff Customers People Search directory Search customers New customer CUSTOMER SITES ACTIONS 1 site Manage sites Save Delete 2 sites Manage sites Save Delete 1 site Manage sites Save Delete 3 customer",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w06-accounts.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/tickets",
+      "url": "https://oee360.com/care/tickets",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every machine you can access. New ticket Ticket 5 · Crawl A palletizer isolation ticket Sep 16, 2026 · Palletizer In progress Ticket 4 · PR96 Care attachment smoke Sep 14, 2026 · Hardware fixture Wait",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w07-tickets.png"
+    },
+    {
+      "role": "staff",
+      "href": "/machines/palletizer/care/service",
+      "url": "https://oee360.com/machines/palletizer/care/service",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ‹ 3D model MACHINE CARE Palletizer Manuals, service tickets, and plant notes for this machine. Overview Manuals Tickets Service Service Log a service visit with the date and what the tech did on site. No live meters required. Customers do not see this tab. Last service Notes Optional meters (if known) Save visit Edit history U",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w08-service.png"
+    },
+    {
+      "role": "staff",
+      "href": "/machines/new",
+      "url": "https://oee360.com/machines/new",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Upload pack Add a 3D model and parts list for a machine. Using SolidWorks? Start with the macro below. 1 · WHERE IT LIVES Machine name CUSTOMER SITE FROM SOLIDWORKS Publish to Spares macro Download the macro and add it once in SolidWorks (Tools → Macro). Open your saved assembly and run it — you get a 3D model and a parts list",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w09-new-machine.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/tenants",
+      "url": "https://oee360.com/staff/tenants",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Host companies Platform owner access is required to manage host tenants.",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w10-tenants.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/platform",
+      "url": "https://oee360.com/staff/platform",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out Hosts Platform owner access is required to manage hosts.",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w11-platform.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/bugs",
+      "url": "https://oee360.com/staff/bugs",
+      "text": "OEE 360 Machines ▾ Care Directory Quotes Bug reports PRIVATE Sign out Bug reports Preview reports from anyone, including the login screen. Screenshots are captured without the Report bug sheet. The “add new host ..” is square and clunky. 9/16/2026, 4:50:47 AM · kevin@huzevka.com (staff) · /staff/tenants Stored in-app only Client log",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w12-bugs.png"
+    },
+    {
+      "role": "staff",
+      "href": "/staff/quotes/2",
+      "url": "https://oee360.com/staff/quotes/2",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ← Quotes Quote 2 · Hardware fixture Sep 16, 2026 · crawl-20260916-0524@spares.test · Crawl A isolation quote. Need-by invented. Freight note $75. ✓ Requested ✓ In review ✓ Pricing ✓ Quoted ✓ PO received ✓ Confirmed ✓ Ordered ✓ Shipped ✓ Delivered Closed Closed. Cancel quote Lines Save pricing Shielded ball bearing 5972K325 Qty",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w13-quote-2.png"
+    },
+    {
+      "role": "staff",
+      "href": "/care/tickets/5",
+      "url": "https://oee360.com/care/tickets/5",
+      "text": "OEE 360 Machines ▾ Care 5 Directory Quotes Bug reports PRIVATE Sign out ‹ Machines CARE Service hub Pick a machine, browse manuals, and work tickets across your plant. Overview Tickets Tickets Across every machine you can access. New ticket Ticket 5 · Crawl A palletizer isolation ticket Sep 16, 2026 · Palletizer In progress Ticket 4 · PR96 Care attachment smoke Sep 14, 2026 · Hardware fixture Wait",
+      "file": "/workspace/docs/exploratory/evidence/crawl-20260916-wide/w14-care-5.png"
+    }
+  ]
+}

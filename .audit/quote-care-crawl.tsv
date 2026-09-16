@@ -4,3 +4,7 @@ ts	phase	decision	why	evidence	result
 2026-09-16T05:38:14Z	lifecycle	walked quote 2 Requested through Closed with fake prices and PO CRAWL-16-524	need a real two-sided thread Tess can open	docs/exploratory/evidence/crawl-20260916/conversation-report.json	closed
 2026-09-16T05:38:14Z	platform	skipped second host create	host staff is 403 on POST /api/platform/tenants and Kevin password was out of bounds	isolation-report platform coverage	blocked
 2026-09-16T05:38:14Z	fix-scope	left Care isolation unfixed	may be intentional plant-shared tickets. Tess routes CODE RED	docs/exploratory/quote-care-crawl-2026-09-16.md	open
+2026-09-16T05:48:02Z	wide-api	proved Care leaks on overview, machine list, and Kevin JPEG download	same machine-scope hole as CR1-5, new endpoints	docs/exploratory/evidence/crawl-20260916-wide/wide-report.json	9 live CODE RED
+2026-09-16T05:50:03Z	wide-ui	numeric /care/tickets/5 shows empty sheet, UUID shows the thread	TicketDetail compared UUID only	docs/exploratory/evidence/crawl-20260916-wide/u05-care-ticket-number.png	M8 live
+2026-09-16T05:52:00Z	one-liner	kept invoiceNumber and tenantId in normalizeStoredQuote, matched numeric ticket URLs	obvious field keep and same pattern as QuoteWorkspace	src/lib/quotes.ts src/components/care/TicketDetail.tsx	tests green, not on Production
+2026-09-16T05:52:00Z	platform	second host still blocked	host staff 403 on platform create	wide-report platform coverage	blocked
