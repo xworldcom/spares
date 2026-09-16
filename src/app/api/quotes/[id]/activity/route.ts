@@ -4,6 +4,7 @@ import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
 import { MAX_ACTIVITY_TEXT, toPublicQuote } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
+import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
 import { appendQuoteActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -49,8 +50,28 @@ export async function POST(
     return error("Quote not found", 404);
   }
 
+  const machineName = await machineNameFor(next);
+  void notifyMachineChatUpdate({
+    tenantId,
+    sender: {
+      id: access.user.id,
+      email: access.user.email,
+      name: access.user.name,
+    },
+    text: parsed.text,
+    attachmentCount: parsed.attachments?.length ?? 0,
+    context: {
+      kind: "quote",
+      quoteNumber: next.number,
+      machineId: next.machineId,
+      machineName,
+    },
+  }).catch((cause) => {
+    console.error("quote chat email notify failed", cause);
+  });
+
   return json(
-    { quote: toPublicQuote(next, access.user, await machineNameFor(next)) },
+    { quote: toPublicQuote(next, access.user, machineName) },
     201,
   );
 }
