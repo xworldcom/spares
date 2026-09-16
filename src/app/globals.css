@@ -2703,6 +2703,27 @@ html.spares-embed .spares-app-stage {
   font-weight: 600;
 }
 
+.care-visit-fields-optional {
+  opacity: 0.85;
+}
+
+.care-optional-meters {
+  margin-top: 0.25rem;
+}
+
+.care-optional-meters summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.care-optional-meters summary::-webkit-details-marker {
+  display: none;
+}
+
+.care-optional-meters-fields {
+  margin-top: 0.75rem;
+}
+
 @media (max-width: 640px) {
   .care-form-grid {
     grid-template-columns: 1fr;

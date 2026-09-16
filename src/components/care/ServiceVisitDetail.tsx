@@ -30,6 +30,9 @@ export function ServiceVisitDetail({
 }) {
   const snapshot = entry.snapshot;
   const backHref = careHref(machineId, "service");
+  const showMeters =
+    snapshot &&
+    (snapshot.hours != null || snapshot.cycles != null);
 
   return (
     <section className="care-card care-stack">
@@ -43,36 +46,42 @@ export function ServiceVisitDetail({
         </p>
       </header>
 
-      <p className="care-row-title">{entry.summary}</p>
-
       {snapshot ? (
-        <dl className="care-visit-fields">
-          <div>
-            <dt>Hours</dt>
-            <dd>{snapshot.hours ?? "—"}</dd>
-          </div>
-          <div>
-            <dt>Cycles</dt>
-            <dd>{snapshot.cycles ?? "—"}</dd>
-          </div>
-          <div>
-            <dt>Last service</dt>
-            <dd>{formatDay(snapshot.lastServiceAt)}</dd>
-          </div>
-        </dl>
+        <div className="care-field">
+          <span className="text-sm font-semibold">Last service</span>
+          <p className="mt-1 text-[17px] font-semibold tracking-tight">
+            {formatDay(snapshot.lastServiceAt)}
+          </p>
+        </div>
       ) : (
         <p className="spares-muted text-sm leading-relaxed">
-          Field-level notes for this visit were not recorded. Only the summary
-          above was saved.
+          Visit details were not stored for this entry. See the summary below.
         </p>
       )}
 
       <div className="care-field">
         <span className="text-sm font-semibold">Notes</span>
         <p className="spares-muted mt-2 whitespace-pre-wrap text-sm leading-relaxed">
-          {snapshot?.notes?.trim() ? snapshot.notes : "No notes for this visit."}
+          {snapshot?.notes?.trim()
+            ? snapshot.notes
+            : "No notes for this visit."}
         </p>
       </div>
+
+      {showMeters ? (
+        <dl className="care-visit-fields care-visit-fields-optional">
+          <div>
+            <dt>Hours (optional)</dt>
+            <dd>{snapshot?.hours ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Cycles (optional)</dt>
+            <dd>{snapshot?.cycles ?? "—"}</dd>
+          </div>
+        </dl>
+      ) : null}
+
+      <p className="spares-muted text-xs leading-relaxed">{entry.summary}</p>
     </section>
   );
 }

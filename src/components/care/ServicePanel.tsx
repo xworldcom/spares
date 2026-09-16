@@ -80,14 +80,24 @@ export function ServicePanel({
     setError(null);
     setNotice(null);
     try {
-      const next = await updateMachineUsage(machineId, {
-        hours: hours.trim() === "" ? null : Number(hours),
-        cycles: cycles.trim() === "" ? null : Number(cycles),
+      const patch: {
+        hours?: number | null;
+        cycles?: number | null;
+        lastServiceAt?: string | null;
+        notes?: string | null;
+      } = {
         lastServiceAt: lastServiceAt.trim() || null,
         notes: notes.trim() || null,
-      });
+      };
+      if (hours.trim() !== "") {
+        patch.hours = Number(hours);
+      }
+      if (cycles.trim() !== "") {
+        patch.cycles = Number(cycles);
+      }
+      const next = await updateMachineUsage(machineId, patch);
       apply(next);
-      setNotice("Service saved.");
+      setNotice("Visit saved.");
     } catch (cause) {
       setError(errorMessage(cause, "Could not save service."));
     } finally {
@@ -143,29 +153,9 @@ export function ServicePanel({
       >
         <h2>Service</h2>
         <p className="spares-muted text-sm leading-relaxed">
-          Log a service visit on this machine — hours, cycles, last service date,
-          and notes. Customers do not see this tab.
+          Log a service visit with the date and what the tech did on site. No live
+          meters required. Customers do not see this tab.
         </p>
-        <div className="care-form-grid">
-          <label className="care-field">
-            <span>Hours</span>
-            <input
-              inputMode="decimal"
-              value={hours}
-              onChange={(event) => setHours(event.target.value)}
-              className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-            />
-          </label>
-          <label className="care-field">
-            <span>Cycles</span>
-            <input
-              inputMode="numeric"
-              value={cycles}
-              onChange={(event) => setCycles(event.target.value)}
-              className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-            />
-          </label>
-        </div>
         <label className="care-field">
           <span>Last service</span>
           <input
@@ -180,11 +170,38 @@ export function ServicePanel({
           <textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            rows={4}
+            rows={5}
             className="spares-field w-full rounded-2xl border-0 px-3 py-2 text-[16px] outline-none"
-            placeholder="What the crew should remember next visit"
+            placeholder="Preventative maintenance performed, parts replaced, follow-ups…"
           />
         </label>
+        <details className="care-optional-meters">
+          <summary className="spares-muted text-sm font-semibold">
+            Optional meters (if known)
+          </summary>
+          <div className="care-form-grid care-optional-meters-fields">
+            <label className="care-field">
+              <span>Hours</span>
+              <input
+                inputMode="decimal"
+                value={hours}
+                onChange={(event) => setHours(event.target.value)}
+                placeholder="Not required"
+                className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+              />
+            </label>
+            <label className="care-field">
+              <span>Cycles</span>
+              <input
+                inputMode="numeric"
+                value={cycles}
+                onChange={(event) => setCycles(event.target.value)}
+                placeholder="Not required"
+                className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+              />
+            </label>
+          </div>
+        </details>
         {error ? (
           <p className="text-sm text-[#f0c4c0]" role="alert">
             {error}
@@ -200,7 +217,7 @@ export function ServicePanel({
           disabled={busy}
           className="btn-primary inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold disabled:opacity-60"
         >
-          {busy ? "Saving…" : "Save service"}
+          {busy ? "Saving…" : "Save visit"}
         </button>
       </form>
 
