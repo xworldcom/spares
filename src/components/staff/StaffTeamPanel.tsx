@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
@@ -248,7 +249,16 @@ export function StaffTeamPanel({
           {staff.map((row) => (
             <li key={row.id} className="catalog-person-card">
               <div className="min-w-0">
-                <p className="catalog-person-name">{row.email}</p>
+                {user?.platformOwner ? (
+                  <Link
+                    href={`/staff/directory/${encodeURIComponent(row.id)}`}
+                    className="catalog-person-name hover:underline"
+                  >
+                    {row.email}
+                  </Link>
+                ) : (
+                  <p className="catalog-person-name">{row.email}</p>
+                )}
                 {user?.platformOwner ? (
                   <p className="catalog-person-email text-muted text-sm font-mono">
                     {row.tenantId ?? "missing tenant"}

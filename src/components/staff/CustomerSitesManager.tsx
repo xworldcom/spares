@@ -1,24 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
   createSite,
+  deleteCustomerAccount,
   deleteSite,
   getCustomerAccountDetail,
   updateCustomerAccount,
   updateSite,
 } from "@/lib/api/auth";
+import {
+  deletePlatformDirectoryCustomer,
+  deletePlatformDirectorySite,
+  getPlatformDirectoryCustomer,
+  updatePlatformDirectoryCustomer,
+} from "@/lib/api/platform-directory";
 import { errorMessage } from "@/lib/api/errors";
 import type { CustomerAccount, Site } from "@/lib/api/types";
 
 type SiteRow = Site & { machineCount: number };
 
 export function CustomerSitesManager({ customerId }: { customerId: string }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const platformScope = Boolean(user?.platformOwner);
   const [account, setAccount] = useState<CustomerAccount | null>(null);
+  const [hostName, setHostName] = useState<string | null>(null);
+  const [hostId, setHostId] = useState<string | null>(null);
   const [sites, setSites] = useState<SiteRow[]>([]);
   const [accountName, setAccountName] = useState("");
   const [newSiteName, setNewSiteName] = useState("");
@@ -30,8 +44,9 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    getCustomerAccountDetail(customerId)
-      .then((data) => {
+    async function loadDetail() {
+      if (platformScope) {
+        const data = await getPlatformDirectoryCustomer(customerId);
         if (cancelled) {
           return;
         }
@@ -39,22 +54,48 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
         setAccountName(data.account.name);
         setSites(data.sites);
         setEditNames(Object.fromEntries(data.sites.map((site) => [site.id, site.name])));
+        setHostName(data.hostName);
+        setHostId(data.hostId);
         setError(null);
         setLoading(false);
-      })
-      .catch((cause: unknown) => {
-        if (cancelled) {
-          return;
-        }
-        setError(errorMessage(cause, "Could not load this customer."));
-        setLoading(false);
-      });
+        return;
+      }
+      const data = await getCustomerAccountDetail(customerId);
+      if (cancelled) {
+        return;
+      }
+      setAccount(data.account);
+      setAccountName(data.account.name);
+      setSites(data.sites);
+      setEditNames(Object.fromEntries(data.sites.map((site) => [site.id, site.name])));
+      setHostName(null);
+      setHostId(null);
+      setError(null);
+      setLoading(false);
+    }
+    void loadDetail().catch((cause: unknown) => {
+      if (cancelled) {
+        return;
+      }
+      setError(errorMessage(cause, "Could not load this customer."));
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, [customerId, retryKey]);
+  }, [customerId, retryKey, platformScope]);
 
   async function refresh() {
+    if (platformScope) {
+      const data = await getPlatformDirectoryCustomer(customerId);
+      setAccount(data.account);
+      setAccountName(data.account.name);
+      setSites(data.sites);
+      setHostName(data.hostName);
+      setHostId(data.hostId);
+      setEditNames(Object.fromEntries(data.sites.map((site) => [site.id, site.name])));
+      return;
+    }
     const data = await getCustomerAccountDetail(customerId);
     setAccount(data.account);
     setAccountName(data.account.name);
@@ -69,7 +110,9 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      const next = await updateCustomerAccount(account.id, accountName.trim());
+      const next = platformScope
+        ? await updatePlatformDirectoryCustomer(account.id, accountName.trim())
+        : await updateCustomerAccount(account.id, accountName.trim());
       setAccount(next);
     } catch (cause) {
       setError(errorMessage(cause, "Could not save customer name."));
@@ -125,11 +168,46 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      await deleteSite(siteId);
+      if (platformScope) {
+        await deletePlatformDirectorySite(siteId);
+      } else {
+        await deleteSite(siteId);
+      }
       await refresh();
     } catch (cause) {
       setError(errorMessage(cause, "Could not delete that site."));
     } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function removeCustomer() {
+    if (!account) {
+      return;
+    }
+    const siteHint =
+      sites.length > 0
+        ? `\n\nThis customer still has ${sites.length} site${sites.length === 1 ? "" : "s"}. Delete those sites first.`
+        : "";
+    if (
+      !window.confirm(
+        `Delete customer “${account.name}”?${siteHint || " This cannot be undone on Preview."}`,
+      )
+    ) {
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (platformScope) {
+        await deletePlatformDirectoryCustomer(account.id);
+      } else {
+        await deleteCustomerAccount(account.id);
+      }
+      router.push("/staff/directory?type=customer");
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not delete that customer."));
       setSubmitting(false);
     }
   }
@@ -161,7 +239,19 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
             <span>{account?.name}</span>
           </p>
           <h1>{account?.name}</h1>
-          <p>Sites under this customer. Machines belong to exactly one site.</p>
+          <p>
+            Sites under this customer. Machines belong to exactly one site.
+            {platformScope && hostName && hostId ? (
+              <>
+                {" "}
+                Host{" "}
+                <Link href={`/staff/platform/${encodeURIComponent(hostId)}`} className="hover:underline">
+                  {hostName}
+                </Link>
+                .
+              </>
+            ) : null}
+          </p>
         </div>
       </div>
       <div className="catalog-create">
@@ -267,7 +357,7 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
                         disabled={submitting}
                         onClick={() => void removeSite(site.id, site.name, site.machineCount)}
                       >
-                        Delete
+                        Delete site
                       </button>
                     </div>
                   </td>
@@ -277,6 +367,22 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
           </table>
         </div>
       )}
+
+      <section className="border-t border-white/10 pt-6 mt-8">
+        <h2 className="text-lg font-semibold text-[#f0c4c0]">Delete customer</h2>
+        <p className="text-muted mt-1 mb-4 text-sm">
+          Removes this customer company from the directory. Delete every site first. People and
+          machines are unchanged until you clean them up separately.
+        </p>
+        <button
+          type="button"
+          className="btn-soft text-[#f0c4c0]"
+          disabled={submitting}
+          onClick={() => void removeCustomer()}
+        >
+          Delete customer
+        </button>
+      </section>
     </section>
   );
 }

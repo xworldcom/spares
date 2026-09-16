@@ -12,11 +12,16 @@ import { createMemoryPersistence, setPersistenceForTests } from "./persistence.t
 import {
   createCustomer,
   createCustomerAccount,
+  createSite,
   createTenantWithOptionalStaff,
+  getPlatformDirectoryCustomer,
   getPlatformDirectoryUser,
   listPlatformDirectory,
   mutatePlatformDirectoryUser,
+  removePlatformCustomerAccount,
   removePlatformDirectoryUser,
+  removePlatformSite,
+  removePlatformTenant,
   resetStoreMemoryForTests,
   SEED_STAFF,
   updateTenantPlatformMeta,
@@ -373,6 +378,63 @@ describe("platform directory", () => {
       entries.some((row) => row.type === "staff" && row.email === SEED_STAFF.email),
       "soft-deleted demo staff should reappear after catalog heal",
     );
+  });
+
+  it("platform directory deletes customers and sites across hosts", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("Delete Co", {
+      email: "delete-staff@test",
+      passwordHash: await hashPassword("password-1"),
+    });
+    assert.ok("tenant" in created);
+    const tenantId = created.tenant.id;
+
+    const account = await createCustomerAccount("Delete Customer", tenantId);
+    assert.ok("account" in account);
+    const site = await createSite(tenantId, account.account.id, "Delete Site");
+    assert.ok("site" in site);
+
+    const located = await getPlatformDirectoryCustomer(account.account.id);
+    assert.ok(!("error" in located));
+    assert.equal(located.tenantId, tenantId);
+    assert.equal(located.sites.length, 1);
+
+    const removedSite = await removePlatformSite(site.site.id);
+    assert.deepEqual(removedSite, { ok: true });
+
+    const removedCustomer = await removePlatformCustomerAccount(account.account.id);
+    assert.deepEqual(removedCustomer, { ok: true });
+
+    const gone = await getPlatformDirectoryCustomer(account.account.id);
+    assert.deepEqual(gone, { error: "not-found" });
+  });
+
+  it("blocks satellite host delete until catalog is empty", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("Blocked Delete Co", {
+      email: "blocked-staff@test",
+      passwordHash: await hashPassword("password-1"),
+    });
+    assert.ok("tenant" in created);
+    assert.ok(created.staffUser);
+
+    const blocked = await removePlatformTenant(created.tenant.id);
+    assert.equal("error" in blocked && blocked.error, "has-children");
+
+    const removedStaff = await removePlatformDirectoryUser(created.staffUser!.id);
+    assert.deepEqual(removedStaff, { ok: true });
+
+    const removed = await removePlatformTenant(created.tenant.id);
+    assert.deepEqual(removed, { ok: true });
+
+    const entries = await listPlatformDirectory();
+    assert.equal(
+      entries.some((row) => row.type === "host" && row.id === created.tenant.id),
+      false,
+    );
+
+    const hostDelete = await removePlatformTenant(DEFAULT_TENANT_ID);
+    assert.deepEqual(hostDelete, { error: "host-immutable" });
   });
 
   it("suspends satellites but never the Soft Launch host", async () => {

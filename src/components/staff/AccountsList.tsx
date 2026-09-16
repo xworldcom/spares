@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
   createCustomerAccount,
-  deleteCustomerAccount,
   listCustomerAccounts,
   updateCustomerAccount,
 } from "@/lib/api/auth";
@@ -95,32 +94,6 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
       );
     } catch (cause) {
       setError(errorMessage(cause, "Could not save that customer."));
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function removeAccount(id: string, name: string, siteCount: number) {
-    const blockedHint =
-      siteCount > 0
-        ? `\n\nThis customer still has ${siteCount} site${siteCount === 1 ? "" : "s"}. Remove those sites first.`
-        : "";
-    if (
-      !window.confirm(
-        `Delete customer “${name}”?${blockedHint || " This cannot be undone on Preview."}`,
-      )
-    ) {
-      return;
-    }
-    setSavingId(id);
-    setError(null);
-    try {
-      await deleteCustomerAccount(id);
-      const rows = await listCustomerAccounts();
-      setAccounts(rows);
-      setEditNames(Object.fromEntries(rows.map((row) => [row.id, row.name])));
-    } catch (cause) {
-      setError(errorMessage(cause, "Could not delete that customer."));
     } finally {
       setSavingId(null);
     }
@@ -257,14 +230,6 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
                         onClick={() => void saveAccount(row.id)}
                       >
                         Save
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-soft text-[#f0c4c0]"
-                        disabled={savingId === row.id}
-                        onClick={() => void removeAccount(row.id, row.name, row.siteCount)}
-                      >
-                        Delete
                       </button>
                     </div>
                   </td>
