@@ -2,6 +2,7 @@ import type { QuoteActivity, QuoteStatus, Role, TicketStatus } from "../../types
 import { activityLane, sameMessageAuthor, type ActivityLane } from "./activity-lane.ts";
 
 export type MarketingPerspective = "customer" | "staff";
+export type LandingDemoVariant = "quote" | "ticket";
 
 export const DEMO_CUSTOMER_EMAIL = "maya@northline-pack.example";
 export const DEMO_STAFF_EMAIL = "owen@oee360.example";
@@ -9,7 +10,11 @@ export const DEMO_PLANT = "Northline Packing";
 export const DEMO_MACHINE = "Palletizer cell";
 export const DEMO_TICKET_TITLE = "Infeed jam, drive roller";
 export const DEMO_QUOTE_TITLE = "PN-ROLL-2104 × 2";
-export const DEMO_DURATION_MS = 12_000;
+
+/** Full loop length for the parts-quote demo (reading pace + pause between steps). */
+export const DEMO_QUOTE_DURATION_MS = 42_000;
+/** Full loop length for the Care ticket demo. */
+export const DEMO_TICKET_DURATION_MS = 32_000;
 
 export type DemoBeat =
   | {
@@ -53,56 +58,110 @@ export type DemoClockState = {
   rows: DemoVisibleRow[];
 };
 
-export const DEMO_SCRIPT: readonly DemoBeat[] = [
-  { atMs: 0, kind: "ticketStatus", status: "open" },
+export const DEMO_QUOTE_SCRIPT: readonly DemoBeat[] = [
   { atMs: 0, kind: "quoteStatus", status: "requested" },
   {
     atMs: 0,
     kind: "message",
-    id: "m1",
+    id: "q-m1",
     actorRole: "customer",
-    text: "Palletizer jammed on the infeed. Drive roller looks shot.",
+    text: "Need two PN-ROLL-2104 for the palletizer infeed. What's lead time?",
   },
-  { atMs: 1100, kind: "system", id: "s1", text: "Care ticket opened" },
+  { atMs: 3_200, kind: "system", id: "q-s1", text: "Quote request received" },
+  { atMs: 5_400, kind: "quoteStatus", status: "in_review" },
   {
-    atMs: 1900,
+    atMs: 8_600,
     kind: "message",
-    id: "m2",
+    id: "q-m2",
     actorRole: "staff",
-    text: "I see PN-ROLL-2104 on the infeed. Quoting two plus freight.",
+    text: "Checking stock and freight to your dock.",
   },
-  { atMs: 2700, kind: "ticketStatus", status: "in_progress" },
-  { atMs: 2700, kind: "quoteStatus", status: "in_review" },
-  { atMs: 3100, kind: "system", id: "s2", text: "Ticket → In progress" },
-  { atMs: 4000, kind: "quoteStatus", status: "pricing" },
-  { atMs: 4400, kind: "system", id: "s3", text: "Quote in pricing" },
+  { atMs: 11_800, kind: "quoteStatus", status: "pricing" },
+  { atMs: 14_200, kind: "system", id: "q-s2", text: "Quote in pricing" },
   {
-    atMs: 5300,
+    atMs: 18_400,
     kind: "message",
-    id: "m3",
+    id: "q-m3",
     actorRole: "staff",
-    text: "Quote is ready. Two rollers, Friday dock if you PO today.",
+    text: "Two rollers, Friday dock if you PO today. Sending the formal quote now.",
   },
-  { atMs: 5900, kind: "quoteStatus", status: "quoted" },
+  { atMs: 22_600, kind: "quoteStatus", status: "quoted" },
+  { atMs: 25_400, kind: "system", id: "q-s3", text: "Quote ready" },
   {
-    atMs: 6800,
+    atMs: 29_800,
     kind: "message",
-    id: "m4",
+    id: "q-m4",
     actorRole: "customer",
     text: "PO 4418 is in. Need them on the line Friday.",
   },
-  { atMs: 7600, kind: "quoteStatus", status: "po_received" },
-  { atMs: 8000, kind: "system", id: "s4", text: "PO received" },
+  { atMs: 33_600, kind: "quoteStatus", status: "po_received" },
+  { atMs: 36_200, kind: "system", id: "q-s4", text: "PO received" },
   {
-    atMs: 8800,
+    atMs: 39_400,
     kind: "message",
-    id: "m5",
+    id: "q-m5",
     actorRole: "staff",
     text: "Confirmed. Parts leave the crib tonight.",
   },
-  { atMs: 9400, kind: "quoteStatus", status: "confirmed" },
-  { atMs: 9800, kind: "system", id: "s5", text: "Quote confirmed" },
+  { atMs: 41_200, kind: "quoteStatus", status: "confirmed" },
+  { atMs: 42_000, kind: "system", id: "q-s5", text: "Quote confirmed" },
 ];
+
+export const DEMO_TICKET_SCRIPT: readonly DemoBeat[] = [
+  { atMs: 0, kind: "ticketStatus", status: "open" },
+  {
+    atMs: 0,
+    kind: "message",
+    id: "t-m1",
+    actorRole: "customer",
+    text: "Palletizer jammed on the infeed. Drive roller looks shot.",
+  },
+  { atMs: 2_800, kind: "system", id: "t-s1", text: "Care ticket opened" },
+  {
+    atMs: 5_600,
+    kind: "message",
+    id: "t-m2",
+    actorRole: "staff",
+    text: "I see it on the cell camera. Logging PN-ROLL-2104 on the BOM.",
+  },
+  { atMs: 8_400, kind: "ticketStatus", status: "in_progress" },
+  { atMs: 10_200, kind: "system", id: "t-s2", text: "Ticket → In progress" },
+  {
+    atMs: 13_600,
+    kind: "message",
+    id: "t-m3",
+    actorRole: "staff",
+    text: "Replacements are in the crib. Want us to walk your tech through the swap?",
+  },
+  { atMs: 17_200, kind: "ticketStatus", status: "waiting_on_customer" },
+  { atMs: 19_000, kind: "system", id: "t-s3", text: "Waiting on plant" },
+  {
+    atMs: 22_800,
+    kind: "message",
+    id: "t-m4",
+    actorRole: "customer",
+    text: "We're staffed for it—send the steps and we'll confirm when we're green.",
+  },
+  { atMs: 26_400, kind: "ticketStatus", status: "in_progress" },
+  { atMs: 28_200, kind: "system", id: "t-s4", text: "Ticket → In progress" },
+  {
+    atMs: 31_600,
+    kind: "message",
+    id: "t-m5",
+    actorRole: "staff",
+    text: "Steps are in the thread. I'll keep the ticket open until you close the loop.",
+  },
+  { atMs: 32_000, kind: "ticketStatus", status: "resolved" },
+  { atMs: 32_000, kind: "system", id: "t-s5", text: "Ticket resolved" },
+];
+
+export function demoDurationMs(variant: LandingDemoVariant) {
+  return variant === "quote" ? DEMO_QUOTE_DURATION_MS : DEMO_TICKET_DURATION_MS;
+}
+
+export function demoScript(variant: LandingDemoVariant) {
+  return variant === "quote" ? DEMO_QUOTE_SCRIPT : DEMO_TICKET_SCRIPT;
+}
 
 export function demoSelf(perspective: MarketingPerspective): { email: string; role: Role } {
   return perspective === "customer"
@@ -118,11 +177,15 @@ export function demoOtherLabel(perspective: MarketingPerspective) {
   return perspective === "customer" ? "Staff" : DEMO_PLANT;
 }
 
-export function demoClockElapsed(reduceMotion: boolean, elapsedMs: number) {
+export function demoClockElapsed(
+  reduceMotion: boolean,
+  elapsedMs: number,
+  durationMs: number,
+) {
   if (reduceMotion) {
-    return DEMO_DURATION_MS;
+    return durationMs;
   }
-  return elapsedMs % (DEMO_DURATION_MS + 1400);
+  return elapsedMs % (durationMs + 1400);
 }
 
 function asActivity(beat: Extract<DemoBeat, { kind: "message" | "system" }>): QuoteActivity {
@@ -187,3 +250,9 @@ export function reduceDemoClock(
 export function marketingCopyBan(text: string) {
   return /\bPlatform\b|\bHosts\b|\bHost staff\b|\bmulti-tenant\b/i.test(text);
 }
+
+/** All scripted beats for marketing copy checks. */
+export const DEMO_ALL_SCRIPT_BEATS: readonly DemoBeat[] = [
+  ...DEMO_QUOTE_SCRIPT,
+  ...DEMO_TICKET_SCRIPT,
+];
