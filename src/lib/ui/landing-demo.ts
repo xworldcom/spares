@@ -57,7 +57,7 @@ export const DEMO_SCRIPT: readonly DemoBeat[] = [
   { atMs: 0, kind: "ticketStatus", status: "open" },
   { atMs: 0, kind: "quoteStatus", status: "requested" },
   {
-    atMs: 280,
+    atMs: 0,
     kind: "message",
     id: "m1",
     actorRole: "customer",

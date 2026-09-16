@@ -17,14 +17,16 @@ const MARKETING_FILES = [
   "src/components/landing/LandingProductDemo.tsx",
   "src/components/landing/LandingScreen.tsx",
   "src/components/landing/LandingScrollPeek.tsx",
+  "src/components/landing/LandingCell.tsx",
 ];
 
 describe("reduceDemoClock", () => {
-  it("starts on an open ticket and a requested quote", () => {
+  it("starts on an open ticket, a requested quote, and the plant's first note", () => {
     const state = reduceDemoClock(DEMO_SCRIPT, 0, "customer");
     assert.equal(state.ticketStatus, "open");
     assert.equal(state.quoteStatus, "requested");
-    assert.equal(state.rows.length, 0);
+    assert.equal(state.rows.length, 1);
+    assert.equal(state.rows[0]?.kind, "message");
   });
 
   it("puts plant messages on the right for the customer", () => {

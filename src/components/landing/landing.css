@@ -434,6 +434,68 @@
   position: absolute;
 }
 
+.landing-cell-fallback {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(236, 234, 228, 0.08), transparent 55%),
+    #07080a;
+}
+
+.landing-cell-block {
+  position: absolute;
+  display: block;
+  border-radius: 0.35rem;
+  background: linear-gradient(145deg, #8d949e, #3d444d);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.landing-cell-block--base {
+  left: 18%;
+  right: 18%;
+  bottom: 18%;
+  height: 18%;
+}
+
+.landing-cell-block--mast {
+  left: 46%;
+  width: 8%;
+  top: 22%;
+  bottom: 32%;
+}
+
+.landing-cell-block--arm {
+  left: 28%;
+  width: 36%;
+  top: 28%;
+  height: 10%;
+}
+
+.landing-cell-block--load {
+  left: 22%;
+  width: 16%;
+  bottom: 28%;
+  height: 12%;
+  background: linear-gradient(145deg, #c4b59a, #6b5a3d);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-cell-fallback {
+    animation: landing-cell-drift 16s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes landing-cell-drift {
+  from {
+    transform: rotate(-4deg) scale(1.02);
+  }
+
+  to {
+    transform: rotate(5deg) scale(1.08);
+  }
+}
+
 .landing-section--cta {
   text-align: left;
 }

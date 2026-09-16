@@ -1,13 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
+import { LandingCell } from "@/components/landing/LandingCell";
 import { LandingProductDemo } from "@/components/landing/LandingProductDemo";
-
-const OrbitStage = dynamic(
-  () => import("@/components/landing/OrbitStage").then((mod) => mod.OrbitStage),
-  { ssr: false },
-);
 
 export function LandingMarketing() {
   return (
@@ -29,9 +24,7 @@ export function LandingMarketing() {
           Every spare sits on the model the floor already trusts. Drag to orbit. This is a
           generic palletizer cell, not a customer asset.
         </p>
-        <div className="landing-cell">
-          <OrbitStage interactive />
-        </div>
+        <LandingCell />
       </section>
 
       <section className="landing-section landing-section--cta">

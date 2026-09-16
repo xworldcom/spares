@@ -19,52 +19,31 @@ import {
   type MarketingPerspective,
 } from "@/lib/ui/landing-demo";
 
-function usePrefersReducedMotion() {
-  const [reduce, setReduce] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduce(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  return reduce;
-}
-
-function useDemoElapsed(reduceMotion: boolean | null, resetKey: MarketingPerspective) {
+function useDemoElapsed(resetKey: MarketingPerspective) {
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    if (reduceMotion === null) {
-      return;
-    }
-    if (reduceMotion) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setReduceMotion(reduce);
+    if (reduce) {
       setElapsedMs(DEMO_DURATION_MS);
       return;
     }
 
-    let frame = 0;
     const started = performance.now();
-    const tick = (now: number) => {
-      setElapsedMs(now - started);
-      frame = window.requestAnimationFrame(tick);
-    };
-    frame = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frame);
-  }, [reduceMotion, resetKey]);
+    const id = window.setInterval(() => {
+      setElapsedMs(performance.now() - started);
+    }, 90);
+    return () => window.clearInterval(id);
+  }, [resetKey]);
 
-  if (reduceMotion === null) {
-    return 0;
-  }
-  return demoClockElapsed(reduceMotion, elapsedMs);
+  return { elapsedMs: demoClockElapsed(reduceMotion, elapsedMs), reduceMotion };
 }
 
 export function LandingProductDemo() {
-  const reduceMotion = usePrefersReducedMotion();
   const [perspective, setPerspective] = useState<MarketingPerspective>("customer");
-  const elapsedMs = useDemoElapsed(reduceMotion, perspective);
+  const { elapsedMs, reduceMotion } = useDemoElapsed(perspective);
   const state = useMemo(
     () => reduceDemoClock(DEMO_SCRIPT, elapsedMs, perspective),
     [elapsedMs, perspective],
