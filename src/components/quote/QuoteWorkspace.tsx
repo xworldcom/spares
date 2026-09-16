@@ -152,28 +152,7 @@ export function QuoteWorkspace({
     if (!quote || !user) {
       return;
     }
-    const tempId = `pending-${Date.now()}`;
-    const temp = {
-      id: tempId,
-      at: new Date().toISOString(),
-      actorRole: role,
-      actorEmail: user.email,
-      kind: "message" as const,
-      text: input.text,
-      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
-    };
-    setQuote({ ...quote, activities: [...quote.activities, temp] });
-    const ok = await run(() => postQuoteActivity(String(quote.number), input));
-    if (!ok) {
-      setQuote((current) =>
-        current
-          ? {
-              ...current,
-              activities: current.activities.filter((row) => row.id !== tempId),
-            }
-          : current,
-      );
-    }
+    await run(() => postQuoteActivity(String(quote.number), input));
   }
 
   if (!quote) {
