@@ -110,31 +110,12 @@ export function TicketDetail({
     if (!ticket || !user) {
       return;
     }
-    const tempId = `pending-${Date.now()}`;
-    const temp = {
-      id: tempId,
-      at: new Date().toISOString(),
-      actorRole: user.role,
-      actorEmail: user.email,
-      kind: "message" as const,
-      text: input.text,
-      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
-    };
-    setTicket({ ...ticket, activities: [...ticket.activities, temp] });
     setBusy(true);
     setError(null);
     try {
       setTicket(await postTicketActivity(ticket.id, input));
       onUpdated?.();
     } catch (cause) {
-      setTicket((current) =>
-        current
-          ? {
-              ...current,
-              activities: current.activities.filter((row) => row.id !== tempId),
-            }
-          : current,
-      );
       setError(errorMessage(cause, "Could not send that note."));
       throw cause;
     } finally {
