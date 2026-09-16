@@ -50,6 +50,23 @@ describe("org migration", () => {
     assert.equal(db.users?.[0]?.companyAccess, undefined);
   });
 
+  it("does not lower a tenant schemaVersion already past the org version", () => {
+    const { db } = migrateOrgTree({
+      schemaVersion: 3,
+      customers: [{ id: "customer-acme", name: "Acme", createdAt: "2020-01-01T00:00:00.000Z" }],
+      sites: [
+        {
+          id: "site-acme-dayton",
+          customerId: "customer-acme",
+          name: "Dayton",
+          createdAt: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+      users: [],
+    });
+    assert.equal(db.schemaVersion, 3);
+  });
+
   it("is idempotent once schemaVersion is current", () => {
     const first = migrateOrgTree({
       sites: [{ id: "site-a", company: "Acme", name: "Dayton" }],

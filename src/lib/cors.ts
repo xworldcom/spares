@@ -83,6 +83,19 @@ export function requestOrigin(request: Request) {
   }
 }
 
+/** Browser cross-site POSTs send Origin. Same-origin and non-browser clients pass. */
+export function isSameOriginRequest(request: Request) {
+  const origin = request.headers.get("Origin");
+  if (!origin) {
+    return true;
+  }
+  try {
+    return normalizeOrigin(origin) === normalizeOrigin(new URL(request.url).origin);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Presigned R2 GET/PUT URLs only work in the browser when the page origin is
  * listed on the bucket CORS policy. Preview deploys that match the Spares

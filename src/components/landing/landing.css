@@ -11,7 +11,26 @@
 }
 
 .landing-scroll .landing-hero {
+  display: flex;
+  flex-direction: column;
   margin: -1.25rem -1rem 0;
+}
+
+.landing-scroll .landing-copy {
+  flex: 1 1 auto;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.landing-scroll .landing-scroll-peek {
+  position: relative;
+  z-index: 2;
+  left: auto;
+  bottom: auto;
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: 0.5rem;
+  margin-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  transform: none;
 }
 
 @media (min-width: 640px) {

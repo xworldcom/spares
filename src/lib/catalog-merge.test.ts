@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   liveEmailConflict,
+  loginRenameConflicts,
   mergeIdLists,
   mergeRowsForWrite,
   mergeUsersForWrite,
@@ -101,6 +102,29 @@ describe("liveEmailConflict", () => {
     ];
     assert.equal(
       liveEmailConflict(users, { id: "mine", email: "ops@jmp-solutions.test" }),
+      false,
+    );
+  });
+});
+
+describe("loginRenameConflicts", () => {
+  it("refuses a rename onto an address another live row already holds", () => {
+    const latest = [user("kevin", "kevin@huzevka.com"), user("sat", "sat@b.test")];
+    const next = [user("sat", "kevin@huzevka.com")];
+    const merged = mergeUsersForWrite(latest, next);
+    assert.deepEqual(merged.map((row) => row.id), ["sat"]);
+    assert.equal(
+      loginRenameConflicts(latest, merged, { id: "sat", email: "kevin@huzevka.com" }),
+      true,
+    );
+  });
+
+  it("allows a rename when the address is free", () => {
+    const latest = [user("sat", "sat@b.test")];
+    const next = [user("sat", "new@b.test")];
+    const merged = mergeUsersForWrite(latest, next);
+    assert.equal(
+      loginRenameConflicts(latest, merged, { id: "sat", email: "new@b.test" }),
       false,
     );
   });

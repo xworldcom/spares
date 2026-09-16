@@ -92,6 +92,17 @@ export function liveEmailConflict(
   );
 }
 
+export function loginRenameConflicts(
+  latestUsers: readonly MergeableUser[] | undefined,
+  mergedUsers: readonly MergeableUser[],
+  login: { id: string; email: string },
+) {
+  if (latestUsers && liveEmailConflict(latestUsers, login)) {
+    return true;
+  }
+  return liveEmailConflict(mergedUsers, login);
+}
+
 export function mergeIdLists(
   latest: readonly string[] | undefined,
   next: readonly string[] | undefined,

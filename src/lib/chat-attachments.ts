@@ -36,6 +36,10 @@ const BLOCKED_EXTENSIONS = new Set([
   ".so",
   ".deb",
   ".rpm",
+  ".html",
+  ".htm",
+  ".xhtml",
+  ".svg",
 ]);
 
 const INLINE_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);

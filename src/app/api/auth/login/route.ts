@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { assertPasswordLoginAllowed } from "@/lib/auth/password-login.server";
+import { isSameOriginRequest } from "@/lib/cors";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
@@ -54,6 +55,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const html = wantsDocument(request);
+  if (!isSameOriginRequest(request)) {
+    return html ? redirectNoQuery("/login") : error("Origin not allowed", 403);
+  }
   const body = await readLoginBody(request);
   if (isErrorResponse(body)) {
     return html ? redirectNoQuery("/login") : body;

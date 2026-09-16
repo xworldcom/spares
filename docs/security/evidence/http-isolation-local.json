@@ -1,0 +1,543 @@
+{
+  "base": "http://127.0.0.1:3020",
+  "passed": 67,
+  "failed": 0,
+  "rows": [
+    {
+      "area": "auth",
+      "id": "anon-me",
+      "expect": "401",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/machines",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/quotes",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/tickets",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/staff/customers",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/staff/team",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/platform/tenants",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/platform/directory",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-GET /api/bugs",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "login-foreign-origin",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": "cross-site login POST"
+    },
+    {
+      "area": "auth",
+      "id": "host-staff-login",
+      "expect": "200|401",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "cust-a-login",
+      "expect": "200|401",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "cust-b-login",
+      "expect": "200|401",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "platform",
+      "id": "host-staff-tenants",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "platform",
+      "id": "host-staff-directory",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "host-staff-foreign-team",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-staff-customers",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-platform-tenants",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-model-upload",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-bugs-list",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-create-customer",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-create-staff",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-staff-tickets",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-preview-fixture",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-a-list",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-b-sees-a-quote",
+      "expect": "false",
+      "actual": "false",
+      "pass": true,
+      "note": "customerId filter"
+    },
+    {
+      "area": "machines",
+      "id": "cust-b-read-a-machine",
+      "expect": "404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "care",
+      "id": "cust-b-tickets-on-a-machine",
+      "expect": "404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-b-usage",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-a-usage",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "cust-views",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "anon",
+      "id": "anon-machine-file",
+      "expect": "401|403",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-a-create",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-create-strips-price",
+      "expect": "false",
+      "actual": "false",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "xss",
+      "id": "quote-note-stored-as-text",
+      "expect": "true",
+      "actual": "true",
+      "pass": true,
+      "note": "JSON text; React children escape on render"
+    },
+    {
+      "area": "quotes",
+      "id": "cust-b-read-a-quote",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-b-patch-a-quote",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-b-activity",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-b-po",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-b-attachment",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "quotes",
+      "id": "cust-a-status-escalate",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "care",
+      "id": "cust-a-create-ticket",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "care",
+      "id": "cust-b-read-ticket",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "care",
+      "id": "cust-b-patch-ticket",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "care",
+      "id": "cust-a-status-escalate",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "owner-login",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "platform",
+      "id": "owner-tenants",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "platform",
+      "id": "owner-create-satellite",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "sat-staff-login",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-staff-machines",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-staff-sees-host-machine",
+      "expect": "false",
+      "actual": "false",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-staff-sees-host-quote",
+      "expect": "false",
+      "actual": "false",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "platform",
+      "id": "sat-staff-tenants",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-read-host-quote-id",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-patch-host-person",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-create-host-staff",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-create-customer",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "tenant",
+      "id": "sat-grant-host-machine",
+      "expect": "false",
+      "actual": "false",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "bugs-foreign-origin",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": "cross-site bug POST"
+    },
+    {
+      "area": "auth",
+      "id": "session-httponly",
+      "expect": "true",
+      "actual": "true",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "session-samesite-lax",
+      "expect": "true",
+      "actual": "true",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "create-throwaway",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "delete-throwaway",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "auth",
+      "id": "deleted-user-login",
+      "expect": "401",
+      "actual": "401",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "staff-create-ignores-role",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "role",
+      "id": "created-role-is-customer",
+      "expect": "customer",
+      "actual": "customer",
+      "pass": true,
+      "note": "client role field ignored"
+    },
+    {
+      "area": "auth",
+      "id": "logout-clears-cookie-only",
+      "expect": "200-or-401",
+      "actual": "200",
+      "pass": true,
+      "note": "JWT stays valid until exp if the old value is resent (Low ticket)"
+    }
+  ]
+}

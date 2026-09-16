@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword, verifyPassword } from "./auth/password.ts";
 import {
-  liveEmailConflict,
+  loginRenameConflicts,
   mergeIdLists,
   mergeRowsForWrite,
   mergeUsersForWrite,
@@ -71,6 +71,12 @@ import {
 } from "./care.ts";
 import { deleteManualFile, writeManualFile } from "./manual-storage.ts";
 import { isSeedAllowed } from "./production-env.ts";
+import {
+  StoredFileClaimedError,
+  chatKeyClaimed,
+  manualFileNameClaimed,
+  modelFileNameClaimed,
+} from "./stored-file-claim.ts";
 import type {
   MachineManual,
   MachineUsage,
@@ -534,7 +540,7 @@ async function seedUser(input: {
 
 async function emptyDatabase(): Promise<Database> {
   const migrated = migrateTenants({
-    schemaVersion: 2,
+    schemaVersion: TENANT_SCHEMA_VERSION,
     tenants: [],
     customers: [],
     users: [],
@@ -1334,7 +1340,8 @@ async function writeDatabaseWithLogin(
   login: { id: string; email: string },
 ): Promise<LoginWriteResult> {
   const merged = await mergeIdentityWithLatest(next);
-  if (liveEmailConflict(merged.users, login)) {
+  const latest = (await loadPersistedSnapshot())?.db;
+  if (loginRenameConflicts(latest?.users, merged.users, login)) {
     return { error: "email-taken" };
   }
   await persistDatabase(merged);
@@ -1354,7 +1361,8 @@ async function writeDatabaseWithOrgMerge(
     }
     merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, latest));
   }
-  if (login && liveEmailConflict(merged.users, login)) {
+  const latest = (await loadPersistedSnapshot())?.db;
+  if (login && loginRenameConflicts(latest?.users, merged.users, login)) {
     return { error: "email-taken" };
   }
   await persistDatabase(merged);
@@ -1568,6 +1576,7 @@ export function createTenant(name: string) {
     const tenant = newTenantFromName(trimmed);
     await writeDatabase({
       ...db,
+      schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
       tenants: [...(db.tenants ?? []), tenant],
     });
     return { tenant };
@@ -2239,11 +2248,7 @@ export function updatePerson(
       }
       if (
         db.users.some(
-          (row) =>
-            row.id !== userId &&
-            row.email === normalized &&
-            !row.deletedAt &&
-            belongsToTenant(row, tenantId),
+          (row) => row.id !== userId && row.email === normalized && !row.deletedAt,
         )
       ) {
         return { error: "email-taken" as const };
@@ -2426,9 +2431,13 @@ export function deleteMachine(machineId: string, tenantId: string) {
       tickets,
       machineUsage,
     });
-    await deleteStoredFile(machine.storedFileName);
+    if (!modelFileNameClaimed(machines, machine.storedFileName)) {
+      await deleteStoredFile(machine.storedFileName);
+    }
     for (const manual of removedManuals) {
-      await deleteManualFile(manual.storedFileName);
+      if (!manualFileNameClaimed(manuals, manual.storedFileName)) {
+        await deleteManualFile(manual.storedFileName);
+      }
     }
     return { ok: true as const };
   });
@@ -2527,6 +2536,9 @@ export function createMachine(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
+    if (modelFileNameClaimed(db.machines, input.storedFileName)) {
+      throw new StoredFileClaimedError("model");
+    }
     const machine: StoredMachine = {
       id: randomUUID(),
       name: input.name,
@@ -2565,6 +2577,9 @@ export function replaceMachinePack(
     }
     const current = db.machines[index];
     const previousFileName = current.storedFileName;
+    if (modelFileNameClaimed(db.machines, input.storedFileName, machineId)) {
+      return { error: "file-taken" as const };
+    }
     const machines = db.machines.slice();
     machines[index] = {
       ...current,
@@ -2577,7 +2592,10 @@ export function replaceMachinePack(
       revisedAt: new Date().toISOString(),
     };
     await writeDatabase({ ...db, machines });
-    if (previousFileName !== input.storedFileName) {
+    if (
+      previousFileName !== input.storedFileName &&
+      !modelFileNameClaimed(machines, previousFileName)
+    ) {
       await deleteStoredFile(previousFileName);
     }
     return { machine: machines[index] };
@@ -2852,11 +2870,7 @@ export function listQuotes(tenantId: string) {
 export function getQuote(idOrNumber: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    const quote = findQuoteInList(db.quotes, idOrNumber);
-    if (!quote || !belongsToTenant(quote, tenantId)) {
-      return null;
-    }
-    return quote;
+    return findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
   });
 }
 
@@ -2867,8 +2881,8 @@ export function mutateQuote(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const current = findQuoteInList(db.quotes, idOrNumber);
-    if (!current || !belongsToTenant(current, tenantId)) {
+    const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
+    if (!current) {
       return null;
     }
     const next = fn(current);
@@ -2974,6 +2988,9 @@ export function createManual(
     if (!machine || !belongsToTenant(machine, tenantId)) {
       return { error: "not-found" as const };
     }
+    if (manualFileNameClaimed(careCollections(db).manuals, input.storedFileName)) {
+      return { error: "file-taken" as const };
+    }
     if (input.bytes?.length) {
       await writeManualFile(input.storedFileName, input.bytes);
     }
@@ -2997,6 +3014,16 @@ export function createManual(
   });
 }
 
+export function chatAttachmentKeyClaimed(
+  r2Key: string,
+  except?: { quoteId?: string; ticketId?: string },
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return chatKeyClaimed(db.quotes ?? [], careCollections(db).tickets, r2Key, except);
+  });
+}
+
 export function listTickets(tenantId: string, machineId?: string) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -3010,11 +3037,10 @@ export function listTickets(tenantId: string, machineId?: string) {
 export function getTicket(idOrNumber: string, tenantId: string) {
   return withLock(async () => {
     const db = await readDatabase();
-    const ticket = findTicketInList(careCollections(db).tickets, idOrNumber);
-    if (!ticket || !belongsToTenant(ticket, tenantId)) {
-      return null;
-    }
-    return ticket;
+    return findTicketInList(
+      filterByTenant(careCollections(db).tickets, tenantId),
+      idOrNumber,
+    );
   });
 }
 
@@ -3090,8 +3116,11 @@ function mutateTicket(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const current = findTicketInList(careCollections(db).tickets, idOrNumber);
-    if (!current || !belongsToTenant(current, tenantId)) {
+    const current = findTicketInList(
+      filterByTenant(careCollections(db).tickets, tenantId),
+      idOrNumber,
+    );
+    if (!current) {
       return null;
     }
     const next = fn(current);
