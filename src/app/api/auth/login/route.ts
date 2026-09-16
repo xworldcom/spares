@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
-import { assertPasswordLoginAllowed } from "@/lib/auth/password-login";
+import { assertPasswordLoginAllowed } from "@/lib/auth/password-login.server";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";

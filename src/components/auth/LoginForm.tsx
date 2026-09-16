@@ -12,7 +12,7 @@ import {
   PASSWORD_LOGIN_DISABLED_CODE,
   PASSWORD_LOGIN_DISABLED_MESSAGE,
   PASSWORD_LOGIN_UNAVAILABLE_MESSAGE,
-} from "@/lib/auth/password-login";
+} from "@/lib/auth/password-login-public";
 import { stripCredentialQueryFromLocation } from "@/lib/auth/safe-url";
 import { useHydrated } from "@/lib/use-hydrated";
 

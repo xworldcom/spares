@@ -1,4 +1,4 @@
-import { getSignInOptions } from "@/lib/auth/password-login";
+import { getSignInOptions } from "@/lib/auth/password-login.server";
 import { json } from "@/lib/http";
 
 export const dynamic = "force-dynamic";

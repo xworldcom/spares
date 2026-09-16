@@ -1,8 +1,6 @@
 import { LandingPageGate } from "@/components/landing/LandingPageGate";
-import {
-  getSignInOptions,
-  PASSWORD_LOGIN_DISABLED_CODE,
-} from "@/lib/auth/password-login";
+import { PASSWORD_LOGIN_DISABLED_CODE } from "@/lib/auth/password-login-public";
+import { getSignInOptions } from "@/lib/auth/password-login.server";
 
 export default async function LoginPage({
   searchParams,

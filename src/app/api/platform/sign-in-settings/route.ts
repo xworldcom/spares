@@ -1,4 +1,4 @@
-import { getSignInOptions } from "@/lib/auth/password-login";
+import { getSignInOptions } from "@/lib/auth/password-login.server";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { updatePlatformSignInSettings } from "@/lib/store";

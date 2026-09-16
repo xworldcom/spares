@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
+import { loginSurfaceFlags, PASSWORD_LOGIN_DISABLED_MESSAGE } from "./password-login-public.ts";
 import {
   assertPasswordLoginAllowed,
   effectivePasswordLoginEnabled,
   getSignInOptions,
-  loginSurfaceFlags,
-  PASSWORD_LOGIN_DISABLED_MESSAGE,
   readPasswordLoginEnvOverride,
-} from "./password-login.ts";
+} from "./password-login.server.ts";
 import { createMemoryPersistence, setPersistenceForTests } from "../persistence.ts";
 import { resetStoreMemoryForTests, updatePlatformSignInSettings } from "../store.ts";
 
