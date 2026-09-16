@@ -4,6 +4,9 @@ export const BLOB_DB_PATH = "spares/db.json";
 /** Care manuals / tickets / usage — separate so catalog heals cannot clobber them. */
 export const BLOB_CARE_PATH = "spares/care.json";
 
+/** Platform-wide sign-in policy — separate so catalog heals cannot clobber it. */
+export const BLOB_PLATFORM_SETTINGS_PATH = "spares/platform-settings.json";
+
 /** Prefix for durable files (GLBs, PO PDFs, screenshots). */
 export const BLOB_FILES_PREFIX = "spares/files/";
 
@@ -26,4 +29,8 @@ export function blobDbPath() {
 
 export function blobCarePath() {
   return `spares/${blobNamespace()}care.json`;
+}
+
+export function blobPlatformSettingsPath() {
+  return `spares/${blobNamespace()}platform-settings.json`;
 }

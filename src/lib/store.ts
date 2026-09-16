@@ -88,8 +88,14 @@ import type {
   TicketStatus,
   UnmatchedPart,
 } from "../types/index.ts";
+import {
+  readPersistedPlatformSignInSettings,
+  writePersistedPlatformSignInSettings,
+  type PlatformSignInSettings,
+} from "./platform-settings-persistence.ts";
 
 export { filesDir, getDataDir } from "./persistence.ts";
+export type { PlatformSignInSettings };
 
 export const SEED_STAFF = {
   id: "user-staff",
@@ -263,11 +269,6 @@ type OrgTombstones = {
   siteIds?: string[];
 };
 
-export type PlatformSignInSettings = {
-  /** When false, only Microsoft SSO (if configured) may sign in. Omitted means enabled. */
-  passwordLoginEnabled?: boolean;
-};
-
 type Database = {
   schemaVersion?: number;
   tenants?: Tenant[];
@@ -282,6 +283,7 @@ type Database = {
   tickets?: StoredTicket[];
   machineUsage?: StoredUsage[];
   orgTombstones?: OrgTombstones;
+  /** Legacy; sign-in policy lives in platform-settings.json. */
   platformSettings?: PlatformSignInSettings;
 };
 
@@ -1447,19 +1449,26 @@ export function getPlatformDeployment(tenantId: string) {
 }
 
 export async function getPlatformSignInSettingsFromCatalog(): Promise<PlatformSignInSettings> {
-  const db = await readDatabase();
-  return db.platformSettings ?? {};
+  const sidecar = await readPersistedPlatformSignInSettings();
+  if (sidecar) {
+    return sidecar;
+  }
+  const legacy = (await readDatabase()).platformSettings;
+  if (legacy?.passwordLoginEnabled !== undefined) {
+    await writePersistedPlatformSignInSettings(legacy);
+    return legacy;
+  }
+  return {};
 }
 
 export function updatePlatformSignInSettings(patch: { passwordLoginEnabled: boolean }) {
   return withLock(async () => {
-    const db = await readDatabase();
-    const current = db.platformSettings ?? {};
+    const current = await getPlatformSignInSettingsFromCatalog();
     const nextSettings: PlatformSignInSettings = {
       ...current,
       passwordLoginEnabled: patch.passwordLoginEnabled,
     };
-    await writeDatabase({ ...db, platformSettings: nextSettings });
+    await writePersistedPlatformSignInSettings(nextSettings);
     return { settings: nextSettings };
   });
 }

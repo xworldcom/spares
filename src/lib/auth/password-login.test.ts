@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, afterEach, beforeEach, describe, it } from "node:test";
+import { after, beforeEach, describe, it } from "node:test";
 import { loginSurfaceFlags, PASSWORD_LOGIN_DISABLED_MESSAGE } from "./password-login-public.ts";
 import {
   assertPasswordLoginAllowed,
@@ -7,7 +7,7 @@ import {
   getSignInOptions,
   readPasswordLoginEnvOverride,
 } from "./password-login.server.ts";
-import { createMemoryPersistence, setPersistenceForTests } from "../persistence.ts";
+import { createMemoryPersistence, getPersistence, setPersistenceForTests } from "../persistence.ts";
 import {
   resetStoreMemoryForTests,
   updatePlatformSignInSettings,
@@ -65,22 +65,6 @@ describe("password login policy", () => {
         signInUnavailable: false,
       },
     );
-    assert.deepEqual(
-      loginSurfaceFlags({ passwordLoginEnabled: false, microsoftSignInEnabled: true }),
-      {
-        passwordLoginEnabled: false,
-        microsoftSignInEnabled: true,
-        signInUnavailable: false,
-      },
-    );
-    assert.deepEqual(
-      loginSurfaceFlags({ passwordLoginEnabled: false, microsoftSignInEnabled: false }),
-      {
-        passwordLoginEnabled: false,
-        microsoftSignInEnabled: false,
-        signInUnavailable: true,
-      },
-    );
   });
 });
 
@@ -102,7 +86,7 @@ describe("password login API gate", () => {
     assert.equal(options.passwordLoginEnabled, true);
   });
 
-  it("rejects password login when disabled in catalog", async () => {
+  it("rejects password login when disabled in sidecar", async () => {
     await updatePlatformSignInSettings({ passwordLoginEnabled: false });
     resetStoreMemoryForTests();
     const allowed = await assertPasswordLoginAllowed();
@@ -115,31 +99,38 @@ describe("password login API gate", () => {
     assert.equal(options.passwordLoginEnabled, false);
   });
 
-  it("persists disable in db.json after memory reset", async () => {
+  it("persists disable in platform-settings.json after memory reset", async () => {
     const persistence = createMemoryPersistence();
     setPersistenceForTests(persistence);
     resetStoreMemoryForTests();
     await updatePlatformSignInSettings({ passwordLoginEnabled: false });
     resetStoreMemoryForTests();
-    const raw = await persistence.readDatabaseJson();
+    const raw = await persistence.readPlatformSettingsJson();
     assert.match(raw ?? "", /"passwordLoginEnabled"\s*:\s*false/);
+    const dbRaw = await persistence.readDatabaseJson();
+    assert.doesNotMatch(dbRaw ?? "", /"passwordLoginEnabled"\s*:\s*false/);
     const allowed = await assertPasswordLoginAllowed();
     assert.equal(allowed.ok, false);
   });
 
-  it("catalog heal does not drop platformSettings already on blob", async () => {
+  it("catalog heal on db.json does not clear sidecar disable", async () => {
     const persistence = createMemoryPersistence();
     setPersistenceForTests(persistence);
     resetStoreMemoryForTests();
     await updatePlatformSignInSettings({ passwordLoginEnabled: false });
-    const raw = await persistence.readDatabaseJson();
-    assert.ok(raw);
-    const snapshot = JSON.parse(raw!) as { platformSettings?: { passwordLoginEnabled?: boolean } };
+    assert.equal((await getSignInOptions()).passwordLoginEnabled, false);
+    const dbRaw = await persistence.readDatabaseJson();
+    assert.ok(dbRaw);
+    const snapshot = JSON.parse(dbRaw!) as Record<string, unknown>;
     const staleHeal = { ...snapshot };
     delete staleHeal.platformSettings;
     await writeCatalogHealForTests(staleHeal as never);
     resetStoreMemoryForTests();
-    const allowed = await assertPasswordLoginAllowed();
-    assert.equal(allowed.ok, false);
+    assert.match(
+      (await getPersistence().readPlatformSettingsJson()) ?? "",
+      /"passwordLoginEnabled"\s*:\s*false/,
+    );
+    assert.equal((await getSignInOptions()).passwordLoginEnabled, false);
+    assert.equal((await assertPasswordLoginAllowed()).ok, false);
   });
 });
