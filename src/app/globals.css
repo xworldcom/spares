@@ -2684,8 +2684,52 @@ html.spares-embed .spares-app-stage {
   gap: 0.85rem;
 }
 
+.care-visit-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.care-visit-fields dt {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--spares-muted);
+}
+
+.care-visit-fields dd {
+  margin: 0.15rem 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.care-visit-fields-optional {
+  opacity: 0.85;
+}
+
+.care-optional-meters {
+  margin-top: 0.25rem;
+}
+
+.care-optional-meters summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.care-optional-meters summary::-webkit-details-marker {
+  display: none;
+}
+
+.care-optional-meters-fields {
+  margin-top: 0.75rem;
+}
+
 @media (max-width: 640px) {
   .care-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .care-visit-fields {
     grid-template-columns: 1fr;
   }
 }

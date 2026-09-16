@@ -295,7 +295,7 @@ export function usageSummary(
   if ((after.notes ?? "") !== (before?.notes ?? "")) {
     parts.push(after.notes?.trim() ? "Updated notes" : "Cleared notes");
   }
-  return parts.join(" · ") || "Updated usage";
+  return parts.join(" · ") || "Updated service";
 }
 
 export function usageHistoryEntry(
@@ -329,12 +329,16 @@ export function hubCareHref(tab: "overview" | "tickets" = "overview") {
 
 export function careHref(
   machineId: string,
-  tab: "overview" | "manuals" | "tickets" | "usage" = "overview",
+  tab: "overview" | "manuals" | "tickets" | "service" = "overview",
 ) {
   if (tab === "overview") {
     return `/machines/${machineId}/care`;
   }
   return `/machines/${machineId}/care/${tab}`;
+}
+
+export function serviceVisitHref(machineId: string, visitId: string) {
+  return `${careHref(machineId, "service")}/${visitId}`;
 }
 
 export function machineTicketsHref(machineId: string, ticketId?: string) {
