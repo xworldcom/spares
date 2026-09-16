@@ -190,17 +190,21 @@ export function migrateTenants<T extends TenantSlice>(
   if (repaired.changed) {
     changed = true;
   }
-  const usersFinal = repaired.users.map((user) => {
-    if (
-      user.role === "staff" &&
-      user.tenantId === DEFAULT_TENANT_ID &&
-      !user.staffCreatedTenantId?.trim()
-    ) {
-      changed = true;
-      return { ...user, staffCreatedTenantId: DEFAULT_TENANT_ID };
-    }
-    return user;
-  });
+  // Pin legacy host staff only on the initial schema migration — re-running on an
+  // already-migrated catalog must stay a no-op (staff created later are pinned at create time).
+  const usersFinal = initial
+    ? repaired.users.map((user) => {
+        if (
+          user.role === "staff" &&
+          user.tenantId === DEFAULT_TENANT_ID &&
+          !user.staffCreatedTenantId?.trim()
+        ) {
+          changed = true;
+          return { ...user, staffCreatedTenantId: DEFAULT_TENANT_ID };
+        }
+        return user;
+      })
+    : repaired.users;
   const customers = stampRows(db.customers);
   const sites = stampRows(db.sites);
   const machines = stampRows(db.machines);
