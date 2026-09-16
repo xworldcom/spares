@@ -113,7 +113,7 @@ function TenantDetail() {
         method: "PATCH",
         body: JSON.stringify({ inactive: !detail.deployment.inactive }),
       });
-      setNotice(detail.deployment.inactive ? "Marked active." : "Marked inactive.");
+      setNotice(detail.deployment.inactive ? "Host reactivated." : "Host suspended.");
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Update failed");
@@ -145,7 +145,7 @@ function TenantDetail() {
     <main className="page-shell">
       <p className="mb-4">
         <Link className="text-sm text-muted hover:underline" href="/staff/platform">
-          ← Platform deployments
+          ← Hosts
         </Link>
       </p>
 
@@ -153,9 +153,9 @@ function TenantDetail() {
       <p className="text-muted font-mono text-sm">{deployment.tenant.id}</p>
       <p className="text-muted text-sm">
         Handle <code>{deployment.tenant.slug}</code> ·{" "}
-        {deployment.kind === "host" ? "Soft Launch host" : "Satellite host"} · Created{" "}
+        {deployment.kind === "host" ? "Soft Launch Host" : "Satellite"} · Created{" "}
         {new Date(deployment.tenant.createdAt).toLocaleString()}
-        {deployment.inactive ? " · Inactive" : ""}
+        {deployment.inactive ? " · Suspended" : ""}
       </p>
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -188,7 +188,7 @@ function TenantDetail() {
         <h2 className="text-lg font-semibold mb-3">Display name</h2>
         <div className="flex flex-wrap gap-2">
           <input
-            className="input flex-1 min-w-[12rem]"
+            className="spares-field h-12 flex-1 min-w-[12rem] rounded-2xl border-0 px-4 text-[16px] outline-none"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
@@ -202,10 +202,12 @@ function TenantDetail() {
           disabled={busy || deployment.kind === "host"}
           onClick={() => void toggleInactive()}
         >
-          {deployment.inactive ? "Mark active" : "Mark inactive"}
+          {deployment.inactive ? "Reactivate host" : "Suspend host"}
         </button>
         {deployment.kind === "host" ? (
-          <p className="text-xs text-muted mt-2">Soft Launch host cannot be marked inactive.</p>
+          <p className="text-xs text-muted mt-2">
+            The Soft Launch host cannot be suspended or deleted.
+          </p>
         ) : null}
         {error ? <p className="text-danger mt-2">{error}</p> : null}
         {notice ? <p className="text-sm text-muted mt-2">{notice}</p> : null}
