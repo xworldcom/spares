@@ -20,9 +20,10 @@ const STAFF_NAV_HREFS = [
   "/care",
   "/staff/accounts",
   "/staff/people",
-  "/staff/team",
   "/staff/quotes",
   "/staff/bugs",
+  "/staff/platform",
+  "/staff/directory",
 ] as const;
 
 function NavLink({
@@ -189,9 +190,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <NavLink href="/staff/people" hrefs={navHrefs}>
                     People
                   </NavLink>
-                  <NavLink href="/staff/team" hrefs={navHrefs}>
-                    Team
-                  </NavLink>
                   <NavLinkWithBadge
                     href="/staff/quotes"
                     hrefs={navHrefs}
@@ -202,9 +200,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     Bug reports
                   </NavLink>
                   {user.platformOwner ? (
-                    <NavLink href="/staff/platform" hrefs={navHrefs}>
-                      Platform
-                    </NavLink>
+                    <>
+                      <NavLink href="/staff/platform" hrefs={navHrefs}>
+                        Platform
+                      </NavLink>
+                      <NavLink href="/staff/directory" hrefs={navHrefs}>
+                        Directory
+                      </NavLink>
+                    </>
                   ) : null}
                 </>
               ) : (

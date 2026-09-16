@@ -111,16 +111,18 @@ export function MobileTabBar() {
     "/care",
     "/staff/accounts",
     "/staff/people",
-    "/staff/team",
     "/staff/quotes",
     "/staff/bugs",
+    "/staff/platform",
+    "/staff/directory",
   ] as const;
   const moreActive =
     user?.role === "staff" &&
     (isNavActive(pathname, "/staff/accounts", staffHrefs) ||
       isNavActive(pathname, "/staff/people", staffHrefs) ||
-      isNavActive(pathname, "/staff/team", staffHrefs) ||
-      isNavActive(pathname, "/staff/bugs", staffHrefs));
+      isNavActive(pathname, "/staff/bugs", staffHrefs) ||
+      isNavActive(pathname, "/staff/platform", staffHrefs) ||
+      isNavActive(pathname, "/staff/directory", staffHrefs));
   const moreOpen = moreForPath === pathname;
   const machinesMenuOpen = machinesForPath === pathname;
   const staffMachinesActive = machinesFamilyActive(pathname, staffHrefs);
@@ -177,17 +179,27 @@ export function MobileTabBar() {
               People
             </Link>
             <Link
-              href="/staff/team"
-              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-            >
-              Team
-            </Link>
-            <Link
               href="/staff/bugs"
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
               Bug reports
             </Link>
+            {user.platformOwner ? (
+              <>
+                <Link
+                  href="/staff/platform"
+                  className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+                >
+                  Platform
+                </Link>
+                <Link
+                  href="/staff/directory"
+                  className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+                >
+                  Directory
+                </Link>
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}

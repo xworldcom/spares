@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { PersonGlyph } from "@/components/catalog/CatalogGlyph";
@@ -27,8 +26,6 @@ import {
 } from "@/lib/api/auth";
 import { listMachines } from "@/lib/api/machines";
 import { errorMessage } from "@/lib/api/errors";
-import { apiFetch } from "@/lib/api/client";
-import { DEFAULT_TENANT_ID } from "@/lib/tenant";
 import type { CustomerAccount, MachineSummary, PublicUser, Site } from "@/lib/api/types";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { displayPersonName } from "@/lib/ui/display-name";
@@ -57,17 +54,8 @@ function profilesEqual(left: PersonProfile, right: PersonProfile) {
   return left.name.trim() === right.name.trim() && left.email.trim() === right.email.trim();
 }
 
-type PlatformStaffRow = {
-  id: string;
-  email: string;
-  tenantId: string | null;
-  tenantName: string | null;
-};
-
 export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
-  const { user } = useAuth();
   const [people, setPeople] = useState<PublicUser[]>([]);
-  const [platformStaff, setPlatformStaff] = useState<PlatformStaffRow[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
   const [machines, setMachines] = useState<MachineSummary[]>([]);
@@ -87,30 +75,21 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
       listCustomerAccounts(),
       listMachines(),
     ];
-    if (user?.platformOwner) {
-      loads.push(
-        apiFetch<{ staff: PlatformStaffRow[] }>("/api/platform/staff").then(
-          (data) => data.staff,
-        ),
-      );
-    }
     Promise.all(loads)
       .then((results) => {
         if (cancelled) {
           return;
         }
-        const [nextPeople, nextSites, nextAccounts, nextMachines, nextStaff] = results as [
+        const [nextPeople, nextSites, nextAccounts, nextMachines] = results as [
           PublicUser[],
           Site[],
           CustomerAccount[],
           MachineSummary[],
-          PlatformStaffRow[] | undefined,
         ];
         setPeople(nextPeople);
         setSites(nextSites);
         setAccounts(nextAccounts);
         setMachines(nextMachines);
-        setPlatformStaff(nextStaff ?? []);
         setDraftAccess(
           Object.fromEntries(
             nextPeople.map((row) => [row.id, grantFromPublicUser(row)]),
@@ -132,7 +111,7 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey, retryKey, user?.platformOwner]);
+  }, [reloadKey, retryKey]);
 
   const filtered = useMemo(() => {
     return people.filter((row) =>
@@ -229,27 +208,6 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
 
   return (
     <section className="catalog-stack">
-      {user?.platformOwner && platformStaff.length > 0 ? (
-        <div className="card p-4 mb-4">
-          <h2 className="text-base font-semibold mb-2">Staff tenant ids</h2>
-          <p className="text-sm text-muted mb-3">
-            Customer rows below are site access only. Staff logins must not use{" "}
-            <code>{DEFAULT_TENANT_ID}</code> unless they belong to OEE360 Host.
-          </p>
-          <ul className="stack gap-2 text-sm">
-            {platformStaff.map((row) => (
-              <li key={row.id}>
-                <span className="font-medium">{row.email}</span>
-                <span className="text-muted">
-                  {" "}
-                  · {row.tenantName ?? "—"} ·{" "}
-                  <code className="text-xs">{row.tenantId ?? "missing"}</code>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       <div className="catalog-toolbar">
         <CatalogSearch
           id="people-search"
