@@ -6,7 +6,7 @@ const staffHrefs = [
   "/machines",
   "/machines/new",
   "/care",
-  "/staff/customers",
+  "/staff/directory",
   "/staff/quotes",
   "/staff/bugs",
 ] as const;
@@ -32,7 +32,8 @@ describe("nav active state", () => {
 
   it("highlights only the matching staff route", () => {
     assert.deepEqual(actives("/staff/quotes"), ["/staff/quotes"]);
-    assert.deepEqual(actives("/staff/customers"), ["/staff/customers"]);
+    assert.deepEqual(actives("/staff/directory"), ["/staff/directory"]);
+    assert.deepEqual(actives("/staff/directory/user-1"), ["/staff/directory"]);
     assert.deepEqual(actives("/staff/bugs"), ["/staff/bugs"]);
   });
 

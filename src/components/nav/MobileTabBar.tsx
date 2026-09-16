@@ -109,20 +109,16 @@ export function MobileTabBar() {
     "/machines",
     "/machines/new",
     "/care",
-    "/staff/accounts",
-    "/staff/people",
+    "/staff/directory",
     "/staff/quotes",
     "/staff/bugs",
     "/staff/platform",
-    "/staff/directory",
   ] as const;
   const moreActive =
     user?.role === "staff" &&
-    (isNavActive(pathname, "/staff/accounts", staffHrefs) ||
-      isNavActive(pathname, "/staff/people", staffHrefs) ||
+    (isNavActive(pathname, "/staff/directory", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs) ||
-      isNavActive(pathname, "/staff/platform", staffHrefs) ||
-      isNavActive(pathname, "/staff/directory", staffHrefs));
+      isNavActive(pathname, "/staff/platform", staffHrefs));
   const moreOpen = moreForPath === pathname;
   const machinesMenuOpen = machinesForPath === pathname;
   const staffMachinesActive = machinesFamilyActive(pathname, staffHrefs);
@@ -167,16 +163,10 @@ export function MobileTabBar() {
             }}
           >
             <Link
-              href="/staff/accounts"
+              href="/staff/directory"
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
-              Customers
-            </Link>
-            <Link
-              href="/staff/people"
-              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-            >
-              People
+              Directory
             </Link>
             <Link
               href="/staff/bugs"
@@ -185,20 +175,12 @@ export function MobileTabBar() {
               Bug reports
             </Link>
             {user.platformOwner ? (
-              <>
-                <Link
-                  href="/staff/platform"
-                  className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-                >
-                  Platform
-                </Link>
-                <Link
-                  href="/staff/directory"
-                  className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-                >
-                  Directory
-                </Link>
-              </>
+              <Link
+                href="/staff/platform"
+                className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+              >
+                Platform
+              </Link>
             ) : null}
           </div>
         </div>
