@@ -156,7 +156,7 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
       <div className="catalog-page-intro catalog-page-intro-split">
         <div>
           <p className="catalog-breadcrumb">
-            <Link href="/staff/accounts">Customers</Link>
+            <Link href="/staff/directory?type=customer">Directory</Link>
             <span aria-hidden="true"> / </span>
             <span>{account?.name}</span>
           </p>

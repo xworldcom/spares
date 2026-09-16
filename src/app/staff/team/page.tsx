@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { directoryHref } from "@/lib/directory-url";
 
-/** Team merged into People — staff live under the Staff segment. */
+/** Team merged into Directory — staff live under the Staff filter. */
 export default function StaffTeamPage() {
-  redirect("/staff/people?tab=staff");
+  redirect(directoryHref("staff"));
 }
