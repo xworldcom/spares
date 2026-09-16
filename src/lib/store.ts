@@ -260,6 +260,24 @@ export type StoredBugReport = {
   delivery: "github" | "store";
 };
 
+export type StoredAccessInquiry = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: import("./access-inquiry.ts").AccessInquiryStatus;
+  fullName: string;
+  workEmail: string;
+  phone: string;
+  companyName: string;
+  website: string;
+  roleTitle: string;
+  scaleNotes: string;
+  customerType: import("./access-inquiry.ts").AccessInquiryCustomerType;
+  message: string;
+  referralNotes: string;
+  submitterIp?: string;
+};
+
 export type StoredManual = MachineManual;
 export type StoredTicket = ServiceTicketRecord;
 export type StoredUsage = MachineUsage;
@@ -277,6 +295,7 @@ type Database = {
   machines: StoredMachine[];
   quotes: StoredQuote[];
   bugReports: StoredBugReport[];
+  accessInquiries?: StoredAccessInquiry[];
   sites: Site[];
   machineViews?: MachineView[];
   manuals?: StoredManual[];
@@ -522,6 +541,7 @@ async function emptyDatabase(): Promise<Database> {
     machines: [],
     quotes: [],
     bugReports: [],
+    accessInquiries: [],
     sites: [],
     manuals: [],
     tickets: [],
@@ -824,6 +844,10 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       ),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
+      accessInquiries: mergeRowsForWrite(
+        healed.accessInquiries ?? [],
+        latest.accessInquiries ?? [],
+      ),
       orgTombstones: mergeOrgTombstones(healed.orgTombstones, latest.orgTombstones),
       platformSettings: latest.platformSettings ?? healed.platformSettings,
     },
@@ -1162,6 +1186,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         machines: parsed.machines ?? [],
         quotes: rawQuotes.map((quote) => normalizeStoredQuote(quote)),
         bugReports: parsed.bugReports ?? [],
+        accessInquiries: parsed.accessInquiries ?? [],
         sites: parsed.sites ?? [],
         machineViews: parsed.machineViews ?? [],
         manuals: parsed.manuals ?? [],
@@ -2480,6 +2505,7 @@ export function seedEmptyMachineCatalogForTests(users: StoredUser[]) {
     machines: [],
     quotes: [],
     bugReports: [],
+    accessInquiries: [],
     sites: [],
     machineViews: [],
     manuals: [],
@@ -3270,6 +3296,70 @@ export function attachBugReportGithubIssue(id: string, githubIssueUrl: string) {
     );
     await writeDatabase({ ...db, bugReports: reports });
     return reports.find((report) => report.id === id) ?? null;
+  });
+}
+
+export function listAccessInquiries() {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return [...(db.accessInquiries ?? [])].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
+  });
+}
+
+export function countNewAccessInquiries() {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return (db.accessInquiries ?? []).filter((row) => row.status === "new").length;
+  });
+}
+
+export function getAccessInquiry(id: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    return (db.accessInquiries ?? []).find((row) => row.id === id) ?? null;
+  });
+}
+
+export function createAccessInquiry(
+  input: Omit<StoredAccessInquiry, "id" | "createdAt" | "updatedAt" | "status">,
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const now = new Date().toISOString();
+    const inquiry: StoredAccessInquiry = {
+      id: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+      status: "new",
+      ...input,
+    };
+    await writeDatabase({
+      ...db,
+      accessInquiries: [inquiry, ...(db.accessInquiries ?? [])],
+    });
+    return inquiry;
+  });
+}
+
+export function updateAccessInquiryStatus(id: string, status: StoredAccessInquiry["status"]) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const list = db.accessInquiries ?? [];
+    const index = list.findIndex((row) => row.id === id);
+    if (index === -1) {
+      return null;
+    }
+    const next: StoredAccessInquiry = {
+      ...list[index]!,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+    const accessInquiries = [...list];
+    accessInquiries[index] = next;
+    await writeDatabase({ ...db, accessInquiries });
+    return next;
   });
 }
 

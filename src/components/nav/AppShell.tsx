@@ -9,6 +9,7 @@ import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { StaffMachinesDesktopNav } from "@/components/nav/MachinesNavMenu";
 import { useCareAlerts } from "@/components/care/CareAlerts";
+import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isNavActive } from "@/lib/nav-active";
@@ -22,6 +23,7 @@ const STAFF_NAV_HREFS = [
   "/staff/quotes",
   "/staff/bugs",
   "/staff/platform",
+  "/staff/platform/inquiries",
 ] as const;
 
 function NavLink({
@@ -79,6 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { status, user, logout } = useAuth();
   const { unreadCount: careUnreadCount } = useCareAlerts();
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
+  const { newCount: inquiryNewCount } = usePlatformInquiryAlerts();
   const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -103,9 +106,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.removeEventListener("resize", syncEmbed);
     };
   }, []);
-  const onLogin = pathname === "/login" || pathname === "/";
+  const onLogin =
+    pathname === "/login" || pathname === "/" || pathname === "/inquire";
   const signedIn = status === "signed-in" && user;
-  const cinematic = onLogin && !signedIn;
+  const cinematic = (pathname === "/" || pathname === "/inquire") && !signedIn;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
   const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
 
@@ -195,9 +199,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     Bug reports
                   </NavLink>
                   {user.platformOwner ? (
-                    <NavLink href="/staff/platform" hrefs={navHrefs}>
-                      Platform
-                    </NavLink>
+                    <>
+                      <NavLink href="/staff/platform" hrefs={navHrefs}>
+                        Platform
+                      </NavLink>
+                      <NavLinkWithBadge
+                        href="/staff/platform/inquiries"
+                        hrefs={navHrefs}
+                        label="Inquiries"
+                        unreadCount={inquiryNewCount}
+                      />
+                    </>
                   ) : null}
                 </>
               ) : (
@@ -208,6 +220,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   unreadCount={quotesUnreadCount}
                 />
               )}
+            </nav>
+          ) : onLogin && !signedIn ? (
+            <nav className="ml-auto flex shrink-0 items-center gap-1" aria-label="Public">
+              <Link
+                href="/inquire"
+                className="spares-muted inline-flex h-11 items-center px-3 text-sm font-medium transition-colors duration-200 hover:text-[var(--spares-ink)]"
+              >
+                Request access
+              </Link>
             </nav>
           ) : (
             <div className="min-w-0 flex-1" />
