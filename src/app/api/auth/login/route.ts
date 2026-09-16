@@ -4,7 +4,7 @@ import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { allowLoginAttempt } from "@/lib/rate-limit";
-import { effectiveStaffTenantId } from "@/lib/tenant";
+import { effectiveStaffTenantId, isPlatformOwnerEmail } from "@/lib/tenant";
 import { findUserByEmail, getOrgContext } from "@/lib/store";
 
 type LoginBody = {
@@ -93,11 +93,13 @@ export async function POST(request: Request) {
   if (html) {
     return redirectNoQuery("/machines");
   }
+  // Same shape as /api/auth/me — the client gates platform nav on this flag.
+  const platformOwner = isPlatformOwnerEmail(user.email);
   if (user.role === "customer") {
     const org = await getOrgContext(tenantId);
     return json({
-      user: toPublicUser(user, org.sites, org.customers, { tenantId }),
+      user: toPublicUser(user, org.sites, org.customers, { tenantId, platformOwner }),
     });
   }
-  return json({ user: toPublicUser(user, [], [], { tenantId }) });
+  return json({ user: toPublicUser(user, [], [], { tenantId, platformOwner }) });
 }
