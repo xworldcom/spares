@@ -1,0 +1,21 @@
+{
+  "status": 200,
+  "body": {
+    "machines": [
+      {
+        "id": "hardware-fixture",
+        "name": "Hardware fixture",
+        "siteId": "site-acme-dayton",
+        "company": "Acme",
+        "siteName": "Dayton"
+      },
+      {
+        "id": "palletizer",
+        "name": "Palletizer",
+        "siteId": "site-cargill-ftw",
+        "company": "Cargill",
+        "siteName": "Fort Worth"
+      }
+    ]
+  }
+}
