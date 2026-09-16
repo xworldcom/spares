@@ -1,69 +1,64 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   DEMO_SCRUB_EXTRA_VH,
-  DEMO_SCRUB_STICKY_TOP_PX,
-  demoElapsedFromProgress,
+  demoPlayhead,
   demoSectionScrollProgress,
 } from "@/lib/ui/landing-demo";
 
 export type LandingDemoScrubSnapshot = {
-  elapsedMs: number;
-  reduceMotion: boolean;
   progress: number;
+  reduceMotion: boolean;
 };
 
 export function LandingDemoScrub({
-  durationMs,
   ariaLabel,
   children,
 }: {
-  durationMs: number;
   ariaLabel: string;
   children: (snapshot: LandingDemoScrubSnapshot) => ReactNode;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
+  const pinRef = useRef<HTMLDivElement>(null);
   const [snapshot, setSnapshot] = useState<LandingDemoScrubSnapshot>(() => ({
-    elapsedMs: 0,
-    reduceMotion: false,
     progress: 0,
+    reduceMotion: false,
   }));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
-      setSnapshot({
-        elapsedMs: durationMs,
-        reduceMotion: true,
-        progress: 1,
-      });
+      setSnapshot({ progress: 1, reduceMotion: true });
       return;
     }
 
     const section = sectionRef.current;
-    if (!section) {
+    const pin = pinRef.current;
+    if (!section || !pin) {
       return;
     }
 
     let frame = 0;
     const measure = () => {
       const el = sectionRef.current;
-      if (!el) {
+      const stage = pinRef.current;
+      if (!el || !stage) {
         return;
       }
-      const rect = el.getBoundingClientRect();
+      const stickyTop = Number.parseFloat(window.getComputedStyle(stage).top) || 0;
       const progress = demoSectionScrollProgress(
-        rect.top,
+        el.getBoundingClientRect().top,
         el.offsetHeight,
-        window.innerHeight,
-        DEMO_SCRUB_STICKY_TOP_PX,
+        stage.offsetHeight,
+        stickyTop,
       );
-      setSnapshot({
-        elapsedMs: demoElapsedFromProgress(false, progress, durationMs),
-        reduceMotion: false,
-        progress,
-      });
+      const next = demoPlayhead(false, progress);
+      setSnapshot((current) =>
+        current.reduceMotion === false && current.progress === next
+          ? current
+          : { progress: next, reduceMotion: false },
+      );
     };
 
     const onScroll = () => {
@@ -86,7 +81,7 @@ export function LandingDemoScrub({
         window.cancelAnimationFrame(frame);
       }
     };
-  }, [durationMs]);
+  }, []);
 
   return (
     <section
@@ -100,7 +95,15 @@ export function LandingDemoScrub({
       }
       aria-label={ariaLabel}
     >
-      <div className="landing-demo-scrub-pin">{children(snapshot)}</div>
+      <div ref={pinRef} className="landing-demo-scrub-pin">
+        <div
+          className="landing-demo-scrub-meter"
+          aria-hidden="true"
+        >
+          <i style={{ transform: `scaleX(${snapshot.progress})` }} />
+        </div>
+        {children(snapshot)}
+      </div>
     </section>
   );
 }

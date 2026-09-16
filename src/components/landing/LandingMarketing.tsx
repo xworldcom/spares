@@ -1,70 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { LandingCell } from "@/components/landing/LandingCell";
-import { LandingDemoPerspective } from "@/components/landing/LandingDemoPerspective";
 import { LandingDemoScrub } from "@/components/landing/LandingDemoScrub";
 import { LandingProductDemo } from "@/components/landing/LandingProductDemo";
-import {
-  DEMO_QUOTE_DURATION_MS,
-  DEMO_TICKET_DURATION_MS,
-  type MarketingPerspective,
-} from "@/lib/ui/landing-demo";
 
 export function LandingMarketing() {
-  const [perspective, setPerspective] = useState<MarketingPerspective>("customer");
-
   return (
     <div className="landing-marketing" aria-label="About OEE360">
       <section id="product-story" className="landing-section landing-section--stage">
         <p className="landing-section-kicker">Care and quotes</p>
-        <h2 className="landing-section-title">Two threads. One calm rhythm.</h2>
+        <h2 className="landing-section-title">Two threads. One workspace.</h2>
         <p className="landing-section-lede">
-          Flip between the plant and staff. Scroll to walk each thread forward or back—same chat and
-          progress language maintenance already uses on a tablet.
+          Scroll to walk a parts quote, then a Care ticket. The list, the status strip, and the
+          thread stay on screen while the story moves.
         </p>
 
         <div className="landing-demo">
-          <LandingDemoPerspective
-            perspective={perspective}
-            onPerspectiveChange={setPerspective}
-          />
-
           <div className="landing-demo-scrub-stack">
-            <LandingDemoScrub durationMs={DEMO_QUOTE_DURATION_MS} ariaLabel="Parts quote demo">
-              {({ elapsedMs, reduceMotion }) => (
-                <div className="landing-demo-block">
-                  <h3 className="landing-demo-block-title">Parts quotes</h3>
-                  <p className="landing-demo-block-lede">
-                    A spare request that breathes—status steps land as you read down the page.
-                  </p>
-                  <LandingProductDemo
-                    variant="quote"
-                    perspective={perspective}
-                    elapsedMs={elapsedMs}
-                    reduceMotion={reduceMotion}
-                    scrubbed
-                  />
-                </div>
+            <LandingDemoScrub ariaLabel="Parts quote demo">
+              {({ progress, reduceMotion }) => (
+                <LandingProductDemo
+                  variant="quote"
+                  progress={progress}
+                  reduceMotion={reduceMotion}
+                  scrubbed
+                />
               )}
             </LandingDemoScrub>
 
-            <LandingDemoScrub durationMs={DEMO_TICKET_DURATION_MS} ariaLabel="Machine Care demo">
-              {({ elapsedMs, reduceMotion }) => (
-                <div className="landing-demo-block">
-                  <h3 className="landing-demo-block-title">Machine Care</h3>
-                  <p className="landing-demo-block-lede">
-                    A ticket on the cell: jam, diagnosis, and handoff without leaving the thread.
-                  </p>
-                  <LandingProductDemo
-                    variant="ticket"
-                    perspective={perspective}
-                    elapsedMs={elapsedMs}
-                    reduceMotion={reduceMotion}
-                    scrubbed
-                  />
-                </div>
+            <LandingDemoScrub ariaLabel="Machine Care demo">
+              {({ progress, reduceMotion }) => (
+                <LandingProductDemo
+                  variant="ticket"
+                  progress={progress}
+                  reduceMotion={reduceMotion}
+                  scrubbed
+                />
               )}
             </LandingDemoScrub>
           </div>
