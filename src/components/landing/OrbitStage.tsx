@@ -62,7 +62,7 @@ function FittedMachine({ paused }: { paused: boolean }) {
     const center = box.getCenter(new Vector3());
     model.position.sub(center);
     const longest = Math.max(size.x, size.y, size.z, 1);
-    const scale = 2.35 / longest;
+    const scale = 2.85 / longest;
     if (root.current) {
       root.current.scale.setScalar(scale);
     }
@@ -118,7 +118,12 @@ export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
       aria-hidden="true"
     >
       <Canvas
-        camera={{ position: [3.05, 1.55, 4.15], fov: 32, near: 0.1, far: 40 }}
+        camera={{
+          position: interactive ? [2.35, 1.85, 3.35] : [3.05, 1.55, 4.15],
+          fov: interactive ? 38 : 32,
+          near: 0.1,
+          far: 40,
+        }}
         dpr={[1, 1.6]}
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
       >
