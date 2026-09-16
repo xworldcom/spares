@@ -13,7 +13,10 @@ import {
   createCustomer,
   createCustomerAccount,
   createTenantWithOptionalStaff,
+  getPlatformDirectoryUser,
   listPlatformDirectory,
+  mutatePlatformDirectoryUser,
+  removePlatformDirectoryUser,
   resetStoreMemoryForTests,
   updateTenantPlatformMeta,
 } from "./store.ts";
@@ -113,6 +116,12 @@ describe("platform directory", () => {
       ],
     );
 
+    const staff = ofType(entries, "staff");
+    assert.deepEqual(
+      staff.map((row) => [row.name, row.email, row.hostId]),
+      [["staff@acme.test", "staff@acme.test", "tenant-acme"]],
+    );
+
     const people = ofType(entries, "person");
     assert.deepEqual(
       people.map((row) => [row.name, row.email, row.hostId]),
@@ -120,11 +129,6 @@ describe("platform directory", () => {
         ["kevin-customer@host.test", "kevin-customer@host.test", DEFAULT_TENANT_ID],
         ["Olive Operator", "operator@plastics.test", "tenant-acme"],
       ],
-    );
-    // Staff logins are managed per host, never listed as directory people.
-    assert.equal(
-      entries.some((row) => row.email === "staff@acme.test"),
-      false,
     );
   });
 
@@ -207,6 +211,7 @@ describe("platform directory", () => {
         ["customer", "Satellite Customer"],
         ["host", "Directory Co"],
         ["person", "Satellite Person"],
+        ["staff", "dir-staff@test"],
       ],
     );
 
@@ -219,11 +224,50 @@ describe("platform directory", () => {
       hostRows.some((row) => row.name === "Satellite Person"),
       false,
     );
-    // Staff created with the tenant never leaks into the directory as a person.
     assert.equal(
-      entries.some((row) => row.email === "dir-staff@test"),
-      false,
+      entries.some((row) => row.type === "staff" && row.email === "dir-staff@test"),
+      true,
     );
+  });
+
+  it("platform directory user APIs edit and deactivate staff and customers", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("People Co", {
+      email: "people-staff@test",
+      passwordHash: await hashPassword("password-1"),
+    });
+    assert.ok("tenant" in created);
+    const tenantId = created.tenant.id;
+    assert.ok(created.staffUser);
+
+    const person = await createCustomer(
+      tenantId,
+      "people-customer@test",
+      await hashPassword("password-2"),
+      { name: "People Customer" },
+    );
+    assert.ok("user" in person);
+
+    const staffLocated = await getPlatformDirectoryUser(created.staffUser!.id);
+    assert.ok(!("error" in staffLocated));
+    assert.equal(staffLocated.tenantId, tenantId);
+
+    const renamed = await mutatePlatformDirectoryUser(created.staffUser!.id, {
+      name: "People Staff",
+    });
+    assert.ok(!("error" in renamed));
+    assert.equal(renamed.user.name, "People Staff");
+
+    const customerPatch = await mutatePlatformDirectoryUser(person.user.id, {
+      email: "people-customer-renamed@test",
+    });
+    assert.ok(!("error" in customerPatch));
+    assert.equal(customerPatch.user.email, "people-customer-renamed@test");
+
+    const removedStaff = await removePlatformDirectoryUser(created.staffUser!.id);
+    assert.deepEqual(removedStaff, { ok: true });
+    const gone = await getPlatformDirectoryUser(created.staffUser!.id);
+    assert.deepEqual(gone, { error: "not-found" });
   });
 
   it("suspends satellites but never the Soft Launch host", async () => {

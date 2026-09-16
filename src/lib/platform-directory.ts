@@ -1,7 +1,7 @@
-import { effectiveTenantId } from "./tenant.ts";
+import { effectiveStaffTenantId, effectiveTenantId } from "./tenant.ts";
 import type { CustomerAccount, Role, Tenant } from "../types/index.ts";
 
-export type DirectoryEntryType = "host" | "customer" | "person";
+export type DirectoryEntryType = "host" | "customer" | "staff" | "person";
 
 export type DirectoryEntry = {
   type: DirectoryEntryType;
@@ -12,7 +12,7 @@ export type DirectoryEntry = {
   email?: string;
   hostId: string;
   hostName: string;
-  /** Host rows only. */
+  /** Host rows only (inactive tenant). */
   suspended?: boolean;
   createdAt?: string;
 };
@@ -39,8 +39,7 @@ function personDisplayName(user: { name?: string; email: string }) {
 
 /**
  * Flat cross-host directory for platform owners: every host tenant, every
- * customer account, and every customer person, each carrying its host column.
- * Staff logins are not people rows — they are managed per host.
+ * customer account, every staff login, and every customer person, each with a host column.
  */
 export function buildPlatformDirectory(catalog: DirectoryCatalogSlice): DirectoryEntry[] {
   const hostNames = new Map(catalog.tenants.map((tenant) => [tenant.id, tenant.name]));
@@ -73,6 +72,21 @@ export function buildPlatformDirectory(catalog: DirectoryCatalogSlice): Director
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const staff: DirectoryEntry[] = catalog.users
+    .filter((user) => user.role === "staff" && !user.deletedAt)
+    .map((user) => {
+      const tenantId = effectiveStaffTenantId(user) ?? effectiveTenantId(user);
+      return {
+        type: "staff" as const,
+        id: user.id,
+        name: personDisplayName(user),
+        email: user.email,
+        hostId: tenantId,
+        hostName: hostName(tenantId),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const people: DirectoryEntry[] = catalog.users
     .filter((user) => user.role === "customer" && !user.deletedAt)
     .map((user) => {
@@ -88,7 +102,7 @@ export function buildPlatformDirectory(catalog: DirectoryCatalogSlice): Director
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return [...hosts, ...customers, ...people];
+  return [...hosts, ...customers, ...staff, ...people];
 }
 
 export function filterDirectoryEntries(

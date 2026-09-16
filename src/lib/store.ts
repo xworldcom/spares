@@ -41,6 +41,8 @@ import {
   TENANT_SCHEMA_VERSION,
   belongsToTenant,
   canAssignStaffAcrossTenants,
+  effectiveStaffTenantId,
+  effectiveTenantId,
   filterByTenant,
   platformOwnerEmails,
 } from "./tenant.ts";
@@ -1625,6 +1627,148 @@ export function deletePerson(userId: string, tenantId: string) {
     await writeDatabase({ ...db, users });
     return { ok: true as const };
   });
+}
+
+export function deleteStaffUser(userId: string, tenantId: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const index = db.users.findIndex(
+      (user) => user.id === userId && belongsToTenant(user, tenantId),
+    );
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const user = db.users[index];
+    if (user.role !== "staff" || user.deletedAt) {
+      return { error: "not-staff" as const };
+    }
+    if (isHostStaffEmail(user.email)) {
+      return { error: "protected" as const };
+    }
+    const users = db.users.slice();
+    users[index] = { ...user, deletedAt: new Date().toISOString() };
+    await writeDatabase({ ...db, users });
+    return { ok: true as const };
+  });
+}
+
+export function updateStaffProfile(
+  userId: string,
+  tenantId: string,
+  patch: { name?: string | null; email?: string },
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const index = db.users.findIndex(
+      (user) => user.id === userId && belongsToTenant(user, tenantId),
+    );
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const user = db.users[index];
+    if (user.role !== "staff" || user.deletedAt) {
+      return { error: "not-staff" as const };
+    }
+    if (isHostStaffEmail(user.email)) {
+      return { error: "protected" as const };
+    }
+
+    let next: StoredUser = { ...user };
+
+    if (patch.email !== undefined) {
+      const normalized = normalizeEmail(patch.email);
+      if (!normalized) {
+        return { error: "bad-email" as const };
+      }
+      if (
+        db.users.some(
+          (row) => row.id !== userId && row.email === normalized && !row.deletedAt,
+        )
+      ) {
+        return { error: "email-taken" as const };
+      }
+      next = { ...next, email: normalized };
+    }
+
+    if (patch.name !== undefined) {
+      const trimmed = patch.name?.trim() ?? "";
+      if (trimmed) {
+        next = { ...next, name: trimmed };
+      } else {
+        const { name: _removed, ...rest } = next;
+        next = rest as StoredUser;
+      }
+    }
+
+    const users = db.users.slice();
+    users[index] = next;
+    await writeDatabase({ ...db, users });
+    return { user: next };
+  });
+}
+
+function platformDirectoryUserTenantId(user: StoredUser) {
+  if (user.role === "staff") {
+    return effectiveStaffTenantId(user) ?? effectiveTenantId(user);
+  }
+  return effectiveTenantId(user);
+}
+
+export function getPlatformDirectoryUser(userId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const user = db.users.find((row) => row.id === userId && !row.deletedAt);
+    if (!user || (user.role !== "customer" && user.role !== "staff")) {
+      return { error: "not-found" as const };
+    }
+    const tenantId = platformDirectoryUserTenantId(user);
+    const tenant = (db.tenants ?? []).find((row) => row.id === tenantId);
+    const hostName = tenant?.name ?? tenantId;
+    return { user, tenantId, hostName };
+  });
+}
+
+export async function mutatePlatformDirectoryUser(
+  userId: string,
+  patch: {
+    name?: string | null;
+    email?: string;
+    siteIds?: string[];
+    machineIds?: string[];
+  },
+) {
+  const located = await getPlatformDirectoryUser(userId);
+  if ("error" in located) {
+    return located;
+  }
+  const { user, tenantId } = located;
+  if (user.role === "staff") {
+    if (patch.siteIds !== undefined || patch.machineIds !== undefined) {
+      return { error: "invalid" as const };
+    }
+    return updateStaffProfile(userId, tenantId, {
+      ...(patch.name !== undefined ? { name: patch.name } : {}),
+      ...(patch.email !== undefined ? { email: patch.email } : {}),
+    });
+  }
+  return updatePerson(userId, tenantId, {
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.email !== undefined ? { email: patch.email } : {}),
+    ...(patch.siteIds !== undefined ? { siteIds: patch.siteIds } : {}),
+    ...(patch.machineIds !== undefined ? { machineIds: patch.machineIds } : {}),
+  });
+}
+
+export async function removePlatformDirectoryUser(userId: string) {
+  const located = await getPlatformDirectoryUser(userId);
+  if ("error" in located) {
+    return located;
+  }
+  const { user, tenantId } = located;
+  if (user.role === "staff") {
+    return deleteStaffUser(userId, tenantId);
+  }
+  return deletePerson(userId, tenantId);
 }
 
 export function listSites(tenantId: string, customerId?: string) {

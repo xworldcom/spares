@@ -23,19 +23,22 @@ const TYPE_FILTERS: Array<{ value: TypeFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "host", label: "Hosts" },
   { value: "customer", label: "Customers" },
+  { value: "staff", label: "Staff" },
   { value: "person", label: "People" },
 ];
 
 const TYPE_LABELS: Record<DirectoryEntryType, string> = {
   host: "Host",
   customer: "Customer",
+  staff: "Staff",
   person: "Person",
 };
 
 const TYPE_ORDER: Record<DirectoryEntryType, number> = {
   host: 0,
   customer: 1,
-  person: 2,
+  staff: 2,
+  person: 3,
 };
 
 function sortValue(entry: DirectoryEntry, key: SortKey): string | number {
@@ -165,6 +168,13 @@ function PlatformDirectory() {
             >
               {entry.name}
             </Link>
+          ) : entry.type === "person" || entry.type === "staff" ? (
+            <Link
+              className="font-medium hover:underline"
+              href={`/staff/directory/${encodeURIComponent(entry.id)}`}
+            >
+              {entry.name}
+            </Link>
           ) : (
             <span className="font-medium">{entry.name}</span>
           )}
@@ -198,8 +208,8 @@ function PlatformDirectory() {
         <div>
           <h1 className="page-title">Directory</h1>
           <p className="text-muted mt-1 max-w-2xl">
-            Find anything across every host install — host companies, their customers, and
-            customer people. Manage records inside each host&apos;s own console.
+            Find anything across every host install — companies, customers, staff logins, and
+            customer people. Open a person or staff row to edit profile or deactivate access.
           </p>
         </div>
         <Link className="btn-secondary text-sm" href="/staff/platform">
