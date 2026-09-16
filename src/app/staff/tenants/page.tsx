@@ -7,6 +7,7 @@ import { DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME } from "@/lib/tenant";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
+import { isForbidden, errorMessage } from "@/lib/api/errors";
 
 type TenantsResponse = { tenants: Tenant[] };
 
@@ -45,19 +46,22 @@ function PlatformTenants() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    if (!user?.platformOwner) {
+      setForbidden(true);
+      return;
+    }
     try {
       const data = await apiFetch<TenantsResponse>("/api/platform/tenants");
       setTenants(data.tenants);
       setForbidden(false);
-      if (user?.platformOwner) {
-        const staffData = await apiFetch<PlatformStaffResponse>("/api/platform/staff");
-        setStaffRows(staffData.staff);
-      }
+      setError(null);
+      const staffData = await apiFetch<PlatformStaffResponse>("/api/platform/staff");
+      setStaffRows(staffData.staff);
     } catch (cause) {
-      if (cause instanceof Error && cause.message.includes("403")) {
+      if (isForbidden(cause)) {
         setForbidden(true);
       }
-      setError(cause instanceof Error ? cause.message : "Could not load tenants");
+      setError(errorMessage(cause, "Could not load tenants"));
     }
   }, [user?.platformOwner]);
 
@@ -67,6 +71,15 @@ function PlatformTenants() {
 
   async function onCreate(event: React.FormEvent) {
     event.preventDefault();
+    const trimmedEmail = staffEmail.trim();
+    if (trimmedEmail && !staffPassword) {
+      setError("Staff password is required when first staff email is set.");
+      return;
+    }
+    if (staffPassword && !trimmedEmail) {
+      setError("First staff email is required when setting a password.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -91,13 +104,13 @@ function PlatformTenants() {
       }
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Create failed");
+      setError(errorMessage(cause, "Create failed"));
     } finally {
       setBusy(false);
     }
   }
 
-  if (forbidden) {
+  if (!user?.platformOwner || forbidden) {
     return (
       <main className="page-shell">
         <h1 className="page-title">Host companies</h1>
@@ -123,11 +136,11 @@ function PlatformTenants() {
         <code className="text-xs">{DEFAULT_TENANT_ID}</code>).
       </p>
 
-      <form className="stack gap-3 max-w-md mb-10" onSubmit={onCreate}>
+      <form className="stack gap-4 max-w-md mb-10" onSubmit={onCreate}>
         <label className="stack gap-1">
-          <span>Tenant name</span>
+          <span className="text-sm font-medium">Company name</span>
           <input
-            className="input"
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -135,29 +148,32 @@ function PlatformTenants() {
           />
         </label>
         <label className="stack gap-1">
-          <span>First staff email (optional)</span>
+          <span className="text-sm font-medium">First staff email (optional)</span>
           <input
-            className="input"
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             type="email"
             value={staffEmail}
             onChange={(e) => setStaffEmail(e.target.value)}
             placeholder="ops@acme-automation.com"
+            autoComplete="off"
           />
         </label>
         <label className="stack gap-1">
-          <span>Staff password (optional)</span>
+          <span className="text-sm font-medium">Staff password (optional)</span>
           <input
-            className="input"
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             type="password"
             value={staffPassword}
             onChange={(e) => setStaffPassword(e.target.value)}
+            minLength={staffEmail.trim() ? 10 : undefined}
             autoComplete="new-password"
           />
+          <p className="spares-muted text-sm">At least 10 characters when creating first staff.</p>
         </label>
-        {error ? <p className="text-danger">{error}</p> : null}
-        {notice ? <p className="text-sm text-muted">{notice}</p> : null}
+        {error ? <p className="text-danger" role="alert">{error}</p> : null}
+        {notice ? <p className="text-sm text-muted" role="status">{notice}</p> : null}
         <button className="btn-primary" type="submit" disabled={busy}>
-          {busy ? "Creating…" : "Create tenant"}
+          {busy ? "Creating…" : "Add new host tenant"}
         </button>
       </form>
 
