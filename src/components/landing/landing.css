@@ -60,6 +60,15 @@
   -webkit-user-select: none;
 }
 
+.landing-stage--interactive {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.landing-stage--interactive:active {
+  cursor: grabbing;
+}
+
 @keyframes landing-ken-burns {
   0% {
     transform: scale(1.02) translate3d(0, 0, 0);
@@ -258,10 +267,15 @@
 }
 
 .landing-section {
-  max-width: 46rem;
+  max-width: 58rem;
   margin: 0 auto;
   padding: 3.25rem 0;
   border-top: 1px solid rgba(236, 234, 228, 0.08);
+}
+
+.landing-section--stage,
+.landing-section--cell {
+  max-width: 72rem;
 }
 
 .landing-section:first-child {
@@ -269,12 +283,12 @@
   padding-top: 2rem;
 }
 
-.landing-section--panel {
-  max-width: none;
-  padding-inline: clamp(1rem, 4vw, 2.5rem);
-  border-radius: 1.25rem;
-  border: 1px solid rgba(236, 234, 228, 0.08);
-  background: rgba(12, 13, 15, 0.72);
+.landing-demo-stage .quote-progress {
+  margin: 0;
+}
+
+.landing-demo-stage .quote-progress-caption {
+  color: rgba(236, 234, 228, 0.5);
 }
 
 .landing-section-kicker {
@@ -302,79 +316,122 @@
   line-height: 1.6;
 }
 
-.landing-flow {
-  list-style: none;
-  margin: 2rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 1.35rem;
-}
-
-.landing-flow-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 1rem;
-  align-items: start;
-}
-
-.landing-flow-step {
-  color: rgba(236, 234, 228, 0.35);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-}
-
-.landing-flow-item h3 {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.landing-flow-item p {
-  margin: 0.35rem 0 0;
-  color: rgba(236, 234, 228, 0.62);
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.landing-bullets {
-  margin: 1.35rem 0 0;
-  padding-left: 1.1rem;
-  color: rgba(236, 234, 228, 0.68);
-  font-size: 15px;
-  line-height: 1.65;
-}
-
-.landing-role-grid {
-  display: grid;
-  gap: 0.85rem;
+.landing-demo {
   margin-top: 1.75rem;
 }
 
-@media (min-width: 720px) {
-  .landing-role-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.landing-perspective {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(236, 234, 228, 0.12);
+  background: rgba(12, 13, 15, 0.72);
 }
 
-.landing-role-card {
-  padding: 1.1rem 1.15rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(236, 234, 228, 0.08);
-  background: rgba(16, 17, 20, 0.55);
-}
-
-.landing-role-card h3 {
-  margin: 0;
-  font-size: 15px;
+.landing-perspective-btn {
+  min-height: 2.75rem;
+  padding: 0 1.15rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(236, 234, 228, 0.62);
+  font-size: 14px;
   font-weight: 600;
 }
 
-.landing-role-card p {
-  margin: 0.45rem 0 0;
-  color: rgba(236, 234, 228, 0.62);
+.landing-perspective-btn.is-on {
+  background: #eceae4;
+  color: #0c0d0f;
+}
+
+.landing-demo-stage {
+  margin-top: 1.1rem;
+  padding: 1rem 0.85rem 1.15rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(236, 234, 228, 0.1);
+  background:
+    linear-gradient(180deg, rgba(22, 24, 28, 0.92), rgba(10, 11, 13, 0.96));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 720px) {
+  .landing-demo-stage {
+    padding: 1.25rem 1.25rem 1.4rem;
+  }
+}
+
+.landing-demo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.landing-demo-kicker {
+  margin: 0;
+  color: rgba(236, 234, 228, 0.42);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.landing-demo-title {
+  margin: 0.35rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.landing-demo-meta {
+  margin: 0.25rem 0 0;
+  color: rgba(236, 234, 228, 0.58);
   font-size: 14px;
-  line-height: 1.5;
+}
+
+.landing-demo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.landing-demo-quote-strip {
+  margin-top: 0.35rem;
+}
+
+.landing-demo-quote-label {
+  margin: 0 0 0.35rem;
+  color: rgba(236, 234, 228, 0.45);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-demo-thread {
+  min-height: 16.5rem;
+  max-height: 22rem;
+  margin-top: 0.85rem;
+  padding: 0.35rem 0.15rem 0.15rem;
+  overflow: auto;
+}
+
+.landing-cell {
+  position: relative;
+  height: min(36rem, 78vw);
+  min-height: 22rem;
+  margin-top: 1.5rem;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(236, 234, 228, 0.1);
+  background: #07080a;
+}
+
+.landing-cell .landing-stage {
+  position: absolute;
 }
 
 .landing-section--cta {

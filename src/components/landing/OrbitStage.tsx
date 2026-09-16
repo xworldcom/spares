@@ -1,8 +1,8 @@
 "use client";
 
+import { OrbitControls, useGLTF } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
-import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Box3,
   Group,
@@ -98,13 +98,25 @@ function Lights() {
   );
 }
 
-export function OrbitStage() {
-  const paused =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const paused = reduceMotion || dragging;
 
   return (
-    <div className="landing-stage" aria-hidden="true">
+    <div
+      className={interactive ? "landing-stage landing-stage--interactive" : "landing-stage"}
+      aria-hidden="true"
+    >
       <Canvas
         camera={{ position: [3.05, 1.55, 4.15], fov: 32, near: 0.1, far: 40 }}
         dpr={[1, 1.6]}
@@ -114,6 +126,17 @@ export function OrbitStage() {
         <Suspense fallback={null}>
           <FittedMachine paused={paused} />
         </Suspense>
+        {interactive ? (
+          <OrbitControls
+            enablePan={false}
+            enableZoom
+            minDistance={2.8}
+            maxDistance={7.2}
+            autoRotate={false}
+            onStart={() => setDragging(true)}
+            onEnd={() => setDragging(false)}
+          />
+        ) : null}
       </Canvas>
     </div>
   );
