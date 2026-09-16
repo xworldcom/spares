@@ -15,6 +15,8 @@ import {
   manualExtension,
   manualOverLimitMessage,
   countUnreadTickets,
+  customerReadReceiptsForTicket,
+  isCustomerReadThroughTicket,
   nextTicketNumber,
   parseCareText,
   parseOptionalNumber,
@@ -143,6 +145,61 @@ describe("care tickets", () => {
     );
     assert.equal(ticket.unread, true);
     assert.equal(ticket.machineName, "Palletizer");
+    assert.equal(ticket.customerReadReceipts, undefined);
+  });
+
+  it("builds staff-only customer read receipts from lastReadAt", () => {
+    const record = {
+      id: "t1",
+      number: 1,
+      machineId: "m1",
+      title: "Belt slip",
+      status: "open" as const,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerId: "cust-a",
+      customerEmail: "a@example.com",
+      activities: [
+        {
+          id: "a1",
+          at: "2026-01-02T00:00:00.000Z",
+          actorRole: "staff" as const,
+          actorEmail: "staff@spares.local",
+          kind: "message" as const,
+          text: "On site Friday",
+        },
+      ],
+      lastReadAt: {
+        "cust-a": "2026-01-02T01:00:00.000Z",
+        "staff-1": "2026-01-02T01:00:00.000Z",
+        "cust-b": "2026-01-01T00:00:00.000Z",
+      },
+    };
+    const customers = [
+      { id: "cust-a", email: "a@example.com", name: "Alex", role: "customer" as const },
+      { id: "cust-b", email: "b@example.com", role: "customer" as const },
+      { id: "staff-1", email: "staff@spares.local", role: "staff" as const },
+    ];
+    assert.deepEqual(customerReadReceiptsForTicket(record, customers), [
+      {
+        userId: "cust-a",
+        email: "a@example.com",
+        name: "Alex",
+        readAt: "2026-01-02T01:00:00.000Z",
+      },
+    ]);
+    assert.equal(isCustomerReadThroughTicket(record, "cust-a"), true);
+    assert.equal(isCustomerReadThroughTicket(record, "cust-b"), false);
+
+    const staffView = toPublicTicket(record, { id: "staff-1", role: "staff" }, "Line", {
+      customerUsers: customers,
+    });
+    assert.equal(staffView.customerReadReceipts?.length, 1);
+    assert.equal(staffView.customerReadReceipts?.[0]?.email, "a@example.com");
+
+    const customerView = toPublicTicket(record, { id: "cust-a", role: "customer" }, "Line", {
+      customerUsers: customers,
+    });
+    assert.equal(customerView.customerReadReceipts, undefined);
   });
 });
 

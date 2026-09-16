@@ -1,5 +1,5 @@
-import { MAX_CARE_TEXT, toPublicTicket } from "@/lib/care";
-import { actorOf, requireTicketAccess } from "@/lib/care-http";
+import { MAX_CARE_TEXT } from "@/lib/care";
+import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
 import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
 import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
@@ -72,7 +72,7 @@ export async function POST(
   });
 
   return json(
-    { ticket: toPublicTicket(next, access.user, access.machine.name) },
+    { ticket: await publicTicketForUser(next, access.user, access.machine.name) },
     201,
   );
 }

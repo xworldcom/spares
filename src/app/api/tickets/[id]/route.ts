@@ -1,5 +1,5 @@
-import { isTicketStatus, toPublicTicket } from "@/lib/care";
-import { actorOf, requireTicketAccess } from "@/lib/care-http";
+import { isTicketStatus } from "@/lib/care";
+import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
@@ -18,9 +18,12 @@ export async function GET(
     return access.error;
   }
   const tenantId = userTenantId(access.user);
-  await markTicketRead(access.ticket.id, tenantId, access.user.id);
+  let ticket = access.ticket;
+  if (access.user.role === "staff") {
+    ticket = (await markTicketRead(access.ticket.id, tenantId, access.user.id)) ?? ticket;
+  }
   return json({
-    ticket: toPublicTicket(access.ticket, access.user, access.machine.name),
+    ticket: await publicTicketForUser(ticket, access.user, access.machine.name),
   });
 }
 
@@ -56,6 +59,6 @@ export async function PATCH(
     return error("Ticket not found", 404);
   }
   return json({
-    ticket: toPublicTicket(next, access.user, access.machine.name),
+    ticket: await publicTicketForUser(next, access.user, access.machine.name),
   });
 }
