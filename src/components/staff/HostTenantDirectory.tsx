@@ -22,10 +22,13 @@ type TypeFilter = DirectoryEntryType | "all";
 
 const TYPE_FILTERS: Array<{ value: TypeFilter; label: string }> = [
   { value: "all", label: "All" },
-  { value: "customer", label: "Customers" },
   { value: "staff", label: "Staff" },
+  { value: "customer", label: "Customers" },
   { value: "person", label: "People" },
 ];
+
+const DIRECTORY_CREATE_CHIP =
+  "btn-soft inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-medium";
 
 type TenantRow =
   | { type: "customer"; id: string; name: string }
@@ -117,27 +120,15 @@ export function HostTenantDirectory() {
 
   return (
     <main className="page-shell">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="page-title">Directory</h1>
-          <p className="text-muted mt-1 max-w-2xl">
-            Customer companies, staff logins, and customer people for this install. Open a person
-            or staff row to edit profile, access, or deactivate.
-          </p>
-        </div>
-        {type === "person" ? (
-          <button
-            type="button"
-            className="btn-primary text-sm"
-            aria-expanded={creatingPerson}
-            onClick={() => setCreatingPerson((open) => !open)}
-          >
-            {creatingPerson ? "Close" : "New person"}
-          </button>
-        ) : null}
+      <div className="mb-6">
+        <h1 className="page-title">Directory</h1>
+        <p className="text-muted mt-1 max-w-2xl">
+          Customer companies, staff logins, and customer people for this install. Open any row to
+          view or edit that record.
+        </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Filter by type" className="flex rounded-full bg-white/5 p-1">
           {TYPE_FILTERS.map((option) => (
             <button
@@ -155,20 +146,29 @@ export function HostTenantDirectory() {
             </button>
           ))}
         </div>
-        {type === "all" ? (
-          <>
-            <label className="sr-only" htmlFor="tenant-directory-search">
-              Search directory
-            </label>
-            <input
-              id="tenant-directory-search"
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name or email"
-              className="spares-field h-11 w-full max-w-sm rounded-2xl border-0 px-4 text-[15px] outline-none"
-            />
-          </>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor="tenant-directory-search">
+          Search directory
+        </label>
+        <input
+          id="tenant-directory-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search name or email"
+          className="spares-field h-11 min-w-[12rem] flex-1 rounded-2xl border-0 px-4 text-[15px] outline-none"
+        />
+        {type === "person" ? (
+          <button
+            type="button"
+            className={DIRECTORY_CREATE_CHIP}
+            aria-expanded={creatingPerson}
+            onClick={() => setCreatingPerson((open) => !open)}
+          >
+            {creatingPerson ? "Close" : "New Person"}
+          </button>
         ) : null}
       </div>
 
