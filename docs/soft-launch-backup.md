@@ -17,7 +17,7 @@ Single JSON document. On Vercel it holds the main app database, including (all s
 - Bug report records (screenshots may point at Blob files under `spares/files/`)
 - Machine view / analytics-style counters stored with the catalog
 
-Paths are defined in `src/lib/blob-paths.ts` (`BLOB_DB_PATH`).
+Paths are defined in `src/lib/blob-paths.ts` (`blobDbPath()`). When an environment sets `SPARES_BLOB_NAMESPACE`, its catalog lives at `spares/<namespace>/db.json` and `spares/<namespace>/care.json` instead — back up the namespaced pair for that environment. Unset means the historical `spares/db.json` / `spares/care.json`.
 
 ### 2. Vercel Blob — Care sidecar (`spares/care.json`)
 
@@ -100,6 +100,10 @@ Vercel and Cloudflare do **not** give Spares point-in-time restore for this stac
 | **Env / secret rotation** | Re-export Vercel env + document rotation date | **Kevin** |
 
 If Preview and Production ever use **different** Blob stores or buckets, label backups clearly — restoring Preview tokens against Production storage will corrupt the wrong environment.
+
+## When a restore is the right answer
+
+The app refuses to overwrite a catalog it cannot read: a failed Blob read raises `PersistenceReadError` and unreadable JSON raises `CatalogUnreadableError`, so requests fail loudly instead of silently rewriting `db.json` with demo fixtures. If the app starts reporting either error, the stored document is still there — restore the most recent `db.json` + `care.json` pair rather than redeploying and hoping.
 
 ## Restore (high level)
 
