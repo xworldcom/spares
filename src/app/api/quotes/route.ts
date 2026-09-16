@@ -2,7 +2,15 @@ import { requireTenantCustomer, requireTenantUser } from "@/lib/auth/tenant-scop
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
 import { canAccessMachine } from "@/lib/access";
-import { createQuote, getMachine, getOrgContext, listMachines, listQuotes } from "@/lib/store";
+import { isSeedAllowed } from "@/lib/production-env";
+import {
+  createQuote,
+  ensurePreviewQaQuoteFixture,
+  getMachine,
+  getOrgContext,
+  listMachines,
+  listQuotes,
+} from "@/lib/store";
 import type { QuoteItem } from "@/types";
 
 type CreateQuoteBody = {
@@ -15,6 +23,10 @@ export async function GET() {
   const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
+  }
+
+  if (auth.user.role === "staff" && isSeedAllowed()) {
+    await ensurePreviewQaQuoteFixture(auth.tenantId);
   }
 
   const [quotes, machines] = await Promise.all([

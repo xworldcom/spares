@@ -92,6 +92,16 @@ export const SEED_CUSTOMER = {
   role: "customer" as const,
 };
 
+/** Idempotent Preview-only quote for Quinn ConversationSheet smoke (#134). */
+export const PREVIEW_QA_QUOTE_ID = "quote-preview-qa-conversation";
+
+const PREVIEW_QA_QUOTE_NOTE =
+  "Preview QA fixture for ConversationSheet smoke (not a real customer order).";
+
+function previewQaQuoteId(tenantId: string) {
+  return tenantId === DEFAULT_TENANT_ID ? PREVIEW_QA_QUOTE_ID : `quote-preview-qa-${tenantId}`;
+}
+
 const EXTRA_SEED_CUSTOMERS = [
   {
     id: "user-acme",
@@ -2256,6 +2266,130 @@ export function createQuote(
     };
     await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
     return quote;
+  });
+}
+
+export type EnsurePreviewQaQuoteResult =
+  | { status: "disabled" }
+  | { status: "no_machine" }
+  | { status: "no_customer" }
+  | { status: "exists"; quote: QuoteRecord }
+  | { status: "created"; quote: QuoteRecord };
+
+/** Preview / Soft Launch only (`SPARES_ALLOW_SEED`). One stable quote per tenant. */
+export function ensurePreviewQaQuoteFixture(tenantId: string): Promise<EnsurePreviewQaQuoteResult> {
+  return withLock(async () => {
+    if (!isSeedAllowed()) {
+      return { status: "disabled" };
+    }
+    const db = await readDatabase();
+    const quoteId = previewQaQuoteId(tenantId);
+    const existing = db.quotes.find(
+      (row) => row.id === quoteId && belongsToTenant(row, tenantId),
+    );
+    if (existing) {
+      return { status: "exists", quote: normalizeStoredQuote(existing) };
+    }
+
+    const machines = filterByTenant(db.machines, tenantId);
+    const machine =
+      machines.find((row) => row.id === FIXTURE_MACHINE_IDS.hardware) ??
+      machines.find((row) => row.id === FIXTURE_MACHINE_IDS.palletizer) ??
+      machines.find((row) => row.parts.length > 0);
+    if (!machine) {
+      return { status: "no_machine" };
+    }
+
+    const customer =
+      db.users.find(
+        (user) =>
+          user.id === SEED_CUSTOMER.id &&
+          user.role === "customer" &&
+          !user.deletedAt &&
+          belongsToTenant(user, tenantId),
+      ) ??
+      db.users.find(
+        (user) =>
+          user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
+      );
+    if (!customer) {
+      return { status: "no_customer" };
+    }
+
+    const part = machine.parts[0];
+    if (!part) {
+      return { status: "no_machine" };
+    }
+
+    const staff =
+      db.users.find(
+        (user) =>
+          user.id === SEED_STAFF.id &&
+          user.role === "staff" &&
+          !user.deletedAt &&
+          belongsToTenant(user, tenantId),
+      ) ??
+      db.users.find(
+        (user) =>
+          user.role === "staff" && !user.deletedAt && belongsToTenant(user, tenantId),
+      );
+
+    const now = new Date().toISOString();
+    const items: QuoteItem[] = [
+      {
+        id: part.id,
+        qty: 1,
+        name: part.name,
+        ...(part.vendor ? { vendor: part.vendor } : {}),
+        ...(part.material ? { material: part.material } : {}),
+        ...(part.replaces ? { replaces: part.replaces } : {}),
+        ...(part.stock ? { stock: part.stock } : {}),
+        ...(part.category ? { category: part.category } : {}),
+      },
+    ];
+    const activities: QuoteActivity[] = [
+      newActivity(
+        { email: customer.email, role: "customer" },
+        "status",
+        statusActivityText("requested"),
+        now,
+      ),
+      newActivity(
+        { email: customer.email, role: "customer" },
+        "message",
+        PREVIEW_QA_QUOTE_NOTE,
+        now,
+      ),
+    ];
+    if (staff) {
+      activities.push(
+        newActivity(
+          { email: staff.email, role: "staff" },
+          "message",
+          "Preview QA reply — use this thread to exercise ConversationSheet.",
+          now,
+        ),
+      );
+    }
+
+    const quote: QuoteRecord = {
+      id: quoteId,
+      number: nextQuoteNumber(db.quotes),
+      machineId: machine.id,
+      items,
+      note: PREVIEW_QA_QUOTE_NOTE,
+      createdAt: now,
+      customerEmail: customer.email,
+      customerId: customer.id,
+      tenantId,
+      status: "requested",
+      shipments: [],
+      activities,
+      lastReadAt: { [customer.id]: now },
+    };
+
+    await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
+    return { status: "created", quote };
   });
 }
 
