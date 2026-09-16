@@ -6,6 +6,10 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
+import {
+  machinesFamilyActive,
+  staffMachinesMenuLinks,
+} from "@/components/nav/MachinesNavMenu";
 import { isNavActive } from "@/lib/nav-active";
 
 function MachinesIcon({ active }: { active: boolean }) {
@@ -43,22 +47,6 @@ function QuotesIcon({ active }: { active: boolean }) {
         strokeWidth={active ? 0 : 1.7}
         d="M6 4.5h12A1.5 1.5 0 0 1 19.5 6v14L12 16.5 4.5 20V6A1.5 1.5 0 0 1 6 4.5z"
       />
-    </svg>
-  );
-}
-
-function UploadIcon({ active }: { active: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.7}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 16.5V7.5m0 0-3.5 3.5M12 7.5l3.5 3.5M5 18.5h14"
-      />
-      {active ? <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.12" /> : null}
     </svg>
   );
 }
@@ -113,6 +101,7 @@ export function MobileTabBar() {
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
   const pathname = usePathname();
   const [moreForPath, setMoreForPath] = useState<string | null>(null);
+  const [machinesForPath, setMachinesForPath] = useState<string | null>(null);
 
   const customerHrefs = ["/machines", "/care", "/quotes"] as const;
   const staffHrefs = [
@@ -133,6 +122,8 @@ export function MobileTabBar() {
       isNavActive(pathname, "/staff/team", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs));
   const moreOpen = moreForPath === pathname;
+  const machinesMenuOpen = machinesForPath === pathname;
+  const staffMachinesActive = machinesFamilyActive(pathname, staffHrefs);
 
   if (!user) {
     return null;
@@ -140,6 +131,25 @@ export function MobileTabBar() {
 
   return (
     <>
+      {machinesMenuOpen ? (
+        <div className="fixed inset-0 z-[55] lg:hidden">
+          <button
+            type="button"
+            aria-label="Close machines menu"
+            className="absolute inset-0 bg-black/25"
+            onClick={() => setMachinesForPath(null)}
+          />
+          <div
+            className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
+            style={{
+              bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom) + 0.5rem)",
+            }}
+          >
+            {staffMachinesMenuLinks(() => setMachinesForPath(null))}
+          </div>
+        </div>
+      ) : null}
+
       {moreOpen ? (
         <div className="fixed inset-0 z-[55] lg:hidden">
           <button
@@ -189,12 +199,24 @@ export function MobileTabBar() {
         <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1">
           {user.role === "staff" ? (
             <>
-              <TabLink href="/machines" hrefs={staffHrefs} label="Machines">
-                <MachinesIcon active={isNavActive(pathname, "/machines", staffHrefs)} />
-              </TabLink>
-              <TabLink href="/machines/new" hrefs={staffHrefs} label="Upload">
-                <UploadIcon active={isNavActive(pathname, "/machines/new", staffHrefs)} />
-              </TabLink>
+              <button
+                type="button"
+                aria-expanded={machinesMenuOpen}
+                onClick={() => {
+                  setMoreForPath(null);
+                  setMachinesForPath((current) =>
+                    current === pathname ? null : pathname,
+                  );
+                }}
+                className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
+                  staffMachinesActive || machinesMenuOpen
+                    ? "text-[var(--spares-ink)]"
+                    : "text-[var(--spares-muted)]"
+                }`}
+              >
+                <MachinesIcon active={staffMachinesActive || machinesMenuOpen} />
+                <span>Machines</span>
+              </button>
               <TabLink
                 href="/care"
                 hrefs={staffHrefs}
@@ -214,9 +236,10 @@ export function MobileTabBar() {
               <button
                 type="button"
                 aria-expanded={moreOpen}
-                onClick={() =>
-                  setMoreForPath((current) => (current === pathname ? null : pathname))
-                }
+                onClick={() => {
+                  setMachinesForPath(null);
+                  setMoreForPath((current) => (current === pathname ? null : pathname));
+                }}
                 className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
                   moreActive || moreOpen ? "text-[var(--spares-ink)]" : "text-[var(--spares-muted)]"
                 }`}
