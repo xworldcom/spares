@@ -8,6 +8,7 @@ import {
   DEMO_TICKET_SCRIPT,
   DEMO_SCRUB_END_HOLD,
   clampDemoScrollProgress,
+  demoDocumentScrollProgress,
   demoPlayhead,
   demoSectionScrollProgress,
   marketingCopyBan,
@@ -139,6 +140,24 @@ describe("demo scroll scrub", () => {
     assert.equal(demoPlayhead(false, 0.5), 0.5);
     assert.equal(demoPlayhead(false, 1), 1);
     assert.equal(reduceDemoFrame("quote", demoPlayhead(true, 0)).quoteStatus, "confirmed");
+  });
+
+  it("keeps progress on document scroll when the viewport rect is stale", () => {
+    const pin = 700;
+    const extra = 2100;
+    const height = pin + extra;
+    const sticky = 56;
+    const sectionTop = 900;
+    const scrollY = sectionTop - sticky + (extra * (1 - DEMO_SCRUB_END_HOLD)) / 2;
+    assert.equal(demoSectionScrollProgress(sectionTop, height, pin, sticky), 0);
+    assert.equal(demoDocumentScrollProgress(scrollY, sectionTop, height, pin, sticky), 0.5);
+    assert.equal(demoDocumentScrollProgress(0, sectionTop, height, pin, sticky), 0);
+  });
+
+  it("reads the playhead from document scroll, not a live client rect", () => {
+    const src = readFileSync("src/components/landing/LandingDemoScrub.tsx", "utf8");
+    assert.match(src, /demoDocumentScrollProgress/);
+    assert.doesNotMatch(src, /getBoundingClientRect\(\)\.top/);
   });
 });
 
