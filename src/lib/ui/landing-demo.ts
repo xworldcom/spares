@@ -17,7 +17,6 @@ export const DEMO_TICKET_NUMBER = "218";
 
 export const DEMO_SCRUB_EXTRA_SVH = 280;
 
-/** Last fraction of the track holds the finished frame before the pin releases. */
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
 export type DemoBeat =

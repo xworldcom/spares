@@ -184,6 +184,8 @@ describe("landing scrub layout", () => {
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
     assert.match(css, /var\(--landing-demo-scrub-extra\)/);
     assert.doesNotMatch(css, /280svh/);
+    const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
+    assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
   });
 
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
