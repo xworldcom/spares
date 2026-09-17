@@ -154,6 +154,13 @@ describe("landing demo tree visibility", () => {
 });
 
 describe("landing scrub layout", () => {
+  it("keeps the phone pin a viewport-tall stage so sticky can hold", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
+    assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
+    assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
+  });
+
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
     const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
     assert.equal((marketing.match(/<LandingDemoScrub/g) ?? []).length, 2);
