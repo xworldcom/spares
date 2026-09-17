@@ -18,6 +18,9 @@ export const DEMO_TICKET_NUMBER = "218";
 /** Extra viewport height while one chapter stays pinned. Sized so a reply can wait a full screen. */
 export const DEMO_SCRUB_EXTRA_VH = 300;
 
+/** Last fraction of the track holds the finished frame before the pin releases. */
+export const DEMO_SCRUB_END_HOLD = 0.14;
+
 export type DemoBeat =
   | {
       at: number;
@@ -260,7 +263,12 @@ export function demoSectionScrollProgress(
     return sectionTop <= stickyTop ? 1 : 0;
   }
   const scrolled = stickyTop - sectionTop;
-  return clampDemoScrollProgress(scrolled / scrollable);
+  const raw = clampDemoScrollProgress(scrolled / scrollable);
+  const active = 1 - DEMO_SCRUB_END_HOLD;
+  if (raw >= active) {
+    return 1;
+  }
+  return raw / active;
 }
 
 function firstOemAt(beats: readonly DemoBeat[]) {

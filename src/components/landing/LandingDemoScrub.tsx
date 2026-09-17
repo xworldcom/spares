@@ -12,6 +12,11 @@ export type LandingDemoScrubSnapshot = {
   reduceMotion: boolean;
 };
 
+function readStickyTop(pin: HTMLElement) {
+  const top = Number.parseFloat(window.getComputedStyle(pin).top);
+  return Number.isFinite(top) ? top : 0;
+}
+
 export function LandingDemoScrub({
   ariaLabel,
   children,
@@ -33,27 +38,24 @@ export function LandingDemoScrub({
       return;
     }
 
-    const section = sectionRef.current;
-    const pin = pinRef.current;
-    if (!section || !pin) {
-      return;
-    }
-
     let frame = 0;
+    let watching = false;
+
     const measure = () => {
       const el = sectionRef.current;
       const stage = pinRef.current;
       if (!el || !stage) {
         return;
       }
-      const stickyTop = Number.parseFloat(window.getComputedStyle(stage).top) || 0;
-      const progress = demoSectionScrollProgress(
-        el.getBoundingClientRect().top,
-        el.offsetHeight,
-        stage.offsetHeight,
-        stickyTop,
+      const next = demoPlayhead(
+        false,
+        demoSectionScrollProgress(
+          el.getBoundingClientRect().top,
+          el.offsetHeight,
+          stage.offsetHeight,
+          readStickyTop(stage),
+        ),
       );
-      const next = demoPlayhead(false, progress);
       setSnapshot((current) =>
         current.reduceMotion === false && current.progress === next
           ? current
@@ -61,22 +63,51 @@ export function LandingDemoScrub({
       );
     };
 
-    const onScroll = () => {
-      if (frame) {
-        return;
-      }
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        measure();
-      });
+    const loop = () => {
+      measure();
+      frame = watching ? window.requestAnimationFrame(loop) : 0;
     };
 
+    const start = () => {
+      if (watching) {
+        return;
+      }
+      watching = true;
+      if (!frame) {
+        frame = window.requestAnimationFrame(loop);
+      }
+    };
+
+    const stop = () => {
+      watching = false;
+    };
+
+    const section = sectionRef.current;
+    if (!section) {
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          start();
+          return;
+        }
+        stop();
+        measure();
+      },
+      { rootMargin: "25% 0px" },
+    );
+    io.observe(section);
+    window.addEventListener("scroll", start, { passive: true, capture: true });
+    window.addEventListener("resize", start, { passive: true });
     measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
+
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      stop();
+      io.disconnect();
+      window.removeEventListener("scroll", start, { capture: true });
+      window.removeEventListener("resize", start);
       if (frame) {
         window.cancelAnimationFrame(frame);
       }
@@ -88,6 +119,7 @@ export function LandingDemoScrub({
       ref={sectionRef}
       className="landing-demo-scrub"
       data-reduce-motion={snapshot.reduceMotion || undefined}
+      data-progress={snapshot.progress.toFixed(3)}
       style={
         snapshot.reduceMotion
           ? undefined
@@ -96,10 +128,7 @@ export function LandingDemoScrub({
       aria-label={ariaLabel}
     >
       <div ref={pinRef} className="landing-demo-scrub-pin">
-        <div
-          className="landing-demo-scrub-meter"
-          aria-hidden="true"
-        >
+        <div className="landing-demo-scrub-meter" aria-hidden="true">
           <i style={{ transform: `scaleX(${snapshot.progress})` }} />
         </div>
         {children(snapshot)}

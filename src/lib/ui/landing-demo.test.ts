@@ -6,6 +6,7 @@ import {
   DEMO_OTHER_LABEL,
   DEMO_QUOTE_SCRIPT,
   DEMO_TICKET_SCRIPT,
+  DEMO_SCRUB_END_HOLD,
   clampDemoScrollProgress,
   demoPlayhead,
   demoSectionScrollProgress,
@@ -124,8 +125,10 @@ describe("demo scroll scrub", () => {
     const extra = 2100;
     const height = pin + extra;
     const sticky = 56;
+    const active = extra * (1 - DEMO_SCRUB_END_HOLD);
     assert.equal(demoSectionScrollProgress(sticky, height, pin, sticky), 0);
-    assert.equal(demoSectionScrollProgress(sticky - extra / 2, height, pin, sticky), 0.5);
+    assert.equal(demoSectionScrollProgress(sticky - active / 2, height, pin, sticky), 0.5);
+    assert.equal(demoSectionScrollProgress(sticky - active, height, pin, sticky), 1);
     assert.equal(demoSectionScrollProgress(sticky - extra, height, pin, sticky), 1);
     assert.equal(clampDemoScrollProgress(1.2), 1);
     assert.equal(clampDemoScrollProgress(-0.1), 0);
