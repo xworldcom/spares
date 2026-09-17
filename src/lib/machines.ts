@@ -24,6 +24,32 @@ export function machineHasModel(machine: {
   return Boolean(machine.storedFileName?.trim());
 }
 
+export function sitesForMachineCreate(
+  granted: readonly Site[],
+  machines: readonly Pick<MachineSummary, "siteId" | "siteName" | "company">[],
+): Site[] {
+  const byId = new Map<string, Site>();
+  for (const site of granted) {
+    if (site.deletedAt) {
+      continue;
+    }
+    byId.set(site.id, site);
+  }
+  for (const machine of machines) {
+    if (!machine.siteId || byId.has(machine.siteId)) {
+      continue;
+    }
+    byId.set(machine.siteId, {
+      id: machine.siteId,
+      name: machine.siteName?.trim() || "Site",
+      createdAt: "",
+      customerId: "",
+      ...(machine.company ? { company: machine.company } : {}),
+    });
+  }
+  return [...byId.values()];
+}
+
 export function findMachineByNameAtSite<
   T extends { name: string; siteId?: string },
 >(machines: readonly T[], name: string, siteId: string): T | null {

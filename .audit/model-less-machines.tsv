@@ -5,3 +5,5 @@ ts	phase	decision	why	evidence	result
 2026-09-17T23:42:58Z	harness	unit tests for name match, empty file claim, quote hydrate, find-or-create, and grant	prove the store path before UI	src/lib/store.test.ts model-less machines	tests green
 2026-09-17T23:42:58Z	api	JSON POST /api/machines is idempotent by name plus site	retries and typed names should select, not duplicate	src/app/api/machines/route.ts	implemented
 2026-09-17T23:42:58Z	quotes	manual line items hydrate catalog parts when present and stay quote-local otherwise	no 3D pick and no extra BOM table	src/lib/quotes.ts hydrateQuoteItems	implemented
+2026-09-17T23:57:38Z	ui	derive create sites from visible machines when user.sites is empty	seed customer has machineIds only so Add machine never appeared	src/lib/machines.ts sitesForMachineCreate	unit test added
+2026-09-17T23:57:38Z	verify	API smoke on local disposable store at :3010	prove create, dedup, ticket, manual quote, file 404, packed file still 200	/tmp/model-less-smoke.json	VERIFIED

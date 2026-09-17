@@ -5,6 +5,7 @@ import {
   machineHasModel,
   machineNameKey,
   normalizeMachineName,
+  sitesForMachineCreate,
   toMachineDetail,
   toMachineSummary,
 } from "./machines.ts";
@@ -67,6 +68,22 @@ describe("machine name matching", () => {
     assert.equal(machineHasModel({ storedFileName: "line.glb" }), true);
     assert.equal(machineHasModel({ hasModel: false, storedFileName: "line.glb" }), false);
     assert.equal(toMachineSummary({ id: "x", name: "Line", storedFileName: "" }).hasModel, false);
+  });
+
+  it("fills create sites from machines when the login has no site grant", () => {
+    const sites = sitesForMachineCreate([], [
+      { siteId: "site-cargill-ftw", siteName: "Fort Worth", company: "Cargill" },
+      { siteId: "site-cargill-ftw", siteName: "Fort Worth", company: "Cargill" },
+    ]);
+    assert.deepEqual(sites, [
+      {
+        id: "site-cargill-ftw",
+        name: "Fort Worth",
+        createdAt: "",
+        customerId: "",
+        company: "Cargill",
+      },
+    ]);
   });
 });
 

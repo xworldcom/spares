@@ -11,6 +11,7 @@ import { listCustomerAccounts, listSites } from "@/lib/api/auth";
 import { listMachines } from "@/lib/api/machines";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
+import { sitesForMachineCreate } from "@/lib/machines";
 import { quoteHref } from "@/lib/quotes";
 import type { CustomerAccount, MachineSummary, Site } from "@/types";
 
@@ -52,7 +53,7 @@ export function NewQuoteForm({
           return;
         }
         setMachines(next);
-        setSites(org.sites);
+        setSites(sitesForMachineCreate(org.sites, next));
         setAccounts(org.accounts);
         if (next.length === 1) {
           setMachineId(next[0].id);

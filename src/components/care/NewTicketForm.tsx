@@ -7,6 +7,7 @@ import { listCustomerAccounts, listSites } from "@/lib/api/auth";
 import { listMachines } from "@/lib/api/machines";
 import { createTicket } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
+import { sitesForMachineCreate } from "@/lib/machines";
 import type { CustomerAccount, MachineSummary, Site } from "@/types";
 
 export function NewTicketForm({
@@ -56,7 +57,11 @@ export function NewTicketForm({
           return;
         }
         setMachines(next);
-        setSites(org.sites);
+        setSites(
+          user?.role === "staff"
+            ? org.sites
+            : sitesForMachineCreate(org.sites, next),
+        );
         setAccounts(org.accounts);
         if (next.length === 1) {
           setSelectedMachineId(next[0].id);

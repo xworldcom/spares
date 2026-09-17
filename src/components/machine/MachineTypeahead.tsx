@@ -127,7 +127,15 @@ export function MachineTypeahead({
         placeholder="Search or type a machine name"
         disabled={disabled || busy}
         onCreate={startCreate}
-        canCreate={() => createSites.length > 0}
+        canCreate={(query) => {
+          if (createSites.length === 0) {
+            return false;
+          }
+          const match = machines.some(
+            (row) => machineNameKey(row.name) === machineNameKey(query),
+          );
+          return !match || createSites.length > 1;
+        }}
         createLabel={(query) => `Add “${normalizeMachineName(query)}”`}
       />
       {pendingName ? (

@@ -18,7 +18,7 @@ import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
 import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
 import { useRouter } from "next/navigation";
-import { machineHasModel } from "@/lib/machines";
+import { machineHasModel, sitesForMachineCreate } from "@/lib/machines";
 import { warmCareOverview } from "@/lib/nav/prefetch";
 
 const RETRY_ATTEMPTS = 3;
@@ -75,7 +75,11 @@ export function MachinesList() {
           return;
         }
         setMachines(next);
-        setSites(org.sites);
+        setSites(
+          user?.role === "staff"
+            ? org.sites
+            : sitesForMachineCreate(org.sites, next),
+        );
         setAccounts(org.accounts);
         setError(null);
         setLoading(false);
