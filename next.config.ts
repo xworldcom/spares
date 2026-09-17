@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // next dev binds localhost. verify-oee360 and some agents use 127.0.0.1.
+  allowedDevOrigins: ["127.0.0.1"],
   outputFileTracingIncludes: {
     "/api/**": ["./public/placeholders/**/*"],
   },

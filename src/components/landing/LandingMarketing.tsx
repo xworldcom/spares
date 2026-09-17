@@ -12,8 +12,8 @@ export function LandingMarketing() {
         <p className="landing-section-kicker">Care and quotes</p>
         <h2 className="landing-section-title">Two threads. One workspace.</h2>
         <p className="landing-section-lede">
-          Scroll to walk a parts quote, then a Care ticket. The list, the status strip, and the
-          thread stay on screen while the story moves.
+          Scroll to walk a parts quote, then a Care ticket. The workspace stays on screen while the
+          story moves.
         </p>
 
         <div className="landing-demo">
