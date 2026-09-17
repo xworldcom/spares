@@ -142,6 +142,17 @@ describe("demo scroll scrub", () => {
   });
 });
 
+describe("landing demo tree visibility", () => {
+  it("hides the quote/Care tree below 900px and shows it beside the thread from 900px", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
+    assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
+    const desktop = css.split("@media (min-width: 900px)").at(-1)?.split("@media")[0] ?? "";
+    assert.match(desktop, /\.landing-demo-workspace\s*\{[^}]*grid-template-columns/);
+    assert.match(desktop, /\.landing-demo-tree\s*\{[^}]*display:\s*flex/);
+  });
+});
+
 describe("landing scrub layout", () => {
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
     const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
@@ -160,6 +171,10 @@ describe("landing scrub layout", () => {
     assert.equal(css.includes(".landing-perspective"), false);
     assert.ok(css.includes("margin-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px))"));
     assert.ok(css.includes(".landing-scroll .landing-scroll-peek"));
+    const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
+    assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
+    assert.match(mobile, /touch-action:\s*pan-y/);
+    assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
   });
 });
 

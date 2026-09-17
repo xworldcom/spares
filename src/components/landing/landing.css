@@ -529,13 +529,33 @@
 }
 
 @media (max-width: 899px) {
-  .landing-demo-tree-lede,
-  .landing-demo-stage .quote-progress-caption,
-  .landing-demo-tree-row .btn-primary,
-  .landing-demo-tree-row .btn-soft,
-  .landing-demo-tree-row .btn-accent,
-  .landing-demo-tree-row .btn-danger {
+  .landing-demo-tree {
     display: none;
+  }
+
+  .landing-demo-stage .quote-progress-caption {
+    display: none;
+  }
+
+  .landing-demo-scrub-pin,
+  .landing-demo-stage {
+    touch-action: pan-y;
+  }
+
+  .landing-demo-scrub-pin {
+    height: auto;
+  }
+
+  .landing-demo-scrub-pin .landing-demo-stage,
+  .landing-demo-workspace,
+  .landing-demo-main {
+    flex: none;
+  }
+
+  .landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed] {
+    flex: none;
+    min-height: 12.5rem;
+    height: auto;
   }
 }
 
