@@ -1,8 +1,8 @@
-import type { QuoteActivity, QuoteStatus, Role, TicketStatus } from "../../types/index.ts";
-import { activityLane, sameMessageAuthor, type ActivityLane } from "./activity-lane.ts";
+import type { QuoteStatus, Role, TicketStatus } from "../../types/index.ts";
+import type { ActivityLane } from "./activity-lane.ts";
 
-export type MarketingPerspective = "customer" | "staff";
 export type LandingDemoVariant = "quote" | "ticket";
+export type DemoActor = "plant" | "oem";
 
 export const DEMO_CUSTOMER_EMAIL = "maya@northline-pack.example";
 export const DEMO_STAFF_EMAIL = "owen@oee360.example";
@@ -10,28 +10,33 @@ export const DEMO_PLANT = "Northline Packing";
 export const DEMO_MACHINE = "Palletizer cell";
 export const DEMO_TICKET_TITLE = "Infeed jam, drive roller";
 export const DEMO_QUOTE_TITLE = "PN-ROLL-2104 × 2";
+export const DEMO_OTHER_LABEL = "Staff";
 
-/** Full loop length for the parts-quote demo (reading pace + pause between steps). */
-export const DEMO_QUOTE_DURATION_MS = 42_000;
-/** Full loop length for the Care ticket demo. */
-export const DEMO_TICKET_DURATION_MS = 32_000;
+export const DEMO_QUOTE_NUMBER = "4418";
+export const DEMO_TICKET_NUMBER = "218";
+
+/** Extra viewport height while one chapter stays pinned. Sized so a reply can wait a full screen. */
+export const DEMO_SCRUB_EXTRA_VH = 300;
+
+/** Last fraction of the track holds the finished frame before the pin releases. */
+export const DEMO_SCRUB_END_HOLD = 0.14;
 
 export type DemoBeat =
   | {
-      atMs: number;
+      at: number;
       kind: "message";
       id: string;
-      actorRole: Role;
+      actor: DemoActor;
       text: string;
     }
   | {
-      atMs: number;
+      at: number;
       kind: "system";
       id: string;
       text: string;
     }
-  | { atMs: number; kind: "ticketStatus"; status: TicketStatus }
-  | { atMs: number; kind: "quoteStatus"; status: QuoteStatus };
+  | { at: number; kind: "ticketStatus"; status: TicketStatus }
+  | { at: number; kind: "quoteStatus"; status: QuoteStatus };
 
 export type DemoMessageRow = {
   kind: "message";
@@ -52,191 +57,243 @@ export type DemoSystemRow = {
 
 export type DemoVisibleRow = DemoMessageRow | DemoSystemRow;
 
-export type DemoClockState = {
+export type DemoTreeRow = {
+  id: string;
+  number: string;
+  title: string;
+  meta: string;
+  featured: boolean;
+  quoteStatus?: QuoteStatus;
+  ticketStatus?: TicketStatus;
+  unread: boolean;
+};
+
+export type DemoFrame = {
   ticketStatus: TicketStatus;
   quoteStatus: QuoteStatus;
   rows: DemoVisibleRow[];
+  appearingId: string | null;
+  tree: DemoTreeRow[];
 };
 
 export const DEMO_QUOTE_SCRIPT: readonly DemoBeat[] = [
-  { atMs: 0, kind: "quoteStatus", status: "requested" },
+  { at: 0, kind: "quoteStatus", status: "requested" },
   {
-    atMs: 0,
+    at: 0,
     kind: "message",
     id: "q-m1",
-    actorRole: "customer",
+    actor: "plant",
     text: "Need two PN-ROLL-2104 for the palletizer infeed. What's lead time?",
   },
-  { atMs: 3_200, kind: "system", id: "q-s1", text: "Quote request received" },
-  { atMs: 5_400, kind: "quoteStatus", status: "in_review" },
+  { at: 0.08, kind: "system", id: "q-s1", text: "Quote request received" },
+  { at: 0.16, kind: "quoteStatus", status: "in_review" },
   {
-    atMs: 8_600,
+    at: 0.28,
     kind: "message",
     id: "q-m2",
-    actorRole: "staff",
+    actor: "oem",
     text: "Checking stock and freight to your dock.",
   },
-  { atMs: 11_800, kind: "quoteStatus", status: "pricing" },
-  { atMs: 14_200, kind: "system", id: "q-s2", text: "Quote in pricing" },
+  { at: 0.38, kind: "quoteStatus", status: "pricing" },
+  { at: 0.4, kind: "system", id: "q-s2", text: "Quote in pricing" },
   {
-    atMs: 18_400,
+    at: 0.52,
     kind: "message",
     id: "q-m3",
-    actorRole: "staff",
+    actor: "oem",
     text: "Two rollers, Friday dock if you PO today. Sending the formal quote now.",
   },
-  { atMs: 22_600, kind: "quoteStatus", status: "quoted" },
-  { atMs: 25_400, kind: "system", id: "q-s3", text: "Quote ready" },
+  { at: 0.62, kind: "quoteStatus", status: "quoted" },
+  { at: 0.64, kind: "system", id: "q-s3", text: "Quote ready" },
   {
-    atMs: 29_800,
+    at: 0.76,
     kind: "message",
     id: "q-m4",
-    actorRole: "customer",
+    actor: "plant",
     text: "PO 4418 is in. Need them on the line Friday.",
   },
-  { atMs: 33_600, kind: "quoteStatus", status: "po_received" },
-  { atMs: 36_200, kind: "system", id: "q-s4", text: "PO received" },
+  { at: 0.84, kind: "quoteStatus", status: "po_received" },
+  { at: 0.86, kind: "system", id: "q-s4", text: "PO received" },
   {
-    atMs: 39_400,
+    at: 0.94,
     kind: "message",
     id: "q-m5",
-    actorRole: "staff",
+    actor: "oem",
     text: "Confirmed. Parts leave the crib tonight.",
   },
-  { atMs: 41_200, kind: "quoteStatus", status: "confirmed" },
-  { atMs: 42_000, kind: "system", id: "q-s5", text: "Quote confirmed" },
+  { at: 0.98, kind: "quoteStatus", status: "confirmed" },
+  { at: 1, kind: "system", id: "q-s5", text: "Quote confirmed" },
 ];
 
 export const DEMO_TICKET_SCRIPT: readonly DemoBeat[] = [
-  { atMs: 0, kind: "ticketStatus", status: "open" },
+  { at: 0, kind: "ticketStatus", status: "open" },
   {
-    atMs: 0,
+    at: 0,
     kind: "message",
     id: "t-m1",
-    actorRole: "customer",
+    actor: "plant",
     text: "Palletizer jammed on the infeed. Drive roller looks shot.",
   },
-  { atMs: 2_800, kind: "system", id: "t-s1", text: "Care ticket opened" },
+  { at: 0.08, kind: "system", id: "t-s1", text: "Care ticket opened" },
   {
-    atMs: 5_600,
+    at: 0.24,
     kind: "message",
     id: "t-m2",
-    actorRole: "staff",
+    actor: "oem",
     text: "I see it on the cell camera. Logging PN-ROLL-2104 on the BOM.",
   },
-  { atMs: 8_400, kind: "ticketStatus", status: "in_progress" },
-  { atMs: 10_200, kind: "system", id: "t-s2", text: "Ticket → In progress" },
+  { at: 0.32, kind: "ticketStatus", status: "in_progress" },
+  { at: 0.34, kind: "system", id: "t-s2", text: "Ticket → In progress" },
   {
-    atMs: 13_600,
+    at: 0.48,
     kind: "message",
     id: "t-m3",
-    actorRole: "staff",
+    actor: "oem",
     text: "Replacements are in the crib. Want us to walk your tech through the swap?",
   },
-  { atMs: 17_200, kind: "ticketStatus", status: "waiting_on_customer" },
-  { atMs: 19_000, kind: "system", id: "t-s3", text: "Waiting on plant" },
+  { at: 0.56, kind: "ticketStatus", status: "waiting_on_customer" },
+  { at: 0.58, kind: "system", id: "t-s3", text: "Waiting on plant" },
   {
-    atMs: 22_800,
+    at: 0.72,
     kind: "message",
     id: "t-m4",
-    actorRole: "customer",
+    actor: "plant",
     text: "We're staffed for it—send the steps and we'll confirm when we're green.",
   },
-  { atMs: 26_400, kind: "ticketStatus", status: "in_progress" },
-  { atMs: 28_200, kind: "system", id: "t-s4", text: "Ticket → In progress" },
+  { at: 0.8, kind: "ticketStatus", status: "in_progress" },
+  { at: 0.82, kind: "system", id: "t-s4", text: "Ticket → In progress" },
   {
-    atMs: 31_600,
+    at: 0.94,
     kind: "message",
     id: "t-m5",
-    actorRole: "staff",
+    actor: "oem",
     text: "Steps are in the thread. I'll keep the ticket open until you close the loop.",
   },
-  { atMs: 32_000, kind: "ticketStatus", status: "resolved" },
-  { atMs: 32_000, kind: "system", id: "t-s5", text: "Ticket resolved" },
+  { at: 0.98, kind: "ticketStatus", status: "resolved" },
+  { at: 1, kind: "system", id: "t-s5", text: "Ticket resolved" },
 ];
 
-export function demoDurationMs(variant: LandingDemoVariant) {
-  return variant === "quote" ? DEMO_QUOTE_DURATION_MS : DEMO_TICKET_DURATION_MS;
-}
+const DEMO_QUOTE_TREE_SEED: readonly Omit<DemoTreeRow, "unread" | "quoteStatus">[] = [
+  {
+    id: "q-featured",
+    number: DEMO_QUOTE_NUMBER,
+    title: DEMO_MACHINE,
+    meta: "Today · 2 lines",
+    featured: true,
+  },
+  {
+    id: "q-4401",
+    number: "4401",
+    title: "Case packer",
+    meta: "12 Sep · 4 lines",
+    featured: false,
+  },
+  {
+    id: "q-4388",
+    number: "4388",
+    title: "Wrapper",
+    meta: "4 Sep · 1 line",
+    featured: false,
+  },
+];
+
+const DEMO_TICKET_TREE_SEED: readonly Omit<DemoTreeRow, "unread" | "ticketStatus">[] = [
+  {
+    id: "t-featured",
+    number: DEMO_TICKET_NUMBER,
+    title: DEMO_TICKET_TITLE,
+    meta: "Today · Palletizer cell",
+    featured: true,
+  },
+  {
+    id: "t-214",
+    number: "214",
+    title: "Encoder drift",
+    meta: "11 Sep · Case packer",
+    featured: false,
+  },
+  {
+    id: "t-209",
+    number: "209",
+    title: "Lube schedule",
+    meta: "2 Sep · Wrapper",
+    featured: false,
+  },
+];
+
+const DEMO_QUOTE_TREE_STATIC: Record<string, QuoteStatus> = {
+  "q-4401": "quoted",
+  "q-4388": "confirmed",
+};
+
+const DEMO_TICKET_TREE_STATIC: Record<string, TicketStatus> = {
+  "t-214": "resolved",
+  "t-209": "closed",
+};
 
 export function demoScript(variant: LandingDemoVariant) {
   return variant === "quote" ? DEMO_QUOTE_SCRIPT : DEMO_TICKET_SCRIPT;
 }
 
-export function demoSelf(perspective: MarketingPerspective): { email: string; role: Role } {
-  return perspective === "customer"
-    ? { email: DEMO_CUSTOMER_EMAIL, role: "customer" }
-    : { email: DEMO_STAFF_EMAIL, role: "staff" };
+export function demoActorEmail(actor: DemoActor) {
+  return actor === "plant" ? DEMO_CUSTOMER_EMAIL : DEMO_STAFF_EMAIL;
 }
 
-export function demoActorEmail(role: Role) {
-  return role === "customer" ? DEMO_CUSTOMER_EMAIL : DEMO_STAFF_EMAIL;
+export function demoActorRole(actor: DemoActor): Role {
+  return actor === "plant" ? "customer" : "staff";
 }
-
-export function demoOtherLabel(perspective: MarketingPerspective) {
-  return perspective === "customer" ? "Staff" : DEMO_PLANT;
-}
-
-/** Extra viewport height scrolled while one demo chapter stays pinned (reading pace). */
-export const DEMO_SCRUB_EXTRA_VH = 168;
-
-/** Matches `.landing-demo-scrub-pin { top: max(0.75rem, …) }` for scroll progress. */
-export const DEMO_SCRUB_STICKY_TOP_PX = 12;
 
 export function clampDemoScrollProgress(progress: number) {
   return Math.min(1, Math.max(0, progress));
 }
 
-/** Map a pinned section's position to scrub progress 0→1. */
+export function demoPlayhead(reduceMotion: boolean, progress: number) {
+  return reduceMotion ? 1 : clampDemoScrollProgress(progress);
+}
+
+/** Map a pinned chapter to progress 0→1 using pin height, not the viewport. */
 export function demoSectionScrollProgress(
   sectionTop: number,
   sectionHeight: number,
-  viewportHeight: number,
+  pinHeight: number,
   stickyTop = 0,
 ) {
-  const scrollable = sectionHeight - viewportHeight;
+  const scrollable = sectionHeight - pinHeight;
   if (scrollable <= 0) {
     return sectionTop <= stickyTop ? 1 : 0;
   }
   const scrolled = stickyTop - sectionTop;
-  return clampDemoScrollProgress(scrolled / scrollable);
-}
-
-export function demoElapsedFromProgress(
-  reduceMotion: boolean,
-  progress: number,
-  durationMs: number,
-) {
-  if (reduceMotion) {
-    return durationMs;
+  const raw = clampDemoScrollProgress(scrolled / scrollable);
+  const active = 1 - DEMO_SCRUB_END_HOLD;
+  if (raw >= active) {
+    return 1;
   }
-  return clampDemoScrollProgress(progress) * durationMs;
+  return raw / active;
 }
 
-function asActivity(beat: Extract<DemoBeat, { kind: "message" | "system" }>): QuoteActivity {
-  const actorRole = beat.kind === "message" ? beat.actorRole : "staff";
-  return {
-    id: beat.id,
-    at: new Date(0).toISOString(),
-    actorRole,
-    actorEmail: demoActorEmail(actorRole),
-    kind: beat.kind === "message" ? "message" : "status",
-    text: beat.text,
-  };
+function firstOemAt(beats: readonly DemoBeat[]) {
+  return beats.find((beat) => beat.kind === "message" && beat.actor === "oem")?.at ?? 1;
 }
 
-export function reduceDemoClock(
-  beats: readonly DemoBeat[],
-  elapsedMs: number,
-  perspective: MarketingPerspective,
-): DemoClockState {
-  const self = demoSelf(perspective);
+function sameDemoAuthor(
+  current: Extract<DemoBeat, { kind: "message" }>,
+  other?: DemoBeat,
+) {
+  return Boolean(other && other.kind === "message" && other.actor === current.actor);
+}
+
+export function reduceDemoFrame(
+  variant: LandingDemoVariant,
+  progress: number,
+): DemoFrame {
+  const beats = demoScript(variant);
+  const playhead = clampDemoScrollProgress(progress);
   let ticketStatus: TicketStatus = "open";
   let quoteStatus: QuoteStatus = "requested";
-  const raw: QuoteActivity[] = [];
+  const visible: Extract<DemoBeat, { kind: "message" | "system" }>[] = [];
 
   for (const beat of beats) {
-    if (beat.atMs > elapsedMs) {
+    if (beat.at > playhead) {
       continue;
     }
     if (beat.kind === "ticketStatus") {
@@ -247,36 +304,55 @@ export function reduceDemoClock(
       quoteStatus = beat.status;
       continue;
     }
-    raw.push(asActivity(beat));
+    visible.push(beat);
   }
 
-  const rows: DemoVisibleRow[] = raw.map((activity, index) => {
-    const lane = activityLane(activity, self);
-    if (lane === "system") {
-      return { kind: "system", id: activity.id, text: activity.text };
+  const rows: DemoVisibleRow[] = visible.map((beat, index) => {
+    if (beat.kind === "system") {
+      return { kind: "system", id: beat.id, text: beat.text };
     }
-    const prev = raw[index - 1];
-    const next = raw[index + 1];
+    const prev = visible[index - 1];
+    const next = visible[index + 1];
     return {
       kind: "message",
-      id: activity.id,
-      lane,
-      text: activity.text,
-      actorEmail: activity.actorEmail,
-      actorRole: activity.actorRole,
-      stacked: sameMessageAuthor(activity, prev),
-      lastInStack: !sameMessageAuthor(activity, next),
+      id: beat.id,
+      lane: beat.actor === "plant" ? "own" : "other",
+      text: beat.text,
+      actorEmail: demoActorEmail(beat.actor),
+      actorRole: demoActorRole(beat.actor),
+      stacked: sameDemoAuthor(beat, prev),
+      lastInStack: !sameDemoAuthor(beat, next),
     };
   });
 
-  return { ticketStatus, quoteStatus, rows };
+  const unread = playhead < firstOemAt(beats);
+
+  const tree: DemoTreeRow[] =
+    variant === "quote"
+      ? DEMO_QUOTE_TREE_SEED.map((row) => ({
+          ...row,
+          quoteStatus: row.featured ? quoteStatus : DEMO_QUOTE_TREE_STATIC[row.id] ?? "quoted",
+          unread: row.featured ? unread : false,
+        }))
+      : DEMO_TICKET_TREE_SEED.map((row) => ({
+          ...row,
+          ticketStatus: row.featured ? ticketStatus : DEMO_TICKET_TREE_STATIC[row.id] ?? "open",
+          unread: row.featured ? unread : false,
+        }));
+
+  return {
+    ticketStatus,
+    quoteStatus,
+    rows,
+    appearingId: rows.at(-1)?.id ?? null,
+    tree,
+  };
 }
 
 export function marketingCopyBan(text: string) {
   return /\bPlatform\b|\bHosts\b|\bHost staff\b|\bmulti-tenant\b/i.test(text);
 }
 
-/** All scripted beats for marketing copy checks. */
 export const DEMO_ALL_SCRIPT_BEATS: readonly DemoBeat[] = [
   ...DEMO_QUOTE_SCRIPT,
   ...DEMO_TICKET_SCRIPT,
