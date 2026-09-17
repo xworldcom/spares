@@ -541,6 +541,22 @@
   .landing-demo-stage {
     touch-action: pan-y;
   }
+
+  .landing-demo-scrub-pin {
+    height: auto;
+  }
+
+  .landing-demo-scrub-pin .landing-demo-stage,
+  .landing-demo-workspace,
+  .landing-demo-main {
+    flex: none;
+  }
+
+  .landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed] {
+    flex: none;
+    min-height: 12.5rem;
+    height: auto;
+  }
 }
 
 .landing-demo-scrub[data-reduce-motion] .landing-demo-thread {
