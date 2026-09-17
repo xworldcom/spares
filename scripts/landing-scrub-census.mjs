@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * Census of which actor holds the landing-scrub imbalance.
- * Premise under test: IO-gated rAF + getBoundingClientRect + sticky pin
- * (100dvh track, content-sized mobile pin) is a sufficient mobile clock.
- *
- * Usage:
- *   node scripts/landing-scrub-census.mjs --url http://localhost:3010/ --width 390 --height 844
- *   node scripts/landing-scrub-census.mjs --url https://oee360.com/ --width 390 --height 844
- */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -165,7 +156,7 @@ const pinStuck =
 
 const report = {
   premise:
-    "IO-gated rAF + getBoundingClientRect + sticky pin (100dvh track, content-sized mobile pin) is a sufficient mobile clock.",
+    "A 100svh sticky pin plus document-scroll playhead keeps the workspace on screen while progress advances.",
   url: targetUrl,
   viewport: { width, height },
   actors: {

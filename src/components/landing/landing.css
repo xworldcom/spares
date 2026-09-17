@@ -349,7 +349,7 @@
 }
 
 .landing-demo-scrub:not([data-reduce-motion]) {
-  height: calc(100svh - var(--spares-header) - 0.75rem + var(--landing-demo-scrub-extra, 280svh));
+  height: calc(100svh - var(--spares-header) - 0.75rem + var(--landing-demo-scrub-extra));
   view-timeline-name: --landing-demo-chapter;
   view-timeline-axis: block;
   view-timeline-inset: var(--spares-header) 0.75rem;

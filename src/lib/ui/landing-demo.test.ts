@@ -159,6 +159,8 @@ describe("landing scrub layout", () => {
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
+    assert.match(css, /var\(--landing-demo-scrub-extra\)/);
+    assert.doesNotMatch(css, /280svh/);
   });
 
   it("pins one workspace chapter at a time with a tree and one status strip", () => {

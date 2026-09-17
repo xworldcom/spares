@@ -15,7 +15,6 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-/** Extra small-viewport height while one chapter stays pinned. svh stays under the iOS URL bar. */
 export const DEMO_SCRUB_EXTRA_SVH = 280;
 
 /** Last fraction of the track holds the finished frame before the pin releases. */
