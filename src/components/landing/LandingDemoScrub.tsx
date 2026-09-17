@@ -29,11 +29,8 @@ function documentScrollY() {
 
 function offsetTopInDocument(el: HTMLElement) {
   let y = 0;
-  let node: HTMLElement | null = el;
-  while (node) {
+  for (let node: Element | null = el; node instanceof HTMLElement; node = node.offsetParent) {
     y += node.offsetTop;
-    const parent = node.offsetParent;
-    node = parent instanceof HTMLElement ? parent : null;
   }
   return y;
 }
