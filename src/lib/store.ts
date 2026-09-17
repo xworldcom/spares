@@ -785,6 +785,12 @@ function isHostStaffEmail(email: string) {
 
 /** Never let a stale heal drop satellite tenants or re-bind staff to the host tenant. */
 function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUser {
+  if (latest.deletedAt) {
+    return latest;
+  }
+  if (healed.deletedAt) {
+    return healed;
+  }
   const merged = { ...healed, ...latest };
   if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
     return merged;
@@ -830,7 +836,7 @@ function mergeTenantsForHeal(
   healed: Tenant[] | undefined,
   latest: Tenant[] | undefined,
 ): Tenant[] {
-  return unionById([...(healed ?? [])], [...(latest ?? [])]);
+  return mergeRowsForWrite(latest ?? [], healed ?? []);
 }
 
 /** Org CRUD lives in blob writes — catalog heal must not clobber concurrent deletes. */
@@ -844,8 +850,8 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
       // Latest wins per row (the blob is newer than this heal's snapshot) but rows only
       // one side knows about are kept, so neither side loses a create.
-      customers: mergeRowsForWrite(healed.customers ?? [], latest.customers ?? []),
-      sites: mergeRowsForWrite(healed.sites ?? [], latest.sites ?? []),
+      customers: mergeRowsForWrite(latest.customers ?? [], healed.customers ?? []),
+      sites: mergeRowsForWrite(latest.sites ?? [], healed.sites ?? []),
       users: mergeOrgUsersAndClampTenants(
         healed,
         latest,
@@ -1372,6 +1378,19 @@ async function writeDatabaseWithOrgMerge(
   return { ok: true };
 }
 
+/** Org deletes race catalog heals on Preview — re-merge with the blob like creates do. */
+async function writeDatabaseWithOrgDelete(next: Database) {
+  let merged = clampSatelliteStaffTenants(next);
+  for (let pass = 0; pass < 2; pass++) {
+    const latest = (await loadPersistedSnapshot())?.db;
+    if (!latest) {
+      break;
+    }
+    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, latest));
+  }
+  await persistDatabase(merged);
+}
+
 /** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
 async function writeCatalogHeal(next: Database) {
   let merged = next;
@@ -1697,7 +1716,7 @@ export function removePlatformTenant(tenantId: string) {
     }
     const tenants = (db.tenants ?? []).slice();
     tenants[index] = { ...tenants[index], deletedAt: new Date().toISOString() };
-    await writeDatabase({ ...db, tenants });
+    await writeDatabaseWithOrgDelete({ ...db, tenants });
     return { ok: true as const };
   });
 }
@@ -1981,7 +2000,9 @@ export function deleteCustomerAccount(id: string, tenantId: string) {
     }
     const next = customers.slice();
     next[index] = { ...next[index], deletedAt: new Date().toISOString() };
-    await writeDatabase(withCustomerTombstone({ ...db, customers: next }, id));
+    await writeDatabaseWithOrgDelete(
+      withCustomerTombstone({ ...db, customers: next }, id),
+    );
     return { ok: true as const };
   });
 }
@@ -2051,7 +2072,7 @@ export function deletePerson(userId: string, tenantId: string) {
     }
     const users = db.users.slice();
     users[index] = { ...user, deletedAt: new Date().toISOString() };
-    await writeDatabase({ ...db, users });
+    await writeDatabaseWithOrgDelete({ ...db, users });
     return { ok: true as const };
   });
 }
@@ -2074,7 +2095,7 @@ export function deleteStaffUser(userId: string, tenantId: string) {
     }
     const users = db.users.slice();
     users[index] = { ...user, deletedAt: new Date().toISOString() };
-    await writeDatabase({ ...db, users });
+    await writeDatabaseWithOrgDelete({ ...db, users });
     return { ok: true as const };
   });
 }
@@ -2355,7 +2376,9 @@ export function deleteSite(siteId: string, tenantId: string) {
         siteIds: user.siteIds.filter((id) => id !== siteId),
       };
     });
-    await writeDatabase(withSiteTombstone({ ...db, sites: updated, users }, siteId));
+    await writeDatabaseWithOrgDelete(
+      withSiteTombstone({ ...db, sites: updated, users }, siteId),
+    );
     return { ok: true as const };
   });
 }

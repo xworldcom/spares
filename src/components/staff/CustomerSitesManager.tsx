@@ -28,8 +28,9 @@ type SiteRow = Site & { machineCount: number };
 
 export function CustomerSitesManager({ customerId }: { customerId: string }) {
   const router = useRouter();
-  const { user } = useAuth();
-  const platformScope = Boolean(user?.platformOwner);
+  const { user, status: authStatus } = useAuth();
+  const authReady = authStatus !== "loading";
+  const platformScope = authReady && Boolean(user?.platformOwner);
   const [account, setAccount] = useState<CustomerAccount | null>(null);
   const [hostName, setHostName] = useState<string | null>(null);
   const [hostId, setHostId] = useState<string | null>(null);
@@ -43,6 +44,9 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
   const [editNames, setEditNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
     let cancelled = false;
     async function loadDetail() {
       if (platformScope) {
@@ -83,9 +87,12 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [customerId, retryKey, platformScope]);
+  }, [authReady, customerId, retryKey, platformScope]);
 
   async function refresh() {
+    if (!authReady) {
+      return;
+    }
     if (platformScope) {
       const data = await getPlatformDirectoryCustomer(customerId);
       setAccount(data.account);
@@ -212,7 +219,7 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
     }
   }
 
-  if (loading) {
+  if (!authReady || loading) {
     return <CatalogSkeleton variant="table" count={3} />;
   }
 

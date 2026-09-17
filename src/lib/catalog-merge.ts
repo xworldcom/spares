@@ -30,7 +30,14 @@ export function mergeRowsForWrite<T extends MergeableRow>(
   const intended = new Set(next.map((row) => row.id));
   const merged: T[] = next.map((row) => {
     const previous = latestById.get(row.id);
-    return previous?.deletedAt && !row.deletedAt ? previous : row;
+    if (!previous) {
+      return row;
+    }
+    if (previous.deletedAt || row.deletedAt) {
+      const deletedAt = previous.deletedAt ?? row.deletedAt;
+      return { ...previous, ...row, deletedAt };
+    }
+    return row;
   });
   for (const row of latest) {
     if (!intended.has(row.id)) {

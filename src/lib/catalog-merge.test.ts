@@ -47,6 +47,14 @@ describe("mergeRowsForWrite", () => {
     );
     assert.equal(merged[0]?.deletedAt, "2026-09-02T00:00:00.000Z");
   });
+
+  it("does not resurrect when the in-flight write deleted but blob is stale live", () => {
+    const merged = mergeRowsForWrite(
+      [{ id: "a" }],
+      [{ id: "a", deletedAt: "2026-09-03T00:00:00.000Z" }],
+    );
+    assert.equal(merged[0]?.deletedAt, "2026-09-03T00:00:00.000Z");
+  });
 });
 
 describe("mergeUsersForWrite", () => {
