@@ -157,6 +157,7 @@ describe("demo scroll scrub", () => {
   it("reads the playhead from document scroll, not a live client rect", () => {
     const src = readFileSync("src/components/landing/LandingDemoScrub.tsx", "utf8");
     assert.match(src, /demoDocumentScrollProgress/);
+    assert.match(src, /flushSync/);
     assert.match(src, /requestAnimationFrame\(tick\)/);
     assert.doesNotMatch(src, /getBoundingClientRect\(\)\.top/);
     assert.doesNotMatch(src, /addEventListener\("scroll"/);

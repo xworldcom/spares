@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import {
   DEMO_SCRUB_EXTRA_SVH,
   demoDocumentScrollProgress,
@@ -99,11 +100,13 @@ export function LandingDemoScrub({
           layout.stickyTop,
         ),
       );
-      setSnapshot((current) =>
-        current.reduceMotion === false && current.progress === next
-          ? current
-          : { progress: next, reduceMotion: false },
-      );
+      flushSync(() => {
+        setSnapshot((current) =>
+          current.reduceMotion === false && current.progress === next
+            ? current
+            : { progress: next, reduceMotion: false },
+        );
+      });
     };
 
     const tick = () => {
