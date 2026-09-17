@@ -18,13 +18,6 @@ export const DEMO_TICKET_NUMBER = "218";
 /** Extra viewport height while one chapter stays pinned. Sized so a reply can wait a full screen. */
 export const DEMO_SCRUB_EXTRA_VH = 300;
 
-/** Side quote/Care tree is a desktop workspace. Phones keep the quiet single-column card. */
-export const DEMO_TREE_MIN_VIEWPORT = 900;
-
-export function demoTreeVisible(viewportWidth: number) {
-  return viewportWidth >= DEMO_TREE_MIN_VIEWPORT;
-}
-
 /** Last fraction of the track holds the finished frame before the pin releases. */
 export const DEMO_SCRUB_END_HOLD = 0.14;
 

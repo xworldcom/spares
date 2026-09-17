@@ -7,11 +7,9 @@ import {
   DEMO_QUOTE_SCRIPT,
   DEMO_TICKET_SCRIPT,
   DEMO_SCRUB_END_HOLD,
-  DEMO_TREE_MIN_VIEWPORT,
   clampDemoScrollProgress,
   demoPlayhead,
   demoSectionScrollProgress,
-  demoTreeVisible,
   marketingCopyBan,
   reduceDemoFrame,
 } from "./landing-demo.ts";
@@ -145,11 +143,13 @@ describe("demo scroll scrub", () => {
 });
 
 describe("landing demo tree visibility", () => {
-  it("hides the quote/Care tree on a phone viewport and shows it on desktop", () => {
-    assert.equal(demoTreeVisible(390), false);
-    assert.equal(demoTreeVisible(DEMO_TREE_MIN_VIEWPORT - 1), false);
-    assert.equal(demoTreeVisible(DEMO_TREE_MIN_VIEWPORT), true);
-    assert.equal(demoTreeVisible(1280), true);
+  it("hides the quote/Care tree below 900px and shows it beside the thread from 900px", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
+    assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
+    const desktop = css.split("@media (min-width: 900px)").at(-1)?.split("@media")[0] ?? "";
+    assert.match(desktop, /\.landing-demo-workspace\s*\{[^}]*grid-template-columns/);
+    assert.match(desktop, /\.landing-demo-tree\s*\{[^}]*display:\s*flex/);
   });
 });
 
@@ -171,7 +171,7 @@ describe("landing scrub layout", () => {
     assert.equal(css.includes(".landing-perspective"), false);
     assert.ok(css.includes("margin-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px))"));
     assert.ok(css.includes(".landing-scroll .landing-scroll-peek"));
-    const mobile = css.split(`@media (max-width: ${DEMO_TREE_MIN_VIEWPORT - 1}px)`)[1]?.split("@media")[0] ?? "";
+    const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
     assert.match(mobile, /touch-action:\s*pan-y/);
     assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
