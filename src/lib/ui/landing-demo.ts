@@ -250,7 +250,6 @@ export function demoPlayhead(reduceMotion: boolean, progress: number) {
   return reduceMotion ? 1 : clampDemoScrollProgress(progress);
 }
 
-/** Map a pinned chapter to progress 0→1 using pin height, not the viewport. */
 export function demoSectionScrollProgress(
   sectionTop: number,
   sectionHeight: number,
@@ -268,6 +267,16 @@ export function demoSectionScrollProgress(
     return 1;
   }
   return raw / active;
+}
+
+export function demoDocumentScrollProgress(
+  scrollY: number,
+  sectionTop: number,
+  sectionHeight: number,
+  pinHeight: number,
+  stickyTop = 0,
+) {
+  return demoSectionScrollProgress(sectionTop - scrollY, sectionHeight, pinHeight, stickyTop);
 }
 
 function firstOemAt(beats: readonly DemoBeat[]) {

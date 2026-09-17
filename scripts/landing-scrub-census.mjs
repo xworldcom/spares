@@ -20,10 +20,11 @@ const height = Number(arg("height", "844"));
 const outPath = arg("out", "");
 
 spawnSync("npm", ["install", "--omit=dev"], { cwd: harness, stdio: "ignore" });
-spawnSync("npx", ["playwright", "install", "chromium"], { cwd: harness, stdio: "inherit" });
+const engine = arg("browser", "chromium");
+spawnSync("npx", ["playwright", "install", engine], { cwd: harness, stdio: "inherit" });
 
 const require = createRequire(join(harness, "package.json"));
-const { chromium } = require("playwright");
+const { chromium, webkit } = require("playwright");
 
 async function snapshot(page) {
   return page.evaluate(() => {
@@ -65,6 +66,35 @@ async function snapshot(page) {
     const stickyTop = Number.parseFloat(pinStyle.top) || 0;
     const scrollable = section.offsetHeight - pin.offsetHeight;
     const raw = scrollable <= 0 ? null : (stickyTop - sectionBox.top) / scrollable;
+    let sectionDocumentTop = 0;
+    let node = section;
+    while (node) {
+      sectionDocumentTop += node.offsetTop;
+      node = node.offsetParent instanceof HTMLElement ? node.offsetParent : null;
+    }
+    const pageY = Math.max(
+      window.pageYOffset || 0,
+      document.documentElement.scrollTop || 0,
+      document.body?.scrollTop || 0,
+      document.scrollingElement?.scrollTop || 0,
+    );
+    const documentRaw =
+      scrollable <= 0 ? null : (pageY + stickyTop - sectionDocumentTop) / scrollable;
+    const transforms = [];
+    let ancestor = pin.parentElement;
+    while (ancestor) {
+      const style = getComputedStyle(ancestor);
+      if (style.transform !== "none" || style.filter !== "none" || style.perspective !== "none") {
+        transforms.push({
+          tag: ancestor.tagName.toLowerCase(),
+          className: typeof ancestor.className === "string" ? ancestor.className : "",
+          transform: style.transform,
+          filter: style.filter,
+          perspective: style.perspective,
+        });
+      }
+      ancestor = ancestor.parentElement;
+    }
     return {
       missing: false,
       href: location.href,
@@ -72,6 +102,13 @@ async function snapshot(page) {
       peekLabel: peek?.textContent?.replace(/\s+/g, " ").trim() ?? null,
       scrollingElement: document.scrollingElement?.tagName ?? null,
       scrollY: Math.round(window.scrollY),
+      pageY: Math.round(pageY),
+      documentElementScrollTop: Math.round(document.documentElement.scrollTop || 0),
+      bodyScrollTop: Math.round(document.body?.scrollTop || 0),
+      sectionDocumentTop: Math.round(sectionDocumentTop),
+      rectProgress: raw,
+      documentProgress: documentRaw,
+      transformAncestors: transforms,
       innerHeight: window.innerHeight,
       visualViewport: window.visualViewport
         ? {
@@ -103,7 +140,13 @@ async function snapshot(page) {
   });
 }
 
-const browser = await chromium.launch({ headless: true });
+const engines = { chromium, webkit };
+const launcher = engines[engine];
+if (!launcher) {
+  throw new Error(`unknown --browser ${engine}`);
+}
+
+const browser = await launcher.launch({ headless: true });
 const context = await browser.newContext({
   viewport: { width, height },
   isMobile: true,
@@ -156,8 +199,9 @@ const pinStuck =
 
 const report = {
   premise:
-    "A 100svh sticky pin plus document-scroll playhead keeps the workspace on screen while progress advances.",
+    "Document scrollY plus offsetTop, not a live client rect, is the playhead on iPhone Safari.",
   url: targetUrl,
+  engine,
   viewport: { width, height },
   actors: {
     hydration: samples[0]?.heroIn ?? false,
