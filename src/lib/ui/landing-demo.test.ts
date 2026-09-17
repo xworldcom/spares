@@ -5,10 +5,20 @@ import {
   DEMO_ALL_SCRIPT_BEATS,
   DEMO_OTHER_LABEL,
   DEMO_QUOTE_SCRIPT,
+  DEMO_SCRUB_EXTRA_SVH,
   DEMO_TICKET_SCRIPT,
   DEMO_SCRUB_END_HOLD,
   clampDemoScrollProgress,
+  createDemoScrubStore,
+  demoApplyAtVisibility,
+  demoDocumentScrollProgress,
+  demoFindScrollRoot,
+  demoIsNestedScrollPort,
+  demoPickScrollY,
+  demoPinPlacement,
   demoPlayhead,
+  demoRowHidden,
+  demoScrubDebugEnabled,
   demoSectionScrollProgress,
   marketingCopyBan,
   reduceDemoFrame,
@@ -35,6 +45,7 @@ describe("reduceDemoFrame", () => {
     assert.equal(state.appearingId, "q-m1");
     if (state.rows[0]?.kind === "message") {
       assert.equal(state.rows[0].lane, "own");
+      assert.equal(state.rows[0].at, 0);
       assert.equal(state.rows[0].text, "Need two PN-ROLL-2104 for the palletizer infeed. What's lead time?");
     }
   });
@@ -140,6 +151,110 @@ describe("demo scroll scrub", () => {
     assert.equal(demoPlayhead(false, 1), 1);
     assert.equal(reduceDemoFrame("quote", demoPlayhead(true, 0)).quoteStatus, "confirmed");
   });
+
+  it("keeps progress on document scroll when the viewport rect is stale", () => {
+    const pin = 700;
+    const extra = 2100;
+    const height = pin + extra;
+    const sticky = 56;
+    const sectionTop = 900;
+    const scrollY = sectionTop - sticky + (extra * (1 - DEMO_SCRUB_END_HOLD)) / 2;
+    assert.equal(demoSectionScrollProgress(sectionTop, height, pin, sticky), 0);
+    assert.equal(demoDocumentScrollProgress(scrollY, sectionTop, height, pin, sticky), 0.5);
+    assert.equal(demoDocumentScrollProgress(0, sectionTop, height, pin, sticky), 0);
+  });
+
+  it("reads the playhead from document scroll, not a live client rect", () => {
+    const src = readFileSync("src/components/landing/LandingDemoScrub.tsx", "utf8");
+    assert.match(src, /demoDocumentScrollProgress/);
+    assert.match(src, /demoPickScrollY/);
+    assert.match(src, /demoFindScrollRoot/);
+    assert.match(src, /useSyncExternalStore/);
+    assert.match(src, /requestAnimationFrame\(tick\)/);
+    assert.match(src, /data-hydrated/);
+    assert.doesNotMatch(src, /flushSync/);
+    assert.doesNotMatch(src, /getBoundingClientRect\(\)\.top/);
+    assert.doesNotMatch(src, /addEventListener\("scroll"/);
+    assert.doesNotMatch(src, /addEventListener\("touchmove"/);
+  });
+
+  it("picks the scroll root or visual pageTop when window Y is stale", () => {
+    assert.equal(demoPickScrollY(0, 0, 0), 0);
+    assert.equal(demoPickScrollY(120, 40, 30), 120);
+    assert.equal(demoPickScrollY(10, 80, 12), 80);
+    assert.equal(demoPickScrollY(10, 10, 64), 64);
+    assert.equal(demoPickScrollY(-4, -2, -1), 0);
+  });
+
+  it("treats overflow-y auto or scroll as a nested port only when it actually scrolls", () => {
+    assert.equal(demoIsNestedScrollPort("auto", 2000, 800), true);
+    assert.equal(demoIsNestedScrollPort("scroll", 2000, 800), true);
+    assert.equal(demoIsNestedScrollPort("visible", 2000, 800), false);
+    assert.equal(demoIsNestedScrollPort("clip", 2000, 800), false);
+    assert.equal(demoIsNestedScrollPort("auto", 800, 800), false);
+    const root = { id: "app", parent: null as { id: string; parent: null } | null };
+    const child = { id: "section", parent: root };
+    const found = demoFindScrollRoot(child, (node) => node.parent, (node) => ({
+      overflowY: node.id === "app" ? "auto" : "visible",
+      scrollHeight: node.id === "app" ? 2400 : 400,
+      clientHeight: 800,
+    }));
+    assert.equal(found?.id, "app");
+    assert.equal(
+      demoFindScrollRoot(child, (node) => node.parent, () => ({
+        overflowY: "visible",
+        scrollHeight: 2400,
+        clientHeight: 800,
+      })),
+      null,
+    );
+  });
+
+  it("pins from document Y, not a live client rect", () => {
+    const start = demoPinPlacement(100, 400, 2800, 700, 56);
+    assert.deepEqual(start, { phase: "start", position: "absolute", top: 0 });
+    const track = demoPinPlacement(800, 400, 2800, 700, 56);
+    assert.deepEqual(track, { phase: "track", position: "fixed", top: 56 });
+    const end = demoPinPlacement(2600, 400, 2800, 700, 56);
+    assert.deepEqual(end, { phase: "end", position: "absolute", top: 2100 });
+  });
+
+  it("hides later beats from the playhead without dropping them from the list", () => {
+    assert.equal(demoRowHidden(0, 0), false);
+    assert.equal(demoRowHidden(0.28, 0.1), true);
+    assert.equal(demoRowHidden(0.28, 0.28), false);
+    const rows = [
+      { hidden: false, dataset: { demoAt: "0" } },
+      { hidden: false, dataset: { demoAt: "0.28" } },
+    ];
+    demoApplyAtVisibility(rows, 0.1);
+    assert.equal(rows[0]?.hidden, false);
+    assert.equal(rows[1]?.hidden, true);
+    demoApplyAtVisibility(rows, 0.3);
+    assert.equal(rows[1]?.hidden, false);
+  });
+
+  it("keeps the finished-frame store snapshot stable until progress moves", () => {
+    const store = createDemoScrubStore();
+    const seen: number[] = [];
+    const stop = store.subscribe(() => {
+      seen.push(store.get().progress);
+    });
+    store.set({ progress: 0, reduceMotion: false });
+    store.set({ progress: 0.4, reduceMotion: false });
+    store.set({ progress: 0.4, reduceMotion: false });
+    stop();
+    assert.deepEqual(seen, [0.4]);
+    assert.deepEqual(store.getServer(), { progress: 0, reduceMotion: false });
+  });
+
+  it("gates the scrub debug HUD off the production host", () => {
+    assert.equal(demoScrubDebugEnabled("oee360.com", "?scrubDebug=1"), false);
+    assert.equal(demoScrubDebugEnabled("www.oee360.com", "?scrubDebug=1"), false);
+    assert.equal(demoScrubDebugEnabled("spares-220euvxo2-yonder3.vercel.app", "?scrubDebug=1"), true);
+    assert.equal(demoScrubDebugEnabled("localhost", ""), false);
+    assert.equal(demoScrubDebugEnabled("localhost", "?scrubDebug=0"), false);
+  });
 });
 
 describe("landing demo tree visibility", () => {
@@ -154,6 +269,17 @@ describe("landing demo tree visibility", () => {
 });
 
 describe("landing scrub layout", () => {
+  it("keeps the phone pin a viewport-tall stage so sticky can hold", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
+    assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
+    assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
+    assert.match(css, /var\(--landing-demo-scrub-extra,\s*280svh\)|--landing-demo-scrub-extra:\s*280svh/);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH, 280);
+    const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
+    assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
+  });
+
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
     const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
     assert.equal((marketing.match(/<LandingDemoScrub/g) ?? []).length, 2);
@@ -164,7 +290,9 @@ describe("landing scrub layout", () => {
     const demo = readFileSync("src/components/landing/LandingProductDemo.tsx", "utf8");
     assert.ok(demo.includes("landing-demo-tree"));
     assert.ok(demo.includes("landing-demo-workspace"));
+    assert.ok(demo.includes("data-demo-at"));
     const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.match(css, /overflow-y:\s*visible/);
     assert.ok(css.includes(".landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed]"));
     assert.ok(css.includes("overflow-y: hidden"));
     assert.ok(css.includes("var(--spares-header)"));
@@ -174,7 +302,13 @@ describe("landing scrub layout", () => {
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
     assert.match(mobile, /touch-action:\s*pan-y/);
-    assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
+    const cinematic = readFileSync("src/app/globals.css", "utf8");
+    assert.match(
+      cinematic,
+      /html:has\(\.spares-app-cinematic\)[\s\S]*overflow-y:\s*visible/,
+    );
+    const critical = readFileSync("src/app/layout.tsx", "utf8");
+    assert.match(critical, /\.spares-app-cinematic\{[^}]*overflow-y:visible/);
   });
 });
 
