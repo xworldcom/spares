@@ -181,7 +181,6 @@ describe("landing scrub layout", () => {
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
     assert.match(mobile, /touch-action:\s*pan-y/);
-    assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
   });
 });
 

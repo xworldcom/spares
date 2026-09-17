@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  DEMO_SCRUB_EXTRA_VH,
+  DEMO_SCRUB_EXTRA_SVH,
   demoPlayhead,
   demoSectionScrollProgress,
 } from "@/lib/ui/landing-demo";
@@ -15,6 +15,10 @@ export type LandingDemoScrubSnapshot = {
 function readStickyTop(pin: HTMLElement) {
   const top = Number.parseFloat(window.getComputedStyle(pin).top);
   return Number.isFinite(top) ? top : 0;
+}
+
+function supportsViewTimeline() {
+  return typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()");
 }
 
 export function LandingDemoScrub({
@@ -30,6 +34,7 @@ export function LandingDemoScrub({
     progress: 0,
     reduceMotion: false,
   }));
+  const [sdaMeter, setSdaMeter] = useState(false);
 
   useLayoutEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,8 +43,9 @@ export function LandingDemoScrub({
       return;
     }
 
+    setSdaMeter(supportsViewTimeline());
+
     let frame = 0;
-    let watching = false;
 
     const measure = () => {
       const el = sectionRef.current;
@@ -63,51 +69,29 @@ export function LandingDemoScrub({
       );
     };
 
-    const loop = () => {
-      measure();
-      frame = watching ? window.requestAnimationFrame(loop) : 0;
-    };
-
-    const start = () => {
-      if (watching) {
+    const onScroll = () => {
+      if (frame) {
         return;
       }
-      watching = true;
-      if (!frame) {
-        frame = window.requestAnimationFrame(loop);
-      }
-    };
-
-    const stop = () => {
-      watching = false;
-    };
-
-    const section = sectionRef.current;
-    if (!section) {
-      return;
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          start();
-          return;
-        }
-        stop();
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
         measure();
-      },
-      { rootMargin: "25% 0px" },
-    );
-    io.observe(section);
-    window.addEventListener("scroll", start, { passive: true, capture: true });
-    window.addEventListener("resize", start, { passive: true });
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    document.addEventListener("touchmove", onScroll, { passive: true });
+    window.visualViewport?.addEventListener("scroll", onScroll, { passive: true });
+    window.visualViewport?.addEventListener("resize", onScroll, { passive: true });
     measure();
 
     return () => {
-      stop();
-      io.disconnect();
-      window.removeEventListener("scroll", start, { capture: true });
-      window.removeEventListener("resize", start);
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      window.removeEventListener("resize", onScroll);
+      document.removeEventListener("touchmove", onScroll);
+      window.visualViewport?.removeEventListener("scroll", onScroll);
+      window.visualViewport?.removeEventListener("resize", onScroll);
       if (frame) {
         window.cancelAnimationFrame(frame);
       }
@@ -123,13 +107,13 @@ export function LandingDemoScrub({
       style={
         snapshot.reduceMotion
           ? undefined
-          : ({ "--landing-demo-scrub-extra": `${DEMO_SCRUB_EXTRA_VH}vh` } as CSSProperties)
+          : ({ "--landing-demo-scrub-extra": `${DEMO_SCRUB_EXTRA_SVH}svh` } as CSSProperties)
       }
       aria-label={ariaLabel}
     >
       <div ref={pinRef} className="landing-demo-scrub-pin">
         <div className="landing-demo-scrub-meter" aria-hidden="true">
-          <i style={{ transform: `scaleX(${snapshot.progress})` }} />
+          <i style={sdaMeter ? undefined : { transform: `scaleX(${snapshot.progress})` }} />
         </div>
         {children(snapshot)}
       </div>

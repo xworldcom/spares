@@ -664,6 +664,11 @@ html.spares-embed .spares-app-stage {
     overflow-x: clip;
   }
 
+  html:has(.spares-app-cinematic),
+  html:has(.spares-app-cinematic) body {
+    overflow-x: visible;
+  }
+
   body {
     font-family: inherit;
     margin: 0;

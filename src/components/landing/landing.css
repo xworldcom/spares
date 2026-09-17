@@ -51,6 +51,7 @@
 
 .spares-app-cinematic {
   background: #000;
+  overflow-x: visible;
 }
 
 .spares-app-cinematic .spares-header {
@@ -348,7 +349,10 @@
 }
 
 .landing-demo-scrub:not([data-reduce-motion]) {
-  height: calc(100dvh - var(--spares-header) - 0.75rem + var(--landing-demo-scrub-extra, 300vh));
+  height: calc(100svh - var(--spares-header) - 0.75rem + var(--landing-demo-scrub-extra, 280svh));
+  view-timeline-name: --landing-demo-chapter;
+  view-timeline-axis: block;
+  view-timeline-inset: var(--spares-header) 0.75rem;
 }
 
 .landing-demo-scrub-pin {
@@ -356,7 +360,8 @@
   top: var(--spares-header);
   z-index: 1;
   display: flex;
-  height: calc(100dvh - var(--spares-header) - 0.75rem);
+  height: calc(100svh - var(--spares-header) - 0.75rem);
+  max-height: calc(100svh - var(--spares-header) - 0.75rem);
   flex-direction: column;
   min-height: 0;
 }
@@ -383,6 +388,24 @@
   transform: scaleX(0);
   transform-origin: left center;
   background: #eceae4;
+}
+
+@keyframes landing-demo-meter {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  .landing-demo-scrub:not([data-reduce-motion]) .landing-demo-scrub-meter i {
+    animation: landing-demo-meter 1ms linear both;
+    animation-timeline: --landing-demo-chapter;
+    animation-range: contain 0% contain 86%;
+  }
 }
 
 .landing-demo {
@@ -540,22 +563,6 @@
   .landing-demo-scrub-pin,
   .landing-demo-stage {
     touch-action: pan-y;
-  }
-
-  .landing-demo-scrub-pin {
-    height: auto;
-  }
-
-  .landing-demo-scrub-pin .landing-demo-stage,
-  .landing-demo-workspace,
-  .landing-demo-main {
-    flex: none;
-  }
-
-  .landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed] {
-    flex: none;
-    min-height: 12.5rem;
-    height: auto;
   }
 }
 
