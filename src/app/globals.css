@@ -497,6 +497,16 @@
   background: color-mix(in srgb, var(--spares-login) 88%, transparent);
 }
 
+.spares-app header:not(.spares-header) {
+  background: transparent;
+  padding-top: 0;
+}
+
+.care-card-head,
+.imsg-header {
+  background: transparent;
+}
+
 .spares-tabbar {
   height: var(--spares-tabbar);
   padding-bottom: env(safe-area-inset-bottom, 0px);

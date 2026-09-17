@@ -13,6 +13,7 @@ import {
 } from "../model-upload-policy.ts";
 import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
+import { readIfWarm } from "./warm-read";
 import type {
   MachineDetail,
   MachinesListResponse,
@@ -95,9 +96,13 @@ export function normalizeMachine(
 export async function listMachines(options?: {
   heal?: boolean;
 }): Promise<MachineSummary[]> {
-  const path = options?.heal ? "/api/machines?heal=1" : "/api/machines";
-  const data = await apiFetch<MachinesListResponse>(path);
-  return data.machines ?? [];
+  const heal = options?.heal ?? false;
+  const path = heal ? "/api/machines?heal=1" : "/api/machines";
+  const cacheKey = heal ? "machines:list:heal" : "care-hub:machines";
+  return readIfWarm(cacheKey, async () => {
+    const data = await apiFetch<MachinesListResponse>(path);
+    return data.machines ?? [];
+  });
 }
 
 export async function getMachine(

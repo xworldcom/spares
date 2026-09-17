@@ -40,8 +40,9 @@ button{cursor:pointer;border:0;background:transparent;}
 .spares-field{background:#1c1f26;color:#eceae4;}
 .spares-app{min-height:100dvh;background:#0c0d0f;color:#eceae4;overflow-x:clip;}
 .spares-app-cinematic{overflow-x:visible;overflow-y:visible;}
-.spares-app header{background:#0c0d0f;padding-top:env(safe-area-inset-top,0px);}
-.spares-app-login,.spares-app-login header{background:#0c0d0f;color:#eceae4;}
+.spares-app header.spares-header{background:#0c0d0f;padding-top:env(safe-area-inset-top,0px);}
+.spares-app-login,.spares-app-login header.spares-header{background:#0c0d0f;color:#eceae4;}
+.spares-app header:not(.spares-header){background:transparent;padding-top:0;}
 .spares-header-inner{min-height:3.5rem;}
 .spares-app a[href="/login"]{display:inline-flex;height:2.75rem;align-items:center;border-radius:999px;background:#eceae4;color:#0c0d0f;padding:0 1rem;font-size:14px;font-weight:600;}
 .login-input{display:block;box-sizing:border-box;height:3.15rem;width:100%;border:0;border-radius:.9rem;background:#181a1e;padding:0 1rem;color:#eceae4;box-shadow:inset 0 0 0 1px rgba(236,234,228,0.08);}

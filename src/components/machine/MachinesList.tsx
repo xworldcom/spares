@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
@@ -15,6 +16,7 @@ import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
+import { warmCareOverview } from "@/lib/nav/prefetch";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -385,7 +387,7 @@ export function MachinesList() {
                       </div>
                     </>
                   ) : (
-                    <Link href={`/machines/${machine.id}`} className="catalog-machine-hit">
+                    <PrefetchLink href={`/machines/${machine.id}`} className="catalog-machine-hit">
                       <MachineGlyph />
                       <div className="catalog-machine-copy">
                         <span className="catalog-machine-name">{machine.name}</span>
@@ -399,15 +401,16 @@ export function MachinesList() {
                           ›
                         </span>
                       )}
-                    </Link>
+                    </PrefetchLink>
                   )}
                   {!staff && !renaming ? (
-                    <Link
+                    <PrefetchLink
                       href={`/machines/${machine.id}/care`}
+                      warm={() => warmCareOverview(machine.id)}
                       className="catalog-care-link"
                     >
                       Care
-                    </Link>
+                    </PrefetchLink>
                   ) : null}
                   {staff ? (
                     <button
@@ -443,7 +446,12 @@ export function MachinesList() {
                           Rename
                         </button>
                       )}
-                      <Link href={`/machines/${machine.id}/care`}>Care</Link>
+                      <PrefetchLink
+                        href={`/machines/${machine.id}/care`}
+                        warm={() => warmCareOverview(machine.id)}
+                      >
+                        Care
+                      </PrefetchLink>
                       <Link href={`/machines/new?replace=${machine.id}`}>Replace pack</Link>
                       <button
                         type="button"

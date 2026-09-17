@@ -13,6 +13,7 @@ import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryA
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isNavActive } from "@/lib/nav-active";
+import { useSignedInTabPrefetch } from "@/components/nav/useSignedInTabPrefetch";
 
 const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes"] as const;
 const STAFF_NAV_HREFS = [
@@ -112,6 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const cinematic = (pathname === "/" || pathname === "/inquire") && !signedIn;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
   const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
+  useSignedInTabPrefetch(signedIn ? user?.role : undefined);
 
   async function handleLogout() {
     setLogoutError(null);
