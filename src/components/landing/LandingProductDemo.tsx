@@ -15,6 +15,7 @@ import {
   DEMO_TICKET_NUMBER,
   DEMO_TICKET_TITLE,
   demoPlayhead,
+  demoRowHidden,
   reduceDemoFrame,
   type DemoTreeRow,
   type LandingDemoVariant,
@@ -81,7 +82,12 @@ export function LandingProductDemo({
   scrubbed?: boolean;
 }) {
   const playhead = demoPlayhead(reduceMotion, progress);
+  const complete = useMemo(() => reduceDemoFrame(variant, 1), [variant]);
   const state = useMemo(() => reduceDemoFrame(variant, playhead), [variant, playhead]);
+  const liveById = useMemo(() => new Map(state.rows.map((row) => [row.id, row])), [state.rows]);
+  const rows = scrubbed
+    ? complete.rows.map((row) => liveById.get(row.id) ?? row)
+    : state.rows;
   const enteringId = reduceMotion ? null : state.appearingId;
   const isQuote = variant === "quote";
 
@@ -120,11 +126,13 @@ export function LandingProductDemo({
             aria-live={scrubbed ? "off" : "polite"}
             data-scrubbed={scrubbed || undefined}
           >
-            {state.rows.map((row) => {
+            {rows.map((row) => {
               if (row.kind === "system") {
                 return (
                   <li
                     key={row.id}
+                    data-demo-at={row.at}
+                    hidden={scrubbed ? demoRowHidden(row.at, playhead) : false}
                     className={enteringId === row.id ? "imsg-system imsg-enter" : "imsg-system"}
                   >
                     <span className="imsg-chip">{row.text}</span>
@@ -136,6 +144,8 @@ export function LandingProductDemo({
               return (
                 <li
                   key={row.id}
+                  data-demo-at={row.at}
+                  hidden={scrubbed ? demoRowHidden(row.at, playhead) : false}
                   data-stacked={row.stacked ? "true" : "false"}
                   data-end={row.lastInStack ? "true" : "false"}
                   className={[

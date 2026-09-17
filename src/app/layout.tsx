@@ -21,6 +21,7 @@ export const viewport: Viewport = {
 
 const CRITICAL_CSS = `
 html,body{margin:0;min-height:100%;background:#0c0d0f;color:#eceae4;color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+html:has(.spares-app-cinematic),html:has(.spares-app-cinematic) body{overflow-x:visible;overflow-y:visible;}
 @layer base{
 a{color:inherit;text-decoration:none;}
 button,input,textarea,select{font:inherit;color:inherit;}
@@ -38,7 +39,7 @@ button{cursor:pointer;border:0;background:transparent;}
 .spares-surface{background:#16181d;color:#eceae4;}
 .spares-field{background:#1c1f26;color:#eceae4;}
 .spares-app{min-height:100dvh;background:#0c0d0f;color:#eceae4;overflow-x:clip;}
-.spares-app-cinematic{overflow-x:visible;}
+.spares-app-cinematic{overflow-x:visible;overflow-y:visible;}
 .spares-app header{background:#0c0d0f;padding-top:env(safe-area-inset-top,0px);}
 .spares-app-login,.spares-app-login header{background:#0c0d0f;color:#eceae4;}
 .spares-header-inner{min-height:3.5rem;}

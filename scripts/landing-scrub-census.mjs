@@ -56,6 +56,7 @@ async function snapshot(page) {
     const peek = document.querySelector(".landing-scroll-peek");
     const thread = document.querySelector(".landing-demo-thread");
     const rows = [...document.querySelectorAll("[data-demo='quote'] .imsg-row, [data-demo='quote'] .imsg-system")];
+    const visibleRows = rows.filter((row) => !row.hidden);
     const strip = document.querySelector("[data-demo='quote'] .quote-progress-step[aria-current='step'] .quote-progress-label-full");
     if (!section || !pin) {
       return { missing: true };
@@ -114,8 +115,11 @@ async function snapshot(page) {
         ? {
             height: Math.round(window.visualViewport.height),
             offsetTop: window.visualViewport.offsetTop,
+            pageTop: Math.round(window.visualViewport.pageTop),
           }
         : null,
+      hydrated: section.getAttribute("data-hydrated"),
+      pinPhase: pin.getAttribute("data-pin"),
       progressAttr: section.getAttribute("data-progress"),
       extra: section.style.getPropertyValue("--landing-demo-scrub-extra") || null,
       reduceMotion: section.hasAttribute("data-reduce-motion"),
@@ -131,7 +135,8 @@ async function snapshot(page) {
       treeDisplay: tree ? getComputedStyle(tree).display : null,
       treeHeight: tree ? Math.round(tree.getBoundingClientRect().height) : 0,
       threadOverflowY: thread ? getComputedStyle(thread).overflowY : null,
-      quoteRows: rows.length,
+      quoteRows: visibleRows.length,
+      quoteAllRows: rows.length,
       quoteCurrent: strip?.textContent?.trim() ?? null,
       scrollTimeline: CSS.supports("animation-timeline: scroll()"),
       viewTimeline: CSS.supports("animation-timeline: view()"),
@@ -218,7 +223,7 @@ const pinStuck =
 
 const report = {
   premise:
-    "Document scrollY plus offsetTop, not a live client rect, is the playhead on iPhone Safari.",
+    "Pick window Y, a nested scroll root, or visualViewport.pageTop. Pin from that Y. Hide rows in the DOM. Linux WebKit is not iPhone Safari.",
   url: targetUrl,
   engine,
   viewport: { width, height },

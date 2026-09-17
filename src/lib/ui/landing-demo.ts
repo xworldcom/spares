@@ -39,6 +39,7 @@ export type DemoBeat =
 export type DemoMessageRow = {
   kind: "message";
   id: string;
+  at: number;
   lane: ActivityLane;
   text: string;
   actorEmail: string;
@@ -50,6 +51,7 @@ export type DemoMessageRow = {
 export type DemoSystemRow = {
   kind: "system";
   id: string;
+  at: number;
   text: string;
 };
 
@@ -278,6 +280,148 @@ export function demoDocumentScrollProgress(
   return demoSectionScrollProgress(sectionTop - scrollY, sectionHeight, pinHeight, stickyTop);
 }
 
+export function demoPickScrollY(windowY: number, rootY: number, visualPageTop: number) {
+  const windowScroll = Math.max(0, windowY);
+  const rootScroll = Math.max(0, rootY);
+  const visualScroll = Math.max(0, visualPageTop);
+  if (rootScroll > windowScroll + 1) {
+    return rootScroll;
+  }
+  if (visualScroll > windowScroll + 1) {
+    return visualScroll;
+  }
+  return Math.max(windowScroll, rootScroll, visualScroll);
+}
+
+export function demoWindowScrollY(windowY: number, documentY: number, bodyY: number, scrollingY: number) {
+  return Math.max(0, windowY, documentY, bodyY, scrollingY);
+}
+
+export function demoIsNestedScrollPort(overflowY: string, scrollHeight: number, clientHeight: number) {
+  return (overflowY === "auto" || overflowY === "scroll") && scrollHeight > clientHeight + 1;
+}
+
+export function demoFindScrollRoot<T>(
+  from: T,
+  parentOf: (node: T) => T | null,
+  measure: (node: T) => { overflowY: string; scrollHeight: number; clientHeight: number },
+): T | null {
+  let node = parentOf(from);
+  while (node) {
+    const box = measure(node);
+    if (demoIsNestedScrollPort(box.overflowY, box.scrollHeight, box.clientHeight)) {
+      return node;
+    }
+    node = parentOf(node);
+  }
+  return null;
+}
+
+export type DemoPinPhase = "start" | "track" | "end";
+
+export type DemoPinPlacement = {
+  phase: DemoPinPhase;
+  position: "absolute" | "fixed";
+  top: number;
+};
+
+export function demoPinPlacement(
+  scrollY: number,
+  sectionTop: number,
+  sectionHeight: number,
+  pinHeight: number,
+  stickyTop: number,
+  allowFixed = true,
+): DemoPinPlacement {
+  const start = sectionTop - stickyTop;
+  const travel = Math.max(0, sectionHeight - pinHeight);
+  const end = start + travel;
+  if (scrollY <= start) {
+    return { phase: "start", position: "absolute", top: 0 };
+  }
+  if (scrollY >= end) {
+    return { phase: "end", position: "absolute", top: travel };
+  }
+  if (!allowFixed) {
+    return {
+      phase: "track",
+      position: "absolute",
+      top: Math.min(travel, Math.max(0, scrollY + stickyTop - sectionTop)),
+    };
+  }
+  return { phase: "track", position: "fixed", top: stickyTop };
+}
+
+export function demoRowHidden(at: number, playhead: number) {
+  return at > playhead;
+}
+
+export function demoApplyAtVisibility(
+  rows: Iterable<{ hidden: boolean; dataset: { demoAt?: string } }>,
+  playhead: number,
+) {
+  for (const row of rows) {
+    const at = Number.parseFloat(row.dataset.demoAt ?? "");
+    if (!Number.isFinite(at)) {
+      continue;
+    }
+    row.hidden = demoRowHidden(at, playhead);
+  }
+}
+
+export type DemoScrubSnapshot = {
+  progress: number;
+  reduceMotion: boolean;
+};
+
+const IDLE_SCRUB: DemoScrubSnapshot = { progress: 0, reduceMotion: false };
+
+export function createDemoScrubStore(initial: DemoScrubSnapshot = IDLE_SCRUB) {
+  let snapshot = initial;
+  const listeners = new Set<() => void>();
+  return {
+    subscribe(onStoreChange: () => void) {
+      listeners.add(onStoreChange);
+      return () => {
+        listeners.delete(onStoreChange);
+      };
+    },
+    get() {
+      return snapshot;
+    },
+    getServer() {
+      return IDLE_SCRUB;
+    },
+    set(next: DemoScrubSnapshot) {
+      if (snapshot.progress === next.progress && snapshot.reduceMotion === next.reduceMotion) {
+        return;
+      }
+      snapshot = next;
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+  };
+}
+
+export function demoScrubDebugEnabled(hostname: string, search: string) {
+  if (hostname === "oee360.com" || hostname === "www.oee360.com") {
+    return false;
+  }
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  return new URLSearchParams(query).get("scrubDebug") === "1";
+}
+
+export function demoOffsetInDocument(el: HTMLElement) {
+  let x = 0;
+  let y = 0;
+  for (let node: Element | null = el; node instanceof HTMLElement; node = node.offsetParent) {
+    x += node.offsetLeft;
+    y += node.offsetTop;
+  }
+  return { x, y };
+}
+
 function firstOemAt(beats: readonly DemoBeat[]) {
   return beats.find((beat) => beat.kind === "message" && beat.actor === "oem")?.at ?? 1;
 }
@@ -316,13 +460,14 @@ export function reduceDemoFrame(
 
   const rows: DemoVisibleRow[] = visible.map((beat, index) => {
     if (beat.kind === "system") {
-      return { kind: "system", id: beat.id, text: beat.text };
+      return { kind: "system", id: beat.id, at: beat.at, text: beat.text };
     }
     const prev = visible[index - 1];
     const next = visible[index + 1];
     return {
       kind: "message",
       id: beat.id,
+      at: beat.at,
       lane: beat.actor === "plant" ? "own" : "other",
       text: beat.text,
       actorEmail: demoActorEmail(beat.actor),

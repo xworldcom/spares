@@ -667,6 +667,7 @@ html.spares-embed .spares-app-stage {
   html:has(.spares-app-cinematic),
   html:has(.spares-app-cinematic) body {
     overflow-x: visible;
+    overflow-y: visible;
   }
 
   body {
