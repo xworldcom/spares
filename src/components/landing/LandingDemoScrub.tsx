@@ -73,7 +73,7 @@ export function LandingDemoScrub({
     };
     let frame = 0;
     let lastY = Number.NaN;
-    let still = 0;
+    let running = true;
 
     const measureLayout = () => {
       const el = sectionRef.current;
@@ -88,6 +88,7 @@ export function LandingDemoScrub({
     };
 
     const apply = () => {
+      measureLayout();
       const next = demoPlayhead(
         false,
         demoDocumentScrollProgress(
@@ -106,52 +107,44 @@ export function LandingDemoScrub({
     };
 
     const tick = () => {
+      if (!running) {
+        return;
+      }
+      if (document.hidden) {
+        frame = 0;
+        return;
+      }
       const y = documentScrollY();
       if (y !== lastY) {
         lastY = y;
-        still = 0;
         apply();
-      } else {
-        still += 1;
       }
-      frame = still < 24 ? window.requestAnimationFrame(tick) : 0;
-    };
-
-    const arm = () => {
-      still = 0;
-      if (!frame) {
-        frame = window.requestAnimationFrame(tick);
-      }
+      frame = window.requestAnimationFrame(tick);
     };
 
     const onResize = () => {
-      measureLayout();
-      arm();
+      lastY = Number.NaN;
     };
 
-    measureLayout();
-    apply();
+    const onVisibility = () => {
+      if (document.hidden || frame) {
+        return;
+      }
+      lastY = Number.NaN;
+      frame = window.requestAnimationFrame(tick);
+    };
 
-    const scrollTarget = document.scrollingElement;
-    window.addEventListener("scroll", arm, { passive: true, capture: true });
-    document.addEventListener("scroll", arm, { passive: true, capture: true });
-    scrollTarget?.addEventListener("scroll", arm, { passive: true });
+    apply();
+    frame = window.requestAnimationFrame(tick);
+
     window.addEventListener("resize", onResize, { passive: true });
-    document.addEventListener("touchstart", arm, { passive: true });
-    document.addEventListener("touchmove", arm, { passive: true });
-    document.addEventListener("touchend", arm, { passive: true });
-    window.visualViewport?.addEventListener("scroll", arm, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
     window.visualViewport?.addEventListener("resize", onResize, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", arm, { capture: true });
-      document.removeEventListener("scroll", arm, { capture: true });
-      scrollTarget?.removeEventListener("scroll", arm);
+      running = false;
       window.removeEventListener("resize", onResize);
-      document.removeEventListener("touchstart", arm);
-      document.removeEventListener("touchmove", arm);
-      document.removeEventListener("touchend", arm);
-      window.visualViewport?.removeEventListener("scroll", arm);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.visualViewport?.removeEventListener("resize", onResize);
       if (frame) {
         window.cancelAnimationFrame(frame);

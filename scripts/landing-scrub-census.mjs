@@ -183,6 +183,25 @@ if (await section.count()) {
     await page.evaluate((y) => window.scrollTo(0, y), start + track * 0.15);
     await page.waitForTimeout(120);
     samples.push({ label: "rewind-0.15", ...(await snapshot(page)) });
+
+    await page.evaluate(() => {
+      const section = document.querySelector(".landing-demo-scrub");
+      if (!section) {
+        return;
+      }
+      const frozenTop = section.getBoundingClientRect().top;
+      const orig = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
+        const box = orig.call(this);
+        if (this === section) {
+          return new DOMRect(box.x, frozenTop, box.width, box.height);
+        }
+        return box;
+      };
+    });
+    await page.evaluate((y) => window.scrollTo(0, y), start + track * 0.55);
+    await page.waitForTimeout(160);
+    samples.push({ label: "stale-rect-0.55", ...(await snapshot(page)) });
   }
 }
 
@@ -213,6 +232,9 @@ const report = {
     scrollDrivenSupported: Boolean(samples[0]?.scrollTimeline || samples[0]?.viewTimeline),
     overflowClipAncestors: (samples[0]?.overflowAncestors ?? []).filter(
       (node) => node.overflowX === "clip" || node.overflowY === "clip" || node.overflowX === "hidden",
+    ),
+    staleRectPlayhead: Number.parseFloat(
+      samples.find((s) => s.label === "stale-rect-0.55")?.progressAttr ?? "0",
     ),
   },
   samples,
