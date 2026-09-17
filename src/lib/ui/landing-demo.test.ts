@@ -7,9 +7,11 @@ import {
   DEMO_QUOTE_SCRIPT,
   DEMO_TICKET_SCRIPT,
   DEMO_SCRUB_END_HOLD,
+  DEMO_TREE_MIN_VIEWPORT,
   clampDemoScrollProgress,
   demoPlayhead,
   demoSectionScrollProgress,
+  demoTreeVisible,
   marketingCopyBan,
   reduceDemoFrame,
 } from "./landing-demo.ts";
@@ -142,6 +144,15 @@ describe("demo scroll scrub", () => {
   });
 });
 
+describe("landing demo tree visibility", () => {
+  it("hides the quote/Care tree on a phone viewport and shows it on desktop", () => {
+    assert.equal(demoTreeVisible(390), false);
+    assert.equal(demoTreeVisible(DEMO_TREE_MIN_VIEWPORT - 1), false);
+    assert.equal(demoTreeVisible(DEMO_TREE_MIN_VIEWPORT), true);
+    assert.equal(demoTreeVisible(1280), true);
+  });
+});
+
 describe("landing scrub layout", () => {
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
     const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
@@ -160,6 +171,9 @@ describe("landing scrub layout", () => {
     assert.equal(css.includes(".landing-perspective"), false);
     assert.ok(css.includes("margin-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px))"));
     assert.ok(css.includes(".landing-scroll .landing-scroll-peek"));
+    const mobile = css.split(`@media (max-width: ${DEMO_TREE_MIN_VIEWPORT - 1}px)`)[1]?.split("@media")[0] ?? "";
+    assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
+    assert.match(mobile, /touch-action:\s*pan-y/);
   });
 });
 
