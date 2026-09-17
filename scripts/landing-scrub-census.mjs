@@ -157,7 +157,7 @@ await browser.close();
 const progressValues = samples
   .map((s) => Number.parseFloat(s.progressAttr ?? "0"))
   .filter((n) => Number.isFinite(n));
-const pinTops = samples.filter((s) => s.label.startsWith("track-") || s.label === "story-start");
+const pinTops = samples.filter((s) => s.label === "track-0.15" || s.label === "track-0.35" || s.label === "track-0.55");
 const uniqueProgress = [...new Set(progressValues.map((n) => n.toFixed(3)))];
 const pinStuck =
   pinTops.length >= 3 &&
