@@ -154,7 +154,7 @@ export function PlatformDirectoryPersonDetail({ userId }: { userId: string }) {
     const label = displayPersonName({ name: profile.name, email: profile.email });
     if (
       !window.confirm(
-        `Deactivate ${label}? They will lose login access. This cannot be undone from the directory.`,
+        `Delete login for ${label}? They will lose sign-in access. This cannot be undone from the directory.`,
       )
     ) {
       return;
@@ -166,7 +166,7 @@ export function PlatformDirectoryPersonDetail({ userId }: { userId: string }) {
       router.push("/staff/directory");
       router.refresh();
     } catch (cause) {
-      setError(errorMessage(cause, "Could not deactivate this login."));
+      setError(errorMessage(cause, "Could not delete this login."));
       setSaving(false);
     }
   }
@@ -286,7 +286,7 @@ export function PlatformDirectoryPersonDetail({ userId }: { userId: string }) {
       ) : null}
 
       <section className="border-t border-white/10 pt-6">
-        <h2 className="text-lg font-semibold text-[#f0c4c0]">Deactivate login</h2>
+        <h2 className="text-lg font-semibold text-[#f0c4c0]">Delete login</h2>
         <p className="text-muted mt-1 mb-4 text-sm">
           Removes sign-in access for this {detail.role === "staff" ? "staff member" : "person"}.
           Data on the host is unchanged.
@@ -297,7 +297,7 @@ export function PlatformDirectoryPersonDetail({ userId }: { userId: string }) {
           disabled={saving || readOnly}
           onClick={() => void deactivate()}
         >
-          Deactivate
+          Delete login
         </button>
       </section>
     </main>

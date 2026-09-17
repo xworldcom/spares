@@ -4,9 +4,12 @@ import { createMemoryPersistence, setPersistenceForTests } from "./persistence.t
 import {
   createCustomerAccount,
   createSite,
+  createTenantStaffUser,
   deleteCustomerAccount,
   deleteSite,
+  deleteStaffUser,
   listCustomerAccounts,
+  listPlatformDirectory,
   listSites,
   resetStoreMemoryForTests,
   SEED_CUSTOMER_ACCOUNTS,
@@ -14,6 +17,7 @@ import {
   updateSite,
   writeCatalogHealForTests,
 } from "./store.ts";
+import { hashPassword } from "./auth/password.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 const T = DEFAULT_TENANT_ID;
@@ -161,6 +165,47 @@ describe("org delete persistence", () => {
     resetStoreMemoryForTests();
     const accounts = await listCustomerAccounts(T);
     assert.equal(accounts.some((row) => row.id === created.account.id), false);
+  });
+
+  it("does not resurrect a deleted staff login when a stale catalog heal writes afterward", async () => {
+    process.env.SPARES_ALLOW_SEED = "false";
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    resetStoreMemoryForTests();
+    await persistence.writeDatabaseJson(
+      JSON.stringify({
+        ...seedOrgDb(),
+        customers: [],
+        sites: [],
+      }),
+    );
+
+    const staleHealSnapshot = JSON.parse((await persistence.readDatabaseJson()) ?? "{}");
+    const created = await createTenantStaffUser(T, {
+      email: "throwaway-staff@test.local",
+      passwordHash: await hashPassword("ThrowawayPass1!"),
+      role: "staff",
+    });
+    assert.ok("user" in created);
+    const userId = created.user.id;
+
+    resetStoreMemoryForTests();
+    await deleteStaffUser(userId, T);
+
+    resetStoreMemoryForTests();
+    await writeCatalogHealForTests(staleHealSnapshot);
+
+    resetStoreMemoryForTests();
+    const directory = await listPlatformDirectory();
+    assert.equal(
+      directory.some((row) => row.type === "staff" && row.email === "throwaway-staff@test.local"),
+      false,
+    );
+    const raw = JSON.parse((await persistence.readDatabaseJson()) ?? "{}") as {
+      users?: Array<{ id: string; deletedAt?: string }>;
+    };
+    const tombstone = raw.users?.find((user) => user.id === userId);
+    assert.ok(tombstone?.deletedAt);
   });
 
   it("does not undo a soft delete when a stale catalog heal writes afterward", async () => {

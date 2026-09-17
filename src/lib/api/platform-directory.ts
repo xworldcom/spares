@@ -43,3 +43,47 @@ export async function deletePlatformDirectoryUser(userId: string) {
     { method: "DELETE" },
   );
 }
+
+export type PlatformDirectoryCustomerDetail = {
+  account: CustomerAccount;
+  hostId: string;
+  hostName: string;
+  sites: Array<Site & { machineCount: number }>;
+};
+
+export async function getPlatformDirectoryCustomer(customerId: string) {
+  return apiFetch<PlatformDirectoryCustomerDetail>(
+    `/api/platform/directory/customers/${encodeURIComponent(customerId)}`,
+  );
+}
+
+export async function updatePlatformDirectoryCustomer(customerId: string, name: string) {
+  const data = await apiFetch<{ account: CustomerAccount }>(
+    `/api/platform/directory/customers/${encodeURIComponent(customerId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    },
+  );
+  return data.account;
+}
+
+export async function deletePlatformDirectoryCustomer(customerId: string) {
+  await apiFetch<{ ok: true }>(
+    `/api/platform/directory/customers/${encodeURIComponent(customerId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function deletePlatformDirectorySite(siteId: string) {
+  await apiFetch<{ ok: true }>(
+    `/api/platform/directory/sites/${encodeURIComponent(siteId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function deletePlatformTenant(tenantId: string) {
+  await apiFetch<{ ok: true }>(`/api/platform/tenants/${encodeURIComponent(tenantId)}`, {
+    method: "DELETE",
+  });
+}

@@ -46,6 +46,7 @@ export function buildPlatformDirectory(catalog: DirectoryCatalogSlice): Director
   const hostName = (tenantId: string) => hostNames.get(tenantId) ?? tenantId;
 
   const hosts: DirectoryEntry[] = [...catalog.tenants]
+    .filter((tenant) => !tenant.deletedAt)
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((tenant) => ({
       type: "host",

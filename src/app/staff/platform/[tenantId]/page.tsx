@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { apiFetch } from "@/lib/api/client";
+import { deletePlatformTenant } from "@/lib/api/platform-directory";
+import { errorMessage } from "@/lib/api/errors";
 import type { Tenant } from "@/types";
 
 type DeploymentDetail = {
@@ -44,6 +46,7 @@ export default function PlatformTenantDetailPage() {
 }
 
 function TenantDetail() {
+  const router = useRouter();
   const { user } = useAuth();
   const params = useParams();
   const tenantId = typeof params.tenantId === "string" ? params.tenantId : "";
@@ -97,6 +100,46 @@ function TenantDetail() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Update failed");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteHost() {
+    if (!tenantId || !detail) {
+      return;
+    }
+    if (detail.deployment.kind === "host") {
+      return;
+    }
+    const { size } = detail.deployment;
+    const childSummary = [
+      size.staffUsers > 0 ? `${size.staffUsers} staff` : null,
+      size.customerPeople > 0 ? `${size.customerPeople} people` : null,
+      size.customers > 0 ? `${size.customers} customers` : null,
+      size.sites > 0 ? `${size.sites} sites` : null,
+      size.machines > 0 ? `${size.machines} machines` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    const blockedHint = childSummary
+      ? `\n\nThis host still has ${childSummary}. Remove those records first.`
+      : "";
+    if (
+      !window.confirm(
+        `Delete host “${detail.deployment.tenant.name}”?${blockedHint || " This permanently removes the satellite host."}`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    setError(null);
+    try {
+      await deletePlatformTenant(tenantId);
+      router.push("/staff/platform");
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not delete this host."));
       setBusy(false);
     }
   }
@@ -212,6 +255,25 @@ function TenantDetail() {
         {error ? <p className="text-danger mt-2">{error}</p> : null}
         {notice ? <p className="text-sm text-muted mt-2">{notice}</p> : null}
       </section>
+
+      {deployment.kind === "satellite" ? (
+        <section className="card p-4 mt-6 max-w-lg border border-[#f0c4c0]/20">
+          <h2 className="text-lg font-semibold text-[#f0c4c0] mb-2">Delete host</h2>
+          <p className="text-sm text-muted mb-4">
+            Permanently removes this satellite host from the platform. Delete every staff login,
+            customer, site, and machine on this host first. Open quotes and care tickets block
+            deletion until they are closed or removed.
+          </p>
+          <button
+            type="button"
+            className="btn-soft text-[#f0c4c0]"
+            disabled={busy}
+            onClick={() => void deleteHost()}
+          >
+            Delete host
+          </button>
+        </section>
+      ) : null}
 
       <section className="mt-8">
         <StaffTeamPanel

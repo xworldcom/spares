@@ -56,7 +56,10 @@ import {
 import { migrateTenants, newTenantFromName } from "./tenant-migration.ts";
 import {
   buildPlatformDeploymentRow,
+  computeTenantSizeMetrics,
+  type PlatformCatalogSlice,
   type PlatformDeploymentRow,
+  type TenantSizeMetrics,
 } from "./platform-metrics.ts";
 import {
   buildPlatformDirectory,
@@ -782,6 +785,12 @@ function isHostStaffEmail(email: string) {
 
 /** Never let a stale heal drop satellite tenants or re-bind staff to the host tenant. */
 function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUser {
+  if (latest.deletedAt) {
+    return latest;
+  }
+  if (healed.deletedAt) {
+    return healed;
+  }
   const merged = { ...healed, ...latest };
   if (merged.role !== "staff" || !merged.email || isHostStaffEmail(merged.email)) {
     return merged;
@@ -827,7 +836,7 @@ function mergeTenantsForHeal(
   healed: Tenant[] | undefined,
   latest: Tenant[] | undefined,
 ): Tenant[] {
-  return unionById([...(healed ?? [])], [...(latest ?? [])]);
+  return mergeRowsForWrite(latest ?? [], healed ?? []);
 }
 
 /** Org CRUD lives in blob writes — catalog heal must not clobber concurrent deletes. */
@@ -841,8 +850,8 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
       tenants: mergeTenantsForHeal(healed.tenants, latest.tenants),
       // Latest wins per row (the blob is newer than this heal's snapshot) but rows only
       // one side knows about are kept, so neither side loses a create.
-      customers: mergeRowsForWrite(healed.customers ?? [], latest.customers ?? []),
-      sites: mergeRowsForWrite(healed.sites ?? [], latest.sites ?? []),
+      customers: mergeRowsForWrite(latest.customers ?? [], healed.customers ?? []),
+      sites: mergeRowsForWrite(latest.sites ?? [], healed.sites ?? []),
       users: mergeOrgUsersAndClampTenants(
         healed,
         latest,
@@ -1369,6 +1378,19 @@ async function writeDatabaseWithOrgMerge(
   return { ok: true };
 }
 
+/** Org deletes race catalog heals on Preview — re-merge with the blob like creates do. */
+async function writeDatabaseWithOrgDelete(next: Database) {
+  let merged = clampSatelliteStaffTenants(next);
+  for (let pass = 0; pass < 2; pass++) {
+    const latest = (await loadPersistedSnapshot())?.db;
+    if (!latest) {
+      break;
+    }
+    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, latest));
+  }
+  await persistDatabase(merged);
+}
+
 /** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
 async function writeCatalogHeal(next: Database) {
   let merged = next;
@@ -1418,7 +1440,9 @@ export function findUserByEmail(email: string) {
 export function listTenants() {
   return withLock(async () => {
     const db = await ensureCatalog();
-    return [...(db.tenants ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+    return [...(db.tenants ?? [])]
+      .filter((row) => !row.deletedAt)
+      .sort((a, b) => a.name.localeCompare(b.name));
   });
 }
 
@@ -1440,7 +1464,9 @@ export function listPlatformDeployments() {
     const db = await ensureCatalog();
     const catalog = platformCatalogSlice(db);
     const tenants = [...(db.tenants ?? [])].sort((a, b) => a.name.localeCompare(b.name));
-    return tenants.map((tenant) => buildPlatformDeploymentRow(tenant, catalog));
+    return tenants
+      .filter((tenant) => !tenant.deletedAt)
+      .map((tenant) => buildPlatformDeploymentRow(tenant, catalog));
   });
 }
 
@@ -1448,7 +1474,7 @@ export function listPlatformDirectory() {
   return withLock(async () => {
     const db = await ensureCatalog();
     return buildPlatformDirectory({
-      tenants: db.tenants ?? [],
+      tenants: (db.tenants ?? []).filter((row) => !row.deletedAt),
       customers: db.customers ?? [],
       users: db.users,
     });
@@ -1460,7 +1486,7 @@ export type { DirectoryEntry };
 export function getPlatformDeployment(tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
-    const tenant = (db.tenants ?? []).find((row) => row.id === tenantId);
+    const tenant = (db.tenants ?? []).find((row) => row.id === tenantId && !row.deletedAt);
     if (!tenant) {
       return { error: "not-found" as const };
     }
@@ -1512,7 +1538,9 @@ export function updateTenantPlatformMeta(
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    const index = (db.tenants ?? []).findIndex((row) => row.id === tenantId);
+    const index = (db.tenants ?? []).findIndex(
+      (row) => row.id === tenantId && !row.deletedAt,
+    );
     if (index < 0) {
       return { error: "not-found" as const };
     }
@@ -1551,15 +1579,154 @@ export function updateTenantPlatformMeta(
   });
 }
 
-export type { PlatformDeploymentRow };
+function catalogSliceFromDb(db: Database): PlatformCatalogSlice {
+  return {
+    users: db.users,
+    customers: db.customers,
+    sites: db.sites,
+    machines: db.machines,
+    quotes: db.quotes,
+    tickets: db.tickets,
+    machineUsage: db.machineUsage,
+  };
+}
+
+function locateCustomerAccountInDb(db: Database, customerId: string) {
+  const account =
+    (db.customers ?? []).find((row) => row.id === customerId && !row.deletedAt) ?? null;
+  if (!account) {
+    return null;
+  }
+  const tenantId = effectiveTenantId(account);
+  const tenant = (db.tenants ?? []).find((row) => row.id === tenantId);
+  return { account, tenantId, hostName: tenant?.name ?? tenantId };
+}
+
+function locateSiteInDb(db: Database, siteId: string) {
+  const site = activeSites(db.sites ?? []).find((row) => row.id === siteId) ?? null;
+  if (!site) {
+    return null;
+  }
+  const tenantId = effectiveTenantId(site);
+  const tenant = (db.tenants ?? []).find((row) => row.id === tenantId);
+  return { site, tenantId, hostName: tenant?.name ?? tenantId };
+}
+
+function tenantHasCatalogChildren(tenantId: string, db: Database) {
+  const size = computeTenantSizeMetrics(tenantId, catalogSliceFromDb(db));
+  if (
+    size.staffUsers > 0 ||
+    size.customerPeople > 0 ||
+    size.customers > 0 ||
+    size.sites > 0 ||
+    size.machines > 0 ||
+    size.openQuotes > 0 ||
+    size.openTickets > 0
+  ) {
+    return { blocked: true as const, size };
+  }
+  const quotes = filterByTenant(db.quotes, tenantId).length;
+  const tickets = filterByTenant(db.tickets ?? [], tenantId).length;
+  const bugs = filterByTenant(db.bugReports, tenantId).length;
+  if (quotes > 0 || tickets > 0 || bugs > 0) {
+    return { blocked: true as const, size };
+  }
+  return { blocked: false as const, size };
+}
+
+export function getPlatformDirectoryCustomer(customerId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const located = locateCustomerAccountInDb(db, customerId);
+    if (!located) {
+      return { error: "not-found" as const };
+    }
+    const { account, tenantId, hostName } = located;
+    const machines = filterByTenant(db.machines, tenantId);
+    const machineCounts = new Map<string, number>();
+    for (const machine of machines) {
+      if (!machine.siteId) {
+        continue;
+      }
+      machineCounts.set(machine.siteId, (machineCounts.get(machine.siteId) ?? 0) + 1);
+    }
+    const sites = activeSites(filterByTenant(db.sites ?? [], tenantId))
+      .filter((site) => site.customerId === customerId)
+      .map((site) => ({
+        ...site,
+        machineCount: machineCounts.get(site.id) ?? 0,
+      }));
+    return { account, tenantId, hostName, sites };
+  });
+}
+
+export async function mutatePlatformDirectoryCustomer(
+  customerId: string,
+  patch: { name?: string },
+) {
+  const located = await getPlatformDirectoryCustomer(customerId);
+  if ("error" in located) {
+    return located;
+  }
+  return updateCustomerAccount(customerId, located.tenantId, patch);
+}
+
+export async function removePlatformCustomerAccount(customerId: string) {
+  const located = await getPlatformDirectoryCustomer(customerId);
+  if ("error" in located) {
+    return located;
+  }
+  return deleteCustomerAccount(customerId, located.tenantId);
+}
+
+export async function removePlatformSite(siteId: string) {
+  const located = await getPlatformDirectorySite(siteId);
+  if ("error" in located) {
+    return located;
+  }
+  return deleteSite(siteId, located.tenantId);
+}
+
+export function getPlatformDirectorySite(siteId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const located = locateSiteInDb(db, siteId);
+    if (!located) {
+      return { error: "not-found" as const };
+    }
+    return located;
+  });
+}
+
+export function removePlatformTenant(tenantId: string) {
+  return withLock(async () => {
+    if (tenantId === DEFAULT_TENANT_ID) {
+      return { error: "host-immutable" as const };
+    }
+    const db = await readDatabase();
+    const index = (db.tenants ?? []).findIndex(
+      (row) => row.id === tenantId && !row.deletedAt,
+    );
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const childCheck = tenantHasCatalogChildren(tenantId, db);
+    if (childCheck.blocked) {
+      return { error: "has-children" as const, size: childCheck.size };
+    }
+    const tenants = (db.tenants ?? []).slice();
+    tenants[index] = { ...tenants[index], deletedAt: new Date().toISOString() };
+    await writeDatabaseWithOrgDelete({ ...db, tenants });
+    return { ok: true as const };
+  });
+}
+
+export type { PlatformDeploymentRow, TenantSizeMetrics };
 
 function tenantNameTaken(db: Database, trimmed: string) {
-  const slugTaken = (db.tenants ?? []).some(
-    (row) => row.slug === newTenantFromName(trimmed).slug,
-  );
-  const nameTaken = (db.tenants ?? []).some(
-    (row) => row.name.toLowerCase() === trimmed.toLowerCase(),
-  );
+  const active = (db.tenants ?? []).filter((row) => !row.deletedAt);
+  const slugTaken = active.some((row) => row.slug === newTenantFromName(trimmed).slug);
+  const nameTaken = active.some((row) => row.name.toLowerCase() === trimmed.toLowerCase());
   return slugTaken || nameTaken;
 }
 
@@ -1833,7 +2000,9 @@ export function deleteCustomerAccount(id: string, tenantId: string) {
     }
     const next = customers.slice();
     next[index] = { ...next[index], deletedAt: new Date().toISOString() };
-    await writeDatabase(withCustomerTombstone({ ...db, customers: next }, id));
+    await writeDatabaseWithOrgDelete(
+      withCustomerTombstone({ ...db, customers: next }, id),
+    );
     return { ok: true as const };
   });
 }
@@ -1903,7 +2072,7 @@ export function deletePerson(userId: string, tenantId: string) {
     }
     const users = db.users.slice();
     users[index] = { ...user, deletedAt: new Date().toISOString() };
-    await writeDatabase({ ...db, users });
+    await writeDatabaseWithOrgDelete({ ...db, users });
     return { ok: true as const };
   });
 }
@@ -1926,7 +2095,7 @@ export function deleteStaffUser(userId: string, tenantId: string) {
     }
     const users = db.users.slice();
     users[index] = { ...user, deletedAt: new Date().toISOString() };
-    await writeDatabase({ ...db, users });
+    await writeDatabaseWithOrgDelete({ ...db, users });
     return { ok: true as const };
   });
 }
@@ -2207,7 +2376,9 @@ export function deleteSite(siteId: string, tenantId: string) {
         siteIds: user.siteIds.filter((id) => id !== siteId),
       };
     });
-    await writeDatabase(withSiteTombstone({ ...db, sites: updated, users }, siteId));
+    await writeDatabaseWithOrgDelete(
+      withSiteTombstone({ ...db, sites: updated, users }, siteId),
+    );
     return { ok: true as const };
   });
 }

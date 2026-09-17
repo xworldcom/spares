@@ -271,7 +271,7 @@ export function TenantDirectoryPersonDetail({ userId }: { userId: string }) {
       </section>
 
       <section className="border-t border-white/10 pt-6">
-        <h2 className="text-lg font-semibold text-[#f0c4c0]">Deactivate login</h2>
+        <h2 className="text-lg font-semibold text-[#f0c4c0]">Delete login</h2>
         <p className="text-muted mt-1 mb-4 text-sm">
           Removes sign-in access for this person. Data on this install is unchanged.
         </p>
@@ -281,7 +281,7 @@ export function TenantDirectoryPersonDetail({ userId }: { userId: string }) {
           disabled={saving}
           onClick={() => void deactivate()}
         >
-          Deactivate
+          Delete login
         </button>
       </section>
     </main>
