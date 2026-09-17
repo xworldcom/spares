@@ -1,4 +1,5 @@
 import { shouldUseCrossOriginObjectUrl } from "./cors.ts";
+import { machineHasModel } from "./machines.ts";
 import {
   createModelDownloadUrl,
   modelExistsInS3,
@@ -12,6 +13,9 @@ export async function machineFileUrl(
   request: Request,
   machine: Pick<StoredMachine, "id" | "storedFileName">,
 ) {
+  if (!machineHasModel(machine)) {
+    return "";
+  }
   const proxyUrl = new URL(
     `/api/machines/${machine.id}/file`,
     request.url,

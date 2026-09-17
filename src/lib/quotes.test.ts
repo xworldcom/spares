@@ -10,6 +10,7 @@ import {
   itemsForRole,
   mergeQuoteItems,
   normalizeStoredQuote,
+  hydrateQuoteItems,
   parseQuoteItems,
   parseShipments,
   pricesVisibleToCustomer,
@@ -86,6 +87,22 @@ describe("parseQuoteItems", () => {
         },
       ],
     });
+  });
+});
+
+describe("hydrateQuoteItems", () => {
+  it("keeps catalog metadata and accepts a part that is not on the machine", () => {
+    const items = hydrateQuoteItems(
+      [
+        { id: "PN-100", qty: 2 },
+        { id: "OEM-9", name: "Third-party seal", qty: 1 },
+      ],
+      [{ id: "PN-100", name: "Pump", meshName: "PN-100", qty: 1, vendor: "Acme" }],
+    );
+    assert.deepEqual(items, [
+      { id: "PN-100", qty: 2, name: "Pump", vendor: "Acme" },
+      { id: "OEM-9", qty: 1, name: "Third-party seal" },
+    ]);
   });
 });
 

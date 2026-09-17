@@ -7,7 +7,7 @@ export default function MachinesPage() {
       <div className="catalog-page">
         <div className="catalog-page-intro">
           <h1>Machines</h1>
-          <p>Open a pack to inspect the model and request a quote.</p>
+          <p>Inspect a model, open Care, or request a quote. Machines do not need a 3D pack.</p>
         </div>
         <MachinesList />
       </div>

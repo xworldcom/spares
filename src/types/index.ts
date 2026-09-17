@@ -78,6 +78,7 @@ export type MachineSummary = {
   company?: string;
   siteName?: string;
   version?: number;
+  hasModel?: boolean;
 };
 
 export type MachineDetail = {
@@ -91,6 +92,9 @@ export type MachineDetail = {
   siteName?: string;
   version?: number;
   revisedAt?: string;
+  hasModel?: boolean;
+  oem?: string;
+  notes?: string;
 };
 
 export type MachineView = {

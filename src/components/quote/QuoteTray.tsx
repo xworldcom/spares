@@ -21,6 +21,7 @@ import {
   initialQuoteSheetSnap,
   type QuoteSheetSnap,
 } from "@/lib/ui/quote-sheet";
+import { ManualQuoteLines } from "@/components/quote/ManualQuoteLines";
 
 export type TrayLine = {
   part: Part;
@@ -56,6 +57,8 @@ function QuoteTrayForm({
   onNote,
   onQty,
   onRemove,
+  onAdd,
+  allowManual,
   onSubmit,
   submitting,
   error,
@@ -68,6 +71,8 @@ function QuoteTrayForm({
   onNote: (value: string) => void;
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
+  onAdd?: (part: Part, qty: number) => void;
+  allowManual?: boolean;
   onSubmit: () => void;
   submitting: boolean;
   error: string | null;
@@ -86,7 +91,7 @@ function QuoteTrayForm({
           <p className="spares-muted mt-0.5 text-sm">
             <span data-quote-target="count" className="quote-count">
               {lines.length === 0 ? (
-                "Tap a part on the machine."
+                allowManual ? "Add a part number to quote." : "Tap a part on the machine."
               ) : (
                 <>
                   <span key={count} className="quote-count-num">
@@ -131,13 +136,13 @@ function QuoteTrayForm({
             </Link>
           ) : null}
         </div>
-      ) : lines.length === 0 ? (
+      ) : lines.length === 0 && !allowManual ? (
         <div className="quote-sheet-empty mt-8 min-h-0 flex-1">
           <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
             Nothing here yet. Select a named part, then add it.
           </p>
         </div>
-      ) : (
+      ) : !allowManual ? (
       <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
         {lines.map((line) => (
           <li
@@ -202,7 +207,32 @@ function QuoteTrayForm({
           </li>
         ))}
       </ul>
-      )}
+      ) : null}
+
+      {allowManual && onAdd && !sent ? (
+        <div className="mt-4">
+          <ManualQuoteLines
+            lines={lines.map((line) => ({
+              id: line.part.id,
+              name: line.part.name,
+              qty: line.qty,
+            }))}
+            onAdd={(line) =>
+              onAdd(
+                {
+                  id: line.id,
+                  name: line.name,
+                  meshName: "",
+                  qty: line.qty,
+                },
+                line.qty,
+              )
+            }
+            onQty={onQty}
+            onRemove={onRemove}
+          />
+        </div>
+      ) : null}
 
       {lines.length > 0 ? (
       <label className="mt-3 block text-sm font-medium text-[var(--spares-muted)]">
@@ -242,6 +272,8 @@ export function QuoteTray({
   lines,
   onQty,
   onRemove,
+  onAdd,
+  allowManual = false,
   onClear,
   fullscreen,
   onExitToTray,
@@ -252,6 +284,8 @@ export function QuoteTray({
   lines: TrayLine[];
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
+  onAdd?: (part: Part, qty: number) => void;
+  allowManual?: boolean;
   onClear: () => void;
   fullscreen?: boolean;
   onExitToTray?: () => void;
@@ -377,6 +411,8 @@ export function QuoteTray({
     onNote: setNote,
     onQty,
     onRemove,
+    onAdd,
+    allowManual,
     onSubmit: () => {
       void handleSubmit();
     },

@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
+import { canAccessMachine } from "./access.ts";
 import {
   FIXTURE_MACHINE_IDS,
 } from "./seed-fixtures.ts";
@@ -13,11 +14,16 @@ import {
 import {
   appendQuoteActivity,
   appendTicketActivity,
+  createCustomer,
+  createCustomerAccount,
   createMachine,
   createManual,
   createQuote,
+  createSite,
   createTicket,
   deleteMachine,
+  findOrCreateModelLessMachine,
+  findUserByEmail,
   getMachine,
   getMachineUsage,
   getQuote,
@@ -525,5 +531,144 @@ describe("quote conversation persistence", () => {
     assert.equal(byId?.activities.at(-1)?.text, "About two weeks.");
     assert.equal(byNumber?.activities.length, byId?.activities.length);
     assert.equal(byNumber?.activities.at(-2)?.text, "Can you confirm lead time?");
+  });
+});
+
+describe("model-less machines", () => {
+  after(() => {
+    resetStoreMemoryForTests();
+    setPersistenceForTests(null);
+    delete process.env.SPARES_DATA_DIR;
+    delete process.env.SPARES_ALLOW_SEED;
+  });
+
+  it("creates a real machine without a pack and reuses the name at that site", async () => {
+    await isolatedDataDir();
+    process.env.SPARES_ALLOW_SEED = "false";
+    const account = await createCustomerAccount("Cargill", T);
+    assert.equal("account" in account, true);
+    if (!("account" in account)) {
+      return;
+    }
+    const site = await createSite(T, account.account.id, "Fort Worth");
+    assert.equal("site" in site, true);
+    if (!("site" in site)) {
+      return;
+    }
+    const first = await findOrCreateModelLessMachine(T, {
+      name: "Fanuc R-2000",
+      siteId: site.site.id,
+      oem: "Fanuc",
+    });
+    assert.equal("machine" in first, true);
+    if (!("machine" in first)) {
+      return;
+    }
+    assert.equal(first.created, true);
+    assert.equal(first.machine.storedFileName, "");
+    assert.equal(first.machine.parts.length, 0);
+    assert.equal(first.machine.siteId, site.site.id);
+    assert.equal(first.machine.oem, "Fanuc");
+
+    const again = await findOrCreateModelLessMachine(T, {
+      name: "  fanuc   r-2000 ",
+      siteId: site.site.id,
+    });
+    assert.equal("machine" in again, true);
+    if (!("machine" in again)) {
+      return;
+    }
+    assert.equal(again.created, false);
+    assert.equal(again.machine.id, first.machine.id);
+
+    const otherSite = await createSite(T, account.account.id, "Wichita");
+    assert.equal("site" in otherSite, true);
+    if (!("site" in otherSite)) {
+      return;
+    }
+    const twin = await findOrCreateModelLessMachine(T, {
+      name: "Fanuc R-2000",
+      siteId: otherSite.site.id,
+    });
+    assert.equal("machine" in twin, true);
+    if (!("machine" in twin)) {
+      return;
+    }
+    assert.equal(twin.created, true);
+    assert.notEqual(twin.machine.id, first.machine.id);
+
+    const ticket = await createTicket(T, {
+      machineId: first.machine.id,
+      title: "Servo fault",
+      customerId: "user-customer",
+      customerEmail: "customer@spares.local",
+      actor: {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
+    });
+    assert.equal("ticket" in ticket, true);
+
+    const quote = await createQuote(T, {
+      machineId: first.machine.id,
+      items: [{ id: "A06B-0115", qty: 1, name: "Servo amplifier" }],
+      customerId: "user-customer",
+      customerEmail: "customer@spares.local",
+    });
+    assert.equal("error" in quote, false);
+    if ("error" in quote) {
+      return;
+    }
+    assert.equal(quote.items[0]?.id, "A06B-0115");
+
+    const deleted = await deleteMachine(first.machine.id, T);
+    assert.equal("ok" in deleted, true);
+    assert.equal(await getMachine(first.machine.id, T), null);
+  });
+
+  it("grants a machine-scoped customer the machine they just added", async () => {
+    await isolatedDataDir();
+    process.env.SPARES_ALLOW_SEED = "false";
+    const account = await createCustomerAccount("Acme", T);
+    assert.equal("account" in account, true);
+    if (!("account" in account)) {
+      return;
+    }
+    const site = await createSite(T, account.account.id, "Dayton");
+    assert.equal("site" in site, true);
+    if (!("site" in site)) {
+      return;
+    }
+    const existing = await createMachine(T, {
+      name: "Line A",
+      siteId: site.site.id,
+      storedFileName: "line-a.glb",
+      originalFileName: "line-a.glb",
+      parts: [],
+      unmatched: [],
+    });
+    const person = await createCustomer(T, "tech@acme.test", "hash", {
+      machineIds: [existing.id],
+    });
+    assert.equal("user" in person, true);
+    if (!("user" in person)) {
+      return;
+    }
+    const created = await findOrCreateModelLessMachine(T, {
+      name: "Spare press",
+      siteId: site.site.id,
+      grantUserId: person.user.id,
+    });
+    assert.equal("machine" in created, true);
+    if (!("machine" in created)) {
+      return;
+    }
+    const granted = await findUserByEmail("tech@acme.test");
+    assert.ok(granted);
+    assert.equal(
+      canAccessMachine(granted, created.machine, [site.site], [account.account]),
+      true,
+    );
   });
 });

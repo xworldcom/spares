@@ -6,6 +6,7 @@ import {
 } from "@/lib/cors";
 import { safeDownloadFilename } from "@/lib/download-filename";
 import { error } from "@/lib/http";
+import { machineHasModel } from "@/lib/machines";
 import { resolveMachineFileServe } from "@/lib/model-file-serve";
 import { canAccessMachine } from "@/lib/access";
 import { getMachine, getOrgContext } from "@/lib/store";
@@ -30,6 +31,10 @@ export async function GET(
   ]);
   if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
+  }
+
+  if (!machineHasModel(machine)) {
+    return error("This machine does not have a 3D model.", 404);
   }
 
   const result = await resolveMachineFileServe({

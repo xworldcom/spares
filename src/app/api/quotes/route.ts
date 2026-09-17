@@ -1,6 +1,6 @@
 import { requireTenantCustomer, requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
+import { hydrateQuoteItems, parseQuoteItems, toPublicQuote } from "@/lib/quotes";
 import { canAccessMachine } from "@/lib/access";
 import { isSeedAllowed } from "@/lib/production-env";
 import {
@@ -11,7 +11,6 @@ import {
   listMachines,
   listQuotes,
 } from "@/lib/store";
-import type { QuoteItem } from "@/types";
 
 type CreateQuoteBody = {
   machineId?: unknown;
@@ -81,25 +80,7 @@ export async function POST(request: Request) {
     return error("Machine not found", 404);
   }
 
-  const pickable = new Map(machine.parts.map((part) => [part.id, part]));
-  if (parsed.items.some((item) => !pickable.has(item.id))) {
-    return error("One or more part ids are not customer-pickable on this machine", 400);
-  }
-
-  const items: QuoteItem[] = parsed.items.map((item) => {
-    const part = pickable.get(item.id);
-    const next: QuoteItem = { id: item.id, qty: item.qty };
-    const name = item.name ?? part?.name;
-    if (name) {
-      next.name = name;
-    }
-    if (part?.vendor) next.vendor = part.vendor;
-    if (part?.material) next.material = part.material;
-    if (part?.replaces) next.replaces = part.replaces;
-    if (part?.stock) next.stock = part.stock;
-    if (part?.category) next.category = part.category;
-    return next;
-  });
+  const items = hydrateQuoteItems(parsed.items, machine.parts);
 
   const created = await createQuote(auth.tenantId, {
     machineId,

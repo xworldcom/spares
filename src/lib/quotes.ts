@@ -1,5 +1,6 @@
 import { normalizeChatAttachments } from "./chat-attachments.ts";
 import type {
+  Part,
   PublicUser,
   Quote,
   QuoteActivity,
@@ -285,6 +286,35 @@ function parseItemRow(
   }
 
   return { ok: true, item };
+}
+
+export function hydrateQuoteItems(
+  items: QuoteItem[],
+  parts: readonly Part[],
+): QuoteItem[] {
+  const catalog = new Map(parts.map((part) => [part.id, part]));
+  return items.map((item) => {
+    const part = catalog.get(item.id);
+    if (!part) {
+      const next: QuoteItem = { id: item.id, qty: item.qty };
+      const name = item.name?.trim() || item.id;
+      if (name) {
+        next.name = name;
+      }
+      return next;
+    }
+    const next: QuoteItem = { id: item.id, qty: item.qty };
+    const name = item.name?.trim() || part.name;
+    if (name) {
+      next.name = name;
+    }
+    if (part.vendor) next.vendor = part.vendor;
+    if (part.material) next.material = part.material;
+    if (part.replaces) next.replaces = part.replaces;
+    if (part.stock) next.stock = part.stock;
+    if (part.category) next.category = part.category;
+    return next;
+  });
 }
 
 export function parseQuoteItems(

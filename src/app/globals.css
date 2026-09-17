@@ -2239,6 +2239,70 @@ html.spares-embed .spares-app-stage {
   color: var(--spares-accent, #8ee0a8);
 }
 
+.searchable-select-option-create {
+  color: var(--spares-accent, #8ee0a8);
+  font-weight: 600;
+}
+
+.machine-typeahead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.machine-typeahead-create {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 1.15rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.machine-typeahead-create-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.manual-quote-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.manual-quote-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.manual-quote-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 1.1rem;
+  background: var(--spares-field, rgba(255, 255, 255, 0.04));
+}
+
+.manual-quote-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .manual-quote-add {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr) 4.5rem auto;
+    align-items: end;
+  }
+}
+
 .searchable-select-empty {
   position: absolute;
   z-index: 20;

@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
+import { listCustomerAccounts, listSites } from "@/lib/api/auth";
 import { listMachines } from "@/lib/api/machines";
 import { createTicket } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
-import type { MachineSummary } from "@/types";
+import type { CustomerAccount, MachineSummary, Site } from "@/types";
 
 export function NewTicketForm({
   machineId,
@@ -15,13 +18,19 @@ export function NewTicketForm({
   onCreated: (ticketId: string, machineId: string) => void;
   onCancel: () => void;
 }) {
+  const { user } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
+  const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [selectedMachineId, setSelectedMachineId] = useState(machineId ?? "");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const showMachinePicker = !machineId;
+  const role = user?.role === "staff" ? "staff" : "customer";
+
+  const customerSites = useMemo(() => user?.sites ?? [], [user?.sites]);
 
   useEffect(() => {
     if (machineId) {
@@ -29,12 +38,26 @@ export function NewTicketForm({
       return;
     }
     let cancelled = false;
-    listMachines()
-      .then((next) => {
+    const orgLoad =
+      user?.role === "staff"
+        ? Promise.all([listSites(), listCustomerAccounts()])
+            .then(([nextSites, nextAccounts]) => ({
+              sites: nextSites,
+              accounts: nextAccounts,
+            }))
+            .catch(() => ({ sites: [] as Site[], accounts: [] as CustomerAccount[] }))
+        : Promise.resolve({
+            sites: customerSites,
+            accounts: [] as CustomerAccount[],
+          });
+    Promise.all([listMachines(), orgLoad])
+      .then(([next, org]) => {
         if (cancelled) {
           return;
         }
         setMachines(next);
+        setSites(org.sites);
+        setAccounts(org.accounts);
         if (next.length === 1) {
           setSelectedMachineId(next[0].id);
         }
@@ -47,7 +70,7 @@ export function NewTicketForm({
     return () => {
       cancelled = true;
     };
-  }, [machineId]);
+  }, [customerSites, machineId, user?.role]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -89,21 +112,16 @@ export function NewTicketForm({
         Tell staff what is happening. They will update status and write back here.
       </p>
       {showMachinePicker ? (
-        <label className="care-field">
-          <span>Machine</span>
-          <select
-            value={selectedMachineId}
-            onChange={(event) => setSelectedMachineId(event.target.value)}
-            className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
-          >
-            <option value="">Select a machine…</option>
-            {machines.map((machine) => (
-              <option key={machine.id} value={machine.id}>
-                {machine.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <MachineTypeahead
+          machines={machines}
+          onMachines={setMachines}
+          accounts={accounts}
+          sites={sites}
+          machineId={selectedMachineId}
+          onMachineId={setSelectedMachineId}
+          role={role}
+          disabled={busy}
+        />
       ) : null}
       <label className="care-field">
         <span>Title</span>

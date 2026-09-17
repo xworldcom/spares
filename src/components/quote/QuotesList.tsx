@@ -72,7 +72,7 @@ export function QuotesList({ role }: { role: Role }) {
         message={
           role === "staff"
             ? "When a customer requests a quote, it will show up here."
-            : "Open a machine, add parts to the tray, and request a quote."
+            : "Start a quote from here, or open a machine and add parts."
         }
         action={
           user?.role === "customer" ? (

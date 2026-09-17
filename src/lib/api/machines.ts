@@ -47,6 +47,9 @@ export function machineFileSrc(machineId: string) {
 }
 
 function resolvedFileUrl(machine: MachineDetail) {
+  if (machine.hasModel === false || !machine.fileUrl.trim()) {
+    return "";
+  }
   if (machine.fileUrl.startsWith("http://") || machine.fileUrl.startsWith("https://")) {
     return machine.fileUrl;
   }
@@ -73,6 +76,9 @@ export function normalizeMachine(
       siteName: machine.siteName,
       version: machine.version,
       revisedAt: machine.revisedAt,
+      hasModel: machine.hasModel === false ? false : Boolean(fileUrl),
+      ...(machine.oem ? { oem: machine.oem } : {}),
+      ...(machine.notes ? { notes: machine.notes } : {}),
     };
   }
 
@@ -86,6 +92,9 @@ export function normalizeMachine(
     siteName: machine.siteName,
     version: machine.version,
     revisedAt: machine.revisedAt,
+    hasModel: machine.hasModel === false ? false : Boolean(fileUrl),
+    ...(machine.oem ? { oem: machine.oem } : {}),
+    ...(machine.notes ? { notes: machine.notes } : {}),
   };
   if (Array.isArray(machine.unmatched)) {
     detail.unmatched = machine.unmatched;
@@ -150,6 +159,24 @@ export async function deleteMachine(machineId: string) {
   await apiFetch<{ ok: true }>(`/api/machines/${machineId}`, {
     method: "DELETE",
   });
+}
+
+export async function createModelLessMachine(input: {
+  name: string;
+  siteId: string;
+  oem?: string;
+  notes?: string;
+}): Promise<MachineDetail> {
+  const data = await apiFetch<MachineDetail>("/api/machines", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      siteId: input.siteId,
+      ...(input.oem ? { oem: input.oem } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+    }),
+  });
+  return normalizeMachine(data);
 }
 
 function assertModelSize(file: File) {

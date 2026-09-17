@@ -1,16 +1,18 @@
 import type { NextRequest } from "next/server";
 import { requireTenantStaff, requireTenantUser } from "@/lib/auth/tenant-scope";
-import { error, json } from "@/lib/http";
+import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail, toMachineSummary } from "@/lib/machines";
+import { parseModelLessMachineBody } from "@/lib/machine-create";
 import {
   isPackFormError,
   joinPackFiles,
   readPackForm,
 } from "@/lib/pack-upload";
-import { canAccessMachine } from "@/lib/access";
+import { canAccessMachine, canCreateMachineAtSite } from "@/lib/access";
 import {
   createMachine,
+  findOrCreateModelLessMachine,
   getOrgContext,
   listMachines,
   ModelPackError,
@@ -42,6 +44,55 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const auth = await requireTenantUser();
+    if ("error" in auth) {
+      return auth.error;
+    }
+    const body = await readJson(request);
+    if (isErrorResponse(body)) {
+      return body;
+    }
+    const parsed = parseModelLessMachineBody(body);
+    if (!parsed.ok) {
+      return error(parsed.error, 400);
+    }
+    const [machines, org] = await Promise.all([
+      listMachines(auth.tenantId),
+      getOrgContext(auth.tenantId),
+    ]);
+    const site = org.sites.find((row) => row.id === parsed.value.siteId);
+    if (!site) {
+      return error("Choose a valid site", 400);
+    }
+    if (!canCreateMachineAtSite(auth.user, site, machines, org.customers)) {
+      return error("You cannot add a machine at that site.", 403);
+    }
+    const result = await findOrCreateModelLessMachine(auth.tenantId, {
+      ...parsed.value,
+      grantUserId: auth.user.role === "customer" ? auth.user.id : undefined,
+    });
+    if ("error" in result) {
+      return error(
+        result.error === "bad-name"
+          ? "Enter a machine name."
+          : "Choose a valid site",
+        400,
+      );
+    }
+    return json(
+      toMachineDetail(
+        result.machine,
+        await machineFileUrl(request, result.machine),
+        auth.user.role,
+        org.sites,
+        org.customers,
+      ),
+      result.created ? 201 : 200,
+    );
+  }
+
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;

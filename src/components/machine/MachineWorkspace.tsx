@@ -15,7 +15,10 @@ import { LoadingState } from "@/components/states/LoadingState";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
 import { viewerNeedsReset } from "@/components/viewer/assemblyView";
+import Link from "next/link";
 import { getMachine, updateMachinePart } from "@/lib/api/machines";
+import { machineHasModel } from "@/lib/machines";
+import { careHref } from "@/lib/care";
 import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
@@ -96,6 +99,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         setSaveError(null);
         setError(null);
         setNotFound(false);
+        setView(machineHasModel(next) ? "model" : "list");
         setLoading(false);
       })
       .catch((cause: unknown) => {
@@ -161,7 +165,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }, [selectedPart]);
 
   const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
-  const src = machine?.fileUrl ?? "";
+  const hasModel = machineHasModel(machine ?? { hasModel: false });
+  const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
   const tray = useMemo(() => {
     if (!isCustomer) {
@@ -171,6 +176,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       <QuoteTray
         machineId={machineId}
         lines={lines}
+        allowManual
+        onAdd={(part, qty) => {
+          setLines((current) => {
+            if (current.some((line) => line.part.id === part.id)) {
+              return current;
+            }
+            return [...current, { part, qty }];
+          });
+        }}
         onQty={(partId, qty) => {
           setLines((current) =>
             current.map((line) =>
@@ -196,7 +210,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return (
       <EmptyState
         title="Machine not found"
-        message="This pack does not exist, or the API is not on this preview yet."
+        message="This machine does not exist, or you do not have access."
       />
     );
   }
@@ -348,11 +362,28 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
             <div>
               <p className="text-[18px] font-semibold tracking-tight text-[var(--spares-on-chip)]">
-                No model
+                No 3D model
               </p>
               <p className="chrome-quiet mt-2 max-w-sm text-[14px] leading-relaxed">
-                This machine does not have a 3D model to display.
+                {machine.oem ? `${machine.oem}. ` : ""}
+                Care and quotes still work for this machine.
               </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Link
+                  href={careHref(machine.id)}
+                  className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+                >
+                  Open Care
+                </Link>
+                {!isCustomer ? (
+                  <Link
+                    href={`/machines/new?replace=${machine.id}`}
+                    className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+                  >
+                    Upload pack
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
         )}
@@ -413,7 +444,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
-          {showViewToggle ? (
+          {showViewToggle && hasModel ? (
             <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
               <button
                 type="button"
@@ -435,7 +466,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               </button>
             </div>
           ) : null}
-          {(showViewToggle && view === "model") || staffSplitView ? (
+          {hasModel && ((showViewToggle && view === "model") || staffSplitView) ? (
             <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
               <span className="chrome-quiet hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
                 Explode

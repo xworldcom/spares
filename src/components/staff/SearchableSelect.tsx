@@ -8,6 +8,8 @@ export type SearchableOption = {
   label: string;
 };
 
+const CREATE_VALUE = "__create__";
+
 export function SearchableSelect({
   id: idProp,
   label,
@@ -18,6 +20,9 @@ export function SearchableSelect({
   disabled = false,
   allowEmpty = false,
   emptyLabel = "None",
+  onCreate,
+  canCreate,
+  createLabel,
 }: {
   id?: string;
   label: string;
@@ -28,6 +33,9 @@ export function SearchableSelect({
   disabled?: boolean;
   allowEmpty?: boolean;
   emptyLabel?: string;
+  onCreate?: (query: string) => void;
+  canCreate?: (query: string) => boolean;
+  createLabel?: (query: string) => string;
 }) {
   const autoId = useId();
   const id = idProp ?? autoId;
@@ -42,13 +50,29 @@ export function SearchableSelect({
     [options, value],
   );
 
+  const createQuery = query.trim();
+
   const filtered = useMemo(() => {
     const rows = options.filter((row) => catalogQueryMatch(query, [row.label, row.value]));
-    if (allowEmpty && catalogQueryMatch(query, [emptyLabel, ""])) {
-      return [{ value: "", label: emptyLabel }, ...rows];
+    const next =
+      allowEmpty && catalogQueryMatch(query, [emptyLabel, ""])
+        ? [{ value: "", label: emptyLabel }, ...rows]
+        : rows;
+    if (
+      onCreate &&
+      createQuery &&
+      (canCreate ? canCreate(createQuery) : true)
+    ) {
+      return [
+        ...next,
+        {
+          value: CREATE_VALUE,
+          label: createLabel?.(createQuery) ?? `Add “${createQuery}”`,
+        },
+      ];
     }
-    return rows;
-  }, [allowEmpty, emptyLabel, options, query]);
+    return next;
+  }, [allowEmpty, canCreate, createLabel, createQuery, emptyLabel, onCreate, options, query]);
 
   useEffect(() => {
     if (!open) {
@@ -73,6 +97,11 @@ export function SearchableSelect({
   }, []);
 
   function choose(nextValue: string) {
+    if (nextValue === CREATE_VALUE) {
+      onCreate?.(createQuery);
+      setOpen(false);
+      return;
+    }
     onChange(nextValue);
     const next = options.find((row) => row.value === nextValue);
     setQuery(next?.label ?? (nextValue ? nextValue : emptyLabel));
@@ -141,8 +170,10 @@ export function SearchableSelect({
                   role="option"
                   aria-selected={row.value === value}
                   className={`searchable-select-option${
-                    index === activeIndex ? " searchable-select-option-active" : ""
-                  }${row.value === value ? " searchable-select-option-selected" : ""}`}
+                    row.value === CREATE_VALUE ? " searchable-select-option-create" : ""
+                  }${index === activeIndex ? " searchable-select-option-active" : ""}${
+                    row.value === value ? " searchable-select-option-selected" : ""
+                  }`}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => choose(row.value)}
                 >

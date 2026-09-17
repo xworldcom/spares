@@ -412,6 +412,51 @@ export function accessLabel(
   return accessSummary(user, accounts);
 }
 
+export function canCreateMachineAtSite(
+  user: Pick<
+    PublicUser,
+    "role" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
+  >,
+  site: Pick<Site, "id" | "deletedAt" | "customerId" | "company" | "tenantId">,
+  machines: readonly Pick<MachineSummary, "id" | "siteId">[] = [],
+  accounts: readonly CustomerAccount[] = [],
+) {
+  if (site.deletedAt) {
+    return false;
+  }
+  if (user.role === "staff") {
+    if (!user.tenantId) {
+      return false;
+    }
+    return belongsToTenant(site, user.tenantId);
+  }
+  if (user.tenantId && user.tenantId !== effectiveTenantId(site)) {
+    return false;
+  }
+  if ((user.siteIds ?? []).includes(site.id)) {
+    return true;
+  }
+  if (
+    (user.machineIds ?? []).some((machineId) =>
+      machines.some((machine) => machine.id === machineId && machine.siteId === site.id),
+    )
+  ) {
+    return true;
+  }
+  const hasModernAccess =
+    (user.siteIds?.length ?? 0) > 0 || (user.machineIds?.length ?? 0) > 0;
+  const companies = user.companyAccess ?? [];
+  if (!hasModernAccess && companies.length > 0) {
+    const company = siteCompanyName(site as Site, accounts);
+    if (!company) {
+      return false;
+    }
+    const needle = company.toLowerCase();
+    return companies.some((row) => row.toLowerCase() === needle);
+  }
+  return false;
+}
+
 export function canAccessMachine(
   user: Pick<
     PublicUser,

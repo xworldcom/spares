@@ -5,6 +5,7 @@ import {
   accessSummary,
   accessSummaryParts,
   canAccessMachine,
+  canCreateMachineAtSite,
   customerIdForGrant,
   grantFromUser,
   isMachineGranted,
@@ -263,6 +264,52 @@ describe("access grants", () => {
     assert.equal(
       customerIdForGrant({ siteIds: ["site-acme-dayton"], machineIds: [] }, sites, machines, accounts),
       "customer-acme",
+    );
+  });
+});
+
+describe("canCreateMachineAtSite", () => {
+  it("lets staff add at a live site in their tenant", () => {
+    const staff = { role: "staff" as const, tenantId: DEFAULT_TENANT_ID, siteIds: [] };
+    assert.equal(
+      canCreateMachineAtSite(staff, { ...sites[0], tenantId: DEFAULT_TENANT_ID }, machines, accounts),
+      true,
+    );
+    assert.equal(
+      canCreateMachineAtSite(
+        staff,
+        { ...sites[0], tenantId: DEFAULT_TENANT_ID, deletedAt: "2026-01-01T00:00:00.000Z" },
+        machines,
+        accounts,
+      ),
+      false,
+    );
+  });
+
+  it("lets a customer add at a granted site or a site they already have a machine on", () => {
+    const siteGrant = {
+      role: "customer" as const,
+      tenantId: DEFAULT_TENANT_ID,
+      siteIds: ["site-cargill-ftw"],
+      machineIds: [],
+    };
+    const machineGrant = {
+      role: "customer" as const,
+      tenantId: DEFAULT_TENANT_ID,
+      siteIds: [],
+      machineIds: ["palletizer"],
+    };
+    assert.equal(
+      canCreateMachineAtSite(siteGrant, { ...sites[0], tenantId: DEFAULT_TENANT_ID }, machines, accounts),
+      true,
+    );
+    assert.equal(
+      canCreateMachineAtSite(machineGrant, { ...sites[0], tenantId: DEFAULT_TENANT_ID }, machines, accounts),
+      true,
+    );
+    assert.equal(
+      canCreateMachineAtSite(machineGrant, { ...sites[1], tenantId: DEFAULT_TENANT_ID }, machines, accounts),
+      false,
     );
   });
 });

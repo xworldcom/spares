@@ -1,0 +1,7 @@
+ts	phase	decision	why	evidence	result
+2026-09-17T23:42:58Z	frame	typeahead create on a real StoredMachine, not Other and not a ghost table	Kevin asked for one pattern that stays inside Customer, Sites, Machines	src/lib/store.ts findOrCreateModelLessMachine	chosen
+2026-09-17T23:42:58Z	frame	staff and customers with site or machine access can create	a maintenance manager must file a ticket without waiting for a pack	src/lib/access.ts canCreateMachineAtSite	chosen
+2026-09-17T23:42:58Z	frame	required name and site, optional maker and notes, empty storedFileName means no model	derive hasModel from the file name so the boolean cannot drift	src/lib/machines.ts machineHasModel	chosen
+2026-09-17T23:42:58Z	harness	unit tests for name match, empty file claim, quote hydrate, find-or-create, and grant	prove the store path before UI	src/lib/store.test.ts model-less machines	tests green
+2026-09-17T23:42:58Z	api	JSON POST /api/machines is idempotent by name plus site	retries and typed names should select, not duplicate	src/app/api/machines/route.ts	implemented
+2026-09-17T23:42:58Z	quotes	manual line items hydrate catalog parts when present and stay quote-local otherwise	no 3D pick and no extra BOM table	src/lib/quotes.ts hydrateQuoteItems	implemented
