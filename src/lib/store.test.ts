@@ -690,6 +690,26 @@ describe("model-less machines", () => {
       canAccessMachine(granted, sibling.machine, [site.site], [account.account]),
       false,
     );
+
+    const grabbed = await findOrCreateModelLessMachine(T, {
+      name: "  line   B ",
+      siteId: site.site.id,
+      grantUserId: person.user.id,
+    });
+    assert.equal("machine" in grabbed, true);
+    if (!("machine" in grabbed)) {
+      return;
+    }
+    assert.equal(grabbed.created, false);
+    assert.equal(grabbed.machine.id, sibling.machine.id);
+    const afterGrab = await findUserByEmail("tech@acme.test");
+    assert.ok(afterGrab);
+    assert.deepEqual(afterGrab.siteIds, []);
+    assert.deepEqual(afterGrab.machineIds, [existing.id, created.machine.id]);
+    assert.equal(
+      canAccessMachine(afterGrab, sibling.machine, [site.site], [account.account]),
+      false,
+    );
   });
 
   it("attaches a pack to a machine that started without a model", async () => {

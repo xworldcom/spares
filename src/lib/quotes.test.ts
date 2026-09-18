@@ -59,10 +59,11 @@ describe("parseQuoteItems", () => {
   });
 
   it("rejects an oversized part id and keeps a typed OEM number", () => {
-    assert.equal(
-      parseQuoteItems([{ id: `PN-${"9".repeat(200)}`, qty: 1 }]).ok,
-      false,
-    );
+    assert.deepEqual(parseQuoteItems([{ id: "A".repeat(80), qty: 1 }]), {
+      ok: true,
+      items: [{ id: "A".repeat(80), qty: 1 }],
+    });
+    assert.equal(parseQuoteItems([{ id: "A".repeat(81), qty: 1 }]).ok, false);
     assert.deepEqual(parseQuoteItems([{ id: "A06B-0115-H002", qty: 1 }]), {
       ok: true,
       items: [{ id: "A06B-0115-H002", qty: 1 }],
