@@ -2,6 +2,68 @@ import type { CustomerAccount, MachineDetail, MachineSummary, Role, Site } from 
 import { siteCompanyName } from "./org.ts";
 import type { StoredMachine } from "./store.ts";
 
+export const MAX_MACHINE_NAME = 120;
+export const MAX_MACHINE_OEM = 80;
+export const MAX_MACHINE_NOTES = 400;
+
+export function normalizeMachineName(name: string) {
+  return name.trim().replace(/\s+/g, " ");
+}
+
+export function machineNameKey(name: string) {
+  return normalizeMachineName(name).toLowerCase();
+}
+
+export function machineHasModel(machine: {
+  storedFileName?: string | null;
+  hasModel?: boolean;
+}) {
+  if (typeof machine.hasModel === "boolean") {
+    return machine.hasModel;
+  }
+  return Boolean(machine.storedFileName?.trim());
+}
+
+export function sitesForMachineCreate(
+  granted: readonly Site[],
+  machines: readonly Pick<MachineSummary, "siteId" | "siteName" | "company">[],
+): Site[] {
+  const byId = new Map<string, Site>();
+  for (const site of granted) {
+    if (site.deletedAt) {
+      continue;
+    }
+    byId.set(site.id, site);
+  }
+  for (const machine of machines) {
+    if (!machine.siteId || byId.has(machine.siteId)) {
+      continue;
+    }
+    byId.set(machine.siteId, {
+      id: machine.siteId,
+      name: machine.siteName?.trim() || "Site",
+      createdAt: "",
+      customerId: "",
+      ...(machine.company ? { company: machine.company } : {}),
+    });
+  }
+  return [...byId.values()];
+}
+
+export function findMachineByNameAtSite<
+  T extends { name: string; siteId?: string },
+>(machines: readonly T[], name: string, siteId: string): T | null {
+  const key = machineNameKey(name);
+  if (!key || !siteId) {
+    return null;
+  }
+  return (
+    machines.find(
+      (row) => row.siteId === siteId && machineNameKey(row.name) === key,
+    ) ?? null
+  );
+}
+
 export function siteFields(
   machine: { siteId?: string },
   sites: readonly Site[] = [],
@@ -19,15 +81,35 @@ export function siteFields(
 }
 
 export function toMachineSummary(
-  machine: { id: string; name: string; siteId?: string },
+  machine: {
+    id: string;
+    name: string;
+    siteId?: string;
+    storedFileName?: string;
+    hasModel?: boolean;
+    version?: number;
+  },
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
 ): MachineSummary {
   return {
     id: machine.id,
     name: machine.name,
+    hasModel: machineHasModel(machine),
+    version: machine.version ?? 1,
     ...siteFields(machine, sites, accounts),
   };
+}
+
+function optionalMachineCopy(machine: StoredMachine): Pick<MachineDetail, "oem" | "notes"> {
+  const copy: Pick<MachineDetail, "oem" | "notes"> = {};
+  if (machine.oem?.trim()) {
+    copy.oem = machine.oem.trim();
+  }
+  if (machine.notes?.trim()) {
+    copy.notes = machine.notes.trim();
+  }
+  return copy;
 }
 
 export function toMachineDetail(
@@ -38,15 +120,20 @@ export function toMachineDetail(
   accounts: readonly CustomerAccount[] = [],
 ): MachineDetail {
   const located = siteFields(machine, sites, accounts);
+  const hasModel = machineHasModel(machine);
+  const resolvedUrl = hasModel ? fileUrl : "";
+  const extra = optionalMachineCopy(machine);
   if (role === "staff") {
     return {
       id: machine.id,
       name: machine.name,
-      fileUrl,
+      fileUrl: resolvedUrl,
       parts: machine.parts,
       unmatched: machine.unmatched,
       version: machine.version ?? 1,
       revisedAt: machine.revisedAt,
+      hasModel,
+      ...extra,
       ...located,
     };
   }
@@ -54,10 +141,12 @@ export function toMachineDetail(
   return {
     id: machine.id,
     name: machine.name,
-    fileUrl,
+    fileUrl: resolvedUrl,
     parts: machine.parts,
     version: machine.version ?? 1,
     revisedAt: machine.revisedAt,
+    hasModel,
+    ...extra,
     ...located,
   };
 }

@@ -15,6 +15,16 @@ describe("stored file claims", () => {
     assert.equal(modelFileNameClaimed(machines, "palletizer.glb"), true);
     assert.equal(modelFileNameClaimed(machines, "palletizer.glb", "host"), false);
     assert.equal(modelFileNameClaimed(machines, "new.glb"), false);
+    assert.equal(
+      modelFileNameClaimed(
+        [
+          { id: "bare-1", storedFileName: "" },
+          { id: "bare-2", storedFileName: "" },
+        ],
+        "",
+      ),
+      false,
+    );
   });
 
   it("treats a manual basename already on another row as claimed", () => {

@@ -1,0 +1,27 @@
+ts	phase	decision	why	evidence	result
+2026-09-17T23:42:58Z	frame	typeahead create on a real StoredMachine, not Other and not a ghost table	Kevin asked for one pattern that stays inside Customer, Sites, Machines	src/lib/store.ts findOrCreateModelLessMachine	chosen
+2026-09-17T23:42:58Z	frame	staff and customers with site or machine access can create	a maintenance manager must file a ticket without waiting for a pack	src/lib/access.ts canCreateMachineAtSite	chosen
+2026-09-17T23:42:58Z	frame	required name and site, optional maker and notes, empty storedFileName means no model	derive hasModel from the file name so the boolean cannot drift	src/lib/machines.ts machineHasModel	chosen
+2026-09-17T23:42:58Z	harness	unit tests for name match, empty file claim, quote hydrate, find-or-create, and grant	prove the store path before UI	src/lib/store.test.ts model-less machines	tests green
+2026-09-17T23:42:58Z	api	JSON POST /api/machines is idempotent by name plus site	retries and typed names should select, not duplicate	src/app/api/machines/route.ts	implemented
+2026-09-17T23:42:58Z	quotes	manual line items hydrate catalog parts when present and stay quote-local otherwise	no 3D pick and no extra BOM table	src/lib/quotes.ts hydrateQuoteItems	implemented
+2026-09-17T23:57:38Z	ui	derive create sites from visible machines when user.sites is empty	seed customer has machineIds only so Add machine never appeared	src/lib/machines.ts sitesForMachineCreate	unit test added
+2026-09-17T23:57:38Z	verify	API smoke on local disposable store at :3010	prove create, dedup, ticket, manual quote, file 404, packed file still 200	/tmp/model-less-smoke.json	VERIFIED
+2026-09-17T23:59:55Z	verify	Playwright tablet UI smoke on localhost:3010	Care select existing, Quotes manual lines, empty viewer fetches no GLB, packed palletizer still loads	.cursor/skills/verify-oee360/evidence/model-less-1789688776	VERIFIED
+2026-09-18T00:06:54Z	ui	keep model-less machines on the empty viewer instead of the parts list	list view hid Open Care and Upload pack and there was no 3D/List toggle without a pack	src/components/machine/MachineWorkspace.tsx setView model	Playwright 08/09 empty viewer VERIFIED no /file fetch
+2026-09-18T00:20:47Z	review	grant test failed with a site id in siteIds	normalizeAccessGrant promoted two machines at one site into a site grant	src/lib/store.test.ts grants a machine-scoped customer	reproduced
+2026-09-18T00:20:47Z	fix	append the new machine id only	a machine-only customer must not gain every machine at that site	src/lib/store.ts withCustomerMachineGrant	tests green
+2026-09-18T00:20:47Z	quotes	reject a part id over 80 characters	typed lines had no upper bound after the pickable-id gate was removed	src/lib/quotes.ts parseItemRow	tests green
+2026-09-18T00:20:47Z	verify	replaceMachinePack on an empty storedFileName	staff can add a pack later without deleteStoredFile treating empty as a file	src/lib/store.test.ts attaches a pack	VERIFIED
+2026-09-18T00:20:47Z	verify	npm test 488 pass after grant and id cap	failing tests then the two-line store and parse fixes	npm test	tests green
+2026-09-18T00:32:46Z	review	typing Line B granted Line B to a machine-scoped customer	the select path also called withCustomerMachineGrant	src/lib/store.ts findOrCreateModelLessMachine existing branch	reproduced
+2026-09-18T00:32:46Z	fix	return the existing machine without a grant	Care is shared by machine access, not by guessing a name	src/lib/store.ts findOrCreateModelLessMachine	tests green
+2026-09-18T00:32:46Z	api	409 when the customer cannot see the matched name	do not return sibling parts or a 200 that confirms the id	src/app/api/machines/route.ts	implemented
+2026-09-18T00:32:46Z	quotes	accept 80-character part ids and reject 81	the prior test only used a 203-character id	src/lib/quotes.test.ts	tests green
+2026-09-18T01:10:03Z	review	staff Quotes had no New quote and POST required a customer	Quinn signed in as staff and could not reach manual lines	src/app/staff/quotes/page.tsx QuotesList only	reproduced
+2026-09-18T01:10:03Z	fix	staff New quote plus customer owner on POST	Kevin asked staff helping a customer to start a manual-line quote	src/app/api/quotes/route.ts quoteOwnerIdForCreate	implemented
+2026-09-18T01:10:03Z	fix	keep customer when siteId clears in MachineSitePicker	picking a customer wiped site then the empty site wiped the customer	src/components/staff/MachineSitePicker.tsx	implemented
+2026-09-18T01:10:03Z	fix	grant UI lists every machine for the selected customer	machines were hidden until a site was already in the grant	src/lib/access.ts machinesForCustomer	tests green
+2026-09-18T01:26:50Z	verify	staff New quote, site unlock, grant lists Staff Quote Press	Playwright tablet on localhost:3010 after the tip-fix	/tmp/staff-quote-ui/result.json	VERIFIED
+2026-09-18T01:37:36Z	verify	staff New quote, site unlock, grant lists Staff Quote Press	Playwright tablet on localhost:3010 after the tip-fix	/tmp/staff-quote-ui/result.json	VERIFIED
+2026-09-18T01:37:36Z	fix	staff quote grants the machine to the customer person	a quote the buyer cannot open on a machine is a dead end	src/lib/store.ts grantCustomerMachine	tests green

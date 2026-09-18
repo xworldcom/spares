@@ -16,6 +16,9 @@ import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
+import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
+import { useRouter } from "next/navigation";
+import { machineHasModel, sitesForMachineCreate } from "@/lib/machines";
 import { warmCareOverview } from "@/lib/nav/prefetch";
 
 const RETRY_ATTEMPTS = 3;
@@ -36,7 +39,9 @@ function machinePlant(machine: MachineSummary, role?: string) {
 }
 
 export function MachinesList() {
+  const router = useRouter();
   const { user, refresh } = useAuth();
+  const [adding, setAdding] = useState(false);
   const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
@@ -60,14 +65,21 @@ export function MachinesList() {
               accounts: nextAccounts,
             }))
             .catch(() => ({ sites: [] as Site[], accounts: [] as CustomerAccount[] }))
-        : Promise.resolve({ sites: [] as Site[], accounts: [] as CustomerAccount[] });
+        : Promise.resolve({
+            sites: user?.sites ?? [],
+            accounts: [] as CustomerAccount[],
+          });
     Promise.all([loadMachines(false), sitesLoad])
       .then(([next, org]) => {
         if (cancelled) {
           return;
         }
         setMachines(next);
-        setSites(org.sites);
+        setSites(
+          user?.role === "staff"
+            ? org.sites
+            : sitesForMachineCreate(org.sites, next),
+        );
         setAccounts(org.accounts);
         setError(null);
         setLoading(false);
@@ -82,7 +94,7 @@ export function MachinesList() {
     return () => {
       cancelled = true;
     };
-  }, [user?.role]);
+  }, [user?.role, user?.sites]);
 
   const filtered = useMemo(() => {
     return machines.filter((machine) =>
@@ -251,12 +263,41 @@ export function MachinesList() {
         <p className="catalog-count">
           {filtered.length} {filtered.length === 1 ? "machine" : "machines"}
         </p>
+        <button
+          type="button"
+          className="btn-soft catalog-toolbar-action"
+          aria-expanded={adding}
+          onClick={() => setAdding((open) => !open)}
+        >
+          {adding ? "Close" : "Add machine"}
+        </button>
         {staff ? (
           <Link href="/machines/new" className="btn-primary catalog-toolbar-action">
             Upload pack
           </Link>
         ) : null}
       </div>
+
+      {adding ? (
+        <div className="care-card care-form">
+          <p className="text-[17px] font-semibold tracking-tight">Add a machine</p>
+          <p className="spares-muted text-sm leading-relaxed">
+            Type a name to save it at a site. A 3D pack can come later.
+          </p>
+          <MachineTypeahead
+            machines={machines}
+            onMachines={setMachines}
+            accounts={accounts}
+            sites={sites}
+            machineId=""
+            onMachineId={(id) => {
+              setAdding(false);
+              router.push(`/machines/${id}`);
+            }}
+            role={staff ? "staff" : "customer"}
+          />
+        </div>
+      ) : null}
 
       {error ? (
         <p className="spares-alert rounded-[20px] px-4 py-3 text-sm" role="alert">
@@ -274,7 +315,8 @@ export function MachinesList() {
             Delete {deleteTarget.name}?
           </p>
           <p className="mt-1 text-sm leading-relaxed text-[#f0c4c0]/80">
-            This removes the machine from the list and deletes its stored 3D file.
+            This removes the machine from the list
+            {machineHasModel(deleteTarget) ? " and deletes its stored 3D file" : ""}.
             Customers will no longer see it. This cannot be undone.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -307,8 +349,8 @@ export function MachinesList() {
             title="No machines yet"
             message={
               staff
-                ? "Upload a pack (3D file + ETO-shaped parts list) to create the first machine."
-                : "No machine packs are available yet. Ask staff to upload one, or try again if this page just opened."
+                ? "Add a machine by name, or upload a 3D pack when you have one."
+                : "Add a machine by name, or ask staff if you expected to see one here."
             }
             action={
               <div className="flex flex-wrap items-center gap-2">
@@ -321,10 +363,17 @@ export function MachinesList() {
                 >
                   Try again
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setAdding(true)}
+                  className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
+                >
+                  Add machine
+                </button>
                 {staff ? (
                   <Link
                     href="/machines/new"
-                    className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
+                    className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
                   >
                     Upload pack
                   </Link>
@@ -393,6 +442,7 @@ export function MachinesList() {
                         <span className="catalog-machine-name">{machine.name}</span>
                         <span className="catalog-machine-meta">
                           {plant}
+                          {machineHasModel(machine) ? "" : plant ? " · No 3D" : "No 3D"}
                           {machine.version && machine.version > 1 ? ` · v${machine.version}` : ""}
                         </span>
                       </div>

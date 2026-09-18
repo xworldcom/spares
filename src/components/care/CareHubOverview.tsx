@@ -92,7 +92,7 @@ export function CareHubOverview() {
         </header>
         {machines.length === 0 ? (
           <p className="spares-muted text-sm leading-relaxed">
-            No machines are assigned to your plant yet.
+            No machines yet. Open a ticket and type a machine name to add one.
           </p>
         ) : (
           <ul className="care-list">
@@ -106,7 +106,9 @@ export function CareHubOverview() {
                   <div className="min-w-0 flex-1">
                     <p className="care-row-title">{machine.name}</p>
                     <p className="spares-muted truncate text-sm">
-                      Manuals, tickets, and notes
+                      {machine.hasModel === false
+                        ? "Tickets and notes · no 3D model"
+                        : "Manuals, tickets, and notes"}
                     </p>
                   </div>
                   <span className="spares-muted text-lg" aria-hidden="true">›</span>

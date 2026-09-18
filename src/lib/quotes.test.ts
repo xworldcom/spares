@@ -10,12 +10,14 @@ import {
   itemsForRole,
   mergeQuoteItems,
   normalizeStoredQuote,
+  hydrateQuoteItems,
   parseQuoteItems,
   parseShipments,
   pricesVisibleToCustomer,
   quoteItemsEqual,
   quotePricingComplete,
   quoteHasReached,
+  quoteOwnerIdForCreate,
   quotePoNextStep,
   quoteStatusCaption,
   quoteStepState,
@@ -57,6 +59,18 @@ describe("parseQuoteItems", () => {
     assert.deepEqual(result, { ok: true, items: [{ id: "PN-1", qty: 2 }] });
   });
 
+  it("rejects an oversized part id and keeps a typed OEM number", () => {
+    assert.deepEqual(parseQuoteItems([{ id: "A".repeat(80), qty: 1 }]), {
+      ok: true,
+      items: [{ id: "A".repeat(80), qty: 1 }],
+    });
+    assert.equal(parseQuoteItems([{ id: "A".repeat(81), qty: 1 }]).ok, false);
+    assert.deepEqual(parseQuoteItems([{ id: "A06B-0115-H002", qty: 1 }]), {
+      ok: true,
+      items: [{ id: "A06B-0115-H002", qty: 1 }],
+    });
+  });
+
   it("parses staff pricing fields", () => {
     const result = parseQuoteItems(
       [
@@ -86,6 +100,39 @@ describe("parseQuoteItems", () => {
         },
       ],
     });
+  });
+});
+
+describe("quoteOwnerIdForCreate", () => {
+  it("lets staff name a customer owner and keeps a customer on their own id", () => {
+    assert.deepEqual(quoteOwnerIdForCreate("customer", "user-buyer", "someone-else"), {
+      ok: true,
+      customerId: "user-buyer",
+    });
+    assert.deepEqual(quoteOwnerIdForCreate("staff", "user-staff", "user-buyer"), {
+      ok: true,
+      customerId: "user-buyer",
+    });
+    assert.deepEqual(quoteOwnerIdForCreate("staff", "user-staff", "  "), {
+      ok: false,
+      error: "Pick a customer for this quote.",
+    });
+  });
+});
+
+describe("hydrateQuoteItems", () => {
+  it("keeps catalog metadata and accepts a part that is not on the machine", () => {
+    const items = hydrateQuoteItems(
+      [
+        { id: "PN-100", qty: 2 },
+        { id: "OEM-9", name: "Third-party seal", qty: 1 },
+      ],
+      [{ id: "PN-100", name: "Pump", meshName: "PN-100", qty: 1, vendor: "Acme" }],
+    );
+    assert.deepEqual(items, [
+      { id: "PN-100", qty: 2, name: "Pump", vendor: "Acme" },
+      { id: "OEM-9", qty: 1, name: "Third-party seal" },
+    ]);
   });
 });
 

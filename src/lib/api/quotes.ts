@@ -14,6 +14,7 @@ export async function createQuote(input: {
   machineId: string;
   items: QuoteItem[];
   note?: string;
+  customerId?: string;
 }): Promise<Quote> {
   const data = await apiFetch<CreateQuoteResponse>("/api/quotes", {
     method: "POST",
@@ -21,6 +22,7 @@ export async function createQuote(input: {
       machineId: input.machineId,
       items: input.items,
       ...(input.note ? { note: input.note } : {}),
+      ...(input.customerId ? { customerId: input.customerId } : {}),
     }),
   });
   invalidateWarmRead("quotes:list");

@@ -11,7 +11,11 @@ import {
   validateLargeModelCompression,
 } from "./gltf-compress.ts";
 import { extractMeshNames, prepareModelBytes } from "./gltf.ts";
-import { isModelFilename } from "./machines.ts";
+import {
+  findMachineByNameAtSite,
+  isModelFilename,
+  normalizeMachineName,
+} from "./machines.ts";
 import {
   deleteModelFile,
   readModelFile,
@@ -250,6 +254,8 @@ export type StoredMachine = {
   tenantId?: string;
   version?: number;
   revisedAt?: string;
+  oem?: string;
+  notes?: string;
 };
 
 export type StoredQuote = QuoteRecord;
@@ -520,6 +526,9 @@ async function persistFile(storedFileName: string, bytes: Buffer) {
 }
 
 async function deleteStoredFile(storedFileName: string) {
+  if (!storedFileName.trim()) {
+    return;
+  }
   if (isModelFilename(storedFileName)) {
     await deleteModelFile(storedFileName);
     return;
@@ -2642,6 +2651,9 @@ export function listMachines(tenantId: string, options?: { heal?: boolean }) {
       siteId: machine.siteId,
       tenantId: machine.tenantId,
       version: machine.version ?? 1,
+      storedFileName: machine.storedFileName,
+      oem: machine.oem,
+      notes: machine.notes,
     }));
   });
 }
@@ -2698,32 +2710,158 @@ export function createMachine(
   tenantId: string,
   input: {
     name: string;
-    storedFileName: string;
-    originalFileName: string;
-    parts: Part[];
-    unmatched: UnmatchedPart[];
+    storedFileName?: string;
+    originalFileName?: string;
+    parts?: Part[];
+    unmatched?: UnmatchedPart[];
     siteId?: string;
+    oem?: string;
+    notes?: string;
   },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
-    if (modelFileNameClaimed(db.machines, input.storedFileName)) {
+    const storedFileName = input.storedFileName?.trim() ?? "";
+    if (modelFileNameClaimed(db.machines, storedFileName)) {
       throw new StoredFileClaimedError("model");
     }
     const machine: StoredMachine = {
       id: randomUUID(),
-      name: input.name,
-      storedFileName: input.storedFileName,
-      originalFileName: input.originalFileName,
-      parts: input.parts,
-      unmatched: input.unmatched,
+      name: normalizeMachineName(input.name) || input.name,
+      storedFileName,
+      originalFileName: input.originalFileName?.trim() ?? "",
+      parts: input.parts ?? [],
+      unmatched: input.unmatched ?? [],
       createdAt: new Date().toISOString(),
       siteId: input.siteId,
       tenantId,
       version: 1,
     };
+    if (input.oem?.trim()) {
+      machine.oem = input.oem.trim();
+    }
+    if (input.notes?.trim()) {
+      machine.notes = input.notes.trim();
+    }
     await writeDatabase({ ...db, machines: [...db.machines, machine] });
     return machine;
+  });
+}
+
+function withCustomerMachineGrant(
+  db: Database,
+  tenantId: string,
+  userId: string | undefined,
+  machine: StoredMachine,
+): Database {
+  if (!userId) {
+    return db;
+  }
+  const index = db.users.findIndex(
+    (user) => user.id === userId && belongsToTenant(user, tenantId),
+  );
+  if (index < 0) {
+    return db;
+  }
+  const user = db.users[index];
+  if (user.role !== "customer" || user.deletedAt) {
+    return db;
+  }
+  if (canAccessMachine(user, machine, db.sites ?? [], db.customers ?? [])) {
+    return db;
+  }
+  const users = db.users.slice();
+  users[index] = {
+    ...user,
+    siteIds: user.siteIds ?? [],
+    machineIds: [...new Set([...(user.machineIds ?? []), machine.id])],
+    companyAccess: undefined,
+  };
+  return { ...db, users };
+}
+
+export function grantCustomerMachine(
+  tenantId: string,
+  userId: string,
+  machineId: string,
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const machine = db.machines.find(
+      (row) => row.id === machineId && belongsToTenant(row, tenantId),
+    );
+    if (!machine) {
+      return { error: "not-found" as const };
+    }
+    const granted = withCustomerMachineGrant(db, tenantId, userId, machine);
+    if (granted !== db) {
+      await writeDatabase(granted);
+    }
+    return { ok: true as const };
+  });
+}
+
+export function findOrCreateModelLessMachine(
+  tenantId: string,
+  input: {
+    name: string;
+    siteId: string;
+    oem?: string;
+    notes?: string;
+    grantUserId?: string;
+  },
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const name = normalizeMachineName(input.name);
+    if (!name) {
+      return { error: "bad-name" as const };
+    }
+    const site = activeSites(db.sites ?? []).find(
+      (row) => row.id === input.siteId && belongsToTenant(row, tenantId),
+    );
+    if (!site) {
+      return { error: "bad-site" as const };
+    }
+    const existing = findMachineByNameAtSite(
+      filterByTenant(db.machines, tenantId),
+      name,
+      site.id,
+    );
+    if (existing) {
+      return { machine: existing, created: false };
+    }
+
+    const machine: StoredMachine = {
+      id: randomUUID(),
+      name,
+      storedFileName: "",
+      originalFileName: "",
+      parts: [],
+      unmatched: [],
+      createdAt: new Date().toISOString(),
+      siteId: site.id,
+      tenantId,
+      version: 1,
+    };
+    if (input.oem?.trim()) {
+      machine.oem = input.oem.trim();
+    }
+    if (input.notes?.trim()) {
+      machine.notes = input.notes.trim();
+    }
+    const created = {
+      ...db,
+      machines: [...db.machines, machine],
+    };
+    const granted = withCustomerMachineGrant(
+      created,
+      tenantId,
+      input.grantUserId,
+      machine,
+    );
+    await writeDatabase(granted);
+    return { machine, created: true };
   });
 }
 

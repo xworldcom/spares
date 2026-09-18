@@ -1,22 +1,30 @@
-import { requireTenantCustomer, requireTenantUser } from "@/lib/auth/tenant-scope";
+import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { parseQuoteItems, toPublicQuote } from "@/lib/quotes";
+import {
+  hydrateQuoteItems,
+  parseQuoteItems,
+  quoteOwnerIdForCreate,
+  toPublicQuote,
+} from "@/lib/quotes";
 import { canAccessMachine } from "@/lib/access";
 import { isSeedAllowed } from "@/lib/production-env";
+import { belongsToTenant } from "@/lib/tenant";
 import {
   createQuote,
   ensurePreviewQaQuoteFixture,
+  findUserById,
   getMachine,
   getOrgContext,
+  grantCustomerMachine,
   listMachines,
   listQuotes,
 } from "@/lib/store";
-import type { QuoteItem } from "@/types";
 
 type CreateQuoteBody = {
   machineId?: unknown;
   items?: unknown;
   note?: unknown;
+  customerId?: unknown;
 };
 
 export async function GET() {
@@ -50,7 +58,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireTenantCustomer();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
@@ -58,6 +66,31 @@ export async function POST(request: Request) {
   const body = await readJson<CreateQuoteBody>(request);
   if (isErrorResponse(body)) {
     return body;
+  }
+
+  const owner = quoteOwnerIdForCreate(
+    auth.user.role,
+    auth.user.id,
+    typeof body.customerId === "string" ? body.customerId : "",
+  );
+  if (!owner.ok) {
+    return error(owner.error, owner.error === "Forbidden" ? 403 : 400);
+  }
+
+  let customerEmail = auth.user.email;
+  let customerId = owner.customerId;
+  if (auth.user.role === "staff") {
+    const person = await findUserById(owner.customerId);
+    if (
+      !person ||
+      person.deletedAt ||
+      person.role !== "customer" ||
+      !belongsToTenant(person, auth.tenantId)
+    ) {
+      return error("Choose a valid customer.", 400);
+    }
+    customerId = person.id;
+    customerEmail = person.email;
   }
 
   const machineId = typeof body.machineId === "string" ? body.machineId.trim() : "";
@@ -81,35 +114,21 @@ export async function POST(request: Request) {
     return error("Machine not found", 404);
   }
 
-  const pickable = new Map(machine.parts.map((part) => [part.id, part]));
-  if (parsed.items.some((item) => !pickable.has(item.id))) {
-    return error("One or more part ids are not customer-pickable on this machine", 400);
-  }
-
-  const items: QuoteItem[] = parsed.items.map((item) => {
-    const part = pickable.get(item.id);
-    const next: QuoteItem = { id: item.id, qty: item.qty };
-    const name = item.name ?? part?.name;
-    if (name) {
-      next.name = name;
-    }
-    if (part?.vendor) next.vendor = part.vendor;
-    if (part?.material) next.material = part.material;
-    if (part?.replaces) next.replaces = part.replaces;
-    if (part?.stock) next.stock = part.stock;
-    if (part?.category) next.category = part.category;
-    return next;
-  });
+  const items = hydrateQuoteItems(parsed.items, machine.parts);
 
   const created = await createQuote(auth.tenantId, {
     machineId,
     items,
     note,
-    customerId: auth.user.id,
-    customerEmail: auth.user.email,
+    customerId,
+    customerEmail,
   });
   if ("error" in created) {
     return error("Machine not found", 404);
+  }
+
+  if (auth.user.role === "staff") {
+    await grantCustomerMachine(auth.tenantId, customerId, machineId);
   }
 
   return json({ quote: toPublicQuote(created, auth.user, machine.name) }, 201);

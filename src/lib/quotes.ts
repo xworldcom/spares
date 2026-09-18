@@ -1,5 +1,6 @@
 import { normalizeChatAttachments } from "./chat-attachments.ts";
 import type {
+  Part,
   PublicUser,
   Quote,
   QuoteActivity,
@@ -11,6 +12,26 @@ import type {
   Role,
   TrackingCarrier,
 } from "@/types";
+
+export const MAX_QUOTE_ITEM_ID = 80;
+
+export function quoteOwnerIdForCreate(
+  role: Role,
+  actorId: string,
+  requestedCustomerId: string,
+): { ok: true; customerId: string } | { ok: false; error: string } {
+  if (role === "customer") {
+    return { ok: true, customerId: actorId };
+  }
+  if (role !== "staff") {
+    return { ok: false, error: "Forbidden" };
+  }
+  const customerId = requestedCustomerId.trim();
+  if (!customerId) {
+    return { ok: false, error: "Pick a customer for this quote." };
+  }
+  return { ok: true, customerId };
+}
 
 export const QUOTE_PIPELINE = [
   "requested",
@@ -242,6 +263,9 @@ function parseItemRow(
   if (!id) {
     return { ok: false, error: "each item needs a part id" };
   }
+  if (id.length > MAX_QUOTE_ITEM_ID) {
+    return { ok: false, error: "part id is too long" };
+  }
   if (qty === null) {
     return { ok: false, error: "qty must be an integer ≥ 1" };
   }
@@ -285,6 +309,35 @@ function parseItemRow(
   }
 
   return { ok: true, item };
+}
+
+export function hydrateQuoteItems(
+  items: QuoteItem[],
+  parts: readonly Part[],
+): QuoteItem[] {
+  const catalog = new Map(parts.map((part) => [part.id, part]));
+  return items.map((item) => {
+    const part = catalog.get(item.id);
+    if (!part) {
+      const next: QuoteItem = { id: item.id, qty: item.qty };
+      const name = item.name?.trim() || item.id;
+      if (name) {
+        next.name = name;
+      }
+      return next;
+    }
+    const next: QuoteItem = { id: item.id, qty: item.qty };
+    const name = item.name?.trim() || part.name;
+    if (name) {
+      next.name = name;
+    }
+    if (part.vendor) next.vendor = part.vendor;
+    if (part.material) next.material = part.material;
+    if (part.replaces) next.replaces = part.replaces;
+    if (part.stock) next.stock = part.stock;
+    if (part.category) next.category = part.category;
+    return next;
+  });
 }
 
 export function parseQuoteItems(

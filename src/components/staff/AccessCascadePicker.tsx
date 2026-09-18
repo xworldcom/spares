@@ -8,7 +8,7 @@ import {
   isMachineGranted,
   isSiteFullyGranted,
   isSiteIndeterminate,
-  machinesAtSite,
+  machinesForCustomer,
   normalizeAccessGrant,
   sitesForCustomer,
   toggleMachineGrant,
@@ -59,27 +59,10 @@ export function AccessCascadePicker({
     [selectedCustomerId, sites],
   );
 
-  const selectedSiteIds = useMemo(() => {
-    const fromGrant = grant.siteIds.filter((siteId) =>
-      customerSites.some((site) => site.id === siteId),
-    );
-    const partialSites = customerSites
-      .filter((site) =>
-        machinesAtSite(site.id, machines).some((row) => grant.machineIds.includes(row.id)),
-      )
-      .map((site) => site.id);
-    return new Set([...fromGrant, ...partialSites]);
-  }, [customerSites, grant.machineIds, grant.siteIds, machines]);
-
-  const visibleMachines = useMemo(() => {
-    return customerSites
-      .filter((site) => selectedSiteIds.has(site.id))
-      .flatMap((site) =>
-        machines
-          .filter((machine) => machine.siteId === site.id)
-          .sort((a, b) => a.name.localeCompare(b.name)),
-      );
-  }, [customerSites, machines, selectedSiteIds]);
+  const visibleMachines = useMemo(
+    () => machinesForCustomer(selectedCustomerId, sites, machines),
+    [machines, selectedCustomerId, sites],
+  );
 
   function updateGrant(next: AccessGrant) {
     onChange(normalizeAccessGrant(next, machines));
@@ -141,10 +124,10 @@ export function AccessCascadePicker({
         </div>
         <div className="access-cascade-step">
           <p className="access-cascade-step-label">Machines</p>
-          {selectedSiteIds.size === 0 ? (
-            <p className="access-cascade-empty">Select one or more sites.</p>
+          {!selectedCustomerId ? (
+            <p className="access-cascade-empty">Pick a customer to see machines.</p>
           ) : visibleMachines.length === 0 ? (
-            <p className="access-cascade-empty">No machines at selected sites.</p>
+            <p className="access-cascade-empty">No machines for this customer.</p>
           ) : (
             <ul className="access-cascade-options">
               {visibleMachines.map((machine) => (

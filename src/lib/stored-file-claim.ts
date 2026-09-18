@@ -18,8 +18,12 @@ export function modelFileNameClaimed(
   storedFileName: string,
   exceptMachineId?: string,
 ) {
+  const name = storedFileName.trim();
+  if (!name) {
+    return false;
+  }
   return machines.some(
-    (row) => row.storedFileName === storedFileName && row.id !== exceptMachineId,
+    (row) => row.storedFileName === name && row.id !== exceptMachineId,
   );
 }
 
