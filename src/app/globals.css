@@ -443,6 +443,35 @@
   pointer-events: none;
 }
 
+/* While dragging from peek, un-collapse chrome so the type bar slides in
+   with sheet height (clipped) instead of popping open after an overshoot. */
+.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-grab,
+.conversation-sheet:not(.is-inline).is-dragging .imsg-composer {
+  transition: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek.is-dragging .conversation-sheet-grab {
+  max-height: 3.25rem;
+  opacity: 1;
+  padding-top: 0.125rem;
+  padding-bottom: 0.25rem;
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-composer {
+  max-height: 12rem;
+  opacity: 1;
+  padding-top: 0.7rem;
+  padding-bottom: 0.85rem;
+  border-top-color: var(--spares-line);
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek .imsg-thread--fill {
+  flex: 1 0 auto;
+  min-height: 4.25rem;
+}
+
 .conversation-sheet-peek {
   display: none;
 }
@@ -454,10 +483,10 @@
 @media (min-width: 1024px) {
   .conversation-sheet:not(.is-inline) {
     left: auto;
-    right: max(1rem, calc((100vw - 64rem) / 2 + 1rem));
-    top: 5.5rem;
-    bottom: 1.25rem;
-    width: min(26rem, calc(100vw - 2rem));
+    right: 1.1rem;
+    top: calc(var(--spares-header) + 1.1rem);
+    bottom: 1.1rem;
+    width: var(--spares-tray);
     max-height: none;
     height: auto;
     border-radius: 28px;
@@ -1228,9 +1257,9 @@ html.spares-embed .spares-app-stage {
 
 .quote-workspace[data-quote-layout="split"] .conversation-sheet.is-inline {
   position: sticky;
-  top: 5.5rem;
-  height: calc(100dvh - 6.75rem);
-  max-height: calc(100dvh - 6.75rem);
+  top: calc(var(--spares-header) + 1.25rem);
+  height: calc(100dvh - var(--spares-header) - 2.5rem);
+  max-height: calc(100dvh - var(--spares-header) - 2.5rem);
 }
 
 .imsg-empty {
@@ -2829,6 +2858,12 @@ html.spares-embed .spares-app-stage {
   }
 
   .tickets-workspace[data-tickets-layout="split"] .care-stack {
+    min-height: 0;
+    flex: 1;
+    height: 100%;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .conversation-sheet.is-inline {
     min-height: 0;
     flex: 1;
   }

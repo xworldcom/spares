@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  conversationSheetDragHeight,
   initialConversationSheetSnap,
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
@@ -144,11 +145,20 @@ export function useSnapSheet({
   }
 
   function paintHeight(px: number) {
-    const full = heightForSnap("full");
-    const peek = heightForSnap("peek");
-    const clamped = Math.max(peek, Math.min(full, px));
-    cardRef.current?.style.setProperty("--sheet-h", `${clamped}px`);
+    cardRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`);
     cardRef.current?.style.setProperty("--drag-h", "0px");
+  }
+
+  function paintDrag(dy: number) {
+    const live = conversationSheetDragHeight({
+      from: drag.current.from,
+      startH: drag.current.startH,
+      dy,
+      peekH: heightForSnap("peek"),
+      replyH: heightForSnap("reply"),
+      fullH: heightForSnap("full"),
+    });
+    paintHeight(live);
   }
 
   function clearInlineHeight() {
@@ -386,7 +396,7 @@ export function useSnapSheet({
     }
     // Pull up (negative dy) grows the sheet; pull down shrinks it.
     recordSample(event.clientY);
-    paintHeight(drag.current.startH - dy);
+    paintDrag(dy);
     stickThreadToLatest();
   }
 
@@ -397,16 +407,35 @@ export function useSnapSheet({
       dockedRef.current = true;
     }
     steppedAtRef.current = performance.now();
-    setDragging(false);
-    setDraggingClass(false);
-    clearInlineHeight();
+    const target = heightForSnap(next);
+    const live = cardRef.current?.getBoundingClientRect().height ?? target;
+    paintHeight(live);
     setSheet(next);
     setOpen(true);
+    setDragging(false);
+    setDraggingClass(false);
+    if (Math.abs(live - target) < 2) {
+      clearInlineHeight();
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      paintHeight(target);
+      window.setTimeout(() => {
+        clearInlineHeight();
+      }, 440);
+    });
   }
 
   function settleSheet(dy: number, from: SnapSheetSnap) {
     const velocity = liveVelocity();
-    const currentH = drag.current.startH - dy;
+    const currentH = conversationSheetDragHeight({
+      from,
+      startH: drag.current.startH,
+      dy,
+      peekH: heightForSnap("peek"),
+      replyH: heightForSnap("reply"),
+      fullH: heightForSnap("full"),
+    });
     if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
       // Small nudge — step one stage in the gesture direction.
       if (dy < -12 || velocity < -0.2) {
