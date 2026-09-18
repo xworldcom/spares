@@ -46,7 +46,8 @@ function heightForSnap(snap: ConversationSheetSnap) {
     return remPx(5.75);
   }
   if (snap === "reply") {
-    return remPx(16.5);
+    // Peek thread + grab chrome + composer — history waits for full.
+    return remPx(14);
   }
   return Math.min(window.innerHeight * 0.92, window.innerHeight - tabBarPx() - 48);
 }
@@ -133,6 +134,8 @@ export function useSnapSheet({
     moved: false,
     samples: [] as { t: number; y: number }[],
   });
+  /** Keep the latest message docked while the sheet grows; undock only when the user scrolls history up at full. */
+  const dockedRef = useRef(true);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
@@ -156,6 +159,9 @@ export function useSnapSheet({
   }
 
   function stickThreadToLatest() {
+    if (!dockedRef.current) {
+      return;
+    }
     const body = cardRef.current?.querySelector(scrollBodySelector);
     if (body instanceof HTMLElement) {
       body.scrollTop = body.scrollHeight;
@@ -170,6 +176,7 @@ export function useSnapSheet({
         }
         return initialConversationSheetSnap(true, desktopStage);
       });
+      dockedRef.current = true;
       clearInlineHeight();
       setDragging(false);
       setDraggingClass(false);
@@ -182,12 +189,54 @@ export function useSnapSheet({
   }, [open, desktopStage, cardRef]);
 
   useEffect(() => {
+    const body = cardRef.current?.querySelector(scrollBodySelector);
+    if (!(body instanceof HTMLElement) || sheet === "out") {
+      return;
+    }
+    const onScroll = () => {
+      const gap = body.scrollHeight - body.scrollTop - body.clientHeight;
+      // Peek/reply always re-dock; full lets the user browse history.
+      if (sheet !== "full") {
+        dockedRef.current = true;
+        return;
+      }
+      dockedRef.current = gap <= 4;
+    };
+    body.addEventListener("scroll", onScroll, { passive: true });
+    const resize = new ResizeObserver(() => stickThreadToLatest());
+    resize.observe(body);
+    stickThreadToLatest();
+    return () => {
+      body.removeEventListener("scroll", onScroll);
+      resize.disconnect();
+    };
+  }, [sheet, open, scrollBodySelector, cardRef]);
+
+  useEffect(() => {
     if (dragging || sheet === "out") {
       return;
     }
-    // After a snap settles, keep the latest message pinned in view.
-    const id = window.requestAnimationFrame(() => stickThreadToLatest());
-    return () => window.cancelAnimationFrame(id);
+    // Peek/reply always show the latest context; full keeps dock if already there.
+    if (sheet === "peek" || sheet === "reply") {
+      dockedRef.current = true;
+    }
+    // Stick through the height + composer open transition so the latest line stays put.
+    let alive = true;
+    const started = performance.now();
+    function tick(now: number) {
+      if (!alive) {
+        return;
+      }
+      stickThreadToLatest();
+      if (now - started < 520) {
+        window.requestAnimationFrame(tick);
+      }
+    }
+    const id = window.requestAnimationFrame(tick);
+    return () => {
+      alive = false;
+      window.cancelAnimationFrame(id);
+    };
   }, [sheet, dragging]);
 
   function dismiss() {
@@ -342,6 +391,9 @@ export function useSnapSheet({
   function settleTo(next: ConversationSheetSnap) {
     drag.current.on = false;
     drag.current.pending = false;
+    if (next === "peek" || next === "reply") {
+      dockedRef.current = true;
+    }
     setDragging(false);
     setDraggingClass(false);
     clearInlineHeight();

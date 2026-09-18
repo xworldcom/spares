@@ -43,7 +43,8 @@ export function ConversationSheet({
   });
 
   const overlayMobile = layout === "overlay" && !desktop;
-  const showChrome = overlayMobile && sheet !== "peek" && sheet !== "out";
+  // Keep grab mounted on mobile so peek→reply can open the chrome without a layout pop.
+  const showChrome = overlayMobile && sheet !== "out";
   const expanded =
     sheet === "full" || sheet === "reply" || (layout === "inline" && desktop);
 

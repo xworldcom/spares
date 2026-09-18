@@ -324,7 +324,8 @@
   flex-direction: column;
   overflow: hidden;
   --peek-h: 5.75rem;
-  --reply-h: 16.5rem;
+  /* Peek thread stays put; grab + composer open into this delta; history waits for full. */
+  --reply-h: 14rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
   --sheet-h: var(--peek-h);
   --drag-h: 0px;
@@ -395,10 +396,48 @@
     transform var(--sheet-duration) var(--sheet-ease);
 }
 
-/* Peek keeps the live latest message; composer waits for the reply stage. */
-.conversation-sheet:not(.is-inline).is-peek .imsg-composer,
+/* Peek keeps the live latest message; typing zone + title open on the way to reply
+   (collapse height instead of display:none so the context chip does not jump). */
+.conversation-sheet:not(.is-inline) .conversation-sheet-grab {
+  overflow: hidden;
+  max-height: 3.25rem;
+  opacity: 1;
+  transition:
+    max-height var(--sheet-duration) var(--sheet-ease),
+    opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease),
+    padding var(--sheet-duration) var(--sheet-ease);
+}
+
+.conversation-sheet:not(.is-inline) .imsg-composer {
+  overflow: hidden;
+  max-height: 12rem;
+  opacity: 1;
+  transition:
+    max-height var(--sheet-duration) var(--sheet-ease),
+    opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease),
+    padding var(--sheet-duration) var(--sheet-ease),
+    border-color var(--sheet-duration) var(--sheet-ease);
+}
+
 .conversation-sheet:not(.is-inline).is-peek .conversation-sheet-grab {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek .imsg-composer {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-color: transparent;
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek .imsg-composer * {
+  pointer-events: none;
 }
 
 .conversation-sheet-peek {
@@ -435,7 +474,12 @@
   }
 
   .conversation-sheet:not(.is-inline).is-peek .imsg-composer {
-    display: none;
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: transparent;
+    pointer-events: none;
   }
 
   .conversation-sheet:not(.is-inline).is-reply,
@@ -1114,6 +1158,7 @@ html.spares-embed .spares-app-stage {
   flex: 1;
   min-height: 0;
   max-height: none;
+  overflow-anchor: none;
 }
 
 /* Keep the latest message docked above the composer as the sheet grows —
@@ -1122,6 +1167,7 @@ html.spares-embed .spares-app-stage {
   content: "";
   flex: 1 1 auto;
   min-height: 0;
+  pointer-events: none;
 }
 
 .conversation-sheet-spacer {
