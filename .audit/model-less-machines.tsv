@@ -9,3 +9,8 @@ ts	phase	decision	why	evidence	result
 2026-09-17T23:57:38Z	verify	API smoke on local disposable store at :3010	prove create, dedup, ticket, manual quote, file 404, packed file still 200	/tmp/model-less-smoke.json	VERIFIED
 2026-09-17T23:59:55Z	verify	Playwright tablet UI smoke on localhost:3010	Care select existing, Quotes manual lines, empty viewer fetches no GLB, packed palletizer still loads	.cursor/skills/verify-oee360/evidence/model-less-1789688776	VERIFIED
 2026-09-18T00:06:54Z	ui	keep model-less machines on the empty viewer instead of the parts list	list view hid Open Care and Upload pack and there was no 3D/List toggle without a pack	src/components/machine/MachineWorkspace.tsx setView model	Playwright 08/09 empty viewer VERIFIED no /file fetch
+2026-09-18T00:20:47Z	review	grant test failed with a site id in siteIds	normalizeAccessGrant promoted two machines at one site into a site grant	src/lib/store.test.ts grants a machine-scoped customer	reproduced
+2026-09-18T00:20:47Z	fix	append the new machine id only	a machine-only customer must not gain every machine at that site	src/lib/store.ts withCustomerMachineGrant	tests green
+2026-09-18T00:20:47Z	quotes	reject a part id over 80 characters	typed lines had no upper bound after the pickable-id gate was removed	src/lib/quotes.ts parseItemRow	tests green
+2026-09-18T00:20:47Z	verify	replaceMachinePack on an empty storedFileName	staff can add a pack later without deleteStoredFile treating empty as a file	src/lib/store.test.ts attaches a pack	VERIFIED
+2026-09-18T00:20:47Z	verify	npm test 488 pass after grant and id cap	failing tests then the two-line store and parse fixes	npm test	tests green
