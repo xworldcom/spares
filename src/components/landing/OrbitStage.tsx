@@ -1,6 +1,7 @@
 "use client";
 
 import { OrbitControls, useGLTF } from "@react-three/drei";
+import { StudioGround } from "@/components/viewer/StudioGround";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -61,6 +62,7 @@ function FittedMachine({ paused }: { paused: boolean }) {
     const size = box.getSize(new Vector3());
     const center = box.getCenter(new Vector3());
     model.position.sub(center);
+    model.position.y += size.y / 2;
     const longest = Math.max(size.x, size.y, size.z, 1);
     const scale = 2.85 / longest;
     if (root.current) {
@@ -128,6 +130,7 @@ export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
       >
         <Lights />
+        <StudioGround />
         <Suspense fallback={null}>
           <FittedMachine paused={paused} />
         </Suspense>
