@@ -198,7 +198,6 @@ export function machinesForCustomer(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Customer account implied by a grant. Empty when the person has no site or machine. */
 export function customerIdFromGrant(
   grant: AccessGrant,
   sites: readonly Site[],
@@ -222,7 +221,6 @@ export function customerIdFromGrant(
   return "";
 }
 
-/** Sites and machines a staff quote may use for this person. Empty when they have no customer. */
 export function staffQuotePersonScope(
   grant: AccessGrant,
   sites: readonly Site[],
@@ -246,7 +244,6 @@ export function staffQuotePersonScope(
   };
 }
 
-/** Pick the customer column to focus for a person's saved grant. */
 export function customerIdForGrant(
   grant: AccessGrant,
   sites: readonly Site[],
