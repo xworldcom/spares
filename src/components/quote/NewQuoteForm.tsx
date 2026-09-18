@@ -12,6 +12,7 @@ import { listMachines } from "@/lib/api/machines";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import { SearchableSelect } from "@/components/staff/SearchableSelect";
+import { grantFromUser, staffQuotePersonScope } from "@/lib/access";
 import { sitesForMachineCreate } from "@/lib/machines";
 import { quoteHref } from "@/lib/quotes";
 import { displayPersonName } from "@/lib/ui/display-name";
@@ -39,6 +40,22 @@ export function NewQuoteForm({
   const [error, setError] = useState<string | null>(null);
   const customerSites = useMemo(() => user?.sites ?? [], [user?.sites]);
   const staff = role === "staff";
+  const person = useMemo(
+    () => people.find((row) => row.id === personId),
+    [people, personId],
+  );
+  const quoteScope = useMemo(
+    () =>
+      person
+        ? staffQuotePersonScope(grantFromUser(person), sites, machines, accounts)
+        : null,
+    [accounts, machines, person, sites],
+  );
+  const personAccountId = quoteScope?.accountId ?? "";
+  const quoteAccounts = quoteScope?.accounts ?? [];
+  const quoteSites = staff ? (quoteScope?.sites ?? []) : sites;
+  const quoteMachines =
+    staff && personAccountId ? (quoteScope?.machines ?? []) : machines;
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +88,7 @@ export function NewQuoteForm({
         if (org.people.length === 1) {
           setPersonId(org.people[0].id);
         }
-        if (next.length === 1) {
+        if (!staff && next.length === 1) {
           setMachineId(next[0].id);
         }
       })
@@ -89,6 +106,10 @@ export function NewQuoteForm({
     event.preventDefault();
     if (staff && !personId) {
       setError("Pick a customer for this quote.");
+      return;
+    }
+    if (staff && !personAccountId) {
+      setError("This person has no customer yet.");
       return;
     }
     if (!machineId) {
@@ -138,24 +159,35 @@ export function NewQuoteForm({
         <SearchableSelect
           id="quote-customer-person"
           label="Customer"
-          options={people.map((person) => ({
-            value: person.id,
-            label: displayPersonName(person),
+          options={people.map((row) => ({
+            value: row.id,
+            label: displayPersonName(row),
           }))}
           value={personId}
-          onChange={setPersonId}
+          onChange={(next) => {
+            setPersonId(next);
+            setMachineId("");
+            setError(null);
+          }}
           placeholder="Search people…"
         />
       ) : null}
+      {staff && personId && !personAccountId ? (
+        <p className="text-sm text-[#f0c4c0]" role="alert">
+          This person has no customer yet. Grant them a site in People first.
+        </p>
+      ) : null}
       <MachineTypeahead
-        machines={machines}
+        key={personId || "machine"}
+        machines={quoteMachines}
         onMachines={setMachines}
-        accounts={accounts}
-        sites={sites}
+        accounts={staff ? quoteAccounts : accounts}
+        sites={quoteSites}
         machineId={machineId}
         onMachineId={setMachineId}
         role={role}
-        disabled={busy}
+        disabled={busy || (staff && !personAccountId)}
+        lockAccount={staff && Boolean(personAccountId)}
       />
       <ManualQuoteLines
         lines={lines}

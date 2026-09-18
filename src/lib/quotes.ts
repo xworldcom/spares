@@ -33,6 +33,22 @@ export function quoteOwnerIdForCreate(
   return { ok: true, customerId };
 }
 
+export function staffQuoteAccountMatch(
+  personAccountId: string,
+  machineSiteCustomerId: string,
+): { ok: true } | { ok: false; error: string } {
+  if (!personAccountId.trim()) {
+    return { ok: false, error: "This person has no customer yet." };
+  }
+  if (!machineSiteCustomerId.trim()) {
+    return { ok: false, error: "That machine has no customer site." };
+  }
+  if (personAccountId !== machineSiteCustomerId) {
+    return { ok: false, error: "That machine belongs to a different customer." };
+  }
+  return { ok: true };
+}
+
 export const QUOTE_PIPELINE = [
   "requested",
   "in_review",

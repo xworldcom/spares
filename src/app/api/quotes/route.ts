@@ -4,9 +4,10 @@ import {
   hydrateQuoteItems,
   parseQuoteItems,
   quoteOwnerIdForCreate,
+  staffQuoteAccountMatch,
   toPublicQuote,
 } from "@/lib/quotes";
-import { canAccessMachine } from "@/lib/access";
+import { canAccessMachine, customerIdFromGrant, grantFromUser } from "@/lib/access";
 import { isSeedAllowed } from "@/lib/production-env";
 import { belongsToTenant } from "@/lib/tenant";
 import {
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
 
   let customerEmail = auth.user.email;
   let customerId = owner.customerId;
+  let personGrant: { siteIds?: string[]; machineIds?: string[] } | undefined;
   if (auth.user.role === "staff") {
     const person = await findUserById(owner.customerId);
     if (
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
     }
     customerId = person.id;
     customerEmail = person.email;
+    personGrant = person;
   }
 
   const machineId = typeof body.machineId === "string" ? body.machineId.trim() : "";
@@ -112,6 +115,22 @@ export async function POST(request: Request) {
   ]);
   if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
+  }
+
+  if (personGrant) {
+    const catalog = await listMachines(auth.tenantId);
+    const personAccountId = customerIdFromGrant(
+      grantFromUser(personGrant),
+      org.sites,
+      catalog,
+    );
+    const machineSite = org.sites.find(
+      (row) => row.id === machine.siteId && !row.deletedAt,
+    );
+    const match = staffQuoteAccountMatch(personAccountId, machineSite?.customerId ?? "");
+    if (!match.ok) {
+      return error(match.error, 400);
+    }
   }
 
   const items = hydrateQuoteItems(parsed.items, machine.parts);
