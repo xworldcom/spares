@@ -7,3 +7,5 @@ ts	phase	decision	why	evidence	result
 2026-09-17T23:42:58Z	quotes	manual line items hydrate catalog parts when present and stay quote-local otherwise	no 3D pick and no extra BOM table	src/lib/quotes.ts hydrateQuoteItems	implemented
 2026-09-17T23:57:38Z	ui	derive create sites from visible machines when user.sites is empty	seed customer has machineIds only so Add machine never appeared	src/lib/machines.ts sitesForMachineCreate	unit test added
 2026-09-17T23:57:38Z	verify	API smoke on local disposable store at :3010	prove create, dedup, ticket, manual quote, file 404, packed file still 200	/tmp/model-less-smoke.json	VERIFIED
+2026-09-17T23:59:55Z	verify	Playwright tablet UI smoke on localhost:3010	Care select existing, Quotes manual lines, empty viewer fetches no GLB, packed palletizer still loads	.cursor/skills/verify-oee360/evidence/model-less-1789688776	VERIFIED
+2026-09-18T00:06:54Z	ui	keep model-less machines on the empty viewer instead of the parts list	list view hid Open Care and Upload pack and there was no 3D/List toggle without a pack	src/components/machine/MachineWorkspace.tsx setView model	Playwright 08/09 empty viewer VERIFIED no /file fetch

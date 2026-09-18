@@ -99,7 +99,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         setSaveError(null);
         setError(null);
         setNotFound(false);
-        setView(machineHasModel(next) ? "model" : "list");
+        setView("model");
         setLoading(false);
       })
       .catch((cause: unknown) => {
