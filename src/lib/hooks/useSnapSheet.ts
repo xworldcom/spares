@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  REPLY_DETENT_PX,
   conversationSheetDragHeight,
   initialConversationSheetSnap,
   type ConversationSheetSnap,
@@ -396,7 +397,17 @@ export function useSnapSheet({
     }
     // Pull up (negative dy) grows the sheet; pull down shrinks it.
     recordSample(event.clientY);
-    paintDrag(dy);
+    const replyH = heightForSnap("reply");
+    const peekH = heightForSnap("peek");
+    if (
+      drag.current.from === "peek" &&
+      -dy > replyH - peekH + REPLY_DETENT_PX
+    ) {
+      drag.current.from = "reply";
+      drag.current.startH = replyH;
+      drag.current.y = event.clientY;
+    }
+    paintDrag(event.clientY - drag.current.y);
     stickThreadToLatest();
   }
 

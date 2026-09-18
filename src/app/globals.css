@@ -468,7 +468,7 @@
 }
 
 .conversation-sheet:not(.is-inline).is-peek .imsg-thread--fill {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   min-height: 4.25rem;
 }
 

@@ -46,12 +46,7 @@ export function conversationSheetDragHeight({
   if (from !== "peek") {
     return raw;
   }
-  if (raw <= replyH) {
-    return raw;
-  }
-  const past = raw - replyH;
-  if (past <= REPLY_DETENT_PX) {
-    return replyH;
-  }
-  return Math.min(fullH, replyH + (past - REPLY_DETENT_PX));
+  // First pull never grows past reply — the type bar seats, then rollout
+  // starts only after the gesture promotes to reply (or a second pull).
+  return Math.max(peekH, Math.min(replyH, raw));
 }

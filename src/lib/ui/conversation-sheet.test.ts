@@ -59,7 +59,7 @@ describe("conversation sheet staged pull-up", () => {
         dy: -(heights.replyH - heights.peekH + REPLY_DETENT_PX + 80),
         ...heights,
       }),
-      heights.replyH + 80,
+      heights.replyH,
     );
   });
 
