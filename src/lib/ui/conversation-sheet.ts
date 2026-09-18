@@ -115,3 +115,47 @@ export function conversationSheetSnapHeight(
   }
   return peekH;
 }
+
+/** Extra upward travel held at compose so the type bar sits before older messages roll in. */
+export const COMPOSE_DETENT_PX = 32;
+
+/**
+ * Live sheet height while dragging. From peek, the first pull stops at compose
+ * (composer seats) and only leftover travel grows toward full (rollout).
+ * `dy` is pointer delta: negative is up (taller sheet).
+ */
+export function conversationSheetDragHeight({
+  from,
+  dy,
+  peekH,
+  composeH,
+  fullH,
+}: {
+  from: ConversationSheetSnap;
+  dy: number;
+  peekH: number;
+  composeH: number;
+  fullH: number;
+}): number {
+  const start = from === "out" ? "peek" : from;
+  const startH = conversationSheetSnapHeight(start, peekH, composeH, fullH);
+  const raw = startH - dy;
+
+  if (start === "peek") {
+    if (dy >= 0) {
+      return peekH;
+    }
+    const up = -dy;
+    const toCompose = Math.max(0, composeH - peekH);
+    if (up <= toCompose) {
+      return Math.min(composeH, peekH + up);
+    }
+    const past = up - toCompose;
+    if (past <= COMPOSE_DETENT_PX) {
+      return composeH;
+    }
+    return Math.min(fullH, composeH + (past - COMPOSE_DETENT_PX));
+  }
+
+  return Math.min(fullH, Math.max(peekH, raw));
+}

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  COMPOSE_DETENT_PX,
+  conversationSheetDragHeight,
   conversationSheetMetrics,
   conversationSheetSnapHeight,
   conversationSheetStep,
@@ -77,5 +79,51 @@ describe("conversation sheet shift-and-roll snaps", () => {
     assert.equal(conversationSheetSnapHeight("peek", 100, 200, 700), 100);
     assert.equal(conversationSheetSnapHeight("compose", 100, 200, 700), 200);
     assert.equal(conversationSheetSnapHeight("full", 100, 200, 700), 700);
+  });
+
+  it("holds the first peek pull at compose instead of overshooting into rollout", () => {
+    assert.equal(
+      conversationSheetDragHeight({
+        from: "peek",
+        dy: -40,
+        ...heights,
+      }),
+      140,
+    );
+    assert.equal(
+      conversationSheetDragHeight({
+        from: "peek",
+        dy: -100,
+        ...heights,
+      }),
+      200,
+    );
+    assert.equal(
+      conversationSheetDragHeight({
+        from: "peek",
+        dy: -(100 + COMPOSE_DETENT_PX),
+        ...heights,
+      }),
+      200,
+    );
+    assert.equal(
+      conversationSheetDragHeight({
+        from: "peek",
+        dy: -(100 + COMPOSE_DETENT_PX + 80),
+        ...heights,
+      }),
+      280,
+    );
+  });
+
+  it("grows from compose toward full without a compose detent", () => {
+    assert.equal(
+      conversationSheetDragHeight({
+        from: "compose",
+        dy: -80,
+        ...heights,
+      }),
+      280,
+    );
   });
 });

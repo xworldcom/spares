@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  conversationSheetDragHeight,
   conversationSheetSnapHeight,
   conversationSheetStep,
   settleConversationSheet,
@@ -104,8 +105,13 @@ export function useSnapSheet({
 
   function paintDrag(px: number) {
     const { peekH, composeH, fullH } = readSheetHeights(cardRef.current);
-    const snapH = conversationSheetSnapHeight(sheetRef.current, peekH, composeH, fullH);
-    const live = Math.min(fullH, Math.max(peekH, snapH - px));
+    const live = conversationSheetDragHeight({
+      from: drag.current.from,
+      dy: px,
+      peekH,
+      composeH,
+      fullH,
+    });
     applyHeight(live, false);
   }
 
@@ -115,12 +121,26 @@ export function useSnapSheet({
 
   function finishSettle(next: SnapSheetSnap) {
     const card = cardRef.current;
+    window.cancelAnimationFrame(settleFrame.current);
+    if (desktopStage) {
+      applyHeight(null, false);
+      setSheet(next);
+      setOpen(true);
+      setDragging(false);
+      setDraggingClass(false);
+      return;
+    }
     const { peekH, composeH, fullH, live } = readSheetHeights(card);
     const target = conversationSheetSnapHeight(next, peekH, composeH, fullH);
-    window.cancelAnimationFrame(settleFrame.current);
     applyHeight(live, false);
     setSheet(next);
     setOpen(true);
+    if (Math.abs(live - target) < 2) {
+      applyHeight(null, false);
+      setDragging(false);
+      setDraggingClass(false);
+      return;
+    }
     let done = false;
     const end = (event?: Event) => {
       if (done || (event && event.target !== card)) {
@@ -333,6 +353,10 @@ export function useSnapSheet({
   }
 
   function expand() {
+    if (desktopStage) {
+      finishSettle("full");
+      return;
+    }
     finishSettle(conversationSheetStep(sheet === "out" ? "peek" : sheet, "up"));
   }
 

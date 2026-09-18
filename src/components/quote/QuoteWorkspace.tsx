@@ -249,7 +249,7 @@ export function QuoteWorkspace({
   }
 
   return (
-    <div className="quote-workspace mx-auto w-full max-w-5xl space-y-5">
+    <div className="quote-workspace mx-auto w-full max-w-5xl space-y-5 lg:max-w-none">
       <div>
         <Link
           href={listHref}
