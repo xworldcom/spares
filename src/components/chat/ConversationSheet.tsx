@@ -5,7 +5,7 @@ import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { useSnapSheet } from "@/lib/hooks/useSnapSheet";
 
 export function ConversationSheet({
-  title,
+  title: _title,
   peekLine: _peekLine,
   unread: _unread,
   children,
@@ -25,26 +25,16 @@ export function ConversationSheet({
 }) {
   const desktop = useDesktopStage();
   const card = useRef<HTMLElement>(null);
-  const {
-    sheet,
-    dragging,
-    hide,
-    expand,
-    collapseToPeek,
-    toggleHandle,
-    dragMoved,
-    pointerHandlers,
-  } = useSnapSheet({
-    cardRef: card,
-    open,
-    onOpenChange,
-    desktopStage: desktop,
-    scrollBodySelector: ".imsg-thread",
-  });
+  const { sheet, dragging, expand, toggleHandle, dragMoved, pointerHandlers } =
+    useSnapSheet({
+      cardRef: card,
+      open,
+      onOpenChange,
+      desktopStage: desktop,
+      scrollBodySelector: ".imsg-thread",
+    });
 
   const overlayMobile = layout === "overlay" && !desktop;
-  // Keep grab mounted on mobile so peek→reply can open the chrome without a layout pop.
-  const showChrome = overlayMobile && sheet !== "out";
   const expanded =
     sheet === "full" || sheet === "reply" || (layout === "inline" && desktop);
 
@@ -91,25 +81,6 @@ export function ConversationSheet({
         }}
       />
       <div className="conversation-sheet-body min-h-0 flex flex-1 flex-col">
-        {showChrome ? (
-          <div className="conversation-sheet-grab snap-sheet-grab flex shrink-0 items-center justify-between gap-3 px-4 pb-1 pt-0.5">
-            <p className="text-[17px] font-semibold tracking-tight">{title}</p>
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full spares-muted"
-              aria-label="Collapse conversation"
-              onClick={() => {
-                if (desktop && layout === "overlay") {
-                  collapseToPeek();
-                  return;
-                }
-                hide();
-              }}
-            >
-              <span className="text-2xl leading-none">×</span>
-            </button>
-          </div>
-        ) : null}
         {children}
       </div>
     </aside>

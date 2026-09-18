@@ -8,6 +8,8 @@ import {
   type RefObject,
 } from "react";
 import {
+  REPLY_DETENT_PX,
+  conversationSheetDragHeight,
   initialConversationSheetSnap,
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
@@ -46,8 +48,8 @@ function heightForSnap(snap: ConversationSheetSnap) {
     return remPx(5.75);
   }
   if (snap === "reply") {
-    // Peek thread + grab chrome + composer — history waits for full.
-    return remPx(12.5);
+    // Peek thread + composer — history waits for full.
+    return remPx(10.25);
   }
   return Math.min(window.innerHeight * 0.92, window.innerHeight - tabBarPx() - 48);
 }
@@ -144,11 +146,20 @@ export function useSnapSheet({
   }
 
   function paintHeight(px: number) {
-    const full = heightForSnap("full");
-    const peek = heightForSnap("peek");
-    const clamped = Math.max(peek, Math.min(full, px));
-    cardRef.current?.style.setProperty("--sheet-h", `${clamped}px`);
+    cardRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`);
     cardRef.current?.style.setProperty("--drag-h", "0px");
+  }
+
+  function paintDrag(dy: number) {
+    const live = conversationSheetDragHeight({
+      from: drag.current.from,
+      startH: drag.current.startH,
+      dy,
+      peekH: heightForSnap("peek"),
+      replyH: heightForSnap("reply"),
+      fullH: heightForSnap("full"),
+    });
+    paintHeight(live);
   }
 
   function clearInlineHeight() {
@@ -386,7 +397,17 @@ export function useSnapSheet({
     }
     // Pull up (negative dy) grows the sheet; pull down shrinks it.
     recordSample(event.clientY);
-    paintHeight(drag.current.startH - dy);
+    const replyH = heightForSnap("reply");
+    const peekH = heightForSnap("peek");
+    if (
+      drag.current.from === "peek" &&
+      -dy > replyH - peekH + REPLY_DETENT_PX
+    ) {
+      drag.current.from = "reply";
+      drag.current.startH = replyH;
+      drag.current.y = event.clientY;
+    }
+    paintDrag(event.clientY - drag.current.y);
     stickThreadToLatest();
   }
 
@@ -397,16 +418,35 @@ export function useSnapSheet({
       dockedRef.current = true;
     }
     steppedAtRef.current = performance.now();
-    setDragging(false);
-    setDraggingClass(false);
-    clearInlineHeight();
+    const target = heightForSnap(next);
+    const live = cardRef.current?.getBoundingClientRect().height ?? target;
+    paintHeight(live);
     setSheet(next);
     setOpen(true);
+    setDragging(false);
+    setDraggingClass(false);
+    if (Math.abs(live - target) < 2) {
+      clearInlineHeight();
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      paintHeight(target);
+      window.setTimeout(() => {
+        clearInlineHeight();
+      }, 440);
+    });
   }
 
   function settleSheet(dy: number, from: SnapSheetSnap) {
     const velocity = liveVelocity();
-    const currentH = drag.current.startH - dy;
+    const currentH = conversationSheetDragHeight({
+      from,
+      startH: drag.current.startH,
+      dy,
+      peekH: heightForSnap("peek"),
+      replyH: heightForSnap("reply"),
+      fullH: heightForSnap("full"),
+    });
     if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
       // Small nudge — step one stage in the gesture direction.
       if (dy < -12 || velocity < -0.2) {
