@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  conversationSheetSnapHeight,
   conversationSheetStep,
   settleConversationSheet,
   type ConversationSheetSnap,
@@ -29,11 +30,23 @@ function isSkipTarget(target: EventTarget | null) {
   return Boolean(target.closest("button, a, input, textarea, select, label"));
 }
 
+function readPx(style: CSSStyleDeclaration | null, name: string, fallback: number) {
+  const raw = style?.getPropertyValue(name)?.trim() ?? "";
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  if (raw.endsWith("rem")) {
+    return value * 16;
+  }
+  return value;
+}
+
 function readSheetHeights(card: HTMLElement | null) {
   const style = card ? getComputedStyle(card) : null;
-  const peekH = Number.parseFloat(style?.getPropertyValue("--peek-h") || "") || 132;
-  const composeH = Number.parseFloat(style?.getPropertyValue("--compose-h") || "") || 220;
-  const fullH = Number.parseFloat(style?.getPropertyValue("--full-h") || "") || 640;
+  const peekH = readPx(style, "--peek-h", 140);
+  const composeH = readPx(style, "--compose-h", 220);
+  const fullH = readPx(style, "--full-h", 640);
   const live = card?.getBoundingClientRect().height ?? peekH;
   return { peekH, composeH, fullH, live };
 }
@@ -56,6 +69,8 @@ export function useSnapSheet({
     initialQuoteSheetSnap(open, desktopStage),
   );
   const [dragging, setDragging] = useState(false);
+  const sheetRef = useRef(sheet);
+  sheetRef.current = sheet;
   const drag = useRef({
     y: 0,
     on: false,
@@ -64,42 +79,69 @@ export function useSnapSheet({
     moved: false,
     samples: [] as { t: number; y: number }[],
   });
+  const settleFrame = useRef(0);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
   }
 
-  function paintThreadWindow(liveH: number, peekH: number, composeH: number) {
-    const threadBase = 108;
-    const extra = Math.max(0, liveH - peekH);
-    const composerReserve = Math.max(0, composeH - peekH);
-    const threadH = threadBase + Math.max(0, extra - composerReserve);
-    cardRef.current?.style.setProperty("--thread-h", `${threadH}px`);
-  }
-
-  function paintDrag(px: number) {
+  function applyHeight(px: number | null, animate: boolean) {
     const card = cardRef.current;
     if (!card) {
       return;
     }
-    card.style.setProperty("--drag", `${px}px`);
-    const { peekH, composeH, fullH } = readSheetHeights(card);
-    const snapH =
-      sheet === "full" ? fullH : sheet === "compose" ? composeH : peekH;
+    if (px == null) {
+      card.style.removeProperty("height");
+      card.style.removeProperty("transition");
+      card.style.removeProperty("--live-h");
+      return;
+    }
+    const next = `${Math.round(px)}px`;
+    card.style.transition = animate ? "height 0.52s var(--sheet-ease)" : "none";
+    card.style.height = next;
+    card.style.setProperty("--live-h", next);
+  }
+
+  function paintDrag(px: number) {
+    const { peekH, composeH, fullH } = readSheetHeights(cardRef.current);
+    const snapH = conversationSheetSnapHeight(sheetRef.current, peekH, composeH, fullH);
     const live = Math.min(fullH, Math.max(peekH, snapH - px));
-    paintThreadWindow(live, peekH, composeH);
+    applyHeight(live, false);
   }
 
   function setDraggingClass(on: boolean) {
     cardRef.current?.classList.toggle("is-dragging", on);
   }
 
+  function finishSettle(next: SnapSheetSnap) {
+    const card = cardRef.current;
+    const { peekH, composeH, fullH, live } = readSheetHeights(card);
+    const target = conversationSheetSnapHeight(next, peekH, composeH, fullH);
+    window.cancelAnimationFrame(settleFrame.current);
+    applyHeight(live, false);
+    setSheet(next);
+    setOpen(true);
+    let done = false;
+    const end = (event?: Event) => {
+      if (done || (event && event.target !== card)) {
+        return;
+      }
+      done = true;
+      card?.removeEventListener("transitionend", end);
+      applyHeight(null, false);
+      setDragging(false);
+      setDraggingClass(false);
+    };
+    settleFrame.current = window.requestAnimationFrame(() => {
+      applyHeight(target, true);
+      card?.addEventListener("transitionend", end);
+      window.setTimeout(() => end(), 640);
+    });
+  }
+
   useEffect(() => {
-    if (sheet === "full") {
-      return;
-    }
-    cardRef.current?.style.setProperty("--thread-h", "108px");
-  }, [sheet, cardRef]);
+    return () => window.cancelAnimationFrame(settleFrame.current);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -109,20 +151,20 @@ export function useSnapSheet({
         }
         return initialQuoteSheetSnap(true, desktopStage);
       });
-      paintDrag(0);
+      applyHeight(null, false);
       setDragging(false);
       setDraggingClass(false);
       return;
     }
     setSheet("out");
-    paintDrag(0);
+      applyHeight(null, false);
     setDragging(false);
     setDraggingClass(false);
   }, [open, desktopStage, cardRef]);
 
   function dismiss() {
     setSheet("out");
-    paintDrag(0);
+      applyHeight(null, false);
     setDragging(false);
     setDraggingClass(false);
     setOpen(false);
@@ -142,6 +184,7 @@ export function useSnapSheet({
     from: SnapSheetSnap,
     pending: boolean,
   ) {
+    window.cancelAnimationFrame(settleFrame.current);
     drag.current = {
       y: event.clientY,
       on: !pending,
@@ -151,6 +194,8 @@ export function useSnapSheet({
       samples: [{ t: performance.now(), y: event.clientY }],
     };
     if (!pending) {
+      const { live } = readSheetHeights(cardRef.current);
+      applyHeight(live, false);
       setDragging(true);
       setDraggingClass(true);
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -237,10 +282,7 @@ export function useSnapSheet({
   function settleSheet(dy: number, from: SnapSheetSnap) {
     drag.current.on = false;
     drag.current.pending = false;
-    setDragging(false);
-    setDraggingClass(false);
     const { peekH, composeH, fullH, live } = readSheetHeights(cardRef.current);
-    paintDrag(0);
     const next = settleConversationSheet({
       from,
       dy,
@@ -250,8 +292,7 @@ export function useSnapSheet({
       composeH,
       fullH,
     });
-    setSheet(next);
-    setOpen(true);
+    finishSettle(next);
   }
 
   function onCardPointerUp(event: ReactPointerEvent<HTMLElement>) {
@@ -267,12 +308,12 @@ export function useSnapSheet({
     recordSample(event.clientY);
     if (!drag.current.moved && Math.abs(dy) < DRAG_SLOP) {
       drag.current.on = false;
-      setDragging(false);
-      setDraggingClass(false);
-      paintDrag(0);
       if (drag.current.from !== "full") {
-        setSheet(conversationSheetStep(drag.current.from, "up"));
-        setOpen(true);
+        finishSettle(conversationSheetStep(drag.current.from, "up"));
+      } else {
+        applyHeight(null, false);
+        setDragging(false);
+        setDraggingClass(false);
       }
       return;
     }
@@ -287,23 +328,16 @@ export function useSnapSheet({
       hide();
       return;
     }
-    if (sheet === "full") {
-      setSheet("compose");
-      setOpen(true);
-      return;
-    }
-    setSheet(conversationSheetStep(sheet, "up"));
-    setOpen(true);
+    const next = sheet === "full" ? "compose" : conversationSheetStep(sheet, "up");
+    finishSettle(next);
   }
 
   function expand() {
-    setSheet(conversationSheetStep(sheet === "out" ? "peek" : sheet, "up"));
-    setOpen(true);
+    finishSettle(conversationSheetStep(sheet === "out" ? "peek" : sheet, "up"));
   }
 
   function collapseToPeek() {
-    setSheet("peek");
-    setOpen(true);
+    finishSettle("peek");
   }
 
   return {

@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { useSnapSheet } from "@/lib/hooks/useSnapSheet";
+import { conversationSheetMetrics } from "@/lib/ui/conversation-sheet";
 
 function pinThreadToEnd(root: HTMLElement | null) {
   const thread = root?.querySelector(".imsg-thread");
@@ -10,6 +11,25 @@ function pinThreadToEnd(root: HTMLElement | null) {
     return;
   }
   thread.scrollTop = thread.scrollHeight;
+}
+
+function measureSheet(root: HTMLElement) {
+  const handle = root.querySelector(".snap-sheet-handle");
+  const composer = root.querySelector(".imsg-composer");
+  const last = root.querySelector(".imsg-thread > li:last-child");
+  const handleH = handle instanceof HTMLElement ? handle.getBoundingClientRect().height + 8 : 28;
+  const composerH = composer instanceof HTMLElement ? composer.getBoundingClientRect().height : 72;
+  const lastH = last instanceof HTMLElement ? last.getBoundingClientRect().height : 96;
+  const next = conversationSheetMetrics({
+    handleH,
+    threadPeekH: Math.max(72, Math.min(168, lastH + 10)),
+    composerH,
+    viewportH: window.innerHeight,
+  });
+  root.style.setProperty("--peek-thread-h", `${next.threadPeekH}px`);
+  root.style.setProperty("--peek-h", `${next.peekH}px`);
+  root.style.setProperty("--compose-h", `${next.composeH}px`);
+  root.style.setProperty("--full-h", `${next.fullH}px`);
 }
 
 export function ConversationSheet({
@@ -50,19 +70,17 @@ export function ConversationSheet({
   });
 
   const expanded = sheet === "full" || (layout === "inline" && desktop);
-  const showComposer = sheet === "compose" || sheet === "full" || layout === "inline" || desktop;
   const showPeekBand = layout === "overlay" && desktop && sheet === "peek";
   const showGrab = layout === "overlay" && !desktop && sheet === "full";
 
   useLayoutEffect(() => {
     const root = card.current;
-    if (!root || desktop) {
+    if (!root || desktop || layout !== "overlay") {
       return;
     }
-    const full = Math.min(window.innerHeight * 0.92, window.innerHeight - 96);
-    root.style.setProperty("--full-h", `${Math.max(full, 320)}px`);
+    measureSheet(root);
     pinThreadToEnd(root);
-  }, [sheet, peekLine, children, desktop]);
+  }, [desktop, layout, peekLine, children, sheet]);
 
   useLayoutEffect(() => {
     const root = card.current;
@@ -74,6 +92,10 @@ export function ConversationSheet({
       return;
     }
     const keepPinned = () => {
+      pinThreadToEnd(root);
+    };
+    keepPinned();
+    const observer = new ResizeObserver(() => {
       if (sheet === "full") {
         const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 96;
         if (nearBottom) {
@@ -81,12 +103,14 @@ export function ConversationSheet({
         }
         return;
       }
-      thread.scrollTop = thread.scrollHeight;
-    };
-    keepPinned();
-    const observer = new ResizeObserver(keepPinned);
+      keepPinned();
+    });
     observer.observe(thread);
     observer.observe(root);
+    const composer = root.querySelector(".imsg-composer");
+    if (composer instanceof HTMLElement) {
+      observer.observe(composer);
+    }
     return () => observer.disconnect();
   }, [desktop, layout, sheet]);
 
@@ -106,7 +130,6 @@ export function ConversationSheet({
         dragging ? "is-dragging" : "",
         layout === "inline" ? "is-inline" : "",
         expanded ? "is-expanded" : "",
-        showComposer ? "is-composer-open" : "",
       ]
         .filter(Boolean)
         .join(" ")}

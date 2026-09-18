@@ -81,6 +81,23 @@ export function settleConversationSheet({
   return "full";
 }
 
+export function conversationSheetMetrics({
+  handleH,
+  threadPeekH,
+  composerH,
+  viewportH,
+}: {
+  handleH: number;
+  threadPeekH: number;
+  composerH: number;
+  viewportH: number;
+}) {
+  const peekH = Math.max(96, handleH + threadPeekH);
+  const composeH = peekH + Math.max(56, composerH);
+  const fullH = Math.max(composeH + 80, Math.min(viewportH * 0.92, viewportH - 96));
+  return { peekH, composeH, fullH, threadPeekH };
+}
+
 export function conversationSheetSnapHeight(
   snap: ConversationSheetSnap,
   peekH: number,

@@ -346,13 +346,10 @@
   left: 0;
   right: 0;
   bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
-  height: clamp(
-    var(--peek-h),
-    calc(var(--snap-h) - var(--drag)),
-    var(--full-h)
-  );
+  height: clamp(var(--peek-h), var(--live-h, var(--snap-h)), var(--full-h));
   max-height: var(--full-h);
   --snap-h: var(--peek-h);
+  --peek-thread-h: 6.75rem;
   background: var(--spares-lift);
   color: var(--spares-on-paper);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
@@ -389,25 +386,52 @@
 
 .conversation-sheet.is-dragging {
   transition: none;
+  height: clamp(var(--peek-h), var(--live-h, var(--snap-h)), var(--full-h));
 }
 
 .conversation-sheet:not(.is-dragging) {
-  transition:
-    height 0.55s var(--sheet-ease),
-    max-height 0.55s var(--sheet-ease);
+  transition: height 0.52s var(--sheet-ease);
+}
+
+.conversation-sheet:not(.is-inline) .imsg-card--sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.conversation-sheet:not(.is-inline) .imsg-thread--fill {
+  flex: 0 0 var(--peek-thread-h);
+  max-height: var(--peek-thread-h);
+  min-height: var(--peek-thread-h);
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline):not(.is-full) .imsg-thread--fill {
+  overflow: hidden;
+  touch-action: none;
+  padding-bottom: 0.15rem;
+}
+
+.conversation-sheet:not(.is-inline).is-full .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-compose.is-dragging .imsg-thread--fill {
+  flex: 1 1 auto;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.conversation-sheet:not(.is-inline) .imsg-composer {
+  flex: 0 0 auto;
+}
+
+.conversation-sheet:not(.is-inline) .imsg-card--sheet .imsg-composer {
+  padding-top: 0.45rem;
+  padding-bottom: 0.55rem;
+  border-top-color: rgba(236, 234, 228, 0.06);
 }
 
 .conversation-sheet:not(.is-inline).is-peek .imsg-composer {
   pointer-events: none;
-}
-
-.conversation-sheet:not(.is-inline):not(.is-full) .imsg-thread--fill {
-  flex: 0 0 var(--thread-h, 6.75rem);
-  max-height: var(--thread-h, 6.75rem);
-  min-height: var(--thread-h, 6.75rem);
-  justify-content: flex-end;
-  overflow: hidden;
-  touch-action: none;
 }
 
 .conversation-sheet-peek {
@@ -513,8 +537,6 @@
   }
 
   .conversation-sheet:not(.is-inline).is-peek .imsg-composer {
-    height: auto;
-    opacity: 1;
     pointer-events: auto;
   }
 }

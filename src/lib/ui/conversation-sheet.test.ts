@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  conversationSheetMetrics,
   conversationSheetSnapHeight,
   conversationSheetStep,
   settleConversationSheet,
@@ -58,6 +59,18 @@ describe("conversation sheet shift-and-roll snaps", () => {
       }),
       "compose",
     );
+  });
+
+  it("sizes compose as peek plus the typing row", () => {
+    const next = conversationSheetMetrics({
+      handleH: 28,
+      threadPeekH: 108,
+      composerH: 72,
+      viewportH: 844,
+    });
+    assert.equal(next.peekH, 136);
+    assert.equal(next.composeH, 208);
+    assert.ok(next.fullH > next.composeH);
   });
 
   it("maps snap heights for peek, compose, and full", () => {
