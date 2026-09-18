@@ -38,7 +38,7 @@ export function ManualQuoteLines({
       return;
     }
     if (id.length > MAX_QUOTE_ITEM_ID) {
-      setError("Part number is too long.");
+      setError("Part number or description is too long.");
       return;
     }
     if (!Number.isInteger(nextQty) || nextQty < 1) {
@@ -116,6 +116,7 @@ export function ManualQuoteLines({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+            maxLength={200}
             placeholder="Servo amplifier"
           />
         </label>

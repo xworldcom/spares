@@ -81,6 +81,12 @@ export async function POST(request: Request) {
         400,
       );
     }
+    if (
+      !result.created &&
+      !canAccessMachine(auth.user, result.machine, org.sites, org.customers)
+    ) {
+      return error("A machine with that name already exists at this site.", 409);
+    }
     return json(
       toMachineDetail(
         result.machine,

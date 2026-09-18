@@ -2808,15 +2808,6 @@ export function findOrCreateModelLessMachine(
       site.id,
     );
     if (existing) {
-      const granted = withCustomerMachineGrant(
-        db,
-        tenantId,
-        input.grantUserId,
-        existing,
-      );
-      if (granted !== db) {
-        await writeDatabase(granted);
-      }
       return { machine: existing, created: false };
     }
 
