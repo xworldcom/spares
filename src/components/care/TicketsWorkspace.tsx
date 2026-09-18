@@ -180,6 +180,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
     <TicketDetail
       machineId={selected?.machineId ?? machineId ?? ""}
       ticketId={ticketId}
+      seedTicket={selected}
       backHref={listHref}
       embedded={desktop}
       onUpdated={refresh}

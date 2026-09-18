@@ -44,22 +44,30 @@ export function TicketDetail({
   backHref,
   embedded = false,
   onUpdated,
+  seedTicket,
 }: {
   machineId: string;
   ticketId: string;
   backHref?: string;
   embedded?: boolean;
   onUpdated?: () => void;
+  /** Row from the tickets list — paints header immediately while detail loads. */
+  seedTicket?: ServiceTicket | null;
 }) {
-  const { user } = useAuth();
+  const { user, status: authStatus } = useAuth();
   const { refresh: refreshCareAlerts } = useCareAlerts();
-  const [ticket, setTicket] = useState<ServiceTicket | null>(null);
+  const [ticket, setTicket] = useState<ServiceTicket | null>(() =>
+    seedTicket && ticketRefMatches(seedTicket, ticketId) ? seedTicket : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
 
   useEffect(() => {
+    if (seedTicket && ticketRefMatches(seedTicket, ticketId)) {
+      setTicket(seedTicket);
+    }
     setError(null);
     let cancelled = false;
     getTicket(ticketId)
@@ -80,7 +88,7 @@ export function TicketDetail({
     return () => {
       cancelled = true;
     };
-  }, [ticketId, reloadKey, refreshCareAlerts]);
+  }, [ticketId, reloadKey, refreshCareAlerts, seedTicket]);
 
   const pollTicket = useCallback(async () => {
     if (busy) {
@@ -153,7 +161,7 @@ export function TicketDetail({
     }
   }
 
-  if (!user) {
+  if (authStatus === "loading" && !ticket) {
     return <LoadingState label="Loading ticket…" />;
   }
 
@@ -170,6 +178,10 @@ export function TicketDetail({
         />
       );
     }
+    return <LoadingState label="Loading ticket…" />;
+  }
+
+  if (!user) {
     return <LoadingState label="Loading ticket…" />;
   }
 

@@ -33,6 +33,7 @@ import {
   quotePricingComplete,
   quoteTitle,
 } from "@/lib/quotes";
+import { quoteSeedForRef } from "@/lib/nav/quote-list-seed";
 import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role } from "@/types";
 
 export function QuoteWorkspace({
@@ -44,7 +45,8 @@ export function QuoteWorkspace({
 }) {
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const seedQuote = quoteSeedForRef(quoteRef);
+  const [quote, setQuote] = useState<Quote | null>(() => seedQuote ?? null);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [shipments, setShipments] = useState<QuoteShipment[]>([]);
   const [loadedRef, setLoadedRef] = useState<string | null>(null);
@@ -64,6 +66,12 @@ export function QuoteWorkspace({
   }
 
   useEffect(() => {
+    const seed = quoteSeedForRef(quoteRef);
+    if (seed) {
+      setQuote(seed);
+      setItems(seed.items);
+      setShipments(draftShipmentsFrom(seed));
+    }
     let cancelled = false;
     getQuote(quoteRef)
       .then((next) => {

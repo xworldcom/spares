@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import { invalidateWarmRead, readIfWarm } from "./warm-read";
+import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 import type {
   CreateQuoteResponse,
   Quote,
@@ -38,10 +38,13 @@ export async function listQuotes(): Promise<QuotesListResponse> {
 }
 
 export async function getQuote(idOrNumber: string): Promise<Quote> {
-  const data = await readIfWarm(`quote:${idOrNumber}`, () =>
-    apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`),
-  );
-  return data.quote;
+  return readIfWarm(`quote:${idOrNumber}`, async () => {
+    const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`);
+    const quote = data.quote;
+    warmRead(`quote:${quote.id}`, () => Promise.resolve(quote));
+    warmRead(`quote:${String(quote.number)}`, () => Promise.resolve(quote));
+    return quote;
+  });
 }
 
 export async function updateQuote(

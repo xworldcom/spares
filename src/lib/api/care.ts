@@ -147,10 +147,10 @@ export async function createTicket(
 }
 
 export async function getTicket(idOrNumber: string): Promise<ServiceTicket> {
-  const data = await readIfWarm(`ticket:${idOrNumber}`, () =>
-    apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`),
-  );
-  return data.ticket;
+  return readIfWarm(`ticket:${idOrNumber}`, async () => {
+    const data = await apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`);
+    return data.ticket;
+  });
 }
 
 export async function updateTicketStatus(id: string, status: TicketStatus) {

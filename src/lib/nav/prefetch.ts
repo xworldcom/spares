@@ -25,8 +25,10 @@ export function warmTicketDetail(ticketId: string) {
   warmRead(`ticket:${ticketId}`, () => getTicket(ticketId));
 }
 
-export function warmQuoteDetail(quoteId: string) {
-  warmRead(`quote:${quoteId}`, () => getQuote(quoteId));
+export function warmQuoteDetail(quote: { id: string; number: number }) {
+  const byNumber = String(quote.number);
+  warmRead(`quote:${byNumber}`, () => getQuote(byNumber));
+  warmRead(`quote:${quote.id}`, () => getQuote(byNumber));
 }
 
 export function warmCareOverview(machineId: string) {

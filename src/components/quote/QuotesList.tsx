@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
@@ -13,10 +14,12 @@ import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { listQuotes } from "@/lib/api/quotes";
 import { quoteHref } from "@/lib/quotes";
-import { warmQuoteDetail } from "@/lib/nav/prefetch";
+import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
+import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
 import type { Quote, Role } from "@/lib/api/types";
 
 export function QuotesList({ role }: { role: Role }) {
+  const router = useRouter();
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -47,6 +50,17 @@ export function QuotesList({ role }: { role: Role }) {
       cancelled = true;
     };
   }, [reloadKey, refresh]);
+
+  useEffect(() => {
+    if (quotes.length === 0) {
+      return;
+    }
+    rememberQuotesForNav(quotes);
+    for (const quote of quotes.slice(0, 6)) {
+      prefetchAppRoute(router, quoteHref(role, quote));
+      warmQuoteDetail(quote);
+    }
+  }, [quotes, role, router]);
 
   if (loading) {
     return <LoadingState label="Loading quotes…" />;
@@ -97,7 +111,7 @@ export function QuotesList({ role }: { role: Role }) {
           <li key={quote.id}>
             <PrefetchLink
               href={quoteHref(role, quote)}
-              warm={() => warmQuoteDetail(quote.id)}
+              warm={() => warmQuoteDetail(quote)}
               className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-white/4 sm:items-center"
             >
               {quote.unread ? (
