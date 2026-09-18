@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, beforeEach, describe, it } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import { loginSurfaceFlags, PASSWORD_LOGIN_DISABLED_MESSAGE } from "./password-login-public.ts";
 import {
   assertPasswordLoginAllowed,

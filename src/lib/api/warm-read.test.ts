@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
+import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read.ts";
 
 describe("warm-read", () => {
   it("reuses a warmed promise within TTL", async () => {
