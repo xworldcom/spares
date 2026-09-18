@@ -133,10 +133,11 @@ export function QuoteActivityFeed({
       return;
     }
     const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
-    if (nearBottom) {
+    // Sheet layout always docks to the latest context (peek/reply/full stick handler).
+    if (layout === "sheet" || nearBottom) {
       root.scrollTop = root.scrollHeight;
     }
-  }, [activities]);
+  }, [activities, layout]);
 
   useEffect(() => {
     const node = inputRef.current;

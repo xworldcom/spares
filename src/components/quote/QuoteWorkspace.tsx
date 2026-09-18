@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
+import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
@@ -45,6 +46,7 @@ export function QuoteWorkspace({
 }) {
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
+  const desktop = useDesktopStage();
   const seedQuote = quoteSeedForRef(quoteRef);
   const [quote, setQuote] = useState<Quote | null>(() => seedQuote ?? null);
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -249,7 +251,11 @@ export function QuoteWorkspace({
   }
 
   return (
-    <div className="quote-workspace mx-auto w-full max-w-5xl space-y-5">
+    <div
+      className="quote-workspace mx-auto w-full max-w-5xl"
+      data-quote-layout={desktop ? "split" : "stack"}
+    >
+      <div className="quote-workspace-main space-y-5">
       <div>
         <Link
           href={listHref}
@@ -412,24 +418,6 @@ export function QuoteWorkspace({
 
       <div className="conversation-sheet-spacer" aria-hidden="true" />
 
-      <ConversationSheet
-        title="Conversation"
-        peekLine={peek.text}
-        unread={quote.unread}
-        layout="overlay"
-      >
-        <QuoteActivityFeed
-          activities={threadReady ? quote.activities : []}
-          role={role}
-          selfEmail={user.email}
-          busy={busy || !threadReady}
-          onSend={sendActivity}
-          threadKind="quote"
-          threadId={quote.id}
-          layout="sheet"
-        />
-      </ConversationSheet>
-
       {role === "staff" && (statusDirty || itemsDirty) ? (
         <div
           className="quote-staff-apply sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
@@ -447,6 +435,25 @@ export function QuoteWorkspace({
           </button>
         </div>
       ) : null}
+      </div>
+
+      <ConversationSheet
+        title="Conversation"
+        peekLine={peek.text}
+        unread={quote.unread}
+        layout={desktop ? "inline" : "overlay"}
+      >
+        <QuoteActivityFeed
+          activities={threadReady ? quote.activities : []}
+          role={role}
+          selfEmail={user.email}
+          busy={busy || !threadReady}
+          onSend={sendActivity}
+          threadKind="quote"
+          threadId={quote.id}
+          layout="sheet"
+        />
+      </ConversationSheet>
     </div>
   );
 }

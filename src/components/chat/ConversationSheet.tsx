@@ -6,14 +6,15 @@ import { useSnapSheet } from "@/lib/hooks/useSnapSheet";
 
 export function ConversationSheet({
   title,
-  peekLine,
-  unread,
+  peekLine: _peekLine,
+  unread: _unread,
   children,
   layout = "overlay",
   open = true,
   onOpenChange,
 }: {
   title: string;
+  /** Kept for call-site compatibility; latest context now comes from the live thread. */
   peekLine: string;
   unread?: boolean;
   children: ReactNode;
@@ -38,21 +39,26 @@ export function ConversationSheet({
     open,
     onOpenChange,
     desktopStage: desktop,
-    scrollBodySelector: ".conversation-sheet-body",
+    scrollBodySelector: ".imsg-thread",
   });
 
-  const expanded = sheet === "full" || (layout === "inline" && desktop);
-  const showPeekBand = layout === "overlay" && sheet === "peek";
+  const overlayMobile = layout === "overlay" && !desktop;
+  // Keep grab mounted on mobile so peek→reply can open the chrome without a layout pop.
+  const showChrome = overlayMobile && sheet !== "out";
+  const expanded =
+    sheet === "full" || sheet === "reply" || (layout === "inline" && desktop);
 
   return (
     <aside
       ref={card}
       data-conversation-sheet=""
       data-layout={layout}
+      data-snap={sheet}
       className={[
         "conversation-sheet",
         "snap-sheet",
         sheet === "full" ? "is-full" : "",
+        sheet === "reply" ? "is-reply" : "",
         sheet === "peek" ? "is-peek" : "",
         sheet === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
@@ -61,46 +67,31 @@ export function ConversationSheet({
       ]
         .filter(Boolean)
         .join(" ")}
-      {...(layout === "overlay" && !desktop ? pointerHandlers : {})}
+      {...(overlayMobile ? pointerHandlers : {})}
     >
       <button
         type="button"
         className="snap-sheet-handle quote-sheet-handle"
-        aria-label={expanded ? "Collapse conversation" : "Expand conversation"}
+        aria-label={
+          sheet === "full"
+            ? "Collapse conversation"
+            : sheet === "reply"
+              ? "Show more history"
+              : "Open conversation"
+        }
         onClick={() => {
           if (dragMoved()) {
             return;
           }
-          if (showPeekBand) {
+          if (sheet === "peek") {
             expand();
             return;
           }
           toggleHandle();
         }}
       />
-      {showPeekBand ? (
-        <button
-          type="button"
-          className="conversation-sheet-peek snap-sheet-grab"
-          onClick={() => {
-            if (dragMoved()) {
-              return;
-            }
-            expand();
-          }}
-        >
-          <span className="conversation-sheet-peek-title">{title}</span>
-          <span className="conversation-sheet-peek-line">
-            {unread ? <span className="conversation-sheet-unread" aria-hidden="true" /> : null}
-            <span className="truncate">{peekLine}</span>
-          </span>
-        </button>
-      ) : null}
-      <div
-        className="conversation-sheet-body min-h-0 flex flex-1 flex-col"
-        aria-hidden={showPeekBand ? true : undefined}
-      >
-        {layout === "overlay" && !desktop ? (
+      <div className="conversation-sheet-body min-h-0 flex flex-1 flex-col">
+        {showChrome ? (
           <div className="conversation-sheet-grab snap-sheet-grab flex shrink-0 items-center justify-between gap-3 px-4 pb-1 pt-0.5">
             <p className="text-[17px] font-semibold tracking-tight">{title}</p>
             <button
