@@ -327,8 +327,8 @@
   flex-direction: column;
   overflow: hidden;
   --peek-h: 5.75rem;
-  /* Peek thread stays put; grab + composer open into this delta; history waits for full. */
-  --reply-h: 12.5rem;
+  /* Peek thread stays put; composer opens into this delta; history waits for full. */
+  --reply-h: 10.25rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
   --sheet-h: var(--peek-h);
   --drag-h: 0px;
@@ -399,18 +399,8 @@
     transform var(--sheet-duration) var(--sheet-ease);
 }
 
-/* Peek keeps the live latest message; typing zone + title open on the way to reply
+/* Peek keeps the live latest message; the typing zone opens on the way to reply
    (collapse height instead of display:none so the context chip does not jump). */
-.conversation-sheet:not(.is-inline) .conversation-sheet-grab {
-  overflow: hidden;
-  max-height: 3.25rem;
-  opacity: 1;
-  transition:
-    max-height var(--sheet-duration) var(--sheet-ease),
-    opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease),
-    padding var(--sheet-duration) var(--sheet-ease);
-}
-
 .conversation-sheet:not(.is-inline) .imsg-composer {
   overflow: hidden;
   max-height: 12rem;
@@ -420,14 +410,6 @@
     opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease),
     padding var(--sheet-duration) var(--sheet-ease),
     border-color var(--sheet-duration) var(--sheet-ease);
-}
-
-.conversation-sheet:not(.is-inline).is-peek .conversation-sheet-grab {
-  max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  pointer-events: none;
 }
 
 .conversation-sheet:not(.is-inline).is-peek .imsg-composer {
@@ -445,17 +427,8 @@
 
 /* While dragging from peek, un-collapse chrome so the type bar slides in
    with sheet height (clipped) instead of popping open after an overshoot. */
-.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-grab,
 .conversation-sheet:not(.is-inline).is-dragging .imsg-composer {
   transition: none;
-}
-
-.conversation-sheet:not(.is-inline).is-peek.is-dragging .conversation-sheet-grab {
-  max-height: 3.25rem;
-  opacity: 1;
-  padding-top: 0.125rem;
-  padding-bottom: 0.25rem;
-  pointer-events: none;
 }
 
 .conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-composer {

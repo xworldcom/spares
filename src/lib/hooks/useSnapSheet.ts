@@ -48,8 +48,8 @@ function heightForSnap(snap: ConversationSheetSnap) {
     return remPx(5.75);
   }
   if (snap === "reply") {
-    // Peek thread + grab chrome + composer — history waits for full.
-    return remPx(12.5);
+    // Peek thread + composer — history waits for full.
+    return remPx(10.25);
   }
   return Math.min(window.innerHeight * 0.92, window.innerHeight - tabBarPx() - 48);
 }

@@ -14,8 +14,8 @@ export function initialConversationSheetSnap(
 
 /** Sheet heights as CSS lengths — keep in sync with globals.css. */
 export const CONVERSATION_SHEET_PEEK_H = "5.75rem";
-/** Latest context + grab + composer; history opens on the way to full. */
-export const CONVERSATION_SHEET_REPLY_H = "12.5rem";
+/** Latest context + composer; history opens on the way to full. */
+export const CONVERSATION_SHEET_REPLY_H = "10.25rem";
 export const CONVERSATION_SHEET_FULL_H =
   "min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem))";
 
