@@ -13,6 +13,7 @@ export function MachineSitePicker({
   onSiteChange,
   disabled = false,
   allowUnassigned = true,
+  lockAccount = false,
 }: {
   accounts: readonly CustomerAccount[];
   sites: readonly Site[];
@@ -20,6 +21,7 @@ export function MachineSitePicker({
   onSiteChange: (siteId: string) => void;
   disabled?: boolean;
   allowUnassigned?: boolean;
+  lockAccount?: boolean;
 }) {
   const activeAccounts = useMemo(
     () => accounts.filter((row) => !row.deletedAt),
@@ -69,18 +71,31 @@ export function MachineSitePicker({
     }
   }
 
+  const lockedAccount = lockAccount
+    ? activeAccounts.find((row) => row.id === selectedCustomerId) ?? activeAccounts[0]
+    : undefined;
+
   return (
     <div className="machine-site-picker">
-      <CustomerPicker
-        id="machine-site-customer"
-        accounts={accounts}
-        value={selectedCustomerId}
-        onChange={onCustomerChange}
-        disabled={disabled}
-        allowEmpty={allowUnassigned}
-        emptyLabel="No customer"
-        placeholder="Search customers…"
-      />
+      {lockAccount && lockedAccount ? (
+        <p className="care-field">
+          <span>Customer</span>
+          <span className="spares-field flex h-11 items-center rounded-2xl px-3 text-[16px]">
+            {lockedAccount.name}
+          </span>
+        </p>
+      ) : (
+        <CustomerPicker
+          id="machine-site-customer"
+          accounts={accounts}
+          value={selectedCustomerId}
+          onChange={onCustomerChange}
+          disabled={disabled}
+          allowEmpty={allowUnassigned}
+          emptyLabel="No customer"
+          placeholder="Search customers…"
+        />
+      )}
       <SearchableSelect
         id="machine-site-site"
         label="Site"

@@ -7,7 +7,9 @@ import {
   canAccessMachine,
   canCreateMachineAtSite,
   customerIdForGrant,
+  customerIdFromGrant,
   machinesForCustomer,
+  staffQuotePersonScope,
   grantFromUser,
   isMachineGranted,
   isSiteFullyGranted,
@@ -265,6 +267,69 @@ describe("access grants", () => {
         accounts,
       ),
       false,
+    );
+  });
+
+  it("reads a person customer from their grant and not the first account", () => {
+    assert.equal(
+      customerIdFromGrant({ siteIds: [], machineIds: ["palletizer"] }, sites, machines),
+      "customer-cargill",
+    );
+    assert.equal(
+      customerIdFromGrant({ siteIds: ["site-acme-dayton"], machineIds: [] }, sites, machines),
+      "customer-acme",
+    );
+    assert.equal(customerIdFromGrant({ siteIds: [], machineIds: [] }, sites, machines), "");
+  });
+
+  it("offers only the buyer account when a throwaway site is first in the tenant", () => {
+    const tenantSites = [
+      {
+        id: "site-throwaway",
+        customerId: "customer-throwaway",
+        name: "PR155 Throwaway",
+        createdAt: "2020-01-01T00:00:00.000Z",
+      },
+      ...sites,
+    ];
+    const tenantAccounts = [
+      {
+        id: "customer-throwaway",
+        name: "PR155 Throwaway Customer",
+        createdAt: "2020-01-01T00:00:00.000Z",
+      },
+      ...accounts,
+    ];
+    const empty = staffQuotePersonScope(
+      { siteIds: [], machineIds: [] },
+      tenantSites,
+      machines,
+      tenantAccounts,
+    );
+    assert.deepEqual(empty, {
+      accountId: "",
+      accounts: [],
+      sites: [],
+      machines: [],
+    });
+    const scope = staffQuotePersonScope(
+      { siteIds: ["site-cargill-ftw"], machineIds: [] },
+      tenantSites,
+      machines,
+      tenantAccounts,
+    );
+    assert.equal(scope.accountId, "customer-cargill");
+    assert.deepEqual(
+      scope.accounts.map((row) => row.id),
+      ["customer-cargill"],
+    );
+    assert.deepEqual(
+      scope.sites.map((row) => row.id),
+      ["site-cargill-ftw", "site-cargill-wichita"],
+    );
+    assert.deepEqual(
+      scope.machines.map((row) => row.id),
+      ["line-a", "palletizer"],
     );
   });
 

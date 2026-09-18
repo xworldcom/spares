@@ -18,6 +18,7 @@ import {
   quotePricingComplete,
   quoteHasReached,
   quoteOwnerIdForCreate,
+  staffQuoteAccountMatch,
   quotePoNextStep,
   quoteStatusCaption,
   quoteStepState,
@@ -116,6 +117,20 @@ describe("quoteOwnerIdForCreate", () => {
     assert.deepEqual(quoteOwnerIdForCreate("staff", "user-staff", "  "), {
       ok: false,
       error: "Pick a customer for this quote.",
+    });
+  });
+
+  it("rejects a machine on another customer account", () => {
+    assert.deepEqual(staffQuoteAccountMatch("customer-cargill", "customer-cargill"), {
+      ok: true,
+    });
+    assert.deepEqual(staffQuoteAccountMatch("customer-scotts", "customer-throwaway"), {
+      ok: false,
+      error: "That machine belongs to a different customer.",
+    });
+    assert.deepEqual(staffQuoteAccountMatch("", "customer-cargill"), {
+      ok: false,
+      error: "This person has no customer yet.",
     });
   });
 });

@@ -31,6 +31,7 @@ export function MachineTypeahead({
   onMachineId,
   role,
   disabled = false,
+  lockAccount = false,
 }: {
   machines: readonly MachineSummary[];
   onMachines?: (machines: MachineSummary[]) => void;
@@ -40,6 +41,7 @@ export function MachineTypeahead({
   onMachineId: (machineId: string) => void;
   role: Role;
   disabled?: boolean;
+  lockAccount?: boolean;
 }) {
   const [pendingName, setPendingName] = useState("");
   const [siteId, setSiteId] = useState("");
@@ -151,6 +153,7 @@ export function MachineTypeahead({
               siteId={siteId}
               onSiteChange={setSiteId}
               allowUnassigned={false}
+              lockAccount={lockAccount}
             />
           ) : (
             <SearchableSelect

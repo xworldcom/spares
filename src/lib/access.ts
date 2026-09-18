@@ -198,12 +198,10 @@ export function machinesForCustomer(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Pick the customer column to focus for a person's saved grant. */
-export function customerIdForGrant(
+export function customerIdFromGrant(
   grant: AccessGrant,
   sites: readonly Site[],
   machines: readonly Pick<MachineSummary, "id" | "siteId">[],
-  accounts: readonly CustomerAccount[] = [],
 ) {
   for (const siteId of grant.siteIds) {
     const site = sites.find((row) => row.id === siteId && !row.deletedAt);
@@ -219,6 +217,42 @@ export function customerIdForGrant(
     if (site?.customerId) {
       return site.customerId;
     }
+  }
+  return "";
+}
+
+export function staffQuotePersonScope(
+  grant: AccessGrant,
+  sites: readonly Site[],
+  machines: readonly Pick<MachineSummary, "id" | "name" | "siteId">[],
+  accounts: readonly CustomerAccount[] = [],
+) {
+  const accountId = customerIdFromGrant(grant, sites, machines);
+  if (!accountId) {
+    return {
+      accountId: "",
+      accounts: [] as CustomerAccount[],
+      sites: [] as Site[],
+      machines: [] as Pick<MachineSummary, "id" | "name" | "siteId">[],
+    };
+  }
+  return {
+    accountId,
+    accounts: accounts.filter((row) => !row.deletedAt && row.id === accountId),
+    sites: sitesForCustomer(accountId, sites),
+    machines: machinesForCustomer(accountId, sites, machines),
+  };
+}
+
+export function customerIdForGrant(
+  grant: AccessGrant,
+  sites: readonly Site[],
+  machines: readonly Pick<MachineSummary, "id" | "siteId">[],
+  accounts: readonly CustomerAccount[] = [],
+) {
+  const fromGrant = customerIdFromGrant(grant, sites, machines);
+  if (fromGrant) {
+    return fromGrant;
   }
   const active = accounts
     .filter((row) => !row.deletedAt)
