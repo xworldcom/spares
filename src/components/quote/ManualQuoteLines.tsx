@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MAX_QUOTE_ITEM_ID } from "@/lib/quotes";
 
 export type ManualQuoteLine = {
   id: string;
@@ -34,6 +35,10 @@ export function ManualQuoteLines({
     const nextQty = Number.parseInt(qty, 10);
     if (!id || !name) {
       setError("Add a part number or description.");
+      return;
+    }
+    if (id.length > MAX_QUOTE_ITEM_ID) {
+      setError("Part number is too long.");
       return;
     }
     if (!Number.isInteger(nextQty) || nextQty < 1) {
@@ -101,6 +106,7 @@ export function ManualQuoteLines({
             value={partNumber}
             onChange={(event) => setPartNumber(event.target.value)}
             className="spares-field h-11 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+            maxLength={MAX_QUOTE_ITEM_ID}
             placeholder="A06B-0115"
           />
         </label>

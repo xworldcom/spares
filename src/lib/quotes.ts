@@ -13,6 +13,8 @@ import type {
   TrackingCarrier,
 } from "@/types";
 
+export const MAX_QUOTE_ITEM_ID = 80;
+
 export const QUOTE_PIPELINE = [
   "requested",
   "in_review",
@@ -242,6 +244,9 @@ function parseItemRow(
   const qty = asQty(record.qty);
   if (!id) {
     return { ok: false, error: "each item needs a part id" };
+  }
+  if (id.length > MAX_QUOTE_ITEM_ID) {
+    return { ok: false, error: "part id is too long" };
   }
   if (qty === null) {
     return { ok: false, error: "qty must be an integer ≥ 1" };

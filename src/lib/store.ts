@@ -2770,22 +2770,11 @@ function withCustomerMachineGrant(
   if (canAccessMachine(user, machine, db.sites ?? [], db.customers ?? [])) {
     return db;
   }
-  const validMachines = filterByTenant(db.machines, tenantId).map((row) => ({
-    id: row.id,
-    siteId: row.siteId,
-  }));
-  const normalized = normalizeAccessGrant(
-    {
-      siteIds: user.siteIds ?? [],
-      machineIds: [...(user.machineIds ?? []), machine.id],
-    },
-    validMachines,
-  );
   const users = db.users.slice();
   users[index] = {
     ...user,
-    siteIds: normalized.siteIds,
-    machineIds: normalized.machineIds,
+    siteIds: user.siteIds ?? [],
+    machineIds: [...new Set([...(user.machineIds ?? []), machine.id])],
     companyAccess: undefined,
   };
   return { ...db, users };
