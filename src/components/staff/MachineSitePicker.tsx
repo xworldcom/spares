@@ -36,7 +36,9 @@ export function MachineSitePicker({
   const [customerId, setCustomerId] = useState(siteCustomerId);
 
   useEffect(() => {
-    setCustomerId(siteCustomerId);
+    if (siteCustomerId) {
+      setCustomerId(siteCustomerId);
+    }
   }, [siteCustomerId]);
 
   const selectedCustomerId = activeAccounts.some((row) => row.id === customerId)

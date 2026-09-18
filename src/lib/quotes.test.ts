@@ -17,6 +17,7 @@ import {
   quoteItemsEqual,
   quotePricingComplete,
   quoteHasReached,
+  quoteOwnerIdForCreate,
   quotePoNextStep,
   quoteStatusCaption,
   quoteStepState,
@@ -98,6 +99,23 @@ describe("parseQuoteItems", () => {
           note: "stock",
         },
       ],
+    });
+  });
+});
+
+describe("quoteOwnerIdForCreate", () => {
+  it("lets staff name a customer owner and keeps a customer on their own id", () => {
+    assert.deepEqual(quoteOwnerIdForCreate("customer", "user-buyer", "someone-else"), {
+      ok: true,
+      customerId: "user-buyer",
+    });
+    assert.deepEqual(quoteOwnerIdForCreate("staff", "user-staff", "user-buyer"), {
+      ok: true,
+      customerId: "user-buyer",
+    });
+    assert.deepEqual(quoteOwnerIdForCreate("staff", "user-staff", "  "), {
+      ok: false,
+      error: "Pick a customer for this quote.",
     });
   });
 });

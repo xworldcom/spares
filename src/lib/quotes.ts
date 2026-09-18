@@ -15,6 +15,24 @@ import type {
 
 export const MAX_QUOTE_ITEM_ID = 80;
 
+export function quoteOwnerIdForCreate(
+  role: Role,
+  actorId: string,
+  requestedCustomerId: string,
+): { ok: true; customerId: string } | { ok: false; error: string } {
+  if (role === "customer") {
+    return { ok: true, customerId: actorId };
+  }
+  if (role !== "staff") {
+    return { ok: false, error: "Forbidden" };
+  }
+  const customerId = requestedCustomerId.trim();
+  if (!customerId) {
+    return { ok: false, error: "Pick a customer for this quote." };
+  }
+  return { ok: true, customerId };
+}
+
 export const QUOTE_PIPELINE = [
   "requested",
   "in_review",

@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
 import { QuotesList } from "@/components/quote/QuotesList";
+import type { Role } from "@/types";
 
-export function QuotesWorkspace() {
+export function QuotesWorkspace({ role = "customer" }: { role?: Role }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
 
@@ -15,7 +16,9 @@ export function QuotesWorkspace() {
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight">Quotes</h1>
           <p className="spares-muted mt-2 text-[15px] leading-relaxed">
-            Request parts from a machine. Type a name if it is not in the list yet.
+            {role === "staff"
+              ? "Open a quote for a customer. Type a machine name if it is not listed yet."
+              : "Request parts from a machine. Type a name if it is not in the list yet."}
           </p>
         </div>
         <button
@@ -29,6 +32,7 @@ export function QuotesWorkspace() {
       </div>
       {creating ? (
         <NewQuoteForm
+          role={role}
           onCreated={(href) => {
             setCreating(false);
             router.push(href);
@@ -36,7 +40,7 @@ export function QuotesWorkspace() {
           onCancel={() => setCreating(false)}
         />
       ) : null}
-      <QuotesList role="customer" />
+      <QuotesList role={role} />
     </div>
   );
 }

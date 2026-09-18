@@ -7,6 +7,7 @@ import {
   canAccessMachine,
   canCreateMachineAtSite,
   customerIdForGrant,
+  machinesForCustomer,
   grantFromUser,
   isMachineGranted,
   isSiteFullyGranted,
@@ -196,6 +197,26 @@ describe("access grants", () => {
     assert.equal(isSiteFullyGranted(grant, "site-cargill-ftw", machines), true);
     assert.equal(isMachineGranted(grant, machines[0]), true);
     assert.equal(isMachineGranted(grant, machines[2]), true);
+  });
+
+  it("lists every machine for a customer, not only the granted site", () => {
+    const wichita = {
+      id: "quinn-ml-1",
+      name: "Quinn-ML-1",
+      siteId: "site-cargill-wichita",
+    };
+    assert.deepEqual(
+      machinesForCustomer("customer-cargill", sites, [...machines, wichita]).map(
+        (row) => row.id,
+      ),
+      ["line-a", "palletizer", "quinn-ml-1"],
+    );
+    assert.deepEqual(
+      machinesForCustomer("customer-acme", sites, [...machines, wichita]).map(
+        (row) => row.id,
+      ),
+      ["hardware-fixture"],
+    );
   });
 
   it("keeps partial machine picks as machineIds", () => {

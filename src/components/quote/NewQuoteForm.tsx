@@ -7,54 +7,70 @@ import {
   ManualQuoteLines,
   type ManualQuoteLine,
 } from "@/components/quote/ManualQuoteLines";
-import { listCustomerAccounts, listSites } from "@/lib/api/auth";
+import { listCustomerAccounts, listCustomers, listSites } from "@/lib/api/auth";
 import { listMachines } from "@/lib/api/machines";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
+import { SearchableSelect } from "@/components/staff/SearchableSelect";
 import { sitesForMachineCreate } from "@/lib/machines";
 import { quoteHref } from "@/lib/quotes";
-import type { CustomerAccount, MachineSummary, Site } from "@/types";
+import { displayPersonName } from "@/lib/ui/display-name";
+import type { CustomerAccount, MachineSummary, PublicUser, Role, Site } from "@/types";
 
 export function NewQuoteForm({
+  role = "customer",
   onCreated,
   onCancel,
 }: {
+  role?: Role;
   onCreated: (href: string) => void;
   onCancel: () => void;
 }) {
   const { user } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
+  const [people, setPeople] = useState<PublicUser[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [personId, setPersonId] = useState("");
   const [machineId, setMachineId] = useState("");
   const [lines, setLines] = useState<ManualQuoteLine[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const customerSites = useMemo(() => user?.sites ?? [], [user?.sites]);
+  const staff = role === "staff";
 
   useEffect(() => {
     let cancelled = false;
-    const orgLoad =
-      user?.role === "staff"
-        ? Promise.all([listSites(), listCustomerAccounts()])
-            .then(([nextSites, nextAccounts]) => ({
-              sites: nextSites,
-              accounts: nextAccounts,
-            }))
-            .catch(() => ({ sites: [] as Site[], accounts: [] as CustomerAccount[] }))
-        : Promise.resolve({
-            sites: customerSites,
+    const orgLoad = staff
+      ? Promise.all([listSites(), listCustomerAccounts(), listCustomers()])
+          .then(([nextSites, nextAccounts, nextPeople]) => ({
+            sites: nextSites,
+            accounts: nextAccounts,
+            people: nextPeople.filter((row) => !row.deletedAt && row.role === "customer"),
+          }))
+          .catch(() => ({
+            sites: [] as Site[],
             accounts: [] as CustomerAccount[],
-          });
+            people: [] as PublicUser[],
+          }))
+      : Promise.resolve({
+          sites: customerSites,
+          accounts: [] as CustomerAccount[],
+          people: [] as PublicUser[],
+        });
     Promise.all([listMachines(), orgLoad])
       .then(([next, org]) => {
         if (cancelled) {
           return;
         }
         setMachines(next);
-        setSites(sitesForMachineCreate(org.sites, next));
+        setSites(staff ? org.sites : sitesForMachineCreate(org.sites, next));
         setAccounts(org.accounts);
+        setPeople(org.people);
+        if (org.people.length === 1) {
+          setPersonId(org.people[0].id);
+        }
         if (next.length === 1) {
           setMachineId(next[0].id);
         }
@@ -67,10 +83,14 @@ export function NewQuoteForm({
     return () => {
       cancelled = true;
     };
-  }, [customerSites, user?.role]);
+  }, [customerSites, staff]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (staff && !personId) {
+      setError("Pick a customer for this quote.");
+      return;
+    }
     if (!machineId) {
       setError("Pick a machine for this quote.");
       return;
@@ -90,8 +110,9 @@ export function NewQuoteForm({
           qty: line.qty,
         })),
         note: note.trim() || undefined,
+        ...(staff ? { customerId: personId } : {}),
       });
-      onCreated(quoteHref("customer", created));
+      onCreated(quoteHref(role, created));
     } catch (cause) {
       setError(errorMessage(cause, "Could not request that quote."));
       setBusy(false);
@@ -113,6 +134,19 @@ export function NewQuoteForm({
       <p className="spares-muted text-sm leading-relaxed">
         Type a machine name if it is not listed. Add parts by number and description.
       </p>
+      {staff ? (
+        <SearchableSelect
+          id="quote-customer-person"
+          label="Customer"
+          options={people.map((person) => ({
+            value: person.id,
+            label: displayPersonName(person),
+          }))}
+          value={personId}
+          onChange={setPersonId}
+          placeholder="Search people…"
+        />
+      ) : null}
       <MachineTypeahead
         machines={machines}
         onMachines={setMachines}
@@ -120,7 +154,7 @@ export function NewQuoteForm({
         sites={sites}
         machineId={machineId}
         onMachineId={setMachineId}
-        role="customer"
+        role={role}
         disabled={busy}
       />
       <ManualQuoteLines
@@ -155,7 +189,7 @@ export function NewQuoteForm({
         disabled={busy}
         className="btn-primary inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold disabled:opacity-60"
       >
-        {busy ? "Sending…" : "Request quote"}
+        {busy ? "Sending…" : staff ? "Create quote" : "Request quote"}
       </button>
     </form>
   );

@@ -1,11 +1,18 @@
-import { requireTenantCustomer, requireTenantUser } from "@/lib/auth/tenant-scope";
+import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { hydrateQuoteItems, parseQuoteItems, toPublicQuote } from "@/lib/quotes";
+import {
+  hydrateQuoteItems,
+  parseQuoteItems,
+  quoteOwnerIdForCreate,
+  toPublicQuote,
+} from "@/lib/quotes";
 import { canAccessMachine } from "@/lib/access";
 import { isSeedAllowed } from "@/lib/production-env";
+import { belongsToTenant } from "@/lib/tenant";
 import {
   createQuote,
   ensurePreviewQaQuoteFixture,
+  findUserById,
   getMachine,
   getOrgContext,
   listMachines,
@@ -16,6 +23,7 @@ type CreateQuoteBody = {
   machineId?: unknown;
   items?: unknown;
   note?: unknown;
+  customerId?: unknown;
 };
 
 export async function GET() {
@@ -49,7 +57,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireTenantCustomer();
+  const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
@@ -57,6 +65,31 @@ export async function POST(request: Request) {
   const body = await readJson<CreateQuoteBody>(request);
   if (isErrorResponse(body)) {
     return body;
+  }
+
+  const owner = quoteOwnerIdForCreate(
+    auth.user.role,
+    auth.user.id,
+    typeof body.customerId === "string" ? body.customerId : "",
+  );
+  if (!owner.ok) {
+    return error(owner.error, owner.error === "Forbidden" ? 403 : 400);
+  }
+
+  let customerEmail = auth.user.email;
+  let customerId = owner.customerId;
+  if (auth.user.role === "staff") {
+    const person = await findUserById(owner.customerId);
+    if (
+      !person ||
+      person.deletedAt ||
+      person.role !== "customer" ||
+      !belongsToTenant(person, auth.tenantId)
+    ) {
+      return error("Choose a valid customer.", 400);
+    }
+    customerId = person.id;
+    customerEmail = person.email;
   }
 
   const machineId = typeof body.machineId === "string" ? body.machineId.trim() : "";
@@ -86,8 +119,8 @@ export async function POST(request: Request) {
     machineId,
     items,
     note,
-    customerId: auth.user.id,
-    customerEmail: auth.user.email,
+    customerId,
+    customerEmail,
   });
   if ("error" in created) {
     return error("Machine not found", 404);

@@ -18,3 +18,7 @@ ts	phase	decision	why	evidence	result
 2026-09-18T00:32:46Z	fix	return the existing machine without a grant	Care is shared by machine access, not by guessing a name	src/lib/store.ts findOrCreateModelLessMachine	tests green
 2026-09-18T00:32:46Z	api	409 when the customer cannot see the matched name	do not return sibling parts or a 200 that confirms the id	src/app/api/machines/route.ts	implemented
 2026-09-18T00:32:46Z	quotes	accept 80-character part ids and reject 81	the prior test only used a 203-character id	src/lib/quotes.test.ts	tests green
+2026-09-18T01:10:03Z	review	staff Quotes had no New quote and POST required a customer	Quinn signed in as staff and could not reach manual lines	src/app/staff/quotes/page.tsx QuotesList only	reproduced
+2026-09-18T01:10:03Z	fix	staff New quote plus customer owner on POST	Kevin asked staff helping a customer to start a manual-line quote	src/app/api/quotes/route.ts quoteOwnerIdForCreate	implemented
+2026-09-18T01:10:03Z	fix	keep customer when siteId clears in MachineSitePicker	picking a customer wiped site then the empty site wiped the customer	src/components/staff/MachineSitePicker.tsx	implemented
+2026-09-18T01:10:03Z	fix	grant UI lists every machine for the selected customer	machines were hidden until a site was already in the grant	src/lib/access.ts machinesForCustomer	tests green

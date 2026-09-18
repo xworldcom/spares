@@ -186,6 +186,18 @@ export function sitesForCustomer(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function machinesForCustomer(
+  customerId: string,
+  sites: readonly Site[],
+  machines: readonly Pick<MachineSummary, "id" | "name" | "siteId">[],
+) {
+  const siteIds = new Set(sitesForCustomer(customerId, sites).map((site) => site.id));
+  return machines
+    .filter((machine) => machine.siteId && siteIds.has(machine.siteId))
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** Pick the customer column to focus for a person's saved grant. */
 export function customerIdForGrant(
   grant: AccessGrant,
