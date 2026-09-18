@@ -25,6 +25,7 @@ import {
   findOrCreateModelLessMachine,
   findUserByEmail,
   getMachine,
+  replaceMachinePack,
   getMachineUsage,
   getQuote,
   getTicket,
@@ -664,11 +665,74 @@ describe("model-less machines", () => {
     if (!("machine" in created)) {
       return;
     }
+    const sibling = await findOrCreateModelLessMachine(T, {
+      name: "Line B",
+      siteId: site.site.id,
+    });
+    assert.equal("machine" in sibling, true);
+    if (!("machine" in sibling)) {
+      return;
+    }
+
     const granted = await findUserByEmail("tech@acme.test");
     assert.ok(granted);
+    assert.deepEqual(granted.siteIds, []);
+    assert.deepEqual(granted.machineIds, [existing.id, created.machine.id]);
     assert.equal(
       canAccessMachine(granted, created.machine, [site.site], [account.account]),
       true,
     );
+    assert.equal(
+      canAccessMachine(granted, existing, [site.site], [account.account]),
+      true,
+    );
+    assert.equal(
+      canAccessMachine(granted, sibling.machine, [site.site], [account.account]),
+      false,
+    );
+  });
+
+  it("attaches a pack to a machine that started without a model", async () => {
+    await isolatedDataDir();
+    process.env.SPARES_ALLOW_SEED = "false";
+    const account = await createCustomerAccount("Acme", T);
+    assert.equal("account" in account, true);
+    if (!("account" in account)) {
+      return;
+    }
+    const site = await createSite(T, account.account.id, "Dayton");
+    assert.equal("site" in site, true);
+    if (!("site" in site)) {
+      return;
+    }
+    const created = await findOrCreateModelLessMachine(T, {
+      name: "Spare press",
+      siteId: site.site.id,
+    });
+    assert.equal("machine" in created, true);
+    if (!("machine" in created)) {
+      return;
+    }
+    assert.equal(created.machine.storedFileName, "");
+
+    const packed = await replaceMachinePack(created.machine.id, T, {
+      storedFileName: "spare-press.glb",
+      originalFileName: "spare-press.glb",
+      parts: [{ id: "PN-1", name: "Seal", meshName: "PN-1", qty: 1 }],
+      unmatched: [],
+    });
+    assert.equal("machine" in packed, true);
+    if (!("machine" in packed)) {
+      return;
+    }
+    assert.equal(packed.machine.storedFileName, "spare-press.glb");
+    assert.equal(packed.machine.originalFileName, "spare-press.glb");
+    assert.equal(packed.machine.version, 2);
+    assert.deepEqual(packed.machine.parts, [
+      { id: "PN-1", name: "Seal", meshName: "PN-1", qty: 1 },
+    ]);
+
+    const loaded = await getMachine(created.machine.id, T);
+    assert.equal(loaded?.storedFileName, "spare-press.glb");
   });
 });
