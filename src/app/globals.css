@@ -398,17 +398,13 @@
 }
 
 .conversation-sheet:not(.is-inline).is-peek .imsg-composer {
-  height: 0;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  opacity: 0;
   pointer-events: none;
 }
 
 .conversation-sheet:not(.is-inline):not(.is-full) .imsg-thread--fill {
+  flex: 0 0 var(--thread-h, 6.75rem);
+  max-height: var(--thread-h, 6.75rem);
+  min-height: var(--thread-h, 6.75rem);
   justify-content: flex-end;
   overflow: hidden;
   touch-action: none;

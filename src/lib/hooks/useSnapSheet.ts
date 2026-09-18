@@ -69,13 +69,37 @@ export function useSnapSheet({
     onOpenChange?.(next);
   }
 
+  function paintThreadWindow(liveH: number, peekH: number, composeH: number) {
+    const threadBase = 108;
+    const extra = Math.max(0, liveH - peekH);
+    const composerReserve = Math.max(0, composeH - peekH);
+    const threadH = threadBase + Math.max(0, extra - composerReserve);
+    cardRef.current?.style.setProperty("--thread-h", `${threadH}px`);
+  }
+
   function paintDrag(px: number) {
-    cardRef.current?.style.setProperty("--drag", `${px}px`);
+    const card = cardRef.current;
+    if (!card) {
+      return;
+    }
+    card.style.setProperty("--drag", `${px}px`);
+    const { peekH, composeH, fullH } = readSheetHeights(card);
+    const snapH =
+      sheet === "full" ? fullH : sheet === "compose" ? composeH : peekH;
+    const live = Math.min(fullH, Math.max(peekH, snapH - px));
+    paintThreadWindow(live, peekH, composeH);
   }
 
   function setDraggingClass(on: boolean) {
     cardRef.current?.classList.toggle("is-dragging", on);
   }
+
+  useEffect(() => {
+    if (sheet === "full") {
+      return;
+    }
+    cardRef.current?.style.setProperty("--thread-h", "108px");
+  }, [sheet, cardRef]);
 
   useEffect(() => {
     if (open) {
