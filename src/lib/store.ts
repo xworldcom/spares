@@ -2780,6 +2780,27 @@ function withCustomerMachineGrant(
   return { ...db, users };
 }
 
+export function grantCustomerMachine(
+  tenantId: string,
+  userId: string,
+  machineId: string,
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const machine = db.machines.find(
+      (row) => row.id === machineId && belongsToTenant(row, tenantId),
+    );
+    if (!machine) {
+      return { error: "not-found" as const };
+    }
+    const granted = withCustomerMachineGrant(db, tenantId, userId, machine);
+    if (granted !== db) {
+      await writeDatabase(granted);
+    }
+    return { ok: true as const };
+  });
+}
+
 export function findOrCreateModelLessMachine(
   tenantId: string,
   input: {

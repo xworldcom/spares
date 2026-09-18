@@ -22,10 +22,11 @@ import {
   createSite,
   createTicket,
   deleteMachine,
-  findOrCreateModelLessMachine,
-  findUserByEmail,
-  getMachine,
-  replaceMachinePack,
+    findOrCreateModelLessMachine,
+    findUserByEmail,
+    getMachine,
+    grantCustomerMachine,
+    replaceMachinePack,
   getMachineUsage,
   getQuote,
   getTicket,
@@ -709,6 +710,25 @@ describe("model-less machines", () => {
     assert.equal(
       canAccessMachine(afterGrab, sibling.machine, [site.site], [account.account]),
       false,
+    );
+
+    const grantedSibling = await grantCustomerMachine(
+      T,
+      person.user.id,
+      sibling.machine.id,
+    );
+    assert.equal("ok" in grantedSibling, true);
+    const afterStaffQuote = await findUserByEmail("tech@acme.test");
+    assert.ok(afterStaffQuote);
+    assert.deepEqual(afterStaffQuote.siteIds, []);
+    assert.deepEqual(afterStaffQuote.machineIds, [
+      existing.id,
+      created.machine.id,
+      sibling.machine.id,
+    ]);
+    assert.equal(
+      canAccessMachine(afterStaffQuote, sibling.machine, [site.site], [account.account]),
+      true,
     );
   });
 

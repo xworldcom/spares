@@ -15,6 +15,7 @@ import {
   findUserById,
   getMachine,
   getOrgContext,
+  grantCustomerMachine,
   listMachines,
   listQuotes,
 } from "@/lib/store";
@@ -124,6 +125,10 @@ export async function POST(request: Request) {
   });
   if ("error" in created) {
     return error("Machine not found", 404);
+  }
+
+  if (auth.user.role === "staff") {
+    await grantCustomerMachine(auth.tenantId, customerId, machineId);
   }
 
   return json({ quote: toPublicQuote(created, auth.user, machine.name) }, 201);
