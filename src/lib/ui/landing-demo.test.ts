@@ -31,6 +31,7 @@ const MARKETING_FILES = [
   "src/components/landing/LandingScreen.tsx",
   "src/components/landing/LandingScrollPeek.tsx",
   "src/components/landing/LandingCell.tsx",
+  "src/components/landing/LandingBackToTop.tsx",
 ];
 
 describe("reduceDemoFrame", () => {
@@ -309,6 +310,28 @@ describe("landing scrub layout", () => {
     );
     const critical = readFileSync("src/app/layout.tsx", "utf8");
     assert.match(critical, /\.spares-app-cinematic\{[^}]*overflow-y:visible/);
+  });
+});
+
+describe("landing cell stage", () => {
+  it("reuses the machine viewer floor grid in marketing OrbitStage", () => {
+    const orbit = readFileSync("src/components/landing/OrbitStage.tsx", "utf8");
+    assert.match(orbit, /StudioGround/);
+    assert.doesNotMatch(orbit, /<Grid/);
+    const ground = readFileSync("src/components/viewer/StudioGround.tsx", "utf8");
+    assert.match(ground, /cellColor="#5b6776"/);
+    assert.match(ground, /infiniteGrid/);
+  });
+
+  it("offers a back-to-top escape once marketing scroll leaves the hero", () => {
+    const screen = readFileSync("src/components/landing/LandingScreen.tsx", "utf8");
+    assert.match(screen, /LandingBackToTop/);
+    const control = readFileSync("src/components/landing/LandingBackToTop.tsx", "utf8");
+    assert.match(control, /prefers-reduced-motion/);
+    assert.match(control, /scrollTo\(\{ top: 0/);
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.match(css, /\.landing-back-to-top/);
+    assert.match(css, /z-index:\s*40/);
   });
 });
 

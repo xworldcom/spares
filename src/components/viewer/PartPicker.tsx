@@ -1,6 +1,6 @@
 "use client";
 
-import { Bounds, Grid, OrbitControls } from "@react-three/drei";
+import { Bounds, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   Suspense,
@@ -26,6 +26,7 @@ import {
   meshMatchesSelection,
   resolvePick,
 } from "./resolvePick";
+import { StudioGround } from "./StudioGround";
 import type { PartPickerProps, UnmatchedMesh, ViewerPart } from "./types";
 import {
   loadGltfWithCredentials,
@@ -395,26 +396,6 @@ function LoadedModel({
         onPointerOut={handlePointerOut}
       />
     </>
-  );
-}
-
-function StudioGround() {
-  return (
-    <group position={[0, -0.02, 0]}>
-      <Grid
-        args={[24, 24]}
-        cellSize={0.2}
-        cellThickness={0.7}
-        cellColor="#5b6776"
-        sectionSize={1}
-        sectionThickness={1.15}
-        sectionColor="#8b98a8"
-        fadeDistance={16}
-        fadeStrength={1.15}
-        infiniteGrid
-        followCamera={false}
-      />
-    </group>
   );
 }
 

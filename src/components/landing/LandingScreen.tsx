@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { LandingBackToTop } from "@/components/landing/LandingBackToTop";
 import { LandingMarketing } from "@/components/landing/LandingMarketing";
 import { LandingScrollPeek } from "@/components/landing/LandingScrollPeek";
 import { LandingStage } from "@/components/landing/LandingStage";
@@ -59,6 +60,7 @@ export function LandingScreen({
         {showMarketing ? <LandingScrollPeek /> : null}
       </section>
       {showMarketing ? <LandingMarketing /> : null}
+      {showMarketing ? <LandingBackToTop /> : null}
     </div>
   );
 }
