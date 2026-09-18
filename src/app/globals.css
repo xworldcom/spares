@@ -325,7 +325,7 @@
   overflow: hidden;
   --peek-h: 5.75rem;
   /* Peek thread stays put; grab + composer open into this delta; history waits for full. */
-  --reply-h: 14rem;
+  --reply-h: 12.5rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
   --sheet-h: var(--peek-h);
   --drag-h: 0px;
@@ -1168,6 +1168,17 @@ html.spares-embed .spares-app-stage {
   flex: 1 1 auto;
   min-height: 0;
   pointer-events: none;
+}
+
+/* Peek/reply keep a short context window — no tall empty mid-pane. Full uses the spacer. */
+.conversation-sheet:not(.is-inline).is-peek .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-reply .imsg-thread--fill {
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline).is-peek .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-reply .imsg-thread--fill::before {
+  display: none;
 }
 
 .conversation-sheet-spacer {

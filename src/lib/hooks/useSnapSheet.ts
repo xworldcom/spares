@@ -47,7 +47,7 @@ function heightForSnap(snap: ConversationSheetSnap) {
   }
   if (snap === "reply") {
     // Peek thread + grab chrome + composer — history waits for full.
-    return remPx(14);
+    return remPx(12.5);
   }
   return Math.min(window.innerHeight * 0.92, window.innerHeight - tabBarPx() - 48);
 }
@@ -136,6 +136,8 @@ export function useSnapSheet({
   });
   /** Keep the latest message docked while the sheet grows; undock only when the user scrolls history up at full. */
   const dockedRef = useRef(true);
+  /** Ignore the synthetic click that follows a pointer step so peek does not skip to full. */
+  const steppedAtRef = useRef(0);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
@@ -394,6 +396,7 @@ export function useSnapSheet({
     if (next === "peek" || next === "reply") {
       dockedRef.current = true;
     }
+    steppedAtRef.current = performance.now();
     setDragging(false);
     setDraggingClass(false);
     clearInlineHeight();
@@ -454,6 +457,9 @@ export function useSnapSheet({
     if (drag.current.moved) {
       return;
     }
+    if (performance.now() - steppedAtRef.current < 400) {
+      return;
+    }
     if (desktopStage) {
       hide();
       return;
@@ -463,13 +469,20 @@ export function useSnapSheet({
     } else if (sheet === "reply") {
       setSheet("peek");
     } else {
+      steppedAtRef.current = performance.now();
       setSheet("reply");
       setOpen(true);
     }
   }
 
   function expand() {
-    setSheet(sheet === "peek" ? "reply" : "full");
+    if (performance.now() - steppedAtRef.current < 400) {
+      return;
+    }
+    steppedAtRef.current = performance.now();
+    setSheet((current) =>
+      stepToward(current === "out" ? "peek" : current, "up"),
+    );
     setOpen(true);
   }
 
