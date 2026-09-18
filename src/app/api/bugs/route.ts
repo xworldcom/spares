@@ -1,12 +1,14 @@
-import { getCurrentUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { isSameOriginRequest } from "@/lib/cors";
 import { DEFAULT_TENANT_ID, tenantIdForUser } from "@/lib/tenant";
 import {
+  bugReportTitle,
   bugReportUserLabel,
   parseJpegBase64,
   stripSecrets,
 } from "@/lib/bug-report/format";
+import { bugReportWebhookUrl, notifyBugReportWebhook } from "@/lib/bug-report/notify";
 import { createGithubBugIssue, githubToken } from "@/lib/github/bugs";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { allowRateLimit, clientIp } from "@/lib/rate-limit";
@@ -24,14 +26,24 @@ type CreateBugBody = {
   userAgent?: unknown;
   userEmail?: unknown;
   userRole?: unknown;
+  website?: unknown;
 };
 
 const MAX_DESCRIPTION = 8000;
 const MAX_LOG = 32_000;
 const MAX_SCREENSHOT = Math.floor(2 * 1024 * 1024);
+const MIN_DESCRIPTION = 8;
+const BUG_IP_LIMIT = 5;
+const BUG_IP_WINDOW_MS = 60_000;
+const BUG_USER_LIMIT = 8;
+const BUG_USER_WINDOW_MS = 60 * 60_000;
 
 function clip(value: string, max: number) {
   return value.length > max ? value.slice(0, max) : value;
+}
+
+function githubDeliveryRequired() {
+  return Boolean(process.env.VERCEL) || Boolean(githubToken());
 }
 
 export async function GET() {
@@ -64,13 +76,30 @@ export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) {
     return error("Origin not allowed", 403);
   }
-  if (!allowRateLimit(`bugs:${clientIp(request)}`, 5, 60_000)) {
-    return error("Too many bug reports. Try again in a minute.", 429);
-  }
 
   const body = await readJson<CreateBugBody>(request);
   if (isErrorResponse(body)) {
     return body;
+  }
+
+  if (typeof body.website === "string" && body.website.trim()) {
+    return json({ ok: true, id: "discarded", stored: false, githubIssueUrl: undefined }, 201);
+  }
+
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return auth.error;
+  }
+  const sessionUser = auth.user;
+
+  const ip = clientIp(request);
+  if (!allowRateLimit(`bugs:ip:${ip}`, BUG_IP_LIMIT, BUG_IP_WINDOW_MS)) {
+    return error("Too many bug reports. Try again in a minute.", 429);
+  }
+  if (
+    !allowRateLimit(`bugs:user:${sessionUser.id}`, BUG_USER_LIMIT, BUG_USER_WINDOW_MS)
+  ) {
+    return error("You have sent several reports recently. Try again later.", 429);
   }
 
   const description =
@@ -78,12 +107,12 @@ export async function POST(request: Request) {
   if (!description) {
     return error("description is required", 400);
   }
+  if (description.length < MIN_DESCRIPTION) {
+    return error(`Please add a bit more detail (at least ${MIN_DESCRIPTION} characters).`, 400);
+  }
 
-  const sessionUser = await getCurrentUser();
-  // Ignore client-supplied identity. Spoofing staff/customer on an open POST
-  // would otherwise land in GitHub issues and the staff inbox.
-  const userEmail = sessionUser?.email;
-  const userRole = sessionUser?.role;
+  const userEmail = sessionUser.email;
+  const userRole = sessionUser.role;
   const pathValue =
     typeof body.path === "string" && body.path.trim() ? body.path.trim() : "/";
   const userAgent =
@@ -109,9 +138,18 @@ export async function POST(request: Request) {
     screenshot: screenshotBytes,
   };
 
-  const bugTenantId = sessionUser
-    ? tenantIdForUser(sessionUser) ?? DEFAULT_TENANT_ID
-    : DEFAULT_TENANT_ID;
+  const bugTenantId = tenantIdForUser(sessionUser) ?? DEFAULT_TENANT_ID;
+  const mustDeliverGithub = githubDeliveryRequired();
+
+  if (mustDeliverGithub && !githubToken()) {
+    console.error(
+      "Bug report rejected: set SPARES_GITHUB_TOKEN or BUG_REPORT_GITHUB_TOKEN on Vercel",
+    );
+    return error(
+      "Bug reporting is temporarily unavailable. Contact your OEE360 administrator.",
+      503,
+    );
+  }
 
   let stored: Awaited<ReturnType<typeof createBugReport>> | null = null;
   try {
@@ -121,6 +159,8 @@ export async function POST(request: Request) {
   }
 
   let githubIssueUrl: string | undefined;
+  let githubIssueNumber: number | undefined;
+
   if (githubToken()) {
     try {
       const issue = await createGithubBugIssue({
@@ -135,11 +175,37 @@ export async function POST(request: Request) {
         storedInApp: Boolean(stored),
       });
       githubIssueUrl = issue?.url;
+      githubIssueNumber = issue?.number;
       if (stored && githubIssueUrl) {
         await attachBugReportGithubIssue(stored.id, githubIssueUrl);
       }
+      if (githubIssueUrl && githubIssueNumber != null) {
+        const webhook = await notifyBugReportWebhook({
+          githubIssueUrl,
+          issueNumber: githubIssueNumber,
+          title: bugReportTitle(record.description),
+          description: record.description,
+          path: record.path,
+          userEmail: record.userEmail,
+          userRole: record.userRole,
+        });
+        if (!webhook.sent && bugReportWebhookUrl()) {
+          console.error(
+            "Bug report GitHub issue was created but BUG_REPORT_WEBHOOK_URL notify failed",
+          );
+        }
+      }
     } catch (cause) {
       console.error("Failed to open GitHub issue for bug report", cause);
+      if (mustDeliverGithub) {
+        if (stored) {
+          return error(
+            "We saved your note for staff but could not open a GitHub issue. Try again in a few minutes or ask staff to check Bug reports.",
+            502,
+          );
+        }
+        return error("Could not file the bug report. Please try again.", 502);
+      }
     }
   }
 

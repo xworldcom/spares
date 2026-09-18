@@ -470,6 +470,13 @@ async function main() {
   });
   expectStatus("auth", "bugs-foreign-origin", foreignBug.status, [403], "cross-site bug POST");
 
+  const anonBug = await fetch(`${BASE}/api/bugs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ description: "pentest anonymous bug report" }),
+  });
+  expectStatus("auth", "bugs-anon-post", anonBug.status, [401], "bug POST requires session");
+
   if (staff.status === 200) {
     const setCookie =
       typeof staff.headers.getSetCookie === "function"

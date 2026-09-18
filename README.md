@@ -152,7 +152,8 @@ Several automation companies (“hosts”) can share one OEE360 deployment. Each
 - **Second host** — a platform owner creates a tenant (name + optional first staff login) on **Hosts** (`/staff/tenants`). That staff user signs in like today; Vercel Deployment Protection / SSO on the preview URL is unchanged.
 - **Not in this MVP** — per-tenant domains, billing, marketplace, or tenant-aware Microsoft/Google SSO (sessions already carry `tenantId` for a follow-up).
 - `SPARES_ALLOW_SEED` — set to `true` on **Preview only** to seed demo fixtures (`SparesStaff1!`, Hardware, Palletizer, extra customers). Leave unset/false on Production.
-- `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — optional scoped PAT for staff bug-report GitHub issues (`issues:write`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks.
+- `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — **required on Vercel** for in-app **Report bug** → GitHub issues in `xworldcom/spares` (`issues:write`, title prefix `[bug-report]`, labels `bug` + `needs-review`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks. Without a token on Vercel, submit returns **503** (no silent in-app-only success).
+- `BUG_REPORT_WEBHOOK_URL` (or `SPARES_BUG_REPORT_WEBHOOK_URL`) — optional JSON POST after a GitHub issue is created (e.g. Grok Bot / Quinn). Missing URL is fine; issue creation still succeeds and the server logs webhook failures only.
 - `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
 - **S3-compatible object storage (preferred for GLB files)** — keeps large model binaries off Vercel origin transfer. Set all of:
   - `S3_ENDPOINT` — R2 endpoint, e.g. `https://<accountid>.r2.cloudflarestorage.com`

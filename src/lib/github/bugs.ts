@@ -55,19 +55,53 @@ async function githubJson<T>(
   return { ok: response.ok, status: response.status, data };
 }
 
-async function ensureBugLabel(token: string) {
-  const existing = await githubJson(token, `/repos/${OWNER}/${REPO}/labels/bug`);
-  if (existing.ok) {
-    return;
+const BUG_LABELS: { name: string; color: string; description: string }[] = [
+  {
+    name: "bug",
+    color: "d73a4a",
+    description: "Something isn't working",
+  },
+  {
+    name: "needs-review",
+    color: "fbca04",
+    description: "Needs triage before automation or merge",
+  },
+];
+
+async function ensureBugLabels(token: string) {
+  for (const label of BUG_LABELS) {
+    const existing = await githubJson(
+      token,
+      `/repos/${OWNER}/${REPO}/labels/${encodeURIComponent(label.name)}`,
+    );
+    if (existing.ok) {
+      continue;
+    }
+    await githubJson(token, `/repos/${OWNER}/${REPO}/labels`, {
+      method: "POST",
+      body: JSON.stringify(label),
+    });
   }
-  await githubJson(token, `/repos/${OWNER}/${REPO}/labels`, {
-    method: "POST",
-    body: JSON.stringify({
-      name: "bug",
-      color: "d73a4a",
-      description: "Something isn't working",
-    }),
-  });
+}
+
+export class GithubBugIssueError extends Error {
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "GithubBugIssueError";
+    this.status = status;
+  }
+}
+
+function githubErrorDetail(data: unknown) {
+  if (data && typeof data === "object" && "message" in data) {
+    const message = (data as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+  }
+  return "GitHub API error";
 }
 
 async function uploadUserAttachment(
@@ -198,7 +232,7 @@ export async function createGithubBugIssue(input: {
     return null;
   }
 
-  await ensureBugLabel(token);
+  await ensureBugLabels(token);
   const screenshotUrl = await uploadScreenshot(token, input.id, input.screenshot);
   const body = bugReportIssueBody({
     description: input.description,
@@ -218,7 +252,7 @@ export async function createGithubBugIssue(input: {
       body: JSON.stringify({
         title: bugReportTitle(input.description),
         body,
-        labels: ["bug"],
+        labels: ["bug", "needs-review"],
       }),
     },
   );
@@ -235,11 +269,18 @@ export async function createGithubBugIssue(input: {
       body: JSON.stringify({
         title: bugReportTitle(input.description),
         body,
+        labels: ["bug"],
       }),
     },
   );
   if (unlabeled.ok && unlabeled.data?.html_url) {
     return { url: unlabeled.data.html_url, number: unlabeled.data.number };
   }
-  return null;
+
+  const status = unlabeled.status || created.status;
+  const detail = githubErrorDetail(unlabeled.data ?? created.data);
+  throw new GithubBugIssueError(
+    `Could not open GitHub issue (${status}): ${detail}`,
+    status,
+  );
 }

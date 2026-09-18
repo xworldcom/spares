@@ -13,6 +13,7 @@ export async function submitBugReport(input: {
   userAgent: string;
   userEmail?: string;
   userRole?: string;
+  website?: string;
 }): Promise<SubmitBugReportResponse> {
   return apiFetch<SubmitBugReportResponse>("/api/bugs", {
     method: "POST",

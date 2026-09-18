@@ -36,8 +36,10 @@ export function BugReportControl() {
   const [visible, setVisible] = useState(true);
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [lastGithubIssueUrl, setLastGithubIssueUrl] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -76,6 +78,10 @@ export function BugReportControl() {
       setError("Describe what's going on.");
       return;
     }
+    if (text.length < 8) {
+      setError("Add a bit more detail (at least 8 characters).");
+      return;
+    }
 
     setSending(true);
     setError(null);
@@ -96,7 +102,7 @@ export function BugReportControl() {
     setVisible(true);
 
     try {
-      await submitBugReport({
+      const submitted = await submitBugReport({
         description: text,
         screenshotJpegBase64,
         logText: buildClientLogText({
@@ -109,8 +115,10 @@ export function BugReportControl() {
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
         userEmail: user?.email,
         userRole: user?.role,
+        website: honeypot,
       });
       setDescription("");
+      setLastGithubIssueUrl(submitted.githubIssueUrl);
       setStatus("sent");
     } catch (cause) {
       setStatus("error");
@@ -121,6 +129,10 @@ export function BugReportControl() {
   }
 
   if (!visible) {
+    return null;
+  }
+
+  if (!user) {
     return null;
   }
 
@@ -153,7 +165,7 @@ export function BugReportControl() {
               }}
               role="status"
             >
-              Sent. Thank you.
+              {lastGithubIssueUrl ? "Sent. Thank you." : "Saved for staff review."}
             </p>,
             document.body,
           )
@@ -192,6 +204,16 @@ export function BugReportControl() {
               <label htmlFor="bug-report-description" className="sr-only">
                 What is going on?
               </label>
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(event) => setHoneypot(event.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="pointer-events-none absolute h-0 w-0 opacity-0"
+              />
               <textarea
                 ref={textareaRef}
                 id="bug-report-description"
