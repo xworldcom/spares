@@ -139,7 +139,9 @@ export function useSnapSheet({
       beginDrag(event, "full", true);
       return;
     }
-    beginDrag(event, sheet === "full" ? "full" : "peek", false);
+    // Peek stays pending until an upward drag clears slop so a tap expands
+    // (immediate capture ate clicks on iOS / the grab handle).
+    beginDrag(event, sheet === "full" ? "full" : "peek", sheet !== "full");
   }
 
   function recordSample(y: number) {
@@ -163,22 +165,38 @@ export function useSnapSheet({
   }
 
   function onCardPointerMove(event: ReactPointerEvent<HTMLElement>) {
-    if (drag.current.pending && drag.current.from === "full") {
+    if (drag.current.pending) {
       const dy = event.clientY - drag.current.y;
-      const body = cardRef.current?.querySelector(scrollBodySelector);
-      const atTop = body instanceof HTMLElement ? body.scrollTop <= 1 : true;
-      if (dy > DRAG_SLOP && atTop) {
-        drag.current.on = true;
-        drag.current.pending = false;
-        drag.current.moved = true;
-        setDragging(true);
-        setDraggingClass(true);
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } else if (Math.abs(dy) > DRAG_SLOP) {
-        drag.current.pending = false;
-        return;
-      } else {
-        return;
+      if (drag.current.from === "peek") {
+        if (dy < -DRAG_SLOP) {
+          drag.current.on = true;
+          drag.current.pending = false;
+          drag.current.moved = true;
+          setDragging(true);
+          setDraggingClass(true);
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } else if (Math.abs(dy) > DRAG_SLOP) {
+          drag.current.pending = false;
+          return;
+        } else {
+          return;
+        }
+      } else if (drag.current.from === "full") {
+        const body = cardRef.current?.querySelector(scrollBodySelector);
+        const atTop = body instanceof HTMLElement ? body.scrollTop <= 1 : true;
+        if (dy > DRAG_SLOP && atTop) {
+          drag.current.on = true;
+          drag.current.pending = false;
+          drag.current.moved = true;
+          setDragging(true);
+          setDraggingClass(true);
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } else if (Math.abs(dy) > DRAG_SLOP) {
+          drag.current.pending = false;
+          return;
+        } else {
+          return;
+        }
       }
     }
     if (!drag.current.on) {
@@ -224,8 +242,14 @@ export function useSnapSheet({
 
   function onCardPointerUp(event: ReactPointerEvent<HTMLElement>) {
     if (drag.current.pending) {
+      const from = drag.current.from;
       drag.current.pending = false;
       drag.current.on = false;
+      // Tap on peek / handle: expand without requiring a drag.
+      if (from === "peek") {
+        setSheet("full");
+        setOpen(true);
+      }
       return;
     }
     if (!drag.current.on) {

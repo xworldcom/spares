@@ -341,6 +341,9 @@
   left: 0;
   right: 0;
   bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+  /* Always the full sheet height; peek hides the rest with translateY.
+     Content-sized peek made --sheet-y 0 so a pull only slid a stub up. */
+  height: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
   max-height: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
   background: var(--spares-lift);
   color: var(--spares-on-paper);
@@ -354,7 +357,6 @@
 
 .conversation-sheet:not(.is-inline).is-full {
   --sheet-y: 0px;
-  height: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
   touch-action: manipulation;
 }
 
@@ -1148,13 +1150,6 @@ html.spares-embed .spares-app-stage {
   flex: 1;
   min-height: 0;
   max-height: none;
-}
-
-/* Short threads sit above the composer (chat), not parked at the top of a tall pane. */
-.imsg-thread--fill::before {
-  content: "";
-  flex: 1 1 auto;
-  min-height: 0;
 }
 
 .conversation-sheet-spacer {
