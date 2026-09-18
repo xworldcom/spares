@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { invalidateWarmRead, readIfWarm } from "./warm-read";
 import type {
   CreateQuoteResponse,
   Quote,
@@ -22,19 +23,24 @@ export async function createQuote(input: {
       ...(input.note ? { note: input.note } : {}),
     }),
   });
+  invalidateWarmRead("quotes:list");
   return data.quote;
 }
 
 export async function listQuotes(): Promise<QuotesListResponse> {
-  const data = await apiFetch<QuotesListResponse>("/api/quotes");
-  return {
-    quotes: data.quotes ?? [],
-    unreadCount: data.unreadCount ?? 0,
-  };
+  return readIfWarm("quotes:list", async () => {
+    const data = await apiFetch<QuotesListResponse>("/api/quotes");
+    return {
+      quotes: data.quotes ?? [],
+      unreadCount: data.unreadCount ?? 0,
+    };
+  });
 }
 
 export async function getQuote(idOrNumber: string): Promise<Quote> {
-  const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`);
+  const data = await readIfWarm(`quote:${idOrNumber}`, () =>
+    apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`),
+  );
   return data.quote;
 }
 
@@ -52,6 +58,8 @@ export async function updateQuote(
     method: "PATCH",
     body: JSON.stringify(patch),
   });
+  invalidateWarmRead(`quote:${idOrNumber}`);
+  invalidateWarmRead("quotes:list");
   return data.quote;
 }
 
@@ -63,6 +71,7 @@ export async function postQuoteActivity(
     method: "POST",
     body: JSON.stringify(input),
   });
+  invalidateWarmRead(`quote:${idOrNumber}`);
   return data.quote;
 }
 
@@ -79,6 +88,8 @@ export async function uploadQuotePo(
     method: "POST",
     body: form,
   });
+  invalidateWarmRead(`quote:${idOrNumber}`);
+  invalidateWarmRead("quotes:list");
   return data.quote;
 }
 

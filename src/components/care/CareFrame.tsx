@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getMachine } from "@/lib/api/machines";
 import { careHref } from "@/lib/care";
+import {
+  prefetchAppRoute,
+  prefetchCareTabRoutes,
+  warmCareOverview,
+} from "@/lib/nav/prefetch";
 
 const TABS: {
   id: "overview" | "manuals" | "tickets" | "service";
@@ -40,9 +46,17 @@ export function CareFrame({
 }) {
   const { user } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const current = tabFromPath(pathname);
   const staff = user?.role === "staff";
   const [machineName, setMachineName] = useState("Machine");
+
+  useEffect(() => {
+    for (const href of prefetchCareTabRoutes(machineId, staff)) {
+      prefetchAppRoute(router, href);
+    }
+    warmCareOverview(machineId);
+  }, [machineId, router, staff]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,14 +94,15 @@ export function CareFrame({
           const href = careHref(machineId, tab.id);
           const active = current === tab.id;
           return (
-            <Link
+            <PrefetchLink
               key={tab.id}
               href={href}
+              warm={() => warmCareOverview(machineId)}
               aria-current={active ? "page" : undefined}
               className={active ? "care-tab is-active" : "care-tab"}
             >
               {tab.label}
-            </Link>
+            </PrefetchLink>
           );
         })}
       </nav>

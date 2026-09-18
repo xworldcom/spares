@@ -6,6 +6,7 @@ import {
 } from "../care.ts";
 import { ApiError } from "./errors";
 import { apiFetch } from "./client";
+import { invalidateWarmRead, readIfWarm } from "./warm-read";
 import type {
   CareOverviewResponse,
   MachineUsage,
@@ -21,7 +22,9 @@ import type {
 } from "./types";
 
 export async function getCareOverview(machineId: string) {
-  return apiFetch<CareOverviewResponse>(`/api/machines/${machineId}/care`);
+  return readIfWarm(`care-overview:${machineId}`, () =>
+    apiFetch<CareOverviewResponse>(`/api/machines/${machineId}/care`),
+  );
 }
 
 export async function listManuals(machineId: string) {
@@ -98,13 +101,15 @@ export async function uploadManual(
 }
 
 export async function listMachineTickets(machineId: string) {
-  const data = await apiFetch<TicketsListResponse>(
-    `/api/machines/${machineId}/tickets`,
-  );
-  return {
-    tickets: data.tickets ?? [],
-    unreadCount: data.unreadCount ?? 0,
-  };
+  return readIfWarm(`tickets:machine:${machineId}`, async () => {
+    const data = await apiFetch<TicketsListResponse>(
+      `/api/machines/${machineId}/tickets`,
+    );
+    return {
+      tickets: data.tickets ?? [],
+      unreadCount: data.unreadCount ?? 0,
+    };
+  });
 }
 
 export async function listStaffTickets() {
@@ -116,11 +121,13 @@ export async function listStaffTickets() {
 }
 
 export async function listAccessibleTickets() {
-  const data = await apiFetch<TicketsListResponse>("/api/tickets");
-  return {
-    tickets: data.tickets ?? [],
-    unreadCount: data.unreadCount ?? 0,
-  };
+  return readIfWarm("tickets:accessible", async () => {
+    const data = await apiFetch<TicketsListResponse>("/api/tickets");
+    return {
+      tickets: data.tickets ?? [],
+      unreadCount: data.unreadCount ?? 0,
+    };
+  });
 }
 
 export async function createTicket(
@@ -134,11 +141,15 @@ export async function createTicket(
       ...(input.note ? { note: input.note } : {}),
     }),
   });
+  invalidateWarmRead("tickets:accessible");
+  invalidateWarmRead(`tickets:machine:${machineId}`);
   return data.ticket;
 }
 
 export async function getTicket(idOrNumber: string): Promise<ServiceTicket> {
-  const data = await apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`);
+  const data = await readIfWarm(`ticket:${idOrNumber}`, () =>
+    apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`),
+  );
   return data.ticket;
 }
 
@@ -147,6 +158,8 @@ export async function updateTicketStatus(id: string, status: TicketStatus) {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+  invalidateWarmRead(`ticket:${id}`);
+  invalidateWarmRead("tickets:accessible");
   return data.ticket;
 }
 
@@ -158,6 +171,7 @@ export async function postTicketActivity(
     method: "POST",
     body: JSON.stringify(input),
   });
+  invalidateWarmRead(`ticket:${id}`);
   return data.ticket;
 }
 
@@ -165,6 +179,8 @@ export async function patchTicketRead(id: string) {
   const data = await apiFetch<TicketResponse>(`/api/tickets/${id}/read`, {
     method: "PATCH",
   });
+  invalidateWarmRead(`ticket:${id}`);
+  invalidateWarmRead("tickets:accessible");
   return data.ticket;
 }
 

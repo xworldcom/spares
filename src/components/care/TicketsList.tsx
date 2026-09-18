@@ -1,8 +1,9 @@
-import Link from "next/link";
+import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { TicketStatusChip } from "@/components/care/TicketStatusChip";
 import { EmptyState } from "@/components/states/EmptyState";
 import { formatDay } from "@/components/quote/quote-format";
 import { ticketHref } from "@/lib/care";
+import { warmTicketDetail } from "@/lib/nav/prefetch";
 import type { ServiceTicket } from "@/types";
 
 export function TicketsList({
@@ -28,8 +29,9 @@ export function TicketsList({
     <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
       {tickets.map((ticket) => (
         <li key={ticket.id}>
-          <Link
+          <PrefetchLink
             href={hrefFor ? hrefFor(ticket) : ticketHref(ticket.machineId, ticket.id)}
+            warm={() => warmTicketDetail(ticket.id)}
             aria-current={selectedId === ticket.id ? "true" : undefined}
             className={
               selectedId === ticket.id ? "care-row is-selected" : "care-row"
@@ -59,7 +61,7 @@ export function TicketsList({
               </p>
             </div>
             <TicketStatusChip status={ticket.status} />
-          </Link>
+          </PrefetchLink>
         </li>
       ))}
     </ul>

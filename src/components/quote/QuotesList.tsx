@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -12,6 +13,7 @@ import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { listQuotes } from "@/lib/api/quotes";
 import { quoteHref } from "@/lib/quotes";
+import { warmQuoteDetail } from "@/lib/nav/prefetch";
 import type { Quote, Role } from "@/lib/api/types";
 
 export function QuotesList({ role }: { role: Role }) {
@@ -93,8 +95,9 @@ export function QuotesList({ role }: { role: Role }) {
         const title = quote.machineName ?? "Machine";
         return (
           <li key={quote.id}>
-            <Link
+            <PrefetchLink
               href={quoteHref(role, quote)}
+              warm={() => warmQuoteDetail(quote.id)}
               className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-white/4 sm:items-center"
             >
               {quote.unread ? (
@@ -125,7 +128,7 @@ export function QuotesList({ role }: { role: Role }) {
               <span className="spares-muted hidden text-lg sm:inline" aria-hidden="true">
                 ›
               </span>
-            </Link>
+            </PrefetchLink>
           </li>
         );
       })}

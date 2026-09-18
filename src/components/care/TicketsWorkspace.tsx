@@ -20,6 +20,7 @@ import {
   machineTicketsHref,
   ticketRefMatches,
 } from "@/lib/care";
+import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
 import type { ServiceTicket } from "@/types";
 
 type TicketsWorkspaceProps = {
@@ -81,6 +82,17 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
       cancelled = true;
     };
   }, [scope, machineId, reloadKey, refreshCareAlerts]);
+
+  useEffect(() => {
+    if (loading || tickets.length === 0) {
+      return;
+    }
+    const likely = tickets.slice(0, 6);
+    for (const ticket of likely) {
+      prefetchAppRoute(router, ticketHrefFor(scope, ticket));
+      warmTicketDetail(ticket.id);
+    }
+  }, [loading, router, scope, tickets]);
 
   function refresh() {
     setReloadKey((key) => key + 1);

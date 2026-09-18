@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useEffect, useState } from "react";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
@@ -8,6 +9,7 @@ import { listAccessibleTickets } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
 import { listMachines } from "@/lib/api/machines";
 import { careHref, hubTicketsHref, ticketIsOpen } from "@/lib/care";
+import { warmCareOverview, warmCareHubLists } from "@/lib/nav/prefetch";
 import type { MachineSummary } from "@/types";
 
 export function CareHubOverview() {
@@ -16,6 +18,10 @@ export function CareHubOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    warmCareHubLists();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,13 +69,13 @@ export function CareHubOverview() {
   return (
     <div className="care-stack">
       <section className="care-stats">
-        <Link href={hubTicketsHref()} className="care-stat">
+        <PrefetchLink href={hubTicketsHref()} className="care-stat">
           <span className="care-stat-value">{openTickets}</span>
           <span className="care-stat-label">
             Open {openTickets === 1 ? "ticket" : "tickets"}
           </span>
           <span className="care-stat-meta">Across all machines</span>
-        </Link>
+        </PrefetchLink>
         <div className="care-stat">
           <span className="care-stat-value">{machines.length}</span>
           <span className="care-stat-label">
@@ -92,7 +98,11 @@ export function CareHubOverview() {
           <ul className="care-list">
             {machines.map((machine) => (
               <li key={machine.id}>
-                <Link href={careHref(machine.id)} className="care-row">
+                <PrefetchLink
+                  href={careHref(machine.id)}
+                  warm={() => warmCareOverview(machine.id)}
+                  className="care-row"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="care-row-title">{machine.name}</p>
                     <p className="spares-muted truncate text-sm">
@@ -100,7 +110,7 @@ export function CareHubOverview() {
                     </p>
                   </div>
                   <span className="spares-muted text-lg" aria-hidden="true">›</span>
-                </Link>
+                </PrefetchLink>
               </li>
             ))}
           </ul>

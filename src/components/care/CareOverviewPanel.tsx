@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TicketStatusChip } from "@/components/care/TicketStatusChip";
@@ -10,6 +10,7 @@ import { formatDay } from "@/components/quote/quote-format";
 import { getCareOverview } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
 import { careHref, machineTicketsHref } from "@/lib/care";
+import { warmCareOverview, warmTicketDetail } from "@/lib/nav/prefetch";
 import { siteLabel } from "@/lib/access";
 import type { CareOverview, ServiceTicket } from "@/types";
 
@@ -68,21 +69,33 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
   return (
     <div className="care-stack">
       <section className="care-stats">
-        <Link href={careHref(machineId, "manuals")} className="care-stat">
+        <PrefetchLink
+          href={careHref(machineId, "manuals")}
+          warm={() => warmCareOverview(machineId)}
+          className="care-stat"
+        >
           <span className="care-stat-value">{overview.manuals}</span>
           <span className="care-stat-label">
             {overview.manuals === 1 ? "Manual" : "Manuals"}
           </span>
-        </Link>
-        <Link href={careHref(machineId, "tickets")} className="care-stat">
+        </PrefetchLink>
+        <PrefetchLink
+          href={careHref(machineId, "tickets")}
+          warm={() => warmCareOverview(machineId)}
+          className="care-stat"
+        >
           <span className="care-stat-value">{overview.ticketsOpen}</span>
           <span className="care-stat-label">
             Open {overview.ticketsOpen === 1 ? "ticket" : "tickets"}
           </span>
           <span className="care-stat-meta">{overview.ticketsTotal} total</span>
-        </Link>
+        </PrefetchLink>
         {staff ? (
-          <Link href={careHref(machineId, "service")} className="care-stat">
+          <PrefetchLink
+            href={careHref(machineId, "service")}
+            warm={() => warmCareOverview(machineId)}
+            className="care-stat"
+          >
             <span className="care-stat-value">
               {overview.usage?.lastServiceAt
                 ? formatDay(overview.usage.lastServiceAt)
@@ -94,7 +107,7 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
                 ? "Latest visit notes on file"
                 : "Log date and notes on site"}
             </span>
-          </Link>
+          </PrefetchLink>
         ) : null}
       </section>
 
@@ -103,7 +116,7 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
       <section className="care-card">
         <header className="care-card-head">
           <h2>Recent tickets</h2>
-          <Link href={careHref(machineId, "tickets")}>All tickets</Link>
+          <PrefetchLink href={careHref(machineId, "tickets")}>All tickets</PrefetchLink>
         </header>
         {recent.length === 0 ? (
           <p className="spares-muted text-sm leading-relaxed">
@@ -114,8 +127,9 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
           <ul className="care-list">
             {recent.map((ticket) => (
               <li key={ticket.id}>
-                <Link
+                <PrefetchLink
                   href={machineTicketsHref(machineId, ticket.id)}
+                  warm={() => warmTicketDetail(ticket.id)}
                   className="care-row"
                 >
                   <div className="min-w-0 flex-1">
@@ -127,7 +141,7 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
                     </p>
                   </div>
                   <TicketStatusChip status={ticket.status} />
-                </Link>
+                </PrefetchLink>
               </li>
             ))}
           </ul>
