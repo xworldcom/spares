@@ -47,6 +47,20 @@ async function main() {
   const me = await probe("GET", "/api/auth/me");
   row("anon-me", "401", String(me.status), me.status === 401, me.text.slice(0, 120));
 
+  const anonBugPost = await probe(
+    "POST",
+    "/api/bugs",
+    { "Content-Type": "application/json" },
+    JSON.stringify({ description: "anon probe should not file bugs" }),
+  );
+  row(
+    "anon-post-bugs",
+    "401",
+    String(anonBugPost.status),
+    anonBugPost.status === 401,
+    anonBugPost.text.slice(0, 80),
+  );
+
   for (const path of [
     "/api/machines",
     "/api/quotes",
