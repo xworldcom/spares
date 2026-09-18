@@ -14,3 +14,7 @@ ts	phase	decision	why	evidence	result
 2026-09-18T00:20:47Z	quotes	reject a part id over 80 characters	typed lines had no upper bound after the pickable-id gate was removed	src/lib/quotes.ts parseItemRow	tests green
 2026-09-18T00:20:47Z	verify	replaceMachinePack on an empty storedFileName	staff can add a pack later without deleteStoredFile treating empty as a file	src/lib/store.test.ts attaches a pack	VERIFIED
 2026-09-18T00:20:47Z	verify	npm test 488 pass after grant and id cap	failing tests then the two-line store and parse fixes	npm test	tests green
+2026-09-18T00:32:46Z	review	typing Line B granted Line B to a machine-scoped customer	the select path also called withCustomerMachineGrant	src/lib/store.ts findOrCreateModelLessMachine existing branch	reproduced
+2026-09-18T00:32:46Z	fix	return the existing machine without a grant	Care is shared by machine access, not by guessing a name	src/lib/store.ts findOrCreateModelLessMachine	tests green
+2026-09-18T00:32:46Z	api	409 when the customer cannot see the matched name	do not return sibling parts or a 200 that confirms the id	src/app/api/machines/route.ts	implemented
+2026-09-18T00:32:46Z	quotes	accept 80-character part ids and reject 81	the prior test only used a 203-character id	src/lib/quotes.test.ts	tests green
