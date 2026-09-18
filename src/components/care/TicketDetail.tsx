@@ -91,9 +91,6 @@ export function TicketDetail({
   }, [ticketId, reloadKey, refreshCareAlerts, seedTicket]);
 
   const pollTicket = useCallback(async () => {
-    if (busy) {
-      return;
-    }
     const next = await getTicket(ticketId);
     if (!ticket || !ticketRefMatches(ticket, ticketId)) {
       setTicket(next);
@@ -117,7 +114,7 @@ export function TicketDetail({
       unread: next.unread,
       customerReadReceipts: next.customerReadReceipts,
     });
-  }, [busy, ticket, ticketId, refreshCareAlerts]);
+  }, [ticket, ticketId, refreshCareAlerts]);
 
   const threadBump =
     ticket?.activities.at(-1)?.at ?? ticket?.activities.at(-1)?.id ?? ticketId;

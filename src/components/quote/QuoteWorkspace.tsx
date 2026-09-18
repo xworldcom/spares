@@ -98,7 +98,7 @@ export function QuoteWorkspace({
   }, [quoteRef]);
 
   const pollQuote = useCallback(async () => {
-    if (!quote || busy || pendingStatus !== null) {
+    if (!quote || pendingStatus !== null) {
       return;
     }
     if (JSON.stringify(items) !== JSON.stringify(quote.items)) {
@@ -126,7 +126,7 @@ export function QuoteWorkspace({
         unread: next.unread,
       };
     });
-  }, [busy, items, pendingStatus, quote, quoteRef, refresh]);
+  }, [items, pendingStatus, quote, quoteRef, refresh]);
 
   useConversationPoll(Boolean(quote && user), pollQuote);
 
