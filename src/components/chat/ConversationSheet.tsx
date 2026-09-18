@@ -1,8 +1,16 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { useSnapSheet } from "@/lib/hooks/useSnapSheet";
+
+function pinThreadToEnd(root: HTMLElement | null) {
+  const thread = root?.querySelector(".imsg-thread");
+  if (!(thread instanceof HTMLElement)) {
+    return;
+  }
+  thread.scrollTop = thread.scrollHeight;
+}
 
 export function ConversationSheet({
   title,
@@ -42,22 +50,63 @@ export function ConversationSheet({
   });
 
   const expanded = sheet === "full" || (layout === "inline" && desktop);
-  const showPeekBand = layout === "overlay" && sheet === "peek";
+  const showComposer = sheet === "compose" || sheet === "full" || layout === "inline" || desktop;
+  const showPeekBand = layout === "overlay" && desktop && sheet === "peek";
+  const showGrab = layout === "overlay" && !desktop && sheet === "full";
+
+  useLayoutEffect(() => {
+    const root = card.current;
+    if (!root || desktop) {
+      return;
+    }
+    const full = Math.min(window.innerHeight * 0.92, window.innerHeight - 96);
+    root.style.setProperty("--full-h", `${Math.max(full, 320)}px`);
+    pinThreadToEnd(root);
+  }, [sheet, peekLine, children, desktop]);
+
+  useLayoutEffect(() => {
+    const root = card.current;
+    if (!root || desktop || layout !== "overlay") {
+      return;
+    }
+    const thread = root.querySelector(".imsg-thread");
+    if (!(thread instanceof HTMLElement)) {
+      return;
+    }
+    const keepPinned = () => {
+      if (sheet === "full") {
+        const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 96;
+        if (nearBottom) {
+          thread.scrollTop = thread.scrollHeight;
+        }
+        return;
+      }
+      thread.scrollTop = thread.scrollHeight;
+    };
+    keepPinned();
+    const observer = new ResizeObserver(keepPinned);
+    observer.observe(thread);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [desktop, layout, sheet]);
 
   return (
     <aside
       ref={card}
       data-conversation-sheet=""
       data-layout={layout}
+      data-sheet={sheet}
       className={[
         "conversation-sheet",
         "snap-sheet",
         sheet === "full" ? "is-full" : "",
+        sheet === "compose" ? "is-compose" : "",
         sheet === "peek" ? "is-peek" : "",
         sheet === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
         layout === "inline" ? "is-inline" : "",
         expanded ? "is-expanded" : "",
+        showComposer ? "is-composer-open" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -96,11 +145,8 @@ export function ConversationSheet({
           </span>
         </button>
       ) : null}
-      <div
-        className="conversation-sheet-body min-h-0 flex flex-1 flex-col"
-        aria-hidden={showPeekBand ? true : undefined}
-      >
-        {layout === "overlay" && !desktop ? (
+      <div className="conversation-sheet-body min-h-0 flex flex-1 flex-col">
+        {showGrab ? (
           <div className="conversation-sheet-grab snap-sheet-grab flex shrink-0 items-center justify-between gap-3 px-4 pb-1 pt-0.5">
             <p className="text-[17px] font-semibold tracking-tight">{title}</p>
             <button

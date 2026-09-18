@@ -8,14 +8,16 @@ import {
   type RefObject,
 } from "react";
 import {
-  initialQuoteSheetSnap,
-  type QuoteSheetSnap,
-} from "@/lib/ui/quote-sheet";
+  conversationSheetStep,
+  settleConversationSheet,
+  type ConversationSheetSnap,
+} from "@/lib/ui/conversation-sheet";
+import { initialQuoteSheetSnap } from "@/lib/ui/quote-sheet";
 
 const DRAG_SLOP = 8;
 const SAMPLE_WINDOW_MS = 90;
 
-export type SnapSheetSnap = QuoteSheetSnap;
+export type SnapSheetSnap = ConversationSheetSnap;
 
 function isSkipTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
@@ -25,6 +27,15 @@ function isSkipTarget(target: EventTarget | null) {
     return false;
   }
   return Boolean(target.closest("button, a, input, textarea, select, label"));
+}
+
+function readSheetHeights(card: HTMLElement | null) {
+  const style = card ? getComputedStyle(card) : null;
+  const peekH = Number.parseFloat(style?.getPropertyValue("--peek-h") || "") || 132;
+  const composeH = Number.parseFloat(style?.getPropertyValue("--compose-h") || "") || 220;
+  const fullH = Number.parseFloat(style?.getPropertyValue("--full-h") || "") || 640;
+  const live = card?.getBoundingClientRect().height ?? peekH;
+  return { peekH, composeH, fullH, live };
 }
 
 export function useSnapSheet({
@@ -94,7 +105,7 @@ export function useSnapSheet({
   }
 
   function hide() {
-    if (sheet === "full" && !desktopStage) {
+    if (sheet !== "out" && !desktopStage) {
       setSheet("peek");
       setOpen(true);
       return;
@@ -139,7 +150,7 @@ export function useSnapSheet({
       beginDrag(event, "full", true);
       return;
     }
-    beginDrag(event, sheet === "full" ? "full" : "peek", false);
+    beginDrag(event, sheet === "out" ? "peek" : sheet, false);
   }
 
   function recordSample(y: number) {
@@ -166,7 +177,9 @@ export function useSnapSheet({
     if (drag.current.pending && drag.current.from === "full") {
       const dy = event.clientY - drag.current.y;
       const body = cardRef.current?.querySelector(scrollBodySelector);
-      const atTop = body instanceof HTMLElement ? body.scrollTop <= 1 : true;
+      const thread = cardRef.current?.querySelector(".imsg-thread");
+      const scroller = thread instanceof HTMLElement ? thread : body;
+      const atTop = scroller instanceof HTMLElement ? scroller.scrollTop <= 1 : true;
       if (dy > DRAG_SLOP && atTop) {
         drag.current.on = true;
         drag.current.pending = false;
@@ -202,23 +215,18 @@ export function useSnapSheet({
     drag.current.pending = false;
     setDragging(false);
     setDraggingClass(false);
+    const { peekH, composeH, fullH, live } = readSheetHeights(cardRef.current);
     paintDrag(0);
-    const velocity = liveVelocity();
-    if (from === "full") {
-      if (dy > 48 || velocity > 0.35) {
-        setSheet("peek");
-        setOpen(true);
-      } else {
-        setSheet("full");
-      }
-      return;
-    }
-    if (dy < -36 || velocity < -0.35) {
-      setSheet("full");
-      setOpen(true);
-      return;
-    }
-    setSheet("peek");
+    const next = settleConversationSheet({
+      from,
+      dy,
+      velocity: liveVelocity(),
+      height: live,
+      peekH,
+      composeH,
+      fullH,
+    });
+    setSheet(next);
     setOpen(true);
   }
 
@@ -239,7 +247,7 @@ export function useSnapSheet({
       setDraggingClass(false);
       paintDrag(0);
       if (drag.current.from !== "full") {
-        setSheet("full");
+        setSheet(conversationSheetStep(drag.current.from, "up"));
         setOpen(true);
       }
       return;
@@ -256,15 +264,16 @@ export function useSnapSheet({
       return;
     }
     if (sheet === "full") {
-      setSheet("peek");
-    } else {
-      setSheet("full");
+      setSheet("compose");
       setOpen(true);
+      return;
     }
+    setSheet(conversationSheetStep(sheet, "up"));
+    setOpen(true);
   }
 
   function expand() {
-    setSheet("full");
+    setSheet(conversationSheetStep(sheet === "out" ? "peek" : sheet, "up"));
     setOpen(true);
   }
 

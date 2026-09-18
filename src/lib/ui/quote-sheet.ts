@@ -1,4 +1,4 @@
-export type QuoteSheetSnap = "peek" | "full" | "out";
+export type QuoteSheetSnap = "peek" | "compose" | "full" | "out";
 
 /**
  * First snap when the quote tray mounts or opens from closed.
