@@ -68,6 +68,25 @@ describe("parseCreatePlatformTenantBody", () => {
     }
     assert.equal(result.status, 400);
   });
+
+  it("accepts an optional SSO domain list", () => {
+    const result = parseCreatePlatformTenantBody({
+      name: "Shape",
+      ssoDomains: "Shape.com, shapetech.com",
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      value: { name: "Shape", ssoDomains: ["shape.com", "shapetech.com"] },
+    });
+  });
+
+  it("rejects a public SSO domain", () => {
+    const result = parseCreatePlatformTenantBody({
+      name: "Shape",
+      ssoDomains: "gmail.com",
+    });
+    assert.equal(result.ok, false);
+  });
 });
 
 describe("platform host tenant create + persist", () => {
@@ -118,5 +137,6 @@ describe("platform host tenant create + persist", () => {
   it("maps duplicate tenant and email errors", () => {
     assert.equal(mapCreateTenantStoreError("taken").status, 409);
     assert.equal(mapCreateTenantStoreError("email-taken").status, 409);
+    assert.equal(mapCreateTenantStoreError("domain-taken").status, 409);
   });
 });

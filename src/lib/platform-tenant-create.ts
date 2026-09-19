@@ -1,14 +1,17 @@
 import { passwordPolicyError } from "./auth/password.ts";
+import { parseSsoDomains } from "./auth/sso-domain.ts";
 
 export type CreatePlatformTenantBody = {
   name?: unknown;
   staffEmail?: unknown;
   staffPassword?: unknown;
+  ssoDomains?: unknown;
 };
 
 export type ParsedCreatePlatformTenant = {
   name: string;
   staff?: { email: string; password: string };
+  ssoDomains?: string[];
 };
 
 type ParseFailure = { ok: false; message: string; status: number };
@@ -41,25 +44,48 @@ export function parseCreatePlatformTenantBody(
       status: 400,
     };
   }
+  let ssoDomains: string[] | undefined;
+  if (body.ssoDomains !== undefined) {
+    const parsedDomains = parseSsoDomains(body.ssoDomains);
+    if (!parsedDomains.ok) {
+      return {
+        ok: false,
+        message: parsedDomains.message,
+        status: parsedDomains.status,
+      };
+    }
+    ssoDomains = parsedDomains.domains;
+  }
+
   if (staffEmail && staffPassword) {
     const policy = passwordPolicyError(staffPassword);
     if (policy) {
       return { ok: false, message: policy, status: 400 };
     }
-    return { ok: true, value: { name, staff: { email: staffEmail, password: staffPassword } } };
+    return {
+      ok: true,
+      value: {
+        name,
+        staff: { email: staffEmail, password: staffPassword },
+        ssoDomains,
+      },
+    };
   }
 
-  return { ok: true, value: { name } };
+  return { ok: true, value: { name, ssoDomains } };
 }
 
 export function mapCreateTenantStoreError(
-  code: "invalid" | "taken" | "email-taken",
+  code: "invalid" | "taken" | "email-taken" | "domain-taken",
 ): { message: string; status: number } {
   if (code === "taken") {
     return { message: "A tenant with that name already exists", status: 409 };
   }
   if (code === "email-taken") {
     return { message: "Staff email is already in use", status: 409 };
+  }
+  if (code === "domain-taken") {
+    return { message: "That SSO domain is already assigned to another host", status: 409 };
   }
   return { message: "Tenant name is required", status: 400 };
 }

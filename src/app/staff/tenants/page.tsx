@@ -40,6 +40,7 @@ function PlatformTenants() {
   const [name, setName] = useState("");
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
+  const [ssoDomains, setSsoDomains] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -90,11 +91,13 @@ function PlatformTenants() {
           name,
           staffEmail: staffEmail.trim() || undefined,
           staffPassword: staffPassword || undefined,
+          ssoDomains: ssoDomains.trim() || undefined,
         }),
       });
       setName("");
       setStaffEmail("");
       setStaffPassword("");
+      setSsoDomains("");
       if (result.staffUser?.tenantId) {
         setNotice(
           `Created ${result.tenant.name}. First staff ${result.staffUser.email} → tenantId ${result.staffUser.tenantId}`,
@@ -148,6 +151,20 @@ function PlatformTenants() {
           />
         </label>
         <label className="stack gap-1">
+          <span className="text-sm font-medium">SSO domain (optional)</span>
+          <input
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+            value={ssoDomains}
+            onChange={(e) => setSsoDomains(e.target.value)}
+            placeholder="shape.com"
+            autoComplete="off"
+          />
+          <p className="spares-muted text-sm">
+            Microsoft work accounts at this domain join this host as staff. Comma-separate
+            extras (shape.com, shapetech.com).
+          </p>
+        </label>
+        <label className="stack gap-1">
           <span className="text-sm font-medium">First staff email (optional)</span>
           <input
             className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
@@ -184,6 +201,11 @@ function PlatformTenants() {
             <li key={tenant.id} className="card p-4">
               <div className="font-medium">{tenant.name}</div>
               <div className="text-sm text-muted">{tenant.slug}</div>
+              {tenant.ssoDomains?.length ? (
+                <div className="text-sm text-muted">
+                  SSO {tenant.ssoDomains.join(", ")}
+                </div>
+              ) : null}
               <div className="text-xs text-muted font-mono">{tenant.id}</div>
             </li>
           ))}

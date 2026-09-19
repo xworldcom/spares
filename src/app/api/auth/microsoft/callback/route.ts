@@ -13,7 +13,7 @@ import {
   pickMicrosoftEmail,
   resolveMicrosoftSession,
 } from "@/lib/auth/microsoft";
-import { findUserByEmail } from "@/lib/store";
+import { resolveMicrosoftCatalogUser } from "@/lib/store";
 
 function loginErrorRedirect(origin: string, code: string) {
   const target = new URL("/login", origin);
@@ -72,8 +72,10 @@ export async function GET(request: Request) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);
   }
 
-  const user = await findUserByEmail(email);
-  const session = resolveMicrosoftSession(user);
+  const resolved = await resolveMicrosoftCatalogUser(email);
+  const session = resolveMicrosoftSession(
+    "user" in resolved ? resolved.user : null,
+  );
   if (!session.ok) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);
   }

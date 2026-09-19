@@ -9,6 +9,7 @@ import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { apiFetch } from "@/lib/api/client";
 import { deletePlatformTenant } from "@/lib/api/platform-directory";
 import { errorMessage } from "@/lib/api/errors";
+import { formatSsoDomains } from "@/lib/auth/sso-domain";
 import type { Tenant } from "@/types";
 
 type DeploymentDetail = {
@@ -52,6 +53,7 @@ function TenantDetail() {
   const tenantId = typeof params.tenantId === "string" ? params.tenantId : "";
   const [detail, setDetail] = useState<DeploymentDetail | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [ssoDomains, setSsoDomains] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -68,6 +70,7 @@ function TenantDetail() {
       );
       setDetail(data);
       setDisplayName(data.deployment.tenant.name);
+      setSsoDomains(formatSsoDomains(data.deployment.tenant.ssoDomains));
       setForbidden(false);
       setError(null);
     } catch (cause) {
@@ -82,6 +85,27 @@ function TenantDetail() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function saveSsoDomains() {
+    if (!tenantId) {
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    setError(null);
+    try {
+      await apiFetch(`/api/platform/tenants/${encodeURIComponent(tenantId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ssoDomains }),
+      });
+      setNotice("SSO domains updated.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveName() {
     if (!tenantId) {
@@ -252,6 +276,36 @@ function TenantDetail() {
             The Soft Launch host cannot be suspended or deleted.
           </p>
         ) : null}
+      </section>
+
+      <section className="card p-4 mt-6 max-w-lg">
+        <h2 className="text-lg font-semibold mb-3">Microsoft SSO domain</h2>
+        <p className="text-sm text-muted mb-3">
+          Work accounts at these domains can Sign in with Microsoft and join this host as
+          staff. Existing logins keep the host they already have. Comma-separate more than
+          one.
+        </p>
+        <label className="sr-only" htmlFor="host-sso-domains">
+          Microsoft SSO domains
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <input
+            id="host-sso-domains"
+            className="spares-field h-12 flex-1 min-w-[12rem] rounded-2xl border-0 px-4 text-[16px] outline-none"
+            value={ssoDomains}
+            onChange={(e) => setSsoDomains(e.target.value)}
+            placeholder="shape.com"
+            autoComplete="off"
+          />
+          <button
+            className="btn-primary"
+            type="button"
+            disabled={busy}
+            onClick={() => void saveSsoDomains()}
+          >
+            Save
+          </button>
+        </div>
         {error ? <p className="text-danger mt-2">{error}</p> : null}
         {notice ? <p className="text-sm text-muted mt-2">{notice}</p> : null}
       </section>

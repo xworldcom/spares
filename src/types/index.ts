@@ -12,6 +12,8 @@ export type Tenant = {
   deletedAt?: string;
   /** First staff login created with this tenant; used to repair heal mis-assignments to the host tenant. */
   bootstrapStaffEmail?: string;
+  /** Work-email domains whose Microsoft SSO users join this host as staff. */
+  ssoDomains?: string[];
 };
 
 export type CustomerAccount = {

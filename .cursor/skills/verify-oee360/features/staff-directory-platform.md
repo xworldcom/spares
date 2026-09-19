@@ -11,6 +11,7 @@ Directory and platform routes let staff browse people in the tenant and let plat
 - `directory-host-row` — host row opens `/staff/platform/[tenantId]`; customer row → `/staff/accounts/[id]`.
 - `platform-tenants` — `/staff/tenants` new host form (platform owner).
 - `platform-create-tenant` — create satellite host (mutating; local only by default).
+- `platform-sso-domain` — optional company email domain on create (`/staff/tenants`) and host detail (`/staff/platform/[tenantId]`). Microsoft work accounts at that domain join the host as staff.
 
 ## How to get to it (user POV)
 
