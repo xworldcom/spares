@@ -144,8 +144,8 @@ function PlatformHosts() {
     const trimmed = query.trim().toLowerCase();
     const filtered = trimmed
       ? rows.filter((row) =>
-          [row.tenant.name, row.tenant.slug, row.tenant.id].some((field) =>
-            field.toLowerCase().includes(trimmed),
+          [row.tenant.name, row.tenant.slug, row.tenant.id, ...(row.tenant.ssoDomains ?? [])].some(
+            (field) => field.toLowerCase().includes(trimmed),
           ),
         )
       : rows;
@@ -232,7 +232,7 @@ function PlatformHosts() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search company, handle, or tenant id"
+          placeholder="Search company, handle, domain, or tenant id"
           className="spares-field h-11 w-full max-w-sm rounded-2xl border-0 px-4 text-[15px] outline-none"
         />
         <p className="text-sm text-muted tabular-nums">
@@ -284,6 +284,12 @@ function PlatformHosts() {
                     {row.tenant.name}
                   </Link>
                   <div className="text-xs text-muted font-mono">{row.tenant.id}</div>
+                  {row.tenant.ssoDomains?.length ? (
+                    <div className="text-xs text-muted">
+                      SSO {row.tenant.ssoDomains.join(", ")} · Autoroute{" "}
+                      {row.tenant.ssoAutoroute ? "on" : "off"}
+                    </div>
+                  ) : null}
                 </td>
                 <td className="py-2.5 pr-4 text-muted whitespace-nowrap">
                   {row.kind === "host" ? "Soft Launch Host" : "Satellite"}

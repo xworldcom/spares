@@ -6,6 +6,7 @@ import {
   authorizeStaffTeamPost,
   decideStaffTeamTenant,
 } from "@/lib/staff-team-guard";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { createTenantStaffUser, findUserById, listStaffUsersForTenant } from "@/lib/store";
 import { effectiveStaffTenantId } from "@/lib/tenant";
 
@@ -99,6 +100,14 @@ export async function POST(request: Request) {
     }
     return error("Could not create staff login", 400);
   }
+
+  await recordAccountActivity({
+    tenantId: tenantPick.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "staff.created",
+    summary: `${auth.user.email} created staff login ${created.user.email}.`,
+    target: { type: "staff", id: created.user.id, label: created.user.email },
+  });
 
   return json(
     {

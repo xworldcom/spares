@@ -1,6 +1,7 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { toPublicUser } from "@/lib/access";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { bulkUpdateCustomerAccess, getOrgContext } from "@/lib/store";
 
 type Body = {
@@ -27,6 +28,15 @@ export async function POST(request: Request) {
     ? body.siteIds.filter((value): value is string => typeof value === "string")
     : [];
   const users = await bulkUpdateCustomerAccess(auth.tenantId, userIds, { siteIds });
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "person.updated",
+    summary: `${auth.user.email} updated site access for ${users.length} ${
+      users.length === 1 ? "person" : "people"
+    }.`,
+    details: { count: users.length },
+  });
   const org = await getOrgContext(auth.tenantId);
   return json({
     customers: users.map((user) => toPublicUser(user, org.sites, org.customers)),

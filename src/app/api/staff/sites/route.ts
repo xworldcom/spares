@@ -1,5 +1,6 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { createSite, listSites } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -41,5 +42,13 @@ export async function POST(request: Request) {
     }
     return error("Customer and site name are required", 400);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "site.created",
+    summary: `${auth.user.email} created site ${created.site.name}.`,
+    target: { type: "site", id: created.site.id, label: created.site.name },
+  });
   return json({ site: created.site }, 201);
 }

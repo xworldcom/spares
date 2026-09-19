@@ -10,6 +10,7 @@ import {
   readPackForm,
 } from "@/lib/pack-upload";
 import { canAccessMachine, canCreateMachineAtSite } from "@/lib/access";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   createMachine,
   findOrCreateModelLessMachine,
@@ -87,6 +88,15 @@ export async function POST(request: Request) {
     ) {
       return error("A machine with that name already exists at this site.", 409);
     }
+    if (result.created) {
+      await recordAccountActivity({
+        tenantId: auth.tenantId,
+        actor: actorFromUser(auth.user),
+        action: "machine.created",
+        summary: `${auth.user.email} added machine ${result.machine.name}.`,
+        target: { type: "machine", id: result.machine.id, label: result.machine.name },
+      });
+    }
     return json(
       toMachineDetail(
         result.machine,
@@ -158,6 +168,14 @@ export async function POST(request: Request) {
     }
     throw cause;
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "machine.created",
+    summary: `${auth.user.email} added machine ${machine.name}.`,
+    target: { type: "machine", id: machine.id, label: machine.name },
+  });
 
   return json(
     toMachineDetail(

@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { hashPassword, verifyPassword } from "./auth/password.ts";
+import { hashPassword, unusablePasswordHash, verifyPassword } from "./auth/password.ts";
+import {
+  emailSsoDomain,
+  findActiveTenantForSsoDomain,
+  firstTakenSsoDomain,
+  parseSsoDomains,
+} from "./auth/sso-domain.ts";
 import {
   loginRenameConflicts,
   mergeIdLists,
@@ -235,6 +241,8 @@ export type StoredUser = {
   tenantId?: string;
   /** Set when a staff login is created; pins company scope for non–cross-tenant admins. */
   staffCreatedTenantId?: string;
+  /** Set when Microsoft SSO created this staff from a host SSO domain. */
+  ssoProvisionedAt?: string;
   siteIds?: string[];
   /** Legacy corporate access; migrated to siteIds on read. */
   companyAccess?: string[];
@@ -1446,6 +1454,57 @@ export function findUserByEmail(email: string) {
   });
 }
 
+/**
+ * Microsoft sign-in: existing catalog row wins. Unknown work emails join the
+ * host that enrolled that domain as staff (first login creates the login).
+ */
+export function resolveMicrosoftCatalogUser(email: string) {
+  const normalized = normalizeEmail(email);
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const matches = db.users.filter(
+      (user) => user.email === normalized && !user.deletedAt,
+    );
+    if (matches.length === 1) {
+      return { user: matches[0], provisioned: false as const };
+    }
+    if (matches.length > 1) {
+      return { error: "unknown" as const };
+    }
+    const domain = emailSsoDomain(normalized);
+    if (!domain) {
+      return { error: "unknown" as const };
+    }
+    const tenant = findActiveTenantForSsoDomain(db.tenants ?? [], domain);
+    if (!tenant) {
+      return { error: "unknown" as const };
+    }
+    const user: StoredUser = {
+      id: randomUUID(),
+      email: normalized,
+      passwordHash: await unusablePasswordHash(),
+      role: "staff",
+      tenantId: tenant.id,
+      staffCreatedTenantId: tenant.id,
+      ssoProvisionedAt: new Date().toISOString(),
+    };
+    const written = await writeDatabaseWithOrgMerge(
+      { ...db, users: [...db.users, user] },
+      { id: user.id, email: user.email },
+    );
+    if ("error" in written) {
+      const raced = (memory ?? (await readDatabase())).users.find(
+        (row) => row.email === normalized && !row.deletedAt,
+      );
+      return raced ? { user: raced, provisioned: false as const } : { error: "unknown" as const };
+    }
+    const persisted = (memory ?? (await readDatabase())).users.find(
+      (row) => row.id === user.id,
+    );
+    return { user: persisted ?? user, provisioned: true as const };
+  });
+}
+
 export function listTenants() {
   return withLock(async () => {
     const db = await ensureCatalog();
@@ -1541,9 +1600,56 @@ export function updatePlatformSignInSettings(patch: { passwordLoginEnabled: bool
   });
 }
 
+function attachSsoDomains(
+  tenants: readonly Tenant[],
+  domains: string[] | undefined,
+  exceptTenantId?: string,
+):
+  | { ok: true; ssoDomains?: string[] }
+  | { ok: false; error: "invalid" | "domain-taken" } {
+  if (domains === undefined) {
+    return { ok: true };
+  }
+  const parsed = parseSsoDomains(domains);
+  if (!parsed.ok) {
+    return { ok: false, error: "invalid" };
+  }
+  if (firstTakenSsoDomain(tenants, parsed.domains, exceptTenantId)) {
+    return { ok: false, error: "domain-taken" };
+  }
+  return {
+    ok: true,
+    ssoDomains: parsed.domains.length > 0 ? parsed.domains : undefined,
+  };
+}
+
+function withSsoDomains(tenant: Tenant, ssoDomains: string[] | undefined): Tenant {
+  if (ssoDomains && ssoDomains.length > 0) {
+    return { ...tenant, ssoDomains };
+  }
+  const { ssoDomains: _removed, ...rest } = tenant;
+  return rest;
+}
+
+function withSsoAutoroute(tenant: Tenant, ssoAutoroute: boolean | undefined): Tenant {
+  if (ssoAutoroute === undefined) {
+    return tenant;
+  }
+  if (ssoAutoroute) {
+    return { ...tenant, ssoAutoroute: true };
+  }
+  const { ssoAutoroute: _removed, ...rest } = tenant;
+  return rest;
+}
+
 export function updateTenantPlatformMeta(
   tenantId: string,
-  patch: { name?: string; inactive?: boolean },
+  patch: {
+    name?: string;
+    inactive?: boolean;
+    ssoDomains?: string[];
+    ssoAutoroute?: boolean;
+  },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -1570,6 +1676,18 @@ export function updateTenantPlatformMeta(
         return { error: "taken" as const };
       }
       next = { ...next, name: trimmed };
+    }
+
+    if (patch.ssoDomains !== undefined) {
+      const assigned = attachSsoDomains(tenants, patch.ssoDomains, tenantId);
+      if (!assigned.ok) {
+        return { error: assigned.error };
+      }
+      next = withSsoDomains(next, assigned.ssoDomains);
+    }
+
+    if (patch.ssoAutoroute !== undefined) {
+      next = withSsoAutoroute(next, patch.ssoAutoroute);
     }
 
     if (patch.inactive === true) {
@@ -1739,7 +1857,12 @@ function tenantNameTaken(db: Database, trimmed: string) {
   return slugTaken || nameTaken;
 }
 
-export function createTenant(name: string) {
+type CreateTenantError = "invalid" | "taken" | "email-taken" | "domain-taken";
+
+export function createTenant(
+  name: string,
+  options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
+): Promise<{ tenant: Tenant } | { error: CreateTenantError }> {
   return withLock(async () => {
     const db = await readDatabase();
     const trimmed = name.trim();
@@ -1749,7 +1872,14 @@ export function createTenant(name: string) {
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const tenant = newTenantFromName(trimmed);
+    const assigned = attachSsoDomains(db.tenants ?? [], options?.ssoDomains);
+    if (!assigned.ok) {
+      return { error: assigned.error };
+    }
+    const tenant = withSsoAutoroute(
+      withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains),
+      options?.ssoAutoroute,
+    );
     await writeDatabase({
       ...db,
       schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
@@ -1763,7 +1893,10 @@ export function createTenant(name: string) {
 export function createTenantWithOptionalStaff(
   name: string,
   staff?: { email: string; passwordHash: string },
-) {
+  options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
+): Promise<
+  { tenant: Tenant; staffUser?: StoredUser } | { error: CreateTenantError }
+> {
   return withLock(async () => {
     const db = await readDatabase();
     const trimmed = name.trim();
@@ -1773,7 +1906,14 @@ export function createTenantWithOptionalStaff(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    let tenant: Tenant = newTenantFromName(trimmed);
+    const assigned = attachSsoDomains(db.tenants ?? [], options?.ssoDomains);
+    if (!assigned.ok) {
+      return { error: assigned.error };
+    }
+    let tenant: Tenant = withSsoAutoroute(
+      withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains),
+      options?.ssoAutoroute,
+    );
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {

@@ -9,6 +9,7 @@ const STAFF_TAB_ROUTES = [
   "/machines",
   "/care",
   "/staff/directory",
+  "/staff/activity",
   "/staff/quotes",
 ] as const;
 

@@ -1,5 +1,6 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { deleteSite, updateSite } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,14 @@ export async function PATCH(
     }
     return error("Site not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "site.updated",
+    summary: `${auth.user.email} updated site ${updated.site.name}.`,
+    target: { type: "site", id: updated.site.id, label: updated.site.name },
+  });
   return json({ site: updated.site });
 }
 
@@ -68,5 +77,13 @@ export async function DELETE(
     }
     return error("Site not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "site.deleted",
+    summary: `${auth.user.email} removed site ${id}.`,
+    target: { type: "site", id },
+  });
   return json({ ok: true });
 }

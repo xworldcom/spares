@@ -1,5 +1,6 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   deleteCustomerAccount,
   getCustomerAccount,
@@ -75,6 +76,14 @@ export async function PATCH(
     }
     return error("Customer not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "customer.updated",
+    summary: `${auth.user.email} updated customer ${updated.account.name}.`,
+    target: { type: "customer", id: updated.account.id, label: updated.account.name },
+  });
   return json({ account: updated.account });
 }
 
@@ -95,5 +104,13 @@ export async function DELETE(
     }
     return error("Customer not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "customer.deleted",
+    summary: `${auth.user.email} removed customer ${id}.`,
+    target: { type: "customer", id },
+  });
   return json({ ok: true });
 }

@@ -21,6 +21,7 @@ const STAFF_NAV_HREFS = [
   "/machines/new",
   "/care",
   "/staff/directory",
+  "/staff/activity",
   "/staff/quotes",
   "/staff/bugs",
   "/staff/platform",
@@ -190,6 +191,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <>
                   <NavLink href="/staff/directory" hrefs={navHrefs}>
                     Directory
+                  </NavLink>
+                  <NavLink href="/staff/activity" hrefs={navHrefs}>
+                    Activity Log
                   </NavLink>
                   <NavLinkWithBadge
                     href="/staff/quotes"
