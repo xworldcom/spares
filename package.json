@@ -25,6 +25,7 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@vercel/blob": "^2.8.0",
+    "ai": "^7.0.107",
     "draco3dgltf": "^1.5.7",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",

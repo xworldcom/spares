@@ -806,6 +806,12 @@ export function toPublicQuote(
   if (quote.invoiceNumber && invoiceVisible(quote.status)) {
     publicQuote.invoiceNumber = quote.invoiceNumber;
   }
+  if (quote.assistantPaused) {
+    publicQuote.assistantPaused = true;
+  }
+  if (quote.assistantEscalatedAt) {
+    publicQuote.assistantEscalatedAt = quote.assistantEscalatedAt;
+  }
   return publicQuote;
 }
 
@@ -864,7 +870,11 @@ function normalizeActivity(raw: unknown): QuoteActivity | null {
   if (typeof record.at !== "string" || !record.at) {
     return null;
   }
-  if (record.actorRole !== "staff" && record.actorRole !== "customer") {
+  if (
+    record.actorRole !== "staff" &&
+    record.actorRole !== "customer" &&
+    record.actorRole !== "assistant"
+  ) {
     return null;
   }
   if (typeof record.actorEmail !== "string" || !record.actorEmail) {
@@ -1012,6 +1022,12 @@ export function normalizeStoredQuote(
   }
   if (typeof record.tenantId === "string" && record.tenantId.trim()) {
     next.tenantId = record.tenantId.trim();
+  }
+  if (record.assistantPaused === true) {
+    next.assistantPaused = true;
+  }
+  if (typeof record.assistantEscalatedAt === "string" && record.assistantEscalatedAt) {
+    next.assistantEscalatedAt = record.assistantEscalatedAt;
   }
 
   return next;

@@ -192,6 +192,11 @@ export function chatObjectKey(storedFileName: string) {
   return `chat/${storedFileName}`;
 }
 
+export function chatStoredFileNameFromKey(r2Key: string) {
+  const trimmed = r2Key.trim();
+  return trimmed.startsWith("chat/") ? trimmed.slice("chat/".length) : trimmed;
+}
+
 export function isChatStoredFileName(value: string) {
   return /^chat-[0-9a-f-]{36}\.[A-Za-z0-9._-]+$/.test(value) ||
     /^chat-[0-9a-f-]{36}$/.test(value);

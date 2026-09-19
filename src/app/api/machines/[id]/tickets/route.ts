@@ -9,6 +9,7 @@ import { actorOf, requireMachineAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
+import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { createTicket, listTickets } from "@/lib/store";
 
 type CreateBody = {
@@ -81,6 +82,19 @@ export async function POST(
     target: { type: "ticket", id: created.ticket.id, label: `#${created.ticket.number}` },
     details: { machineId: access.machine.id, title: created.ticket.title },
   });
+
+  if (note.text) {
+    scheduleAssistantReply({
+      kind: "care",
+      id: created.ticket.id,
+      tenantId,
+      machineId: access.machine.id,
+      machineName: access.machine.name,
+      triggerText: note.text,
+      triggerRole: access.user.role,
+      triggerEmail: access.user.email,
+    });
+  }
 
   return json(
     { ticket: toPublicTicket(created.ticket, access.user, access.machine.name) },

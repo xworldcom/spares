@@ -233,6 +233,28 @@ describe("normalizeStoredQuote", () => {
     assert.equal(quote.activities[0]?.attachments?.[0]?.filename, "photo.png");
   });
 
+  it("keeps AI chat messages", () => {
+    const quote = normalizeStoredQuote({
+      id: "q-ai",
+      machineId: "m1",
+      items: [{ id: "A", qty: 1 }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "c@example.test",
+      activities: [
+        {
+          id: "act-ai",
+          at: "2026-09-19T00:00:00.000Z",
+          actorRole: "assistant",
+          actorEmail: "ai@oee360.local",
+          kind: "message",
+          text: "That part is PN-MTR-1 on the BOM.",
+        },
+      ],
+    } as never);
+    assert.equal(quote.activities[0]?.actorRole, "assistant");
+    assert.equal(quote.activities[0]?.text, "That part is PN-MTR-1 on the BOM.");
+  });
+
   it("round-trips every QuoteRecord field through a catalog load", () => {
     const full = {
       id: "q6",
@@ -506,6 +528,25 @@ describe("role-aware items and unread", () => {
       },
     );
     assert.equal(afterPo.invoiceNumber, "INV-1042");
+  });
+
+  it("exposes a paused assistant flag on the public quote", () => {
+    const paused = toPublicQuote(
+      { ...record, assistantPaused: true, assistantEscalatedAt: "2026-01-02T00:00:00.000Z" },
+      {
+        id: "staff-1",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+    );
+    assert.equal(paused.assistantPaused, true);
+    assert.equal(paused.assistantEscalatedAt, "2026-01-02T00:00:00.000Z");
+    const open = toPublicQuote(record, {
+      id: "staff-1",
+      email: "staff@spares.local",
+      role: "staff",
+    });
+    assert.equal(open.assistantPaused, undefined);
   });
 });
 

@@ -22,6 +22,7 @@ import { errorMessage } from "@/lib/api/errors";
 import {
   getQuote,
   postQuoteActivity,
+  setQuoteAssistantPaused,
   updateQuote,
   uploadQuotePo,
 } from "@/lib/api/quotes";
@@ -107,7 +108,11 @@ export function QuoteWorkspace({
     const next = await getQuote(quoteRef);
     const { activities, changed } = mergeActivitiesById(quote.activities, next.activities);
     const touched =
-      changed || quote.status !== next.status || quote.unread !== next.unread;
+      changed ||
+      quote.status !== next.status ||
+      quote.unread !== next.unread ||
+      quote.assistantPaused !== next.assistantPaused ||
+      quote.assistantAvailable !== next.assistantAvailable;
     if (!touched) {
       return;
     }
@@ -124,6 +129,8 @@ export function QuoteWorkspace({
         status: next.status,
         activities,
         unread: next.unread,
+        assistantPaused: next.assistantPaused,
+        assistantAvailable: next.assistantAvailable,
       };
     });
   }, [items, pendingStatus, quote, quoteRef, refresh]);
@@ -163,6 +170,13 @@ export function QuoteWorkspace({
       return;
     }
     await run(() => postQuoteActivity(String(quote.number), input));
+  }
+
+  async function onAssistantPaused(paused: boolean) {
+    if (!quote) {
+      return;
+    }
+    await run(() => setQuoteAssistantPaused(String(quote.number), paused));
   }
 
   if (!quote) {
@@ -452,6 +466,9 @@ export function QuoteWorkspace({
           threadKind="quote"
           threadId={quote.id}
           layout="sheet"
+          assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
+          assistantPaused={quote.assistantPaused}
+          onAssistantPausedChange={role === "staff" ? onAssistantPaused : undefined}
         />
       </ConversationSheet>
     </div>

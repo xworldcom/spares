@@ -12,6 +12,7 @@ import {
 import { errorMessage } from "@/lib/api/errors";
 import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
+import { assistantActorLabel, isAssistantActivity } from "@/lib/assistant/actor";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
 
@@ -21,6 +22,9 @@ export type ActivitySendInput = {
 };
 
 function actorLabel(activity: QuoteActivity, role: Role, selfEmail: string) {
+  if (isAssistantActivity(activity)) {
+    return assistantActorLabel();
+  }
   if (activity.actorEmail === selfEmail && activity.actorRole === role) {
     return "You";
   }
@@ -30,13 +34,13 @@ function actorLabel(activity: QuoteActivity, role: Role, selfEmail: string) {
   return displayNameFromEmail(activity.actorEmail);
 }
 
-function OtherAvatar({ email }: { email: string }) {
+function OtherAvatar({ email, assistant }: { email: string; assistant?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className="imsg-avatar"
+      className={assistant ? "imsg-avatar imsg-avatar-assistant" : "imsg-avatar"}
     >
-      {initialsFromEmail(email)}
+      {assistant ? "AI" : initialsFromEmail(email)}
     </span>
   );
 }
@@ -75,6 +79,9 @@ export function QuoteActivityFeed({
   subtitle,
   layout = "card",
   customerReadReceipts,
+  assistantAvailable,
+  assistantPaused,
+  onAssistantPausedChange,
 }: {
   activities: QuoteActivity[];
   role: Role;
@@ -89,6 +96,9 @@ export function QuoteActivityFeed({
   layout?: "card" | "sheet";
   /** Staff-only Care ticket read receipts (customers on thread). */
   customerReadReceipts?: TicketCustomerReadReceipt[];
+  assistantAvailable?: boolean;
+  assistantPaused?: boolean;
+  onAssistantPausedChange?: (paused: boolean) => Promise<void>;
 }) {
   const [text, setText] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -97,6 +107,7 @@ export function QuoteActivityFeed({
     null,
   );
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [toggleBusy, setToggleBusy] = useState(false);
   const scrollerRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -198,6 +209,23 @@ export function QuoteActivityFeed({
 
   const sendDisabled =
     busy || uploading || (!text.trim() && pendingFiles.length === 0);
+  const showAssistantToggle =
+    role === "staff" && Boolean(assistantAvailable && onAssistantPausedChange);
+
+  async function onToggleAssistant(nextPaused: boolean) {
+    if (!onAssistantPausedChange || toggleBusy) {
+      return;
+    }
+    setToggleBusy(true);
+    setComposerError(null);
+    try {
+      await onAssistantPausedChange(nextPaused);
+    } catch (cause) {
+      setComposerError(errorMessage(cause, "Could not update AI for this chat."));
+    } finally {
+      setToggleBusy(false);
+    }
+  }
 
   const cardClass =
     layout === "sheet" ? "imsg-card imsg-card--sheet" : "imsg-card";
@@ -237,11 +265,13 @@ export function QuoteActivityFeed({
             const stacked = sameMessageAuthor(activity, prev);
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
+            const assistant = isAssistantActivity(activity);
             const label = actorLabel(activity, role, selfEmail);
             const attachments = activity.attachments ?? [];
 
             const rowClass = [
               own ? "imsg-row imsg-own" : "imsg-row imsg-other",
+              assistant ? "imsg-assistant" : "",
               enteringIds.has(activity.id) ? "imsg-enter" : "",
             ]
               .filter(Boolean)
@@ -273,7 +303,11 @@ export function QuoteActivityFeed({
                 }
               >
                 {!own ? (
-                  lastInStack ? <OtherAvatar email={activity.actorEmail} /> : <span className="imsg-avatar-spacer" aria-hidden="true" />
+                  lastInStack ? (
+                    <OtherAvatar email={activity.actorEmail} assistant={assistant} />
+                  ) : (
+                    <span className="imsg-avatar-spacer" aria-hidden="true" />
+                  )
                 ) : null}
                 <div className="imsg-stack">
                   {!own && !stacked ? (
@@ -340,6 +374,20 @@ export function QuoteActivityFeed({
         ) : null}
         {composerError ? (
           <p className="imsg-composer-error" role="alert">{composerError}</p>
+        ) : null}
+        {showAssistantToggle ? (
+          <label className="imsg-ai-toggle">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={!assistantPaused}
+              disabled={busy || toggleBusy}
+              onChange={(event) => {
+                void onToggleAssistant(!event.target.checked);
+              }}
+            />
+            <span>{assistantPaused ? "AI off for this chat" : "AI on this chat"}</span>
+          </label>
         ) : null}
         <div className="imsg-composer-row">
           <input

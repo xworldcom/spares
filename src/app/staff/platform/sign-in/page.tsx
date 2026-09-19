@@ -99,6 +99,9 @@ function PlatformSignInSettings() {
         <Link className="text-sm text-muted hover:underline" href="/staff/platform">
           ← Hosts
         </Link>
+        <Link className="ml-3 text-sm text-muted hover:underline" href="/staff/platform/assistant">
+          AI settings
+        </Link>
         <h1 className="page-title mt-3">Sign-in</h1>
         <p className="text-muted mt-1">
           Control how people reach OEE360. Microsoft SSO stays available when Azure is

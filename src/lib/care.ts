@@ -317,6 +317,8 @@ export function toPublicTicket(
     customerEmail: ticket.customerEmail,
     activities: ticket.activities,
     unread: isTicketUnreadForUser(ticket, user),
+    assistantPaused: ticket.assistantPaused,
+    assistantEscalatedAt: ticket.assistantEscalatedAt,
   };
   if (user.role === "staff" && options?.customerUsers) {
     const receipts = customerReadReceiptsForTicket(ticket, options.customerUsers);

@@ -1,12 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
+import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
 import { error, json } from "@/lib/http";
 import {
   canUploadPo,
   isPdfUpload,
   MAX_PO_BYTES,
   safeDownloadName,
-  toPublicQuote,
 } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
@@ -137,7 +136,7 @@ export async function POST(
   });
 
   return json(
-    { quote: toPublicQuote(next, access.user, await machineNameFor(next)) },
+    { quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) },
     201,
   );
 }

@@ -5,28 +5,44 @@ export type PlatformSignInSettings = {
   passwordLoginEnabled?: boolean;
 };
 
-type PlatformSettingsDocument = PlatformSignInSettings & {
+export type PlatformSettingsDocument = {
   schemaVersion?: number;
+  passwordLoginEnabled?: boolean;
+  assistantEnabled?: boolean;
+  assistantModel?: string;
 };
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
-function parsePlatformSettingsDocument(raw: string): PlatformSignInSettings | null {
+function parsePlatformSettingsDocument(raw: string): PlatformSettingsDocument | null {
   try {
     const parsed = JSON.parse(raw) as PlatformSettingsDocument;
     if (!parsed || typeof parsed !== "object") {
       return null;
     }
-    if (typeof parsed.passwordLoginEnabled !== "boolean" && parsed.passwordLoginEnabled !== undefined) {
+    const next: PlatformSettingsDocument = {};
+    if (typeof parsed.passwordLoginEnabled === "boolean") {
+      next.passwordLoginEnabled = parsed.passwordLoginEnabled;
+    } else if (parsed.passwordLoginEnabled !== undefined) {
       return null;
     }
-    return { passwordLoginEnabled: parsed.passwordLoginEnabled };
+    if (typeof parsed.assistantEnabled === "boolean") {
+      next.assistantEnabled = parsed.assistantEnabled;
+    } else if (parsed.assistantEnabled !== undefined) {
+      return null;
+    }
+    if (typeof parsed.assistantModel === "string") {
+      next.assistantModel = parsed.assistantModel;
+    } else if (parsed.assistantModel !== undefined) {
+      return null;
+    }
+    return next;
   } catch {
     return null;
   }
 }
 
-export async function readPersistedPlatformSignInSettings(): Promise<PlatformSignInSettings | null> {
+export async function readPersistedPlatformSettings(): Promise<PlatformSettingsDocument | null> {
   const raw = await getPersistence().readPlatformSettingsJson();
   if (raw === null) {
     return null;
@@ -34,12 +50,31 @@ export async function readPersistedPlatformSignInSettings(): Promise<PlatformSig
   return parsePlatformSettingsDocument(raw);
 }
 
+export async function writePersistedPlatformSettings(
+  patch: PlatformSettingsDocument,
+): Promise<PlatformSettingsDocument> {
+  const current = (await readPersistedPlatformSettings()) ?? {};
+  const next: PlatformSettingsDocument = {
+    ...current,
+    ...patch,
+    schemaVersion: SCHEMA_VERSION,
+  };
+  await getPersistence().writePlatformSettingsJson(JSON.stringify(next, null, 2));
+  return next;
+}
+
+export async function readPersistedPlatformSignInSettings(): Promise<PlatformSignInSettings | null> {
+  const doc = await readPersistedPlatformSettings();
+  if (!doc) {
+    return null;
+  }
+  return { passwordLoginEnabled: doc.passwordLoginEnabled };
+}
+
 export async function writePersistedPlatformSignInSettings(
   settings: PlatformSignInSettings,
 ): Promise<void> {
-  const doc: PlatformSettingsDocument = {
-    schemaVersion: SCHEMA_VERSION,
-    ...settings,
-  };
-  await getPersistence().writePlatformSettingsJson(JSON.stringify(doc, null, 2));
+  await writePersistedPlatformSettings({
+    passwordLoginEnabled: settings.passwordLoginEnabled,
+  });
 }

@@ -399,6 +399,38 @@ export async function chatAttachmentHead(storedFileName: string) {
   }
 }
 
+export async function readChatAttachmentBytes(
+  storedFileName: string,
+): Promise<Buffer | null> {
+  const name = safeChatStoredFileName(storedFileName);
+  const key = chatObjectKey(name);
+  if (testS3Objects) {
+    const bytes = testS3Objects.get(key);
+    return bytes ? Buffer.from(bytes) : null;
+  }
+  if (selectChatAttachmentStoreKind() !== "s3") {
+    return null;
+  }
+  try {
+    const result = await getS3Client().send(
+      new GetObjectCommand({
+        Bucket: s3Bucket(),
+        Key: key,
+      }),
+    );
+    if (!result.Body) {
+      return null;
+    }
+    const bytes = await result.Body.transformToByteArray();
+    return Buffer.from(bytes);
+  } catch (error) {
+    if (isS3MissingError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function createChatAttachmentDownloadUrl(
   storedFileName: string,
   expiresInSeconds = modelDownloadUrlTtlSeconds(),

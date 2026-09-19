@@ -1,5 +1,8 @@
 export type Role = "staff" | "customer";
 
+/** Chat/activity author. Login users stay `Role`; the plant assistant posts as `assistant`. */
+export type ActivityActorRole = Role | "assistant";
+
 /** Automation company (host) sharing the platform; not an end-customer account. */
 export type Tenant = {
   id: string;
@@ -163,7 +166,7 @@ export type ChatAttachment = {
 export type QuoteActivity = {
   id: string;
   at: string;
-  actorRole: Role;
+  actorRole: ActivityActorRole;
   actorEmail: string;
   kind: QuoteActivityKind;
   text: string;
@@ -188,6 +191,11 @@ export type Quote = {
   activities: QuoteActivity[];
   unread: boolean;
   invoiceNumber?: string;
+  /** When set, the plant assistant stops auto-replying on this quote. */
+  assistantPaused?: boolean;
+  assistantEscalatedAt?: string;
+  /** Staff-only: platform AI is on, so this thread can mute/unmute it. */
+  assistantAvailable?: boolean;
 };
 
 export type QuoteRecord = {
@@ -209,6 +217,9 @@ export type QuoteRecord = {
   activities: QuoteActivity[];
   lastReadAt: Record<string, string>;
   invoiceNumber?: string;
+  /** When set, the plant assistant stops auto-replying on this quote. */
+  assistantPaused?: boolean;
+  assistantEscalatedAt?: string;
 };
 
 export type BugReport = {
@@ -277,7 +288,7 @@ export type TicketActivityKind = "message" | "status";
 export type TicketActivity = {
   id: string;
   at: string;
-  actorRole: Role;
+  actorRole: ActivityActorRole;
   actorEmail: string;
   kind: TicketActivityKind;
   text: string;
@@ -296,6 +307,9 @@ export type ServiceTicketRecord = {
   tenantId?: string;
   activities: TicketActivity[];
   lastReadAt: Record<string, string>;
+  /** When set, the plant assistant stops auto-replying on this ticket. */
+  assistantPaused?: boolean;
+  assistantEscalatedAt?: string;
 };
 
 /** Customer read receipt on a Care ticket (staff-only in API responses). */
@@ -319,6 +333,10 @@ export type ServiceTicket = {
   unread: boolean;
   /** Present for staff when at least one customer has read through the latest activity. */
   customerReadReceipts?: TicketCustomerReadReceipt[];
+  assistantPaused?: boolean;
+  assistantEscalatedAt?: string;
+  /** Staff-only: platform AI is on, so this thread can mute/unmute it. */
+  assistantAvailable?: boolean;
 };
 
 export type ServiceVisitSnapshot = {

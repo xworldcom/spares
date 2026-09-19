@@ -1,11 +1,12 @@
 import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
 import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
-import { MAX_ACTIVITY_TEXT, toPublicQuote } from "@/lib/quotes";
+import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
+import { MAX_ACTIVITY_TEXT } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
+import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { appendQuoteActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -82,8 +83,20 @@ export async function POST(
     console.error("quote chat email notify failed", cause);
   });
 
+  scheduleAssistantReply({
+    kind: "quote",
+    id: next.id,
+    tenantId,
+    machineId: next.machineId,
+    machineName,
+    triggerText: parsed.text,
+    triggerRole: access.user.role,
+    triggerEmail: access.user.email,
+    attachments: parsed.attachments,
+  });
+
   return json(
-    { quote: toPublicQuote(next, access.user, machineName) },
+    { quote: await publicQuoteForUser(next, access.user, machineName) },
     201,
   );
 }
