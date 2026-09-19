@@ -1,0 +1,104 @@
+{
+  "startedAt": "2026-09-04T04:49:35.808Z",
+  "endedAt": "2026-09-04T04:49:46.723Z",
+  "elapsedMs": 10915,
+  "preview": "https://spares-88zuixxl3-yonder3.vercel.app",
+  "protectionUnauth": "302 to Vercel SSO (confirmed separately)",
+  "afterLoginUrl": "https://spares-88zuixxl3-yonder3.vercel.app/machines/palletizer",
+  "clickedFullscreen": true,
+  "verdict": "FIXED",
+  "gate": {
+    "expand": {
+      "desc": {
+        "tag": "BUTTON",
+        "aria": "Full screen",
+        "text": "",
+        "className": "viewer-chrome-chip inline-flex h-11 w-11 items-center justify-center rounded-full",
+        "color": "rgb(11, 13, 16)",
+        "backgroundColor": "rgb(244, 245, 247)",
+        "opacity": "1",
+        "boxShadow": "rgba(0, 0, 0, 0.22) 0px 8px 24px 0px",
+        "x": 908,
+        "y": 151.5,
+        "w": 44,
+        "h": 44
+      },
+      "near": {
+        "x": 868,
+        "y": 174,
+        "tag": "CANVAS",
+        "className": null,
+        "backgroundColor": "rgba(0, 0, 0, 0)"
+      },
+      "transparent": false,
+      "inkOnInk": true,
+      "chipPainted": true,
+      "chipVsStage": 17.84,
+      "fgVsBg": 17.84,
+      "fgVsStage": 1,
+      "pixel": {
+        "w": 44,
+        "h": 45,
+        "samples": 1980,
+        "p10": 0.017451810498486105,
+        "p90": 0.9125331254129174,
+        "p10p90": 14.27,
+        "darkShare": 0.262,
+        "lightShare": 0.704
+      },
+      "computedOk": true,
+      "pixelOk": true,
+      "brokenBlackOnBlack": false,
+      "visible": true
+    },
+    "exit": {
+      "desc": {
+        "tag": "BUTTON",
+        "aria": "Exit full screen",
+        "text": "×",
+        "className": "viewer-chrome-chip inline-flex h-11 w-11 items-center justify-center rounded-full",
+        "color": "rgb(11, 13, 16)",
+        "backgroundColor": "rgb(244, 245, 247)",
+        "opacity": "1",
+        "boxShadow": "rgba(0, 0, 0, 0.22) 0px 8px 24px 0px",
+        "x": 1384,
+        "y": 68,
+        "w": 44,
+        "h": 44
+      },
+      "near": {
+        "x": 1344,
+        "y": 90,
+        "tag": "SPAN",
+        "className": "btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums",
+        "backgroundColor": "rgb(10, 132, 255)"
+      },
+      "transparent": false,
+      "inkOnInk": true,
+      "chipPainted": true,
+      "chipVsStage": 17.84,
+      "fgVsBg": 17.84,
+      "fgVsStage": 1,
+      "pixel": {
+        "w": 44,
+        "h": 44,
+        "samples": 1936,
+        "p10": 0.016623408836141787,
+        "p90": 0.9125331254129174,
+        "p10p90": 14.447,
+        "darkShare": 0.232,
+        "lightShare": 0.728
+      },
+      "computedOk": true,
+      "pixelOk": true,
+      "brokenBlackOnBlack": false,
+      "visible": true
+    }
+  },
+  "tokenContrast": {
+    "chipVsStage": 17.84,
+    "inkVsChip": 17.84
+  },
+  "ssoHits": 0,
+  "consoleErrorCount": 2
+}
