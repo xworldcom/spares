@@ -1,0 +1,1769 @@
+{
+  "quoteNumber": "1",
+  "log": [
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "9d9f8dcd-9846-4912-99cc-8914b215c5f3",
+          "email": "customer@spares.local",
+          "role": "customer"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "9d9f8dcd-9846-4912-99cc-8914b215c5f3",
+          "email": "customer@spares.local",
+          "role": "customer"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes",
+      "status": 201,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "supplierCost": 12.5,
+              "sellPrice": 48.0,
+              "leadTimeDays": 5,
+              "supplier": "McMaster",
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "88ef9fed-efbe-4b89-bdab-4f029b971f79",
+          "email": "staff@spares.local",
+          "role": "staff"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quotes": [
+          {
+            "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+            "number": 1,
+            "machineId": "hardware-fixture",
+            "items": [
+              {
+                "id": "5972K325",
+                "qty": 2,
+                "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W"
+              }
+            ],
+            "createdAt": "2026-09-04T04:10:45.766Z",
+            "customerEmail": "customer@spares.local",
+            "status": "requested",
+            "shipments": [],
+            "activities": [
+              {
+                "id": "905feaa0-e304-4748-bf04-a1906a106922",
+                "at": "2026-09-04T04:10:45.766Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "status",
+                "text": "Status set to Requested."
+              }
+            ],
+            "unread": true,
+            "hasPoFile": false,
+            "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+            "machineName": "Hardware fixture"
+          }
+        ],
+        "unreadCount": 1
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "in_review",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "pricing",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "quoted",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "quoted",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "9d9f8dcd-9846-4912-99cc-8914b215c5f3",
+          "email": "customer@spares.local",
+          "role": "customer"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "leadTimeDays": 5
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "quoted",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/1/activity",
+      "status": 201,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "leadTimeDays": 5
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "quoted",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/1/po",
+      "status": 400,
+      "ctype": "application/json",
+      "body": {
+        "error": "Expected multipart/form-data"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "leadTimeDays": 5
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "quoted",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "88ef9fed-efbe-4b89-bdab-4f029b971f79",
+          "email": "staff@spares.local",
+          "role": "staff"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quotes": [
+          {
+            "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+            "number": 1,
+            "machineId": "hardware-fixture",
+            "items": [
+              {
+                "id": "5972K325",
+                "qty": 2,
+                "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+                "sellPrice": 48,
+                "supplierCost": 12.5,
+                "supplier": "McMaster",
+                "leadTimeDays": 5,
+                "note": "QA T3.0 line note"
+              }
+            ],
+            "createdAt": "2026-09-04T04:10:45.766Z",
+            "customerEmail": "customer@spares.local",
+            "status": "quoted",
+            "shipments": [],
+            "activities": [
+              {
+                "id": "905feaa0-e304-4748-bf04-a1906a106922",
+                "at": "2026-09-04T04:10:45.766Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "status",
+                "text": "Status set to Requested."
+              },
+              {
+                "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+                "at": "2026-09-04T04:10:46.134Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "pricing",
+                "text": "Pricing updated."
+              },
+              {
+                "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+                "at": "2026-09-04T04:10:46.210Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to In review."
+              },
+              {
+                "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+                "at": "2026-09-04T04:10:46.283Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to Pricing."
+              },
+              {
+                "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+                "at": "2026-09-04T04:10:46.358Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to Quoted."
+              },
+              {
+                "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+                "at": "2026-09-04T04:10:46.741Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "message",
+                "text": "Customer: confirm Friday delivery to line 3."
+              }
+            ],
+            "unread": true,
+            "hasPoFile": false,
+            "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+            "machineName": "Hardware fixture"
+          }
+        ],
+        "unreadCount": 1
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "quoted",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1/po",
+      "status": 404,
+      "ctype": "application/json",
+      "body": {
+        "error": "No purchase order file on this quote"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "confirmed",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            },
+            {
+              "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+              "at": "2026-09-04T04:10:47.396Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Confirmed."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "ordered",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            },
+            {
+              "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+              "at": "2026-09-04T04:10:47.396Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Confirmed."
+            },
+            {
+              "id": "f9d521ea-72c9-49d5-9c24-6176386422e6",
+              "at": "2026-09-04T04:10:47.497Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Ordered."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "shipped",
+          "shipments": [
+            {
+              "id": "5d999b91-4d90-4a99-bfb2-0601fa831e35",
+              "trackingNumber": "1Z999AA10123456784",
+              "carrier": "UPS",
+              "trackingUrl": "https://www.ups.com/track?tracknum=1Z999AA10123456784"
+            }
+          ],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            },
+            {
+              "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+              "at": "2026-09-04T04:10:47.396Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Confirmed."
+            },
+            {
+              "id": "f9d521ea-72c9-49d5-9c24-6176386422e6",
+              "at": "2026-09-04T04:10:47.497Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Ordered."
+            },
+            {
+              "id": "40d175d2-e7f0-4194-bea4-241eda249607",
+              "at": "2026-09-04T04:10:47.577Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "shipment",
+              "text": "Shipped \u2014 tracking 1Z999AA10123456784 (UPS)"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/1/activity",
+      "status": 201,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "supplierCost": 12.5,
+              "supplier": "McMaster",
+              "leadTimeDays": 5,
+              "note": "QA T3.0 line note"
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "shipped",
+          "shipments": [
+            {
+              "id": "5d999b91-4d90-4a99-bfb2-0601fa831e35",
+              "trackingNumber": "1Z999AA10123456784",
+              "carrier": "UPS",
+              "trackingUrl": "https://www.ups.com/track?tracknum=1Z999AA10123456784"
+            }
+          ],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            },
+            {
+              "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+              "at": "2026-09-04T04:10:47.396Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Confirmed."
+            },
+            {
+              "id": "f9d521ea-72c9-49d5-9c24-6176386422e6",
+              "at": "2026-09-04T04:10:47.497Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Ordered."
+            },
+            {
+              "id": "40d175d2-e7f0-4194-bea4-241eda249607",
+              "at": "2026-09-04T04:10:47.577Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "shipment",
+              "text": "Shipped \u2014 tracking 1Z999AA10123456784 (UPS)"
+            },
+            {
+              "id": "4a0733ad-2290-45fb-bcbc-613083b7be2c",
+              "at": "2026-09-04T04:10:47.647Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "message",
+              "text": "Staff: boxed and handed to UPS this morning."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "9d9f8dcd-9846-4912-99cc-8914b215c5f3",
+          "email": "customer@spares.local",
+          "role": "customer"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "leadTimeDays": 5
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "shipped",
+          "shipments": [
+            {
+              "id": "5d999b91-4d90-4a99-bfb2-0601fa831e35",
+              "trackingNumber": "1Z999AA10123456784",
+              "carrier": "UPS",
+              "trackingUrl": "https://www.ups.com/track?tracknum=1Z999AA10123456784"
+            }
+          ],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            },
+            {
+              "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+              "at": "2026-09-04T04:10:47.396Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Confirmed."
+            },
+            {
+              "id": "f9d521ea-72c9-49d5-9c24-6176386422e6",
+              "at": "2026-09-04T04:10:47.497Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Ordered."
+            },
+            {
+              "id": "40d175d2-e7f0-4194-bea4-241eda249607",
+              "at": "2026-09-04T04:10:47.577Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "shipment",
+              "text": "Shipped \u2014 tracking 1Z999AA10123456784 (UPS)"
+            },
+            {
+              "id": "4a0733ad-2290-45fb-bcbc-613083b7be2c",
+              "at": "2026-09-04T04:10:47.647Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "message",
+              "text": "Staff: boxed and handed to UPS this morning."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/1/activity",
+      "status": 201,
+      "ctype": "application/json",
+      "body": {
+        "quote": {
+          "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+              "sellPrice": 48,
+              "leadTimeDays": 5
+            }
+          ],
+          "createdAt": "2026-09-04T04:10:45.766Z",
+          "customerEmail": "customer@spares.local",
+          "status": "shipped",
+          "shipments": [
+            {
+              "id": "5d999b91-4d90-4a99-bfb2-0601fa831e35",
+              "trackingNumber": "1Z999AA10123456784",
+              "carrier": "UPS",
+              "trackingUrl": "https://www.ups.com/track?tracknum=1Z999AA10123456784"
+            }
+          ],
+          "activities": [
+            {
+              "id": "905feaa0-e304-4748-bf04-a1906a106922",
+              "at": "2026-09-04T04:10:45.766Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+              "at": "2026-09-04T04:10:46.134Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "pricing",
+              "text": "Pricing updated."
+            },
+            {
+              "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+              "at": "2026-09-04T04:10:46.210Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to In review."
+            },
+            {
+              "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+              "at": "2026-09-04T04:10:46.283Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Pricing."
+            },
+            {
+              "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+              "at": "2026-09-04T04:10:46.358Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Quoted."
+            },
+            {
+              "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+              "at": "2026-09-04T04:10:46.741Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: confirm Friday delivery to line 3."
+            },
+            {
+              "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+              "at": "2026-09-04T04:10:47.396Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Confirmed."
+            },
+            {
+              "id": "f9d521ea-72c9-49d5-9c24-6176386422e6",
+              "at": "2026-09-04T04:10:47.497Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "status",
+              "text": "Status set to Ordered."
+            },
+            {
+              "id": "40d175d2-e7f0-4194-bea4-241eda249607",
+              "at": "2026-09-04T04:10:47.577Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "shipment",
+              "text": "Shipped \u2014 tracking 1Z999AA10123456784 (UPS)"
+            },
+            {
+              "id": "4a0733ad-2290-45fb-bcbc-613083b7be2c",
+              "at": "2026-09-04T04:10:47.647Z",
+              "actorRole": "staff",
+              "actorEmail": "staff@spares.local",
+              "kind": "message",
+              "text": "Staff: boxed and handed to UPS this morning."
+            },
+            {
+              "id": "7b9bd46c-0e88-4e3c-8e02-4acea987441b",
+              "at": "2026-09-04T04:10:47.958Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "Customer: thanks \u2014 dock is clear."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "user": {
+          "id": "88ef9fed-efbe-4b89-bdab-4f029b971f79",
+          "email": "staff@spares.local",
+          "role": "staff"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes",
+      "status": 200,
+      "ctype": "application/json",
+      "body": {
+        "quotes": [
+          {
+            "id": "6475c468-c64a-48df-a21f-7769f24d889a",
+            "number": 1,
+            "machineId": "hardware-fixture",
+            "items": [
+              {
+                "id": "5972K325",
+                "qty": 2,
+                "name": "Shielded ball bearing, 8 mm ID \u00d7 22 mm OD \u00d7 7 mm W",
+                "sellPrice": 48,
+                "supplierCost": 12.5,
+                "supplier": "McMaster",
+                "leadTimeDays": 5,
+                "note": "QA T3.0 line note"
+              }
+            ],
+            "createdAt": "2026-09-04T04:10:45.766Z",
+            "customerEmail": "customer@spares.local",
+            "status": "shipped",
+            "shipments": [
+              {
+                "id": "5d999b91-4d90-4a99-bfb2-0601fa831e35",
+                "trackingNumber": "1Z999AA10123456784",
+                "carrier": "UPS",
+                "trackingUrl": "https://www.ups.com/track?tracknum=1Z999AA10123456784"
+              }
+            ],
+            "activities": [
+              {
+                "id": "905feaa0-e304-4748-bf04-a1906a106922",
+                "at": "2026-09-04T04:10:45.766Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "status",
+                "text": "Status set to Requested."
+              },
+              {
+                "id": "6c7008cd-20b2-44ef-9f1c-916f95f72713",
+                "at": "2026-09-04T04:10:46.134Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "pricing",
+                "text": "Pricing updated."
+              },
+              {
+                "id": "e53c0050-0afd-4063-beef-c470088ccaa9",
+                "at": "2026-09-04T04:10:46.210Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to In review."
+              },
+              {
+                "id": "ad580344-d184-40b5-96e3-36dfb30ef3e5",
+                "at": "2026-09-04T04:10:46.283Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to Pricing."
+              },
+              {
+                "id": "d059f448-ebf1-4e9d-a6fd-d704d7e62b76",
+                "at": "2026-09-04T04:10:46.358Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to Quoted."
+              },
+              {
+                "id": "e2876f9e-d05f-4a80-bb07-63d59b7c5298",
+                "at": "2026-09-04T04:10:46.741Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "message",
+                "text": "Customer: confirm Friday delivery to line 3."
+              },
+              {
+                "id": "50f0bd2f-0cf8-49fe-96a7-1bcba44d39f6",
+                "at": "2026-09-04T04:10:47.396Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to Confirmed."
+              },
+              {
+                "id": "f9d521ea-72c9-49d5-9c24-6176386422e6",
+                "at": "2026-09-04T04:10:47.497Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "status",
+                "text": "Status set to Ordered."
+              },
+              {
+                "id": "40d175d2-e7f0-4194-bea4-241eda249607",
+                "at": "2026-09-04T04:10:47.577Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "shipment",
+                "text": "Shipped \u2014 tracking 1Z999AA10123456784 (UPS)"
+              },
+              {
+                "id": "4a0733ad-2290-45fb-bcbc-613083b7be2c",
+                "at": "2026-09-04T04:10:47.647Z",
+                "actorRole": "staff",
+                "actorEmail": "staff@spares.local",
+                "kind": "message",
+                "text": "Staff: boxed and handed to UPS this morning."
+              },
+              {
+                "id": "7b9bd46c-0e88-4e3c-8e02-4acea987441b",
+                "at": "2026-09-04T04:10:47.958Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "message",
+                "text": "Customer: thanks \u2014 dock is clear."
+              }
+            ],
+            "unread": true,
+            "hasPoFile": false,
+            "note": "T3.0 QA \u2014 need-by Friday, line 3, serial QA-26.",
+            "machineName": "Hardware fixture"
+          }
+        ],
+        "unreadCount": 1
+      }
+    }
+  ]
+}
