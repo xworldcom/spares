@@ -1,4 +1,4 @@
-import { parseSsoDomains } from "@/lib/auth/sso-domain";
+import { parseSsoAutoroute, parseSsoDomains } from "@/lib/auth/sso-domain";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { updateTenantPlatformMeta, removePlatformTenant } from "@/lib/store";
@@ -11,6 +11,7 @@ type PatchBody = {
   name?: unknown;
   inactive?: unknown;
   ssoDomains?: unknown;
+  ssoAutoroute?: unknown;
 };
 
 export async function PATCH(request: Request, context: Params) {
@@ -35,8 +36,14 @@ export async function PATCH(request: Request, context: Params) {
     }
     ssoDomains = parsed.domains;
   }
+  const ssoAutoroute = parseSsoAutoroute(body.ssoAutoroute);
 
-  if (name === undefined && inactive === undefined && ssoDomains === undefined) {
+  if (
+    name === undefined &&
+    inactive === undefined &&
+    ssoDomains === undefined &&
+    ssoAutoroute === undefined
+  ) {
     return error("No changes requested", 400);
   }
 
@@ -44,6 +51,7 @@ export async function PATCH(request: Request, context: Params) {
     name,
     inactive,
     ssoDomains,
+    ssoAutoroute,
   });
   if ("error" in updated) {
     if (updated.error === "not-found") {

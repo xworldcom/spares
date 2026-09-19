@@ -7,6 +7,7 @@ import {
   firstTakenSsoDomain,
   formatSsoDomains,
   normalizeSsoDomain,
+  parseSsoAutoroute,
   parseSsoDomains,
 } from "./sso-domain.ts";
 
@@ -64,12 +65,28 @@ describe("parseSsoDomains", () => {
   });
 });
 
+describe("parseSsoAutoroute", () => {
+  it("reads on/off from common encodings", () => {
+    assert.equal(parseSsoAutoroute("on"), true);
+    assert.equal(parseSsoAutoroute(true), true);
+    assert.equal(parseSsoAutoroute("off"), false);
+    assert.equal(parseSsoAutoroute(false), false);
+    assert.equal(parseSsoAutoroute(undefined), undefined);
+  });
+});
+
 describe("tenant SSO domain claims", () => {
   const shape = tenant({ id: "tenant-shape", ssoDomains: ["shape.com"] });
   const host = tenant({ id: "tenant-oee360-host", ssoDomains: ["huzevka.com"] });
 
-  it("routes an active unique domain to that host", () => {
-    assert.equal(findActiveTenantForSsoDomain([shape, host], "shape.com")?.id, "tenant-shape");
+  it("routes only when autoroute is on", () => {
+    assert.equal(findActiveTenantForSsoDomain([shape, host], "shape.com"), null);
+    const live = tenant({
+      id: "tenant-shape",
+      ssoDomains: ["shape.com"],
+      ssoAutoroute: true,
+    });
+    assert.equal(findActiveTenantForSsoDomain([live, host], "shape.com")?.id, "tenant-shape");
   });
 
   it("ignores suspended and deleted hosts for first-time SSO", () => {

@@ -80,6 +80,18 @@ describe("parseCreatePlatformTenantBody", () => {
     });
   });
 
+  it("accepts an autoroute off/on flag", () => {
+    const result = parseCreatePlatformTenantBody({
+      name: "Shape",
+      ssoDomains: "shape.com",
+      ssoAutoroute: "on",
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      value: { name: "Shape", ssoDomains: ["shape.com"], ssoAutoroute: true },
+    });
+  });
+
   it("rejects a public SSO domain", () => {
     const result = parseCreatePlatformTenantBody({
       name: "Shape",

@@ -8,7 +8,6 @@ import { createMemoryPersistence, setPersistenceForTests } from "./persistence.t
 import {
   createTenantStaffUser,
   createTenantWithOptionalStaff,
-  findUserByEmail,
   resolveMicrosoftCatalogUser,
   resetStoreMemoryForTests,
   updateTenantPlatformMeta,
@@ -37,6 +36,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const created = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoAutoroute: true,
     });
     assert.ok("tenant" in created);
     if (!("tenant" in created)) {
@@ -67,6 +67,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const shape = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoAutoroute: true,
     });
     assert.ok("tenant" in shape);
     const existing = await createTenantStaffUser(DEFAULT_TENANT_ID, {
@@ -86,10 +87,36 @@ describe("Microsoft SSO domain provision", () => {
     assert.notEqual(resolved.user.tenantId, shape.tenant.id);
   });
 
+  it("does not autoroute when the host switch is off", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("Shape", undefined, {
+      ssoDomains: ["shape.com"],
+      ssoAutoroute: false,
+    });
+    assert.ok("tenant" in created);
+    assert.deepEqual(await resolveMicrosoftCatalogUser("jane@shape.com"), {
+      error: "unknown",
+    });
+    if (!("tenant" in created)) {
+      return;
+    }
+    const enabled = await updateTenantPlatformMeta(created.tenant.id, {
+      ssoAutoroute: true,
+    });
+    assert.ok("tenant" in enabled);
+    const first = await resolveMicrosoftCatalogUser("jane@shape.com");
+    assert.ok("user" in first);
+    if (!("user" in first)) {
+      return;
+    }
+    assert.equal(first.user.tenantId, created.tenant.id);
+  });
+
   it("denies unknown domains and public inboxes", async () => {
     await isolated();
     await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoAutoroute: true,
     });
     assert.deepEqual(await resolveMicrosoftCatalogUser("pat@other.com"), {
       error: "unknown",
@@ -123,6 +150,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const created = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoAutoroute: true,
     });
     assert.ok("tenant" in created);
     if (!("tenant" in created)) {

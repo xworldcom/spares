@@ -172,7 +172,7 @@ export function LoginForm({
             Sign in with Microsoft
           </a>
           <p className="text-center text-[13px] text-[rgba(236,234,228,0.55)]">
-            Company work accounts join their host when that domain is enrolled.
+            Company work accounts join their host when that domain is enrolled and autoroute is on.
           </p>
         </>
       ) : null}

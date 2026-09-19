@@ -128,6 +128,32 @@ export function tenantSsoDomains(tenant: Pick<Tenant, "ssoDomains">) {
   return tenant.ssoDomains ?? [];
 }
 
+export function tenantSsoAutorouteEnabled(tenant: Pick<Tenant, "ssoAutoroute">) {
+  return tenant.ssoAutoroute === true;
+}
+
+export function parseSsoAutoroute(input: unknown): boolean | undefined {
+  if (input === undefined || input === null || input === "") {
+    return undefined;
+  }
+  if (input === true || input === 1) {
+    return true;
+  }
+  if (input === false || input === 0) {
+    return false;
+  }
+  if (typeof input === "string") {
+    const value = input.trim().toLowerCase();
+    if (value === "1" || value === "true" || value === "on" || value === "yes") {
+      return true;
+    }
+    if (value === "0" || value === "false" || value === "off" || value === "no") {
+      return false;
+    }
+  }
+  return undefined;
+}
+
 export function findActiveTenantForSsoDomain(
   tenants: readonly Tenant[],
   domain: string,
@@ -136,6 +162,7 @@ export function findActiveTenantForSsoDomain(
     (tenant) =>
       !tenant.deletedAt &&
       !tenant.inactiveAt &&
+      tenantSsoAutorouteEnabled(tenant) &&
       tenantSsoDomains(tenant).includes(domain),
   );
   return matches.length === 1 ? matches[0] : null;

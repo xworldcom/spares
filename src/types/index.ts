@@ -14,6 +14,8 @@ export type Tenant = {
   bootstrapStaffEmail?: string;
   /** Work-email domains whose Microsoft SSO users join this host as staff. */
   ssoDomains?: string[];
+  /** When true, unknown Microsoft work emails at `ssoDomains` are created as staff. Off by default. */
+  ssoAutoroute?: boolean;
 };
 
 export type CustomerAccount = {

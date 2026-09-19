@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
 import { isForbidden, errorMessage } from "@/lib/api/errors";
+import { SsoAutorouteSelector } from "@/components/staff/SsoAutorouteSelector";
 
 type TenantsResponse = { tenants: Tenant[] };
 
@@ -41,6 +42,7 @@ function PlatformTenants() {
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
   const [ssoDomains, setSsoDomains] = useState("");
+  const [ssoAutoroute, setSsoAutoroute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -92,12 +94,14 @@ function PlatformTenants() {
           staffEmail: staffEmail.trim() || undefined,
           staffPassword: staffPassword || undefined,
           ssoDomains: ssoDomains.trim() || undefined,
+          ssoAutoroute,
         }),
       });
       setName("");
       setStaffEmail("");
       setStaffPassword("");
       setSsoDomains("");
+      setSsoAutoroute(false);
       if (result.staffUser?.tenantId) {
         setNotice(
           `Created ${result.tenant.name}. First staff ${result.staffUser.email} → tenantId ${result.staffUser.tenantId}`,
@@ -160,10 +164,11 @@ function PlatformTenants() {
             autoComplete="off"
           />
           <p className="spares-muted text-sm">
-            Microsoft work accounts at this domain join this host as staff. Comma-separate
-            extras (shape.com, shapetech.com).
+            Company work domain for this host. Comma-separate extras (shape.com,
+            shapetech.com).
           </p>
         </label>
+        <SsoAutorouteSelector value={ssoAutoroute} onChange={setSsoAutoroute} />
         <label className="stack gap-1">
           <span className="text-sm font-medium">First staff email (optional)</span>
           <input
@@ -203,7 +208,8 @@ function PlatformTenants() {
               <div className="text-sm text-muted">{tenant.slug}</div>
               {tenant.ssoDomains?.length ? (
                 <div className="text-sm text-muted">
-                  SSO {tenant.ssoDomains.join(", ")}
+                  SSO {tenant.ssoDomains.join(", ")} · Autoroute{" "}
+                  {tenant.ssoAutoroute ? "on" : "off"}
                 </div>
               ) : null}
               <div className="text-xs text-muted font-mono">{tenant.id}</div>

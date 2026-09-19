@@ -1631,9 +1631,25 @@ function withSsoDomains(tenant: Tenant, ssoDomains: string[] | undefined): Tenan
   return rest;
 }
 
+function withSsoAutoroute(tenant: Tenant, ssoAutoroute: boolean | undefined): Tenant {
+  if (ssoAutoroute === undefined) {
+    return tenant;
+  }
+  if (ssoAutoroute) {
+    return { ...tenant, ssoAutoroute: true };
+  }
+  const { ssoAutoroute: _removed, ...rest } = tenant;
+  return rest;
+}
+
 export function updateTenantPlatformMeta(
   tenantId: string,
-  patch: { name?: string; inactive?: boolean; ssoDomains?: string[] },
+  patch: {
+    name?: string;
+    inactive?: boolean;
+    ssoDomains?: string[];
+    ssoAutoroute?: boolean;
+  },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -1668,6 +1684,10 @@ export function updateTenantPlatformMeta(
         return { error: assigned.error };
       }
       next = withSsoDomains(next, assigned.ssoDomains);
+    }
+
+    if (patch.ssoAutoroute !== undefined) {
+      next = withSsoAutoroute(next, patch.ssoAutoroute);
     }
 
     if (patch.inactive === true) {
@@ -1837,35 +1857,9 @@ function tenantNameTaken(db: Database, trimmed: string) {
   return slugTaken || nameTaken;
 }
 
-export function createTenant(name: string, options?: { ssoDomains?: string[] }) {
-  return withLock(async () => {
-    const db = await readDatabase();
-    const trimmed = name.trim();
-    if (!trimmed) {
-      return { error: "invalid" as const };
-    }
-    if (tenantNameTaken(db, trimmed)) {
-      return { error: "taken" as const };
-    }
-    const assigned = attachSsoDomains(db.tenants ?? [], options?.ssoDomains);
-    if (!assigned.ok) {
-      return { error: assigned.error };
-    }
-    const tenant = withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains);
-    await writeDatabase({
-      ...db,
-      schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
-      tenants: [...(db.tenants ?? []), tenant],
-    });
-    return { tenant };
-  });
-}
-
-/** One write so first staff always shares the new tenant row (no heal gap). */
-export function createTenantWithOptionalStaff(
+export function createTenant(
   name: string,
-  staff?: { email: string; passwordHash: string },
-  options?: { ssoDomains?: string[] },
+  options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -1880,7 +1874,42 @@ export function createTenantWithOptionalStaff(
     if (!assigned.ok) {
       return { error: assigned.error };
     }
-    let tenant: Tenant = withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains);
+    const tenant = withSsoAutoroute(
+      withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains),
+      options?.ssoAutoroute,
+    );
+    await writeDatabase({
+      ...db,
+      schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
+      tenants: [...(db.tenants ?? []), tenant],
+    });
+    return { tenant };
+  });
+}
+
+/** One write so first staff always shares the new tenant row (no heal gap). */
+export function createTenantWithOptionalStaff(
+  name: string,
+  staff?: { email: string; passwordHash: string },
+  options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
+) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { error: "invalid" as const };
+    }
+    if (tenantNameTaken(db, trimmed)) {
+      return { error: "taken" as const };
+    }
+    const assigned = attachSsoDomains(db.tenants ?? [], options?.ssoDomains);
+    if (!assigned.ok) {
+      return { error: assigned.error };
+    }
+    let tenant: Tenant = withSsoAutoroute(
+      withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains),
+      options?.ssoAutoroute,
+    );
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {

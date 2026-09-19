@@ -9,7 +9,8 @@ import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { apiFetch } from "@/lib/api/client";
 import { deletePlatformTenant } from "@/lib/api/platform-directory";
 import { errorMessage } from "@/lib/api/errors";
-import { formatSsoDomains } from "@/lib/auth/sso-domain";
+import { SsoAutorouteSelector } from "@/components/staff/SsoAutorouteSelector";
+import { formatSsoDomains, tenantSsoAutorouteEnabled } from "@/lib/auth/sso-domain";
 import type { Tenant } from "@/types";
 
 type DeploymentDetail = {
@@ -54,6 +55,7 @@ function TenantDetail() {
   const [detail, setDetail] = useState<DeploymentDetail | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [ssoDomains, setSsoDomains] = useState("");
+  const [ssoAutoroute, setSsoAutoroute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -71,6 +73,7 @@ function TenantDetail() {
       setDetail(data);
       setDisplayName(data.deployment.tenant.name);
       setSsoDomains(formatSsoDomains(data.deployment.tenant.ssoDomains));
+      setSsoAutoroute(tenantSsoAutorouteEnabled(data.deployment.tenant));
       setForbidden(false);
       setError(null);
     } catch (cause) {
@@ -96,9 +99,9 @@ function TenantDetail() {
     try {
       await apiFetch(`/api/platform/tenants/${encodeURIComponent(tenantId)}`, {
         method: "PATCH",
-        body: JSON.stringify({ ssoDomains }),
+        body: JSON.stringify({ ssoDomains, ssoAutoroute }),
       });
-      setNotice("SSO domains updated.");
+      setNotice("SSO settings updated.");
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Update failed");
@@ -281,14 +284,13 @@ function TenantDetail() {
       <section className="card p-4 mt-6 max-w-lg">
         <h2 className="text-lg font-semibold mb-3">Microsoft SSO domain</h2>
         <p className="text-sm text-muted mb-3">
-          Work accounts at these domains can Sign in with Microsoft and join this host as
-          staff. Existing logins keep the host they already have. Comma-separate more than
-          one.
+          Enroll the company work domain, then turn autoroute on when new Microsoft
+          sign-ins should create staff. Existing logins keep the host they already have.
         </p>
         <label className="sr-only" htmlFor="host-sso-domains">
           Microsoft SSO domains
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mb-4">
           <input
             id="host-sso-domains"
             className="spares-field h-12 flex-1 min-w-[12rem] rounded-2xl border-0 px-4 text-[16px] outline-none"
@@ -297,15 +299,20 @@ function TenantDetail() {
             placeholder="shape.com"
             autoComplete="off"
           />
-          <button
-            className="btn-primary"
-            type="button"
-            disabled={busy}
-            onClick={() => void saveSsoDomains()}
-          >
-            Save
-          </button>
         </div>
+        <SsoAutorouteSelector
+          value={ssoAutoroute}
+          onChange={setSsoAutoroute}
+          disabled={busy}
+        />
+        <button
+          className="btn-primary mt-4"
+          type="button"
+          disabled={busy}
+          onClick={() => void saveSsoDomains()}
+        >
+          Save
+        </button>
         {error ? <p className="text-danger mt-2">{error}</p> : null}
         {notice ? <p className="text-sm text-muted mt-2">{notice}</p> : null}
       </section>

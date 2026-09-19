@@ -43,7 +43,12 @@ export async function POST(request: Request) {
           passwordHash: await hashPassword(parsed.value.staff.password),
         }
       : undefined,
-    parsed.value.ssoDomains ? { ssoDomains: parsed.value.ssoDomains } : undefined,
+    parsed.value.ssoDomains || parsed.value.ssoAutoroute !== undefined
+      ? {
+          ssoDomains: parsed.value.ssoDomains,
+          ssoAutoroute: parsed.value.ssoAutoroute,
+        }
+      : undefined,
   );
   if ("error" in created && created.error) {
     const mapped = mapCreateTenantStoreError(created.error);

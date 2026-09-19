@@ -1,17 +1,19 @@
 import { passwordPolicyError } from "./auth/password.ts";
-import { parseSsoDomains } from "./auth/sso-domain.ts";
+import { parseSsoAutoroute, parseSsoDomains } from "./auth/sso-domain.ts";
 
 export type CreatePlatformTenantBody = {
   name?: unknown;
   staffEmail?: unknown;
   staffPassword?: unknown;
   ssoDomains?: unknown;
+  ssoAutoroute?: unknown;
 };
 
 export type ParsedCreatePlatformTenant = {
   name: string;
   staff?: { email: string; password: string };
   ssoDomains?: string[];
+  ssoAutoroute?: boolean;
 };
 
 type ParseFailure = { ok: false; message: string; status: number };
@@ -57,6 +59,12 @@ export function parseCreatePlatformTenantBody(
     ssoDomains = parsedDomains.domains;
   }
 
+  const ssoAutoroute = parseSsoAutoroute(body.ssoAutoroute);
+  const sso = {
+    ...(ssoDomains ? { ssoDomains } : {}),
+    ...(ssoAutoroute !== undefined ? { ssoAutoroute } : {}),
+  };
+
   if (staffEmail && staffPassword) {
     const policy = passwordPolicyError(staffPassword);
     if (policy) {
@@ -67,12 +75,12 @@ export function parseCreatePlatformTenantBody(
       value: {
         name,
         staff: { email: staffEmail, password: staffPassword },
-        ssoDomains,
+        ...sso,
       },
     };
   }
 
-  return { ok: true, value: { name, ssoDomains } };
+  return { ok: true, value: { name, ...sso } };
 }
 
 export function mapCreateTenantStoreError(

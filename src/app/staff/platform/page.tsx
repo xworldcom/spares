@@ -286,7 +286,8 @@ function PlatformHosts() {
                   <div className="text-xs text-muted font-mono">{row.tenant.id}</div>
                   {row.tenant.ssoDomains?.length ? (
                     <div className="text-xs text-muted">
-                      SSO {row.tenant.ssoDomains.join(", ")}
+                      SSO {row.tenant.ssoDomains.join(", ")} · Autoroute{" "}
+                      {row.tenant.ssoAutoroute ? "on" : "off"}
                     </div>
                   ) : null}
                 </td>
