@@ -1,0 +1,880 @@
+{
+  "preview": "https://spares-f60bbh7hm-yonder3.vercel.app",
+  "marker": "QA-47 hop marker 2026-09-04T14:37:52Z",
+  "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+  "started": "2026-09-04T14:37:52.878Z",
+  "protection": {
+    "at": "2026-09-04T14:37:52.933Z",
+    "label": "protection-check",
+    "method": "GET",
+    "path": "/",
+    "status": 302,
+    "elapsed_ms": 40,
+    "vercel_id": "iad1::bnpwd-1788532672909-b1a3753e62db",
+    "looks_like_vercel_sso": true,
+    "looks_like_spares_login": false,
+    "title_snip": "<!doctype html>\n<!-- https://vercel.app -->\n<h1>Redirecting (302)</h1>\nThe document has moved\n<a href=\"https://vercel.com/sso-api?url=https%253A%252F%252Fspares-f60bbh7hm-yonder3.v"
+  },
+  "log": [
+    {
+      "at": "2026-09-04T14:37:52.933Z",
+      "label": "protection-check",
+      "method": "GET",
+      "path": "/",
+      "status": 302,
+      "elapsed_ms": 40,
+      "vercel_id": "iad1::bnpwd-1788532672909-b1a3753e62db",
+      "looks_like_vercel_sso": true,
+      "looks_like_spares_login": false,
+      "title_snip": "<!doctype html>\n<!-- https://vercel.app -->\n<h1>Redirecting (302)</h1>\nThe document has moved\n<a href=\"https://vercel.com/sso-api?url=https%253A%252F%252Fspares-f60bbh7hm-yonder3.v"
+    },
+    {
+      "at": "2026-09-04T14:37:52.949Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/login",
+      "status": 200,
+      "elapsed_ms": 135,
+      "ctype": "text/html; charset=utf-8",
+      "vercel_id": "iad1::iad1::k5m74-1788532672986-324cece46eb6",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"/><link rel=\"stylesheet\" href=\"/_next/static/immutable/chunks/3q137jgtxc0yp.css\" data-precedence=\"next\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/immutable/chunks/1mlftcslf095m.js\"/><script src=\"/_next/static/immutable/chunks/2u5v7xdlfh11m.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/3wug62638k01t.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/2e5v3vseouhnh.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/turbopack-2x5seilpz5dse.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/3brdo90ythhn0.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/0fmo_on4afgz6.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/1fru577jvqmvu.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/2emddf_8ofbf0.js\" async=\"\"></script><meta name=\"theme-color\" content=\"#f4f5f7\"/><title>Spares</title><meta name=\"description\" content=\"Private industrial spare-parts platform. Not live.\"/><meta name=\"robots\" content=\"noindex, nofollow\"/><style>\nhtml,body{margin:0;min-height:100%;background:#f4f5f7;color:#0b0d10;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Display\",\"SF Pro Text\",\"Segoe UI\",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}\n@layer base{\na{color:inherit;text-decoration:none;}\nbutton,input,textarea,select{font:inherit;color:inherit;}\n}\nbutton{cursor:pointer;border:0;background:transparent;}\n.btn-primary{background:#0b0d10;color:#fff;}\n.btn-accent{background:#0a84ff;color:#fff;}\n.btn-danger{background:#7f1d1d;color:#fff;}\n.btn-soft{background:#eceef2;color:#0b0d10;}\n.viewer-chrome-chip{background:#f4f5f7;color:#0b0d10;-webkit-appearance:none;appearance:none;box-shadow:0 8px 24px rgba(0,0,0,.22);}\n.viewer-chrome-shade{background:linear-gradient(to bottom,rgba(90,96,108,.62),rgba(11,13,16,0));}\n.row-on-ink{background:#0b0d10;color:#fff;}\n.row-on-ink .row-on-ink-muted{color:rgba(255,255,255,.72);}\n.spares-muted{color:#4b4f57;}\n.spares-app{min-height:100dvh;background:#f4f5f7;color:#0b0d10;overflow-x:clip;}\n.spares-app header{background:#f4f5f7;padding-top:env(safe-area-inset-top,0px);}\n.spares-header-inner{min-height:3.5rem;}\n.spares-app a[href=\"/login\"]{display:inline-flex;height:2.75rem;align-items:center;border-radius:999px;background:#0b0d10;color:#fff;padding:0 1rem;font-size:14px;font-weight:600;}\n.login-input{display:block;box-sizing:border-box;height:3rem;width:100%;border:0;border-radius:1rem;background:#fff;padding:0 1rem;color:#0b0d10;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}\n.login-submit{display:inline-flex;height:3rem;width:100%;align-items:center;justify-content:center;border:0;border-radius:999px;background:#0b0d10;color:#fff;font-size:17px;font-weight:600;}\n.login-submit:disabled{opacity:0.4;}\n</style><script src=\"/_next/static/immutable/chunks/0c0hxoamwjsbw.js\" noModule=\"\"></script></head><body class=\"min-h-screen antialiased\"><div hidden=\"\"><!--$--><!--/$--></div><div class=\"spares-app min-h-dvh bg-[#f4f5f7] text-[#0b0d10]\"><header class=\"spares-header sticky top-0 z-[60] shrink-0 bg-[#f4f5f7]/94 backdrop-blur-md\"><div class=\"spares-header-inner mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4\"><a class=\"relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[15px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-[&#x27;&#x27;]\" href=\"/\">Spares</a><div class=\"min-w-0 flex-1\"></div><div class=\"ml-auto flex shrink-0 items-center gap-1 sm:gap-2\"><p class=\"spares-muted hidden text-[11px] font-medium tracking-[0.14em] uppercase sm:block\">Private</p><div data-bug-report=\"\" class=\"relative\"><button type=\"button\" aria-label=\"Report bug\" aria-expanded=\"false\" class=\"inline-flex h-11 w-11 items-center justify-center rounded-full"
+    },
+    {
+      "at": "2026-09-04T14:37:53.085Z",
+      "label": "customer-a",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "elapsed_ms": 174,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::zslnm-1788532673098-496c969daa67",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [
+        "spares_session"
+      ],
+      "body": {
+        "user": {
+          "id": "user-customer",
+          "email": "customer@spares.local",
+          "role": "customer"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:53.259Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200,
+      "elapsed_ms": 113,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::s6szv-1788532673271-a564cff647a0",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "user": {
+          "id": "user-customer",
+          "email": "customer@spares.local",
+          "role": "customer"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:53.372Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/machines",
+      "status": 200,
+      "elapsed_ms": 146,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::kfdxg-1788532673384-21119e379114",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "machines": [
+          {
+            "id": "hardware-fixture",
+            "name": "Hardware fixture"
+          },
+          {
+            "id": "palletizer",
+            "name": "Palletizer"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:53.519Z",
+      "label": "customer-a",
+      "method": "POST",
+      "path": "/api/quotes",
+      "status": 201,
+      "elapsed_ms": 252,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::gn97t-1788532673532-cc21592b9376",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:53.772Z",
+      "label": "customer-a",
+      "method": "POST",
+      "path": "/api/quotes/1/activity",
+      "status": 201,
+      "elapsed_ms": 338,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::lgwbs-1788532673789-485592836a29",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:54.110Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "elapsed_ms": 280,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::dt6q6-1788532674124-1429540d77d9",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:54.390Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "elapsed_ms": 410,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::wmp79-1788532674403-a923bd1b504c",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:54.801Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/machines",
+      "status": 200,
+      "elapsed_ms": 135,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::dt6q6-1788532674813-51e16d2cc080",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "machines": [
+          {
+            "id": "hardware-fixture",
+            "name": "Hardware fixture"
+          },
+          {
+            "id": "palletizer",
+            "name": "Palletizer"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-04T14:38:31.010Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "elapsed_ms": 318,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::787j5-1788532711025-6635e3bd5460",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:38:31.863Z",
+      "label": "customer-a",
+      "method": "GET",
+      "path": "/api/machines",
+      "status": 200,
+      "elapsed_ms": 155,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::fbzf9-1788532711876-35e4a74254e9",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "machines": [
+          {
+            "id": "hardware-fixture",
+            "name": "Hardware fixture"
+          },
+          {
+            "id": "palletizer",
+            "name": "Palletizer"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:54.951Z",
+      "label": "staff-b",
+      "method": "GET",
+      "path": "/login",
+      "status": 200,
+      "elapsed_ms": 89,
+      "ctype": "text/html; charset=utf-8",
+      "vercel_id": "iad1::iad1::kdnct-1788532674983-9be9c2f230b4",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"/><link rel=\"stylesheet\" href=\"/_next/static/immutable/chunks/3q137jgtxc0yp.css\" data-precedence=\"next\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/immutable/chunks/1mlftcslf095m.js\"/><script src=\"/_next/static/immutable/chunks/2u5v7xdlfh11m.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/3wug62638k01t.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/2e5v3vseouhnh.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/turbopack-2x5seilpz5dse.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/3brdo90ythhn0.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/0fmo_on4afgz6.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/1fru577jvqmvu.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/2emddf_8ofbf0.js\" async=\"\"></script><meta name=\"theme-color\" content=\"#f4f5f7\"/><title>Spares</title><meta name=\"description\" content=\"Private industrial spare-parts platform. Not live.\"/><meta name=\"robots\" content=\"noindex, nofollow\"/><style>\nhtml,body{margin:0;min-height:100%;background:#f4f5f7;color:#0b0d10;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Display\",\"SF Pro Text\",\"Segoe UI\",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}\n@layer base{\na{color:inherit;text-decoration:none;}\nbutton,input,textarea,select{font:inherit;color:inherit;}\n}\nbutton{cursor:pointer;border:0;background:transparent;}\n.btn-primary{background:#0b0d10;color:#fff;}\n.btn-accent{background:#0a84ff;color:#fff;}\n.btn-danger{background:#7f1d1d;color:#fff;}\n.btn-soft{background:#eceef2;color:#0b0d10;}\n.viewer-chrome-chip{background:#f4f5f7;color:#0b0d10;-webkit-appearance:none;appearance:none;box-shadow:0 8px 24px rgba(0,0,0,.22);}\n.viewer-chrome-shade{background:linear-gradient(to bottom,rgba(90,96,108,.62),rgba(11,13,16,0));}\n.row-on-ink{background:#0b0d10;color:#fff;}\n.row-on-ink .row-on-ink-muted{color:rgba(255,255,255,.72);}\n.spares-muted{color:#4b4f57;}\n.spares-app{min-height:100dvh;background:#f4f5f7;color:#0b0d10;overflow-x:clip;}\n.spares-app header{background:#f4f5f7;padding-top:env(safe-area-inset-top,0px);}\n.spares-header-inner{min-height:3.5rem;}\n.spares-app a[href=\"/login\"]{display:inline-flex;height:2.75rem;align-items:center;border-radius:999px;background:#0b0d10;color:#fff;padding:0 1rem;font-size:14px;font-weight:600;}\n.login-input{display:block;box-sizing:border-box;height:3rem;width:100%;border:0;border-radius:1rem;background:#fff;padding:0 1rem;color:#0b0d10;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}\n.login-submit{display:inline-flex;height:3rem;width:100%;align-items:center;justify-content:center;border:0;border-radius:999px;background:#0b0d10;color:#fff;font-size:17px;font-weight:600;}\n.login-submit:disabled{opacity:0.4;}\n</style><script src=\"/_next/static/immutable/chunks/0c0hxoamwjsbw.js\" noModule=\"\"></script></head><body class=\"min-h-screen antialiased\"><div hidden=\"\"><!--$--><!--/$--></div><div class=\"spares-app min-h-dvh bg-[#f4f5f7] text-[#0b0d10]\"><header class=\"spares-header sticky top-0 z-[60] shrink-0 bg-[#f4f5f7]/94 backdrop-blur-md\"><div class=\"spares-header-inner mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4\"><a class=\"relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[15px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-[&#x27;&#x27;]\" href=\"/\">Spares</a><div class=\"min-w-0 flex-1\"></div><div class=\"ml-auto flex shrink-0 items-center gap-1 sm:gap-2\"><p class=\"spares-muted hidden text-[11px] font-medium tracking-[0.14em] uppercase sm:block\">Private</p><div data-bug-report=\"\" class=\"relative\"><button type=\"button\" aria-label=\"Report bug\" aria-expanded=\"false\" class=\"inline-flex h-11 w-11 items-center justify-center rounded-full"
+    },
+    {
+      "at": "2026-09-04T14:37:55.041Z",
+      "label": "staff-b",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "elapsed_ms": 175,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::ndrzx-1788532675053-9845ab434f5e",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [
+        "spares_session"
+      ],
+      "body": {
+        "user": {
+          "id": "user-staff",
+          "email": "staff@spares.local",
+          "role": "staff"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:55.217Z",
+      "label": "staff-b",
+      "method": "GET",
+      "path": "/api/quotes",
+      "status": 200,
+      "elapsed_ms": 167,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::njwnl-1788532675229-73e5a4ac1fcc",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quotes": [
+          {
+            "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+            "number": 1,
+            "machineId": "hardware-fixture",
+            "items": [
+              {
+                "id": "5972K325",
+                "qty": 2,
+                "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+              }
+            ],
+            "createdAt": "2026-09-04T14:37:53.695Z",
+            "customerEmail": "customer@spares.local",
+            "status": "requested",
+            "shipments": [],
+            "activities": [
+              {
+                "id": "1235a787-8a41-4835-8434-b769b69eb442",
+                "at": "2026-09-04T14:37:53.695Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "status",
+                "text": "Status set to Requested."
+              },
+              {
+                "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+                "at": "2026-09-04T14:37:53.956Z",
+                "actorRole": "customer",
+                "actorEmail": "customer@spares.local",
+                "kind": "message",
+                "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+              }
+            ],
+            "unread": true,
+            "hasPoFile": false,
+            "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+            "machineName": "Hardware fixture"
+          }
+        ],
+        "unreadCount": 1
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:55.384Z",
+      "label": "staff-b",
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "elapsed_ms": 498,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::m9v6q-1788532675483-762bfd12a041",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:37:55.883Z",
+      "label": "staff-b",
+      "method": "GET",
+      "path": "/api/machines",
+      "status": 200,
+      "elapsed_ms": 127,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::7rzkq-1788532675895-2f3b66641372",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "machines": [
+          {
+            "id": "hardware-fixture",
+            "name": "Hardware fixture"
+          },
+          {
+            "id": "palletizer",
+            "name": "Palletizer"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-04T14:38:31.329Z",
+      "label": "staff-b",
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "elapsed_ms": 534,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::gqjgk-1788532711341-bf6061c9ae04",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:38:32.034Z",
+      "label": "staff-c-after-wait",
+      "method": "GET",
+      "path": "/login",
+      "status": 200,
+      "elapsed_ms": 110,
+      "ctype": "text/html; charset=utf-8",
+      "vercel_id": "iad1::iad1::7rzkq-1788532712075-f3cb6193adf9",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"/><link rel=\"stylesheet\" href=\"/_next/static/immutable/chunks/3q137jgtxc0yp.css\" data-precedence=\"next\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/immutable/chunks/1mlftcslf095m.js\"/><script src=\"/_next/static/immutable/chunks/2u5v7xdlfh11m.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/3wug62638k01t.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/2e5v3vseouhnh.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/turbopack-2x5seilpz5dse.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/3brdo90ythhn0.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/0fmo_on4afgz6.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/1fru577jvqmvu.js\" async=\"\"></script><script src=\"/_next/static/immutable/chunks/2emddf_8ofbf0.js\" async=\"\"></script><meta name=\"theme-color\" content=\"#f4f5f7\"/><title>Spares</title><meta name=\"description\" content=\"Private industrial spare-parts platform. Not live.\"/><meta name=\"robots\" content=\"noindex, nofollow\"/><style>\nhtml,body{margin:0;min-height:100%;background:#f4f5f7;color:#0b0d10;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Display\",\"SF Pro Text\",\"Segoe UI\",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}\n@layer base{\na{color:inherit;text-decoration:none;}\nbutton,input,textarea,select{font:inherit;color:inherit;}\n}\nbutton{cursor:pointer;border:0;background:transparent;}\n.btn-primary{background:#0b0d10;color:#fff;}\n.btn-accent{background:#0a84ff;color:#fff;}\n.btn-danger{background:#7f1d1d;color:#fff;}\n.btn-soft{background:#eceef2;color:#0b0d10;}\n.viewer-chrome-chip{background:#f4f5f7;color:#0b0d10;-webkit-appearance:none;appearance:none;box-shadow:0 8px 24px rgba(0,0,0,.22);}\n.viewer-chrome-shade{background:linear-gradient(to bottom,rgba(90,96,108,.62),rgba(11,13,16,0));}\n.row-on-ink{background:#0b0d10;color:#fff;}\n.row-on-ink .row-on-ink-muted{color:rgba(255,255,255,.72);}\n.spares-muted{color:#4b4f57;}\n.spares-app{min-height:100dvh;background:#f4f5f7;color:#0b0d10;overflow-x:clip;}\n.spares-app header{background:#f4f5f7;padding-top:env(safe-area-inset-top,0px);}\n.spares-header-inner{min-height:3.5rem;}\n.spares-app a[href=\"/login\"]{display:inline-flex;height:2.75rem;align-items:center;border-radius:999px;background:#0b0d10;color:#fff;padding:0 1rem;font-size:14px;font-weight:600;}\n.login-input{display:block;box-sizing:border-box;height:3rem;width:100%;border:0;border-radius:1rem;background:#fff;padding:0 1rem;color:#0b0d10;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}\n.login-submit{display:inline-flex;height:3rem;width:100%;align-items:center;justify-content:center;border:0;border-radius:999px;background:#0b0d10;color:#fff;font-size:17px;font-weight:600;}\n.login-submit:disabled{opacity:0.4;}\n</style><script src=\"/_next/static/immutable/chunks/0c0hxoamwjsbw.js\" noModule=\"\"></script></head><body class=\"min-h-screen antialiased\"><div hidden=\"\"><!--$--><!--/$--></div><div class=\"spares-app min-h-dvh bg-[#f4f5f7] text-[#0b0d10]\"><header class=\"spares-header sticky top-0 z-[60] shrink-0 bg-[#f4f5f7]/94 backdrop-blur-md\"><div class=\"spares-header-inner mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4\"><a class=\"relative inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center px-2 text-[15px] font-semibold tracking-tight before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-[&#x27;&#x27;]\" href=\"/\">Spares</a><div class=\"min-w-0 flex-1\"></div><div class=\"ml-auto flex shrink-0 items-center gap-1 sm:gap-2\"><p class=\"spares-muted hidden text-[11px] font-medium tracking-[0.14em] uppercase sm:block\">Private</p><div data-bug-report=\"\" class=\"relative\"><button type=\"button\" aria-label=\"Report bug\" aria-expanded=\"false\" class=\"inline-flex h-11 w-11 items-center justify-center rounded-full"
+    },
+    {
+      "at": "2026-09-04T14:38:32.144Z",
+      "label": "staff-c-after-wait",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "elapsed_ms": 180,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::src84-1788532712162-c6f9f8904398",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [
+        "spares_session"
+      ],
+      "body": {
+        "user": {
+          "id": "user-staff",
+          "email": "staff@spares.local",
+          "role": "staff"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:38:32.326Z",
+      "label": "staff-c-after-wait",
+      "method": "GET",
+      "path": "/api/quotes/1",
+      "status": 200,
+      "elapsed_ms": 281,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::qgdk6-1788532712348-ba74eccebf7f",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "quote": {
+          "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+          "number": 1,
+          "machineId": "hardware-fixture",
+          "items": [
+            {
+              "id": "5972K325",
+              "qty": 2,
+              "name": "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W"
+            }
+          ],
+          "createdAt": "2026-09-04T14:37:53.695Z",
+          "customerEmail": "customer@spares.local",
+          "status": "requested",
+          "shipments": [],
+          "activities": [
+            {
+              "id": "1235a787-8a41-4835-8434-b769b69eb442",
+              "at": "2026-09-04T14:37:53.695Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "status",
+              "text": "Status set to Requested."
+            },
+            {
+              "id": "efe8f600-35bb-48e4-8e2b-d2cc71ef6167",
+              "at": "2026-09-04T14:37:53.956Z",
+              "actorRole": "customer",
+              "actorEmail": "customer@spares.local",
+              "kind": "message",
+              "text": "QA-47 hop marker 2026-09-04T14:37:52Z"
+            }
+          ],
+          "unread": false,
+          "hasPoFile": false,
+          "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+          "machineName": "Hardware fixture"
+        }
+      }
+    },
+    {
+      "at": "2026-09-04T14:38:32.607Z",
+      "label": "staff-c-after-wait",
+      "method": "GET",
+      "path": "/api/machines",
+      "status": 200,
+      "elapsed_ms": 140,
+      "ctype": "application/json",
+      "vercel_id": "iad1::iad1::7bxpm-1788532712621-6707d93155ec",
+      "vercel_cache": "MISS",
+      "set_cookie_names": [],
+      "body": {
+        "machines": [
+          {
+            "id": "hardware-fixture",
+            "name": "Hardware fixture"
+          },
+          {
+            "id": "palletizer",
+            "name": "Palletizer"
+          }
+        ]
+      }
+    }
+  ],
+  "verdict": {
+    "protection_on": true,
+    "bypass_reaches_spares_login": true,
+    "customer_login": true,
+    "me": true,
+    "quote_created": true,
+    "comment_created": true,
+    "quote_and_comment_durable": true,
+    "machines_list_loads": true,
+    "second_context_staff_sees_quote": true,
+    "after_wait_new_session_sees_quote": true,
+    "issue_47": "FIXED"
+  },
+  "finished": "2026-09-04T14:38:32.748Z",
+  "quote_id": "59b462b7-c1be-4368-b943-d2ee03162446",
+  "quote_number": 1,
+  "vercel_instance_suffixes": [
+    "787j5-1788532711025-6635e3bd5460",
+    "7bxpm-1788532712621-6707d93155ec",
+    "7rzkq-1788532675895-2f3b66641372",
+    "7rzkq-1788532712075-f3cb6193adf9",
+    "bnpwd-1788532672909-b1a3753e62db",
+    "dt6q6-1788532674124-1429540d77d9",
+    "dt6q6-1788532674813-51e16d2cc080",
+    "fbzf9-1788532711876-35e4a74254e9",
+    "gn97t-1788532673532-cc21592b9376",
+    "gqjgk-1788532711341-bf6061c9ae04",
+    "k5m74-1788532672986-324cece46eb6",
+    "kdnct-1788532674983-9be9c2f230b4",
+    "kfdxg-1788532673384-21119e379114",
+    "lgwbs-1788532673789-485592836a29",
+    "m9v6q-1788532675483-762bfd12a041",
+    "ndrzx-1788532675053-9845ab434f5e",
+    "njwnl-1788532675229-73e5a4ac1fcc",
+    "qgdk6-1788532712348-ba74eccebf7f",
+    "s6szv-1788532673271-a564cff647a0",
+    "src84-1788532712162-c6f9f8904398",
+    "wmp79-1788532674403-a923bd1b504c",
+    "zslnm-1788532673098-496c969daa67"
+  ],
+  "summaries": {
+    "after_create": {
+      "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+      "number": 1,
+      "status": "requested",
+      "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+      "machineId": "hardware-fixture",
+      "machineName": "Hardware fixture",
+      "customerEmail": "customer@spares.local",
+      "activity_count": 2,
+      "messages": [
+        "QA-47 hop marker 2026-09-04T14:37:52Z"
+      ],
+      "marker_present": true,
+      "note_present": true
+    },
+    "after_hop_same_cookie": {
+      "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+      "number": 1,
+      "status": "requested",
+      "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+      "machineId": "hardware-fixture",
+      "machineName": "Hardware fixture",
+      "customerEmail": "customer@spares.local",
+      "activity_count": 2,
+      "messages": [
+        "QA-47 hop marker 2026-09-04T14:37:52Z"
+      ],
+      "marker_present": true,
+      "note_present": true
+    },
+    "staff_other_context": {
+      "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+      "number": 1,
+      "status": "requested",
+      "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+      "machineId": "hardware-fixture",
+      "machineName": "Hardware fixture",
+      "customerEmail": "customer@spares.local",
+      "activity_count": 2,
+      "messages": [
+        "QA-47 hop marker 2026-09-04T14:37:52Z"
+      ],
+      "marker_present": true,
+      "note_present": true
+    },
+    "after_wait_customer": {
+      "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+      "number": 1,
+      "status": "requested",
+      "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+      "machineId": "hardware-fixture",
+      "machineName": "Hardware fixture",
+      "customerEmail": "customer@spares.local",
+      "activity_count": 2,
+      "messages": [
+        "QA-47 hop marker 2026-09-04T14:37:52Z"
+      ],
+      "marker_present": true,
+      "note_present": true
+    },
+    "after_wait_staff": {
+      "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+      "number": 1,
+      "status": "requested",
+      "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+      "machineId": "hardware-fixture",
+      "machineName": "Hardware fixture",
+      "customerEmail": "customer@spares.local",
+      "activity_count": 2,
+      "messages": [
+        "QA-47 hop marker 2026-09-04T14:37:52Z"
+      ],
+      "marker_present": true,
+      "note_present": true
+    },
+    "new_staff_session_after_wait": {
+      "id": "59b462b7-c1be-4368-b943-d2ee03162446",
+      "number": 1,
+      "status": "requested",
+      "note": "QA-47 quote note 2026-09-04T14:37:52Z",
+      "machineId": "hardware-fixture",
+      "machineName": "Hardware fixture",
+      "customerEmail": "customer@spares.local",
+      "activity_count": 2,
+      "messages": [
+        "QA-47 hop marker 2026-09-04T14:37:52Z"
+      ],
+      "marker_present": true,
+      "note_present": true
+    },
+    "machines_first": [
+      "Hardware fixture",
+      "Palletizer"
+    ],
+    "machines_after_wait": [
+      "Hardware fixture",
+      "Palletizer"
+    ],
+    "machines_new_staff": [
+      "Hardware fixture",
+      "Palletizer"
+    ]
+  }
+}
