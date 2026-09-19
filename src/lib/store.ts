@@ -1606,16 +1606,16 @@ function attachSsoDomains(
   exceptTenantId?: string,
 ):
   | { ok: true; ssoDomains?: string[] }
-  | { error: "invalid" | "domain-taken" } {
+  | { ok: false; error: "invalid" | "domain-taken" } {
   if (domains === undefined) {
     return { ok: true };
   }
   const parsed = parseSsoDomains(domains);
   if (!parsed.ok) {
-    return { error: "invalid" };
+    return { ok: false, error: "invalid" };
   }
   if (firstTakenSsoDomain(tenants, parsed.domains, exceptTenantId)) {
-    return { error: "domain-taken" };
+    return { ok: false, error: "domain-taken" };
   }
   return {
     ok: true,
@@ -1857,10 +1857,12 @@ function tenantNameTaken(db: Database, trimmed: string) {
   return slugTaken || nameTaken;
 }
 
+type CreateTenantError = "invalid" | "taken" | "email-taken" | "domain-taken";
+
 export function createTenant(
   name: string,
   options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
-) {
+): Promise<{ tenant: Tenant } | { error: CreateTenantError }> {
   return withLock(async () => {
     const db = await readDatabase();
     const trimmed = name.trim();
@@ -1892,7 +1894,9 @@ export function createTenantWithOptionalStaff(
   name: string,
   staff?: { email: string; passwordHash: string },
   options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
-) {
+): Promise<
+  { tenant: Tenant; staffUser?: StoredUser } | { error: CreateTenantError }
+> {
   return withLock(async () => {
     const db = await readDatabase();
     const trimmed = name.trim();

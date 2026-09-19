@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
   const resolved = await resolveMicrosoftCatalogUser(email);
   const session = resolveMicrosoftSession(
-    "user" in resolved ? resolved.user : null,
+    "user" in resolved ? resolved.user ?? null : null,
   );
   if (!session.ok) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);

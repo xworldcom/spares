@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         }
       : undefined,
   );
-  if ("error" in created && created.error) {
+  if ("error" in created) {
     const mapped = mapCreateTenantStoreError(created.error);
     return error(mapped.message, mapped.status);
   }
