@@ -7,6 +7,7 @@ import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { allowLoginAttempt } from "@/lib/rate-limit";
 import { effectiveStaffTenantId, isPlatformOwnerEmail } from "@/lib/tenant";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { findUserByEmail, getOrgContext } from "@/lib/store";
 
 type LoginBody = {
@@ -102,6 +103,12 @@ export async function POST(request: Request) {
       : error("Account is missing a host tenant. Contact support.", 403);
   }
   await setSessionCookie(user.id, user.email, tenantId);
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(user),
+    action: "auth.login",
+    summary: `${user.email} signed in with email and password.`,
+  });
   if (html) {
     return redirectNoQuery("/machines");
   }

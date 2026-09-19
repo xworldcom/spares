@@ -1466,7 +1466,7 @@ export function resolveMicrosoftCatalogUser(email: string) {
       (user) => user.email === normalized && !user.deletedAt,
     );
     if (matches.length === 1) {
-      return { user: matches[0] };
+      return { user: matches[0], provisioned: false as const };
     }
     if (matches.length > 1) {
       return { error: "unknown" as const };
@@ -1496,12 +1496,12 @@ export function resolveMicrosoftCatalogUser(email: string) {
       const raced = (memory ?? (await readDatabase())).users.find(
         (row) => row.email === normalized && !row.deletedAt,
       );
-      return raced ? { user: raced } : { error: "unknown" as const };
+      return raced ? { user: raced, provisioned: false as const } : { error: "unknown" as const };
     }
     const persisted = (memory ?? (await readDatabase())).users.find(
       (row) => row.id === user.id,
     );
-    return { user: persisted ?? user };
+    return { user: persisted ?? user, provisioned: true as const };
   });
 }
 

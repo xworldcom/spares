@@ -6,6 +6,7 @@ import {
   parseCreatePlatformTenantBody,
   type CreatePlatformTenantBody,
 } from "@/lib/platform-tenant-create";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { createTenantWithOptionalStaff, listTenants } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +64,19 @@ export async function POST(request: Request) {
         tenantId: created.staffUser.tenantId,
       }
     : undefined;
+
+  await recordAccountActivity({
+    tenantId: created.tenant.id,
+    actor: actorFromUser(auth.user),
+    action: "tenant.created",
+    summary: `${auth.user.email} created host ${created.tenant.name}.`,
+    target: { type: "tenant", id: created.tenant.id, label: created.tenant.name },
+    details: {
+      ssoDomains: parsed.value.ssoDomains?.join(", ") ?? "",
+      ssoAutoroute: parsed.value.ssoAutoroute ?? false,
+      staffEmail: staffUser?.email ?? "",
+    },
+  });
 
   return json({ tenant: created.tenant, staffUser }, 201);
 }

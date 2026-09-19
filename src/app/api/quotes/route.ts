@@ -10,6 +10,7 @@ import {
 import { canAccessMachine, customerIdFromGrant, grantFromUser } from "@/lib/access";
 import { isSeedAllowed } from "@/lib/production-env";
 import { belongsToTenant } from "@/lib/tenant";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   createQuote,
   ensurePreviewQaQuoteFixture,
@@ -149,6 +150,15 @@ export async function POST(request: Request) {
   if (auth.user.role === "staff") {
     await grantCustomerMachine(auth.tenantId, customerId, machineId);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "quote.created",
+    summary: `${auth.user.email} created quote #${created.number} for ${machine.name}.`,
+    target: { type: "quote", id: created.id, label: `#${created.number}` },
+    details: { machineId, customerEmail },
+  });
 
   return json({ quote: toPublicQuote(created, auth.user, machine.name) }, 201);
 }

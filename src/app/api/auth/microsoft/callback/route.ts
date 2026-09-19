@@ -13,6 +13,7 @@ import {
   pickMicrosoftEmail,
   resolveMicrosoftSession,
 } from "@/lib/auth/microsoft";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { resolveMicrosoftCatalogUser } from "@/lib/store";
 
 function loginErrorRedirect(origin: string, code: string) {
@@ -81,5 +82,25 @@ export async function GET(request: Request) {
   }
 
   await setSessionCookie(session.userId, session.email, session.tenantId);
+  const actor = actorFromUser({
+    id: session.userId,
+    email: session.email,
+    role: "staff",
+  });
+  if ("user" in resolved && resolved.provisioned) {
+    await recordAccountActivity({
+      tenantId: session.tenantId,
+      actor,
+      action: "auth.sso_provision",
+      summary: `${session.email} was created as staff by Microsoft SSO autoroute.`,
+      target: { type: "staff", id: session.userId, label: session.email },
+    });
+  }
+  await recordAccountActivity({
+    tenantId: session.tenantId,
+    actor,
+    action: "auth.sso_login",
+    summary: `${session.email} signed in with Microsoft.`,
+  });
   return successRedirect(state.origin, state.next);
 }

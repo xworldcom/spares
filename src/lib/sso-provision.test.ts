@@ -53,6 +53,7 @@ describe("Microsoft SSO domain provision", () => {
     assert.equal(first.user.tenantId, created.tenant.id);
     assert.equal(first.user.staffCreatedTenantId, created.tenant.id);
     assert.ok(first.user.ssoProvisionedAt);
+    assert.equal(first.provisioned, true);
     assert.equal(await verifyPassword("anything-long-enough", first.user.passwordHash), false);
 
     const again = await resolveMicrosoftCatalogUser("jane@shape.com");
@@ -61,6 +62,7 @@ describe("Microsoft SSO domain provision", () => {
       return;
     }
     assert.equal(again.user.id, first.user.id);
+    assert.equal(again.provisioned, false);
   });
 
   it("does not move an existing login to another host", async () => {

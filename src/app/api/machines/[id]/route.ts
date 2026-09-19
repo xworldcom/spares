@@ -4,6 +4,7 @@ import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail } from "@/lib/machines";
 import { parseStaffPartEdit, type StaffPartEdit } from "@/lib/staff-catalog";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   deleteMachine,
   getMachine,
@@ -118,6 +119,14 @@ export async function PATCH(
     return error("Machine not found", 404);
   }
 
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "machine.updated",
+    summary: `${auth.user.email} updated machine ${updated.machine.name}.`,
+    target: { type: "machine", id: updated.machine.id, label: updated.machine.name },
+  });
+
   const org = await getOrgContext(auth.tenantId);
   return json(
     toMachineDetail(
@@ -144,6 +153,14 @@ export async function DELETE(
   if ("error" in deleted) {
     return error("Machine not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "machine.deleted",
+    summary: `${auth.user.email} removed machine ${id}.`,
+    target: { type: "machine", id },
+  });
 
   return json({ ok: true });
 }

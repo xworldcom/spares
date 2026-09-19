@@ -9,6 +9,7 @@ import {
   toPublicQuote,
 } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   createQuoteActivity,
   mutateQuote,
@@ -125,6 +126,15 @@ export async function POST(
   if (!next) {
     return error("Quote not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(access.user),
+    action: "quote.updated",
+    summary: `${access.user.email} uploaded a purchase order on quote #${next.number}.`,
+    target: { type: "quote", id: next.id, label: `#${next.number}` },
+    details: { poNumber: poNumber ?? null },
+  });
 
   return json(
     { quote: toPublicQuote(next, access.user, await machineNameFor(next)) },

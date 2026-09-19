@@ -1,5 +1,6 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   createCustomerAccount,
   listCustomerAccounts,
@@ -45,5 +46,13 @@ export async function POST(request: Request) {
     }
     return error("Customer name is required", 400);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "customer.created",
+    summary: `${auth.user.email} created customer ${created.account.name}.`,
+    target: { type: "customer", id: created.account.id, label: created.account.name },
+  });
   return json({ account: { ...created.account, siteCount: 0 } }, 201);
 }

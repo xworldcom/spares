@@ -112,6 +112,7 @@ export function MobileTabBar() {
     "/machines/new",
     "/care",
     "/staff/directory",
+    "/staff/activity",
     "/staff/quotes",
     "/staff/bugs",
     "/staff/platform",
@@ -120,6 +121,7 @@ export function MobileTabBar() {
   const moreActive =
     user?.role === "staff" &&
     (isNavActive(pathname, "/staff/directory", staffHrefs) ||
+      isNavActive(pathname, "/staff/activity", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs) ||
       isNavActive(pathname, "/staff/platform", staffHrefs) ||
       isNavActive(pathname, "/staff/platform/inquiries", staffHrefs));
@@ -171,6 +173,12 @@ export function MobileTabBar() {
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
               Directory
+            </Link>
+            <Link
+              href="/staff/activity"
+              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+            >
+              Activity Log
             </Link>
             <Link
               href="/staff/bugs"

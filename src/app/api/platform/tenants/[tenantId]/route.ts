@@ -1,6 +1,7 @@
 import { parseSsoAutoroute, parseSsoDomains } from "@/lib/auth/sso-domain";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { updateTenantPlatformMeta, removePlatformTenant } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,20 @@ export async function PATCH(request: Request, context: Params) {
     }
     return error("Invalid tenant name", 400);
   }
+
+  await recordAccountActivity({
+    tenantId: updated.tenant.id,
+    actor: actorFromUser(auth.user),
+    action: "tenant.updated",
+    summary: `${auth.user.email} updated host ${updated.tenant.name}.`,
+    target: { type: "tenant", id: updated.tenant.id, label: updated.tenant.name },
+    details: {
+      name: name ?? null,
+      inactive: inactive ?? null,
+      ssoDomains: ssoDomains?.join(", ") ?? null,
+      ssoAutoroute: ssoAutoroute ?? null,
+    },
+  });
   return json({ tenant: updated.tenant });
 }
 
@@ -93,5 +108,13 @@ export async function DELETE(_request: Request, context: Params) {
     }
     return error("Could not delete host", 400);
   }
+
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(auth.user),
+    action: "tenant.deleted",
+    summary: `${auth.user.email} removed host ${tenantId}.`,
+    target: { type: "tenant", id: tenantId },
+  });
   return json({ ok: true });
 }
