@@ -1,0 +1,86 @@
+T1.4 RE-RUN access-path log
+UTC window: 2026-09-03T17:27Z – 2026-09-03T17:52Z
+Agent: https://cursor.com/agents/bc-16d47509-3911-4654-825e-511712215647
+Preview (NEW): https://spares-27bhlgi5c-yonder3.vercel.app
+Deployment: dpl_AVH3Y8bc1EEjiwDLGwwx48Q3Bq8g (READY, target: null / preview)
+Project: spares / prj_vPMO2YHyvTj8FKLK3BZuguu5Anw6
+Vercel team slug: yonder3 (Spares app — not the Yonder product)
+Account id (from MCP): team_LuQNcW3AobCzMEfLetaQav1z
+Commit on deploy: ae215b2bbd24968098fa735f6609dd3a3e44b6c9 (main — hardware pack merged via #12)
+
+Hunch verified: Tess said Kevin re-authed yonder3 so vc curl / OIDC should work.
+Result in THIS agent session: metadata works via teamId=xworldcom; protected CONTENT and yonder3-scoped logs still 403. CLI remains logged out. New URL still shows Vercel login wall.
+
+=== Protection settings (MCP get_project_deployment_protection, teamId=xworldcom) ===
+passwordProtection.enabled = false
+ssoProtection.enabled = true
+ssoProtection.deploymentType = prod_deployment_urls_and_all_previews
+trustedIps.enabled = false
+(Protection left ON on purpose. Not disabled.)
+
+=== Path attempts ===
+
+1) Naked curl (no auth)
+   - /, /login, /staff/quotes, /staff/customers, /machines, /machines/new,
+     /api/auth/me, /api/machines, /api/quotes
+   - All HTTP/2 302 → https://vercel.com/sso-api?url=...
+   - x-robots-tag: noindex
+   - Evidence: sso-http-probe.txt (clocks lined up ~17:41:04Z)
+
+2) Naked browser (Playwright + google-chrome-stable)
+   - Same three paths redirect to https://vercel.com/login?next=/sso-api?...
+   - Title "Login – Vercel"; body "Log in to Vercel"
+   - Spares app UI never rendered (no Spares Sign in form)
+   - Evidence: sso_wall_root.png, sso_wall_login.png, sso_wall_staff_quotes.png
+     (clocks ~17:51:25Z–17:51:33Z)
+
+3) Vercel CLI
+   - Installed vercel@59.11.2 to user prefix
+   - vercel whoami → Logged out
+   - No VERCEL_TOKEN / VERCEL_OIDC_TOKEN in environment
+   - vercel curl --yes <preview>/login → starts device OAuth login flow
+     (user_code redacted; not completed)
+   - vercel env run → same login wall (no OIDC token available)
+   - Evidence: vercel-curl-logged-out.txt
+
+4) Browser OIDC header path
+   - Required header: x-vercel-trusted-oidc-idp-token
+   - No short-lived OIDC token available (CLI logged out; vc env run cannot pull)
+   - Did not substitute x-vercel-oidc-token
+   - Did not ask for a long-lived protection-bypass secret as first solution
+
+5) Vercel MCP
+   - list_teams → []
+   - list_projects teamId=yonder3 → Failed to list projects
+   - list_projects teamId=xworldcom → OK (spares, spares-preview-deploy, yonder)
+   - get_deployment idOrUrl=spares-27bhlgi5c-yonder3.vercel.app teamId=xworldcom → OK
+   - get_project / list_deployments teamId=xworldcom → OK
+   - get_project_deployment_protection teamId=xworldcom → OK (SSO ON)
+   - web_fetch_vercel_url(preview) → Failed to create shareable URL: 403 Forbidden
+   - get_access_to_vercel_url(preview[/login]) → Failed to create shareable URL: 403 Forbidden
+   - get_runtime_logs(project=spares, deployment=dpl_AVH3Y8bc..., teamId=xworldcom)
+     → 403 "Not authorized: Trying to access resource under scope \"yonder3\".
+        You must re-authenticate to this scope or use a token with access to this scope."
+
+=== Stop condition honored ===
+Could not get past Vercel SSO on the NEW URL.
+Did NOT disable Deployment Protection.
+Did NOT use a public URL / production alias as a workaround.
+Did NOT deploy a second app.
+Did NOT merge.
+Did NOT attach a public domain.
+Did NOT pile onto PR #11 (prior SSO blocker on old URL).
+
+=== GitHub issues write ===
+POST /repos/xworldcom/spares/issues/5/comments → 403 Resource not accessible by integration
+POST /repos/xworldcom/spares/issues → 403 Resource not accessible by integration
+Landing: this test-artifact PR (matrix + evidence). Prefer paste onto #5 when issues write is granted.
+
+=== Fixture readiness (local repo on main — not uploaded) ===
+Hardware pack at public/placeholders/hardware/:
+  GLB: mcmaster-hardware.glb
+  List: mcmaster-hardware-parts.csv / .json
+  Join key: part number (McMaster catalog ids)
+  Joined (qty): 5972K325(1), 91280A340(4), 91828A230(4), 6435K12(1), 6331K32(1)
+  Staff unmatched list-only: 93475A240 Flat washer, M6 qty 10 (no mesh)
+  No mesh-only unmatched in this pack (unlike palletizer PN-GRD-5503)
