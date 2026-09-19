@@ -8,6 +8,7 @@ import {
 import { actorOf, requireMachineAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
+import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { createTicket, listTickets } from "@/lib/store";
 
 type CreateBody = {
@@ -70,6 +71,19 @@ export async function POST(
   });
   if ("error" in created) {
     return error("Machine not found", 404);
+  }
+
+  if (note.text) {
+    scheduleAssistantReply({
+      kind: "care",
+      id: created.ticket.id,
+      tenantId,
+      machineId: access.machine.id,
+      machineName: access.machine.name,
+      triggerText: note.text,
+      triggerRole: access.user.role,
+      triggerEmail: access.user.email,
+    });
   }
 
   return json(

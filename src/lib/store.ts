@@ -93,6 +93,7 @@ import type {
   QuoteActivity,
   QuoteItem,
   QuoteRecord,
+  ActivityActorRole,
   Role,
   CustomerAccount,
   ServiceTicketRecord,
@@ -102,13 +103,18 @@ import type {
   UnmatchedPart,
 } from "../types/index.ts";
 import {
+  readPersistedPlatformSettings,
   readPersistedPlatformSignInSettings,
+  writePersistedPlatformSettings,
   writePersistedPlatformSignInSettings,
+  type PlatformSettingsDocument,
   type PlatformSignInSettings,
 } from "./platform-settings-persistence.ts";
+import { normalizeAssistantSettings } from "./assistant/settings.ts";
+import { resolveAssistantModel } from "./assistant/models.ts";
 
 export { filesDir, getDataDir } from "./persistence.ts";
-export type { PlatformSignInSettings };
+export type { PlatformSignInSettings, PlatformSettingsDocument };
 
 export const SEED_STAFF = {
   id: "user-staff",
@@ -382,6 +388,9 @@ function mergeTicketRecord(a: StoredTicket, b: StoredTicket): StoredTicket {
     ...newer,
     activities,
     lastReadAt: { ...a.lastReadAt, ...b.lastReadAt },
+    assistantPaused: a.assistantPaused || b.assistantPaused || newer.assistantPaused,
+    assistantEscalatedAt:
+      newer.assistantEscalatedAt ?? a.assistantEscalatedAt ?? b.assistantEscalatedAt,
   };
 }
 
@@ -410,6 +419,9 @@ function mergeQuoteRecord(a: StoredQuote, b: StoredQuote): StoredQuote {
     shipments: newer.shipments.length >= older.shipments.length
       ? newer.shipments
       : older.shipments,
+    assistantPaused: a.assistantPaused || b.assistantPaused || newer.assistantPaused,
+    assistantEscalatedAt:
+      newer.assistantEscalatedAt ?? a.assistantEscalatedAt ?? b.assistantEscalatedAt,
   };
 }
 
@@ -1538,6 +1550,24 @@ export function updatePlatformSignInSettings(patch: { passwordLoginEnabled: bool
     };
     await writePersistedPlatformSignInSettings(nextSettings);
     return { settings: nextSettings };
+  });
+}
+
+export async function getPlatformAssistantSettingsFromCatalog() {
+  const sidecar = await readPersistedPlatformSettings();
+  return normalizeAssistantSettings(sidecar);
+}
+
+export function updatePlatformAssistantSettings(patch: {
+  enabled: boolean;
+  model?: string;
+}) {
+  return withLock(async () => {
+    const next = await writePersistedPlatformSettings({
+      assistantEnabled: patch.enabled,
+      assistantModel: resolveAssistantModel(patch.model),
+    });
+    return { settings: normalizeAssistantSettings(next) };
   });
 }
 
@@ -2980,7 +3010,7 @@ export function bulkUpdateCustomerAccess(
 }
 
 function newActivity(
-  actor: { email: string; role: Role },
+  actor: { email: string; role: ActivityActorRole },
   kind: QuoteActivity["kind"],
   text: string,
   at = new Date().toISOString(),
@@ -3206,7 +3236,7 @@ export function mutateQuote(
 export function appendQuoteActivity(
   idOrNumber: string,
   tenantId: string,
-  actor: { email: string; role: Role; id: string },
+  actor: { email: string; role: ActivityActorRole; id: string },
   kind: QuoteActivity["kind"],
   text: string,
   attachments?: QuoteActivity["attachments"],
@@ -3232,7 +3262,7 @@ export function markQuoteRead(idOrNumber: string, tenantId: string, userId: stri
 export { newActivity as createQuoteActivity };
 
 function newTicketActivity(
-  actor: { email: string; role: Role },
+  actor: { email: string; role: ActivityActorRole },
   kind: TicketActivity["kind"],
   text: string,
   at = new Date().toISOString(),
@@ -3375,7 +3405,7 @@ export function createTicket(
     title: string;
     customerId: string;
     customerEmail: string;
-    actor: { email: string; role: Role; id: string };
+    actor: { email: string; role: ActivityActorRole; id: string };
     note?: string;
   },
 ) {
@@ -3445,7 +3475,7 @@ export function updateTicketStatus(
   idOrNumber: string,
   tenantId: string,
   status: TicketStatus,
-  actor: { email: string; role: Role; id: string },
+  actor: { email: string; role: ActivityActorRole; id: string },
 ) {
   return mutateTicket(idOrNumber, tenantId, (ticket) => {
     if (ticket.status === status) {
@@ -3464,7 +3494,7 @@ export function updateTicketStatus(
 export function appendTicketActivity(
   idOrNumber: string,
   tenantId: string,
-  actor: { email: string; role: Role; id: string },
+  actor: { email: string; role: ActivityActorRole; id: string },
   text: string,
   attachments?: TicketActivity["attachments"],
 ) {
@@ -3483,6 +3513,32 @@ export function markTicketRead(idOrNumber: string, tenantId: string, userId: str
   return mutateTicket(idOrNumber, tenantId, (ticket) => ({
     ...ticket,
     lastReadAt: { ...ticket.lastReadAt, [userId]: now },
+  }));
+}
+
+export function setTicketAssistantPaused(
+  idOrNumber: string,
+  tenantId: string,
+  paused: boolean,
+) {
+  const now = new Date().toISOString();
+  return mutateTicket(idOrNumber, tenantId, (ticket) => ({
+    ...ticket,
+    assistantPaused: paused || undefined,
+    assistantEscalatedAt: paused ? now : undefined,
+  }));
+}
+
+export function setQuoteAssistantPaused(
+  idOrNumber: string,
+  tenantId: string,
+  paused: boolean,
+) {
+  const now = new Date().toISOString();
+  return mutateQuote(idOrNumber, tenantId, (quote) => ({
+    ...quote,
+    assistantPaused: paused || undefined,
+    assistantEscalatedAt: paused ? now : undefined,
   }));
 }
 

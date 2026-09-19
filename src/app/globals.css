@@ -1362,6 +1362,12 @@ html.spares-embed .spares-app-stage {
   border-bottom-left-radius: 0.35rem;
 }
 
+.imsg-assistant .imsg-bubble {
+  background: #1b3a36;
+  color: #e6f7f3;
+  border: 1px solid #2f6f68;
+}
+
 .imsg-other[data-stacked="true"] .imsg-bubble {
   border-top-left-radius: 0.35rem;
 }
@@ -1425,6 +1431,11 @@ html.spares-embed .spares-app-stage {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+.imsg-avatar-assistant {
+  background: #1f6f68;
+  color: #e8fff9;
 }
 
 .imsg-composer {

@@ -45,6 +45,16 @@ describe("activityLane", () => {
       "other",
     );
   });
+
+  it("puts AI messages on the other lane for both roles", () => {
+    const aiNote = {
+      kind: "message" as const,
+      actorEmail: "ai@oee360.local",
+      actorRole: "assistant" as const,
+    };
+    assert.equal(activityLane(aiNote, staff), "other");
+    assert.equal(activityLane(aiNote, customer), "other");
+  });
 });
 
 describe("sameMessageAuthor", () => {

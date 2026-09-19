@@ -12,6 +12,7 @@ import {
 import { errorMessage } from "@/lib/api/errors";
 import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
+import { assistantActorLabel, isAssistantActivity } from "@/lib/assistant/actor";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
 
@@ -21,6 +22,9 @@ export type ActivitySendInput = {
 };
 
 function actorLabel(activity: QuoteActivity, role: Role, selfEmail: string) {
+  if (isAssistantActivity(activity)) {
+    return assistantActorLabel();
+  }
   if (activity.actorEmail === selfEmail && activity.actorRole === role) {
     return "You";
   }
@@ -30,13 +34,13 @@ function actorLabel(activity: QuoteActivity, role: Role, selfEmail: string) {
   return displayNameFromEmail(activity.actorEmail);
 }
 
-function OtherAvatar({ email }: { email: string }) {
+function OtherAvatar({ email, assistant }: { email: string; assistant?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className="imsg-avatar"
+      className={assistant ? "imsg-avatar imsg-avatar-assistant" : "imsg-avatar"}
     >
-      {initialsFromEmail(email)}
+      {assistant ? "AI" : initialsFromEmail(email)}
     </span>
   );
 }
@@ -237,11 +241,13 @@ export function QuoteActivityFeed({
             const stacked = sameMessageAuthor(activity, prev);
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
+            const assistant = isAssistantActivity(activity);
             const label = actorLabel(activity, role, selfEmail);
             const attachments = activity.attachments ?? [];
 
             const rowClass = [
               own ? "imsg-row imsg-own" : "imsg-row imsg-other",
+              assistant ? "imsg-assistant" : "",
               enteringIds.has(activity.id) ? "imsg-enter" : "",
             ]
               .filter(Boolean)
@@ -273,7 +279,11 @@ export function QuoteActivityFeed({
                 }
               >
                 {!own ? (
-                  lastInStack ? <OtherAvatar email={activity.actorEmail} /> : <span className="imsg-avatar-spacer" aria-hidden="true" />
+                  lastInStack ? (
+                    <OtherAvatar email={activity.actorEmail} assistant={assistant} />
+                  ) : (
+                    <span className="imsg-avatar-spacer" aria-hidden="true" />
+                  )
                 ) : null}
                 <div className="imsg-stack">
                   {!own && !stacked ? (

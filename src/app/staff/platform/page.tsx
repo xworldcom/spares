@@ -214,6 +214,9 @@ function PlatformHosts() {
           <Link className="btn-secondary text-sm" href="/staff/platform/sign-in">
             Sign-in
           </Link>
+          <Link className="btn-secondary text-sm" href="/staff/platform/assistant">
+            AI
+          </Link>
           <Link className="btn-secondary text-sm" href="/staff/directory">
             Directory
           </Link>

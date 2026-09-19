@@ -5,6 +5,7 @@ import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
+import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { appendTicketActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -69,6 +70,18 @@ export async function POST(
     },
   }).catch((cause) => {
     console.error("care chat email notify failed", cause);
+  });
+
+  scheduleAssistantReply({
+    kind: "care",
+    id: next.id,
+    tenantId,
+    machineId: next.machineId,
+    machineName: access.machine.name,
+    triggerText: parsed.text,
+    triggerRole: access.user.role,
+    triggerEmail: access.user.email,
+    attachments: parsed.attachments,
   });
 
   return json(

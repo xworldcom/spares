@@ -5,6 +5,7 @@ import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
 import { MAX_ACTIVITY_TEXT, toPublicQuote } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
+import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { appendQuoteActivity } from "@/lib/store";
 
 type ActivityBody = {
@@ -70,6 +71,18 @@ export async function POST(
     },
   }).catch((cause) => {
     console.error("quote chat email notify failed", cause);
+  });
+
+  scheduleAssistantReply({
+    kind: "quote",
+    id: next.id,
+    tenantId,
+    machineId: next.machineId,
+    machineName,
+    triggerText: parsed.text,
+    triggerRole: access.user.role,
+    triggerEmail: access.user.email,
+    attachments: parsed.attachments,
   });
 
   return json(

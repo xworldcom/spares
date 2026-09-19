@@ -155,6 +155,7 @@ Several automation companies (“hosts”) can share one OEE360 deployment. Each
 - `SPARES_GITHUB_TOKEN` (or `BUG_REPORT_GITHUB_TOKEN`) — **required on Vercel** for in-app **Report bug** → GitHub issues in `xworldcom/spares` (`issues:write`, title prefix `[bug-report]`, labels `bug` + `needs-review`). Do not paste a cloud-agent or Actions `GITHUB_TOKEN` into Vercel. `GITHUB_TOKEN` / `GH_TOKEN` remain last-resort fallbacks. Without a token on Vercel, submit returns **503** (no silent in-app-only success).
 - `BUG_REPORT_WEBHOOK_URL` (or `SPARES_BUG_REPORT_WEBHOOK_URL`) — optional JSON POST after a GitHub issue is created (e.g. Grok Bot / Quinn). Missing URL is fine; issue creation still succeeds and the server logs webhook failures only.
 - `SPARES_DATA_DIR` — local-only override for the file-backed JSON + model directory (defaults to `./data`). **Do not set this on Vercel.**
+- `AI_GATEWAY_API_KEY` — optional locally. The plant assistant (Care / quote chat) uses Vercel AI Gateway. On Vercel, OIDC is enough. Local replies need this key if you turn AI on at `/staff/platform/assistant`. Off by default.
 - **S3-compatible object storage (preferred for GLB files)** — keeps large model binaries off Vercel origin transfer. Set all of:
   - `S3_ENDPOINT` — R2 endpoint, e.g. `https://<accountid>.r2.cloudflarestorage.com`
   - `S3_REGION` — use `auto` for Cloudflare R2
