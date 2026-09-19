@@ -1,0 +1,81 @@
+{
+  "preview": "https://spares-evdd3mzx1-yonder3.vercel.app",
+  "startedAt": "2026-09-04T04:18:25.335Z",
+  "finishedAt": "2026-09-04T04:18:41.655Z",
+  "verdict": "FIXED",
+  "gate": {
+    "uploadActiveOnly": true,
+    "uploadAgainActiveOnly": true,
+    "machinesActiveOnly": true,
+    "machinesAgainActiveOnly": true,
+    "customersActiveOnly": true
+  },
+  "consoleErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()",
+      "location": {
+        "url": "https://spares-evdd3mzx1-yonder3.vercel.app/favicon.ico"
+      }
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "location": {
+        "url": "https://spares-evdd3mzx1-yonder3.vercel.app/api/auth/me"
+      }
+    }
+  ],
+  "failedNetwork": [
+    {
+      "method": "GET",
+      "url": "https://spares-evdd3mzx1-yonder3.vercel.app/favicon.ico",
+      "status": 404,
+      "resourceType": "other"
+    },
+    {
+      "method": "GET",
+      "url": "https://spares-evdd3mzx1-yonder3.vercel.app/api/auth/me",
+      "status": 401,
+      "resourceType": "fetch"
+    }
+  ],
+  "activeByRoute": [
+    {
+      "path": "/machines",
+      "active": [
+        "Machines"
+      ]
+    },
+    {
+      "path": "/machines",
+      "active": [
+        "Machines"
+      ]
+    },
+    {
+      "path": "/machines/new",
+      "active": [
+        "Upload"
+      ]
+    },
+    {
+      "path": "/staff/customers",
+      "active": [
+        "Customers"
+      ]
+    },
+    {
+      "path": "/machines",
+      "active": [
+        "Machines"
+      ]
+    },
+    {
+      "path": "/machines/new",
+      "active": [
+        "Upload"
+      ]
+    }
+  ]
+}
