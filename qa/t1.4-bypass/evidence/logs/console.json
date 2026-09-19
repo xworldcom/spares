@@ -1,0 +1,82 @@
+[
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/staff/quotes"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/new"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "warning",
+    "text": "[GroupMarkerNotSet(crbug.com/242999)!:A03022085C2F0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea"
+  },
+  {
+    "type": "warning",
+    "text": "[GroupMarkerNotSet(crbug.com/242999)!:A03022085C2F0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea"
+  },
+  {
+    "type": "log",
+    "text": "THREE.WebGLRenderer: Context Lost.",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "warning",
+    "text": "[GroupMarkerNotSet(crbug.com/242999)!:A03022085C2F0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/62c7b89c-2b2b-44bb-bd13-4b280097e0ea"
+  },
+  {
+    "type": "log",
+    "text": "THREE.WebGLRenderer: Context Lost.",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/login"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 404 ()",
+    "url": "https://spares-27bhlgi5c-yonder3.vercel.app/machines/does-not-exist"
+  }
+]

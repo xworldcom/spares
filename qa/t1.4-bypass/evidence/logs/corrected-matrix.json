@@ -1,0 +1,35 @@
+{
+  "verdict": "PATH_HOLDS",
+  "preview": "https://spares-27bhlgi5c-yonder3.vercel.app",
+  "access": "automation bypass header (secret not stored)",
+  "fixture": "McMaster hardware pack with unmatched washer 93475A240",
+  "pass": 18,
+  "fail": 0,
+  "blocked": 0,
+  "cases": [
+    { "id": "0", "title": "Bypass reaches Spares login", "status": "PASS" },
+    { "id": "0b", "title": "No seed passwords on login", "status": "PASS" },
+    { "id": "1a", "title": "Wrong password", "status": "PASS" },
+    { "id": "1b", "title": "Unknown email", "status": "PASS" },
+    { "id": "1c", "title": "Staff URL logged out → not signed in", "status": "PASS" },
+    { "id": "2", "title": "Staff upload hardware pack + named qty", "status": "PASS" },
+    { "id": "3", "title": "Staff unmatched washer 93475A240", "status": "PASS" },
+    { "id": "4a", "title": "Empty staff inbox", "status": "PASS" },
+    { "id": "4b", "title": "Staff inbox who/part/notes", "status": "PASS" },
+    { "id": "5", "title": "Customer staff screens not leaked", "status": "PASS" },
+    { "id": "6", "title": "Model loads + orbit", "status": "PASS" },
+    { "id": "7", "title": "Named part highlight + quote success", "status": "PASS" },
+    { "id": "8a", "title": "Customer UI no unmatched", "status": "PASS" },
+    { "id": "8b", "title": "Customer GET omits unmatched", "status": "PASS" },
+    { "id": "9", "title": "Empty/error states", "status": "PASS" },
+    { "id": "10", "title": "Logout/login no role bleed", "status": "PASS" },
+    { "id": "11", "title": "Session holds across refresh", "status": "PASS" },
+    { "id": "5e", "title": "No public signup", "status": "PASS" }
+  ],
+  "product_bugs": [],
+  "notes": [
+    "Freeze screenshots are authoritative over harness assertion races.",
+    "Canvas mesh click inconclusive under headless SwiftShader; BOM→highlight proven.",
+    "Preview /tmp store can empty after instance recycle; continuous walk held."
+  ]
+}
