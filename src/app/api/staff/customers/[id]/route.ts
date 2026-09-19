@@ -1,5 +1,6 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { deletePerson, getOrgContext, updatePerson } from "@/lib/store";
 import { toPublicUser } from "@/lib/access";
 
@@ -67,6 +68,14 @@ export async function PATCH(
     return error("Person not found", 404);
   }
 
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "person.updated",
+    summary: `${auth.user.email} updated person ${updated.user.email}.`,
+    target: { type: "person", id: updated.user.id, label: updated.user.email },
+  });
+
   const org = await getOrgContext(auth.tenantId);
   return json({ user: toPublicUser(updated.user, org.sites, org.customers) });
 }
@@ -88,5 +97,13 @@ export async function DELETE(
     }
     return error("Person not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "person.deleted",
+    summary: `${auth.user.email} removed person ${id}.`,
+    target: { type: "person", id },
+  });
   return json({ ok: true });
 }

@@ -5,6 +5,7 @@ import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { appendTicketActivity } from "@/lib/store";
 
@@ -50,6 +51,15 @@ export async function POST(
   if (!next) {
     return error("Ticket not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(access.user),
+    action: "ticket.message",
+    summary: `${access.user.email} posted on ticket #${next.number}.`,
+    target: { type: "ticket", id: next.id, label: `#${next.number}` },
+    details: { attachmentCount: parsed.attachments?.length ?? 0 },
+  });
 
   void notifyMachineChatUpdate({
     tenantId,

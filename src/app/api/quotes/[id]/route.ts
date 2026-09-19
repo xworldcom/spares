@@ -15,6 +15,7 @@ import {
   trackingUpdatedActivityText,
 } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { createQuoteActivity, markQuoteRead, mutateQuote } from "@/lib/store";
 import type { QuoteRecord, QuoteStatus } from "@/types";
 
@@ -89,6 +90,14 @@ export async function PATCH(
     if (!next) {
       return error("Quote not found", 404);
     }
+    await recordAccountActivity({
+      tenantId,
+      actor: actorFromUser(access.user),
+      action: "quote.updated",
+      summary: `${access.user.email} set PO number on quote #${next.number}.`,
+      target: { type: "quote", id: next.id, label: `#${next.number}` },
+      details: { poNumber },
+    });
     return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
   }
 
@@ -181,6 +190,19 @@ export async function PATCH(
   if (!next) {
     return error("Quote not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(access.user),
+    action: "quote.updated",
+    summary: `${access.user.email} updated quote #${next.number}.`,
+    target: { type: "quote", id: next.id, label: `#${next.number}` },
+    details: {
+      status: next.status,
+      pricing: body.items !== undefined,
+      tracking: shipmentsChanged,
+    },
+  });
 
   return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
 }

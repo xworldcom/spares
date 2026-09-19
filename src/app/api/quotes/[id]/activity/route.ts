@@ -5,6 +5,7 @@ import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from 
 import { MAX_ACTIVITY_TEXT } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { scheduleAssistantReply } from "@/lib/assistant/schedule";
 import { appendQuoteActivity } from "@/lib/store";
 
@@ -52,6 +53,15 @@ export async function POST(
   if (!next) {
     return error("Quote not found", 404);
   }
+
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(access.user),
+    action: "quote.message",
+    summary: `${access.user.email} posted on quote #${next.number}.`,
+    target: { type: "quote", id: next.id, label: `#${next.number}` },
+    details: { attachmentCount: parsed.attachments?.length ?? 0 },
+  });
 
   const machineName = (await machineNameFor(next)) ?? "Machine";
   void notifyMachineChatUpdate({

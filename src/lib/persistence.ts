@@ -1,6 +1,12 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { BLOB_FILES_PREFIX, blobCarePath, blobDbPath, blobPlatformSettingsPath } from "./blob-paths.ts";
+import {
+  BLOB_FILES_PREFIX,
+  blobActivityPath,
+  blobCarePath,
+  blobDbPath,
+  blobPlatformSettingsPath,
+} from "./blob-paths.ts";
 import { isManagedRuntime } from "./production-env.ts";
 
 export type StoreKind = "fs" | "blob" | "memory";
@@ -32,6 +38,8 @@ export type Persistence = {
   writeCareJson(json: string): Promise<void>;
   readPlatformSettingsJson(): Promise<string | null>;
   writePlatformSettingsJson(json: string): Promise<void>;
+  readActivityJson(): Promise<string | null>;
+  writeActivityJson(json: string): Promise<void>;
   readFileBytes(name: string): Promise<Buffer | null>;
   writeFileBytes(name: string, bytes: Buffer): Promise<void>;
   deleteFileBytes(name: string): Promise<void>;
@@ -65,6 +73,7 @@ export function createMemoryPersistence(): Persistence {
   let json: string | null = null;
   let careJson: string | null = null;
   let platformSettingsJson: string | null = null;
+  let activityJson: string | null = null;
   const files = new Map<string, Buffer>();
   return {
     kind: "memory",
@@ -85,6 +94,12 @@ export function createMemoryPersistence(): Persistence {
     },
     async writePlatformSettingsJson(next) {
       platformSettingsJson = next;
+    },
+    async readActivityJson() {
+      return activityJson;
+    },
+    async writeActivityJson(next) {
+      activityJson = next;
     },
     async readFileBytes(name) {
       const bytes = files.get(safeStoredFileName(name));
@@ -142,6 +157,7 @@ function fsPersistence(root: string): Persistence {
   const dbFile = path.join(root, "db.json");
   const careFile = path.join(root, "care.json");
   const platformSettingsFile = path.join(root, "platform-settings.json");
+  const activityFile = path.join(root, "activity.json");
   const filesRoot = path.join(root, "files");
   return {
     kind: "fs",
@@ -165,6 +181,13 @@ function fsPersistence(root: string): Persistence {
     async writePlatformSettingsJson(json) {
       await mkdir(filesRoot, { recursive: true });
       await writeFile(platformSettingsFile, json);
+    },
+    async readActivityJson() {
+      return readJsonFile(activityFile);
+    },
+    async writeActivityJson(json) {
+      await mkdir(filesRoot, { recursive: true });
+      await writeFile(activityFile, json);
     },
     async readFileBytes(name) {
       try {
@@ -238,6 +261,20 @@ function blobPersistence(): Persistence {
     async writePlatformSettingsJson(json) {
       const { put } = await import("@vercel/blob");
       await put(blobPlatformSettingsPath(), json, {
+        access: "private",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 60,
+        contentType: "application/json",
+      });
+    },
+    async readActivityJson() {
+      const bytes = await readJsonBlob(blobActivityPath());
+      return bytes ? bytes.toString("utf8") : null;
+    },
+    async writeActivityJson(json) {
+      const { put } = await import("@vercel/blob");
+      await put(blobActivityPath(), json, {
         access: "private",
         addRandomSuffix: false,
         allowOverwrite: true,

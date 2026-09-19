@@ -2,6 +2,7 @@ import { isTicketStatus } from "@/lib/care";
 import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
@@ -58,6 +59,14 @@ export async function PATCH(
   if (!next) {
     return error("Ticket not found", 404);
   }
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(access.user),
+    action: "ticket.updated",
+    summary: `${access.user.email} set ticket #${next.number} to ${next.status}.`,
+    target: { type: "ticket", id: next.id, label: `#${next.number}` },
+    details: { status: next.status },
+  });
   return json({
     ticket: await publicTicketForUser(next, access.user, access.machine.name),
   });

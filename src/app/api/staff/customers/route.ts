@@ -2,6 +2,7 @@ import { hashPassword, passwordPolicyError } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { createCustomer, getOrgContext, listCustomers } from "@/lib/store";
 
 export async function GET() {
@@ -62,6 +63,14 @@ export async function POST(request: Request) {
   if ("error" in created) {
     return error("A user with that email already exists", 409);
   }
+
+  await recordAccountActivity({
+    tenantId: auth.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "person.created",
+    summary: `${auth.user.email} created person ${created.user.email}.`,
+    target: { type: "person", id: created.user.id, label: created.user.email },
+  });
 
   const org = await getOrgContext(auth.tenantId);
   return json(

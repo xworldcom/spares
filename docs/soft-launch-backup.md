@@ -17,7 +17,7 @@ Single JSON document. On Vercel it holds the main app database, including (all s
 - Bug report records (screenshots may point at Blob files under `spares/files/`)
 - Machine view / analytics-style counters stored with the catalog
 
-Paths are defined in `src/lib/blob-paths.ts` (`blobDbPath()`). When an environment sets `SPARES_BLOB_NAMESPACE`, its catalog lives at `spares/<namespace>/db.json` and `spares/<namespace>/care.json` instead — back up the namespaced pair for that environment. Unset means the historical `spares/db.json` / `spares/care.json`.
+Paths are defined in `src/lib/blob-paths.ts` (`blobDbPath()`). When an environment sets `SPARES_BLOB_NAMESPACE`, its catalog lives at `spares/<namespace>/db.json`, `spares/<namespace>/care.json`, and `spares/<namespace>/activity.json` instead — back up the namespaced set for that environment. Unset means the historical `spares/db.json` / `spares/care.json` / `spares/activity.json`.
 
 ### 2. Vercel Blob — Care sidecar (`spares/care.json`)
 
@@ -29,6 +29,10 @@ Separate object so catalog “heal” passes cannot wipe Care. Contains:
 - **Machine usage** — hours/cycles, notes, usage history
 
 On every write the app mirrors Care into both `db.json` and `care.json`, but **`care.json` is the authoritative merge target** when the two diverge. Always back up **both** JSON files together.
+
+### 2b. Vercel Blob — Activity Log sidecar (`spares/activity.json`)
+
+Append-only staff **Activity Log**. Separate so catalog heals cannot wipe the record. There is no delete API. Back it up with the `db.json` + `care.json` pair.
 
 ### 3. Vercel Blob — small files (`spares/files/…`)
 
@@ -56,9 +60,9 @@ R2 is **not** included in Vercel Blob exports. Treat it as its own backup job.
 
 ### Blob (JSON + `spares/files/`)
 
-1. **Vercel dashboard** — Project → **Storage** → connected Blob store → browse objects and download `spares/db.json`, `spares/care.json`, and any important objects under `spares/files/`.
+1. **Vercel dashboard** — Project → **Storage** → connected Blob store → browse objects and download `spares/db.json`, `spares/care.json`, `spares/activity.json`, and any important objects under `spares/files/`.
 2. **CLI / script (recommended for repeatability)** — From a secure machine, with the environment’s `BLOB_READ_WRITE_TOKEN` (Preview token for Soft Launch data; do not commit tokens):
-   - Pull JSON: use `@vercel/blob` `get()` for `spares/db.json` and `spares/care.json` (same paths the app uses in `src/lib/persistence.ts`).
+   - Pull JSON: use `@vercel/blob` `get()` for `spares/db.json`, `spares/care.json`, and `spares/activity.json` (same paths the app uses in `src/lib/persistence.ts`).
    - List and download `spares/files/*` if you need PO PDFs, screenshots, or legacy GLBs.
 3. Store snapshots in a **private** location (1Password vault file, encrypted drive, or private S3/R2 bucket used only for backups). Name files with **environment + date** (e.g. `preview-2026-09-15-db.json`).
 
@@ -103,12 +107,12 @@ If Preview and Production ever use **different** Blob stores or buckets, label b
 
 ## When a restore is the right answer
 
-The app refuses to overwrite a catalog it cannot read: a failed Blob read raises `PersistenceReadError` and unreadable JSON raises `CatalogUnreadableError`, so requests fail loudly instead of silently rewriting `db.json` with demo fixtures. If the app starts reporting either error, the stored document is still there — restore the most recent `db.json` + `care.json` pair rather than redeploying and hoping.
+The app refuses to overwrite a catalog it cannot read: a failed Blob read raises `PersistenceReadError` and unreadable JSON raises `CatalogUnreadableError`, so requests fail loudly instead of silently rewriting `db.json` with demo fixtures. If the app starts reporting either error, the stored document is still there — restore the most recent `db.json` + `care.json` + `activity.json` set rather than redeploying and hoping.
 
 ## Restore (high level)
 
 1. Restore R2 objects first (or attachment links break).
-2. Upload `spares/care.json` and `spares/db.json` to the **correct** Blob store (overwrite only after confirming environment).
+2. Upload `spares/care.json`, `spares/activity.json`, and `spares/db.json` to the **correct** Blob store (overwrite only after confirming environment).
 3. Restore `spares/files/` objects if PO PDFs or legacy GLBs are missing.
 4. Redeploy or cold-start a function and smoke-test: login, one machine `fileUrl`, one quote, one Care ticket with attachment.
 

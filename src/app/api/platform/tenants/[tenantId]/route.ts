@@ -1,5 +1,7 @@
+import { parseSsoAutoroute, parseSsoDomains } from "@/lib/auth/sso-domain";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { updateTenantPlatformMeta, removePlatformTenant } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +11,8 @@ type Params = { params: Promise<{ tenantId: string }> };
 type PatchBody = {
   name?: unknown;
   inactive?: unknown;
+  ssoDomains?: unknown;
+  ssoAutoroute?: unknown;
 };
 
 export async function PATCH(request: Request, context: Params) {
@@ -25,12 +29,31 @@ export async function PATCH(request: Request, context: Params) {
   const name = typeof body.name === "string" ? body.name : undefined;
   const inactive =
     typeof body.inactive === "boolean" ? body.inactive : undefined;
+  let ssoDomains: string[] | undefined;
+  if (body.ssoDomains !== undefined) {
+    const parsed = parseSsoDomains(body.ssoDomains);
+    if (!parsed.ok) {
+      return error(parsed.message, parsed.status);
+    }
+    ssoDomains = parsed.domains;
+  }
+  const ssoAutoroute = parseSsoAutoroute(body.ssoAutoroute);
 
-  if (name === undefined && inactive === undefined) {
+  if (
+    name === undefined &&
+    inactive === undefined &&
+    ssoDomains === undefined &&
+    ssoAutoroute === undefined
+  ) {
     return error("No changes requested", 400);
   }
 
-  const updated = await updateTenantPlatformMeta(tenantId, { name, inactive });
+  const updated = await updateTenantPlatformMeta(tenantId, {
+    name,
+    inactive,
+    ssoDomains,
+    ssoAutoroute,
+  });
   if ("error" in updated) {
     if (updated.error === "not-found") {
       return error("Tenant not found", 404);
@@ -38,11 +61,28 @@ export async function PATCH(request: Request, context: Params) {
     if (updated.error === "taken") {
       return error("A tenant with that name already exists", 409);
     }
+    if (updated.error === "domain-taken") {
+      return error("That SSO domain is already assigned to another host", 409);
+    }
     if (updated.error === "host-immutable") {
       return error("The Soft Launch host cannot be suspended", 400);
     }
     return error("Invalid tenant name", 400);
   }
+
+  await recordAccountActivity({
+    tenantId: updated.tenant.id,
+    actor: actorFromUser(auth.user),
+    action: "tenant.updated",
+    summary: `${auth.user.email} updated host ${updated.tenant.name}.`,
+    target: { type: "tenant", id: updated.tenant.id, label: updated.tenant.name },
+    details: {
+      name: name ?? null,
+      inactive: inactive ?? null,
+      ssoDomains: ssoDomains?.join(", ") ?? null,
+      ssoAutoroute: ssoAutoroute ?? null,
+    },
+  });
   return json({ tenant: updated.tenant });
 }
 
@@ -68,5 +108,13 @@ export async function DELETE(_request: Request, context: Params) {
     }
     return error("Could not delete host", 400);
   }
+
+  await recordAccountActivity({
+    tenantId,
+    actor: actorFromUser(auth.user),
+    action: "tenant.deleted",
+    summary: `${auth.user.email} removed host ${tenantId}.`,
+    target: { type: "tenant", id: tenantId },
+  });
   return json({ ok: true });
 }

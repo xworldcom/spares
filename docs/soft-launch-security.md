@@ -33,7 +33,7 @@ While seeds are on, catalog heal keeps `staff@spares.local` and `customer@spares
 
 ### `SPARES_BLOB_NAMESPACE` (Preview vs Soft Launch isolation)
 
-Preview deployments and Soft Launch share `BLOB_READ_WRITE_TOKEN`, so a Preview QA smoke that renames a host or deactivates a login writes straight into Soft Launch data (this is how the Soft Launch host showed up renamed on Preview). Set `SPARES_BLOB_NAMESPACE` on the deployments that must stay isolated — `SPARES_BLOB_NAMESPACE=preview-qa` reads and writes `spares/preview-qa/db.json` and `spares/preview-qa/care.json`. Leaving it unset keeps the historical `spares/db.json` paths, so **Soft Launch needs no data migration**; only give the namespace to the environment you want to fork off, and back both up first.
+Preview deployments and Soft Launch share `BLOB_READ_WRITE_TOKEN`, so a Preview QA smoke that renames a host or deactivates a login writes straight into Soft Launch data (this is how the Soft Launch host showed up renamed on Preview). Set `SPARES_BLOB_NAMESPACE` on the deployments that must stay isolated — `SPARES_BLOB_NAMESPACE=preview-qa` reads and writes `spares/preview-qa/db.json`, `spares/preview-qa/care.json`, and `spares/preview-qa/activity.json`. Leaving it unset keeps the historical `spares/db.json` paths, so **Soft Launch needs no data migration**; only give the namespace to the environment you want to fork off, and back the JSON set up first.
 
 ## Auth and sessions
 

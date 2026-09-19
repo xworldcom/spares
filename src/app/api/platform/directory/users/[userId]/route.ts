@@ -1,6 +1,7 @@
 import { toPublicUser } from "@/lib/access";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   getOrgContext,
   getPlatformDirectoryUser,
@@ -131,6 +132,17 @@ export async function PATCH(
   if ("error" in located) {
     return error("Person not found", 404);
   }
+  await recordAccountActivity({
+    tenantId: located.tenantId,
+    actor: actorFromUser(auth.user),
+    action: "person.updated",
+    summary: `${auth.user.email} updated ${located.user.role} ${updated.user.email}.`,
+    target: {
+      type: located.user.role === "staff" ? "staff" : "person",
+      id: updated.user.id,
+      label: updated.user.email,
+    },
+  });
   const org = await getOrgContext(located.tenantId);
   return json({ user: toPublicUser(updated.user, org.sites, org.customers) });
 }
@@ -145,12 +157,27 @@ export async function DELETE(
   }
 
   const { userId } = await params;
+  const located = await getPlatformDirectoryUser(userId);
   const removed = await removePlatformDirectoryUser(userId);
   if ("error" in removed) {
     if (removed.error === "protected") {
       return error("That login is protected and cannot be removed", 400);
     }
     return error("Person not found", 404);
+  }
+
+  if (!("error" in located)) {
+    await recordAccountActivity({
+      tenantId: located.tenantId,
+      actor: actorFromUser(auth.user),
+      action: "person.deleted",
+      summary: `${auth.user.email} removed ${located.user.role} ${located.user.email}.`,
+      target: {
+        type: located.user.role === "staff" ? "staff" : "person",
+        id: userId,
+        label: located.user.email,
+      },
+    });
   }
   return json({ ok: true });
 }

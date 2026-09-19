@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
 import { isForbidden, errorMessage } from "@/lib/api/errors";
+import { SsoAutorouteSelector } from "@/components/staff/SsoAutorouteSelector";
 
 type TenantsResponse = { tenants: Tenant[] };
 
@@ -40,6 +41,8 @@ function PlatformTenants() {
   const [name, setName] = useState("");
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
+  const [ssoDomains, setSsoDomains] = useState("");
+  const [ssoAutoroute, setSsoAutoroute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -90,11 +93,15 @@ function PlatformTenants() {
           name,
           staffEmail: staffEmail.trim() || undefined,
           staffPassword: staffPassword || undefined,
+          ssoDomains: ssoDomains.trim() || undefined,
+          ssoAutoroute,
         }),
       });
       setName("");
       setStaffEmail("");
       setStaffPassword("");
+      setSsoDomains("");
+      setSsoAutoroute(false);
       if (result.staffUser?.tenantId) {
         setNotice(
           `Created ${result.tenant.name}. First staff ${result.staffUser.email} → tenantId ${result.staffUser.tenantId}`,
@@ -148,6 +155,21 @@ function PlatformTenants() {
           />
         </label>
         <label className="stack gap-1">
+          <span className="text-sm font-medium">SSO domain (optional)</span>
+          <input
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+            value={ssoDomains}
+            onChange={(e) => setSsoDomains(e.target.value)}
+            placeholder="shape.com"
+            autoComplete="off"
+          />
+          <p className="spares-muted text-sm">
+            Company work domain for this host. Comma-separate extras (shape.com,
+            shapetech.com).
+          </p>
+        </label>
+        <SsoAutorouteSelector value={ssoAutoroute} onChange={setSsoAutoroute} />
+        <label className="stack gap-1">
           <span className="text-sm font-medium">First staff email (optional)</span>
           <input
             className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
@@ -184,6 +206,12 @@ function PlatformTenants() {
             <li key={tenant.id} className="card p-4">
               <div className="font-medium">{tenant.name}</div>
               <div className="text-sm text-muted">{tenant.slug}</div>
+              {tenant.ssoDomains?.length ? (
+                <div className="text-sm text-muted">
+                  SSO {tenant.ssoDomains.join(", ")} · Autoroute{" "}
+                  {tenant.ssoAutoroute ? "on" : "off"}
+                </div>
+              ) : null}
               <div className="text-xs text-muted font-mono">{tenant.id}</div>
             </li>
           ))}

@@ -15,6 +15,10 @@ export type Tenant = {
   deletedAt?: string;
   /** First staff login created with this tenant; used to repair heal mis-assignments to the host tenant. */
   bootstrapStaffEmail?: string;
+  /** Work-email domains whose Microsoft SSO users join this host as staff. */
+  ssoDomains?: string[];
+  /** When true, unknown Microsoft work emails at `ssoDomains` are created as staff. Off by default. */
+  ssoAutoroute?: boolean;
 };
 
 export type CustomerAccount = {

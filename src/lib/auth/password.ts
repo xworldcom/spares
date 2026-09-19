@@ -19,6 +19,11 @@ export async function hashPassword(password: string): Promise<string> {
   return `${salt.toString("hex")}.${hash.toString("hex")}`;
 }
 
+/** Random hash so Microsoft-provisioned staff cannot password-login by guess. */
+export async function unusablePasswordHash(): Promise<string> {
+  return hashPassword(randomBytes(32).toString("base64url"));
+}
+
 export async function verifyPassword(
   password: string,
   stored: string,
