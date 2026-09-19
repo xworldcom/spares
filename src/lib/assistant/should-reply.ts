@@ -8,6 +8,18 @@ export type AssistantTriggerActivity = {
   text?: string;
 };
 
+export function lastHumanMessage(
+  activities: readonly AssistantTriggerActivity[],
+): AssistantTriggerActivity | undefined {
+  for (let i = activities.length - 1; i >= 0; i -= 1) {
+    const row = activities[i];
+    if (row.kind === "message" && !isAssistantActivity(row)) {
+      return row;
+    }
+  }
+  return undefined;
+}
+
 export function shouldAssistantReply(input: {
   enabled: boolean;
   paused: boolean;
@@ -27,10 +39,14 @@ export function shouldAssistantReply(input: {
   if (last && isAssistantActivity(last)) {
     return false;
   }
-  if (input.trigger.actorRole === "customer") {
+  const speaker = lastHumanMessage(input.activities) ?? input.trigger;
+  if (isAssistantActivity(speaker)) {
+    return false;
+  }
+  if (speaker.actorRole === "customer") {
     return true;
   }
-  return userAskedForAssistant(input.trigger.text ?? "");
+  return userAskedForAssistant(speaker.text ?? "");
 }
 
 function lastMessage(activities: readonly AssistantTriggerActivity[]) {
@@ -43,6 +59,9 @@ function lastMessage(activities: readonly AssistantTriggerActivity[]) {
   return undefined;
 }
 
-export function shouldForceEscalate(text: string): boolean {
+export function shouldForceEscalate(text: string, actorRole = "customer"): boolean {
+  if (actorRole !== "customer") {
+    return false;
+  }
   return userAskedToEscalate(text);
 }

@@ -1,9 +1,10 @@
+import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
 import { getCurrentUser } from "@/lib/auth";
 import { error } from "@/lib/http";
-import { canViewQuote } from "@/lib/quotes";
+import { canViewQuote, toPublicQuote } from "@/lib/quotes";
 import { effectiveTenantId, tenantIdForUser } from "@/lib/tenant";
 import { getQuote, listMachines } from "@/lib/store";
-import type { PublicUser, QuoteRecord } from "@/types";
+import type { PublicUser, Quote, QuoteRecord } from "@/types";
 import type { NextResponse } from "next/server";
 
 export type QuoteAccess =
@@ -41,4 +42,12 @@ export async function machineNameFor(quote: QuoteRecord) {
 
 export function actorOf(user: PublicUser) {
   return { id: user.id, email: user.email, role: user.role };
+}
+
+export async function publicQuoteForUser(
+  quote: QuoteRecord,
+  user: PublicUser,
+  machineName?: string,
+): Promise<Quote> {
+  return attachStaffAssistantAvailability(user, toPublicQuote(quote, user, machineName));
 }

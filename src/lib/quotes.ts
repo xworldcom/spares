@@ -806,6 +806,12 @@ export function toPublicQuote(
   if (quote.invoiceNumber && invoiceVisible(quote.status)) {
     publicQuote.invoiceNumber = quote.invoiceNumber;
   }
+  if (quote.assistantPaused) {
+    publicQuote.assistantPaused = true;
+  }
+  if (quote.assistantEscalatedAt) {
+    publicQuote.assistantEscalatedAt = quote.assistantEscalatedAt;
+  }
   return publicQuote;
 }
 

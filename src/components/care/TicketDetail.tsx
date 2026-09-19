@@ -13,6 +13,7 @@ import { LoadingState } from "@/components/states/LoadingState";
 import {
   getTicket,
   postTicketActivity,
+  setTicketAssistantPaused,
   updateTicketStatus,
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
@@ -102,6 +103,8 @@ export function TicketDetail({
       !changed &&
       ticket.status === next.status &&
       ticket.unread === next.unread &&
+      ticket.assistantPaused === next.assistantPaused &&
+      ticket.assistantAvailable === next.assistantAvailable &&
       sameReadReceipts(ticket.customerReadReceipts, next.customerReadReceipts)
     ) {
       return;
@@ -113,6 +116,8 @@ export function TicketDetail({
       activities,
       unread: next.unread,
       customerReadReceipts: next.customerReadReceipts,
+      assistantPaused: next.assistantPaused,
+      assistantAvailable: next.assistantAvailable,
     });
   }, [ticket, ticketId, refreshCareAlerts]);
 
@@ -136,6 +141,21 @@ export function TicketDetail({
       onUpdated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not update status."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onAssistantPaused(paused: boolean) {
+    if (!ticket) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      setTicket(await setTicketAssistantPaused(ticket.id, paused));
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not update AI for this chat."));
     } finally {
       setBusy(false);
     }
@@ -238,6 +258,9 @@ export function TicketDetail({
           title="Notes"
           layout="sheet"
           customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
+          assistantAvailable={staff ? ticket.assistantAvailable : undefined}
+          assistantPaused={ticket.assistantPaused}
+          onAssistantPausedChange={staff ? onAssistantPaused : undefined}
         />
       </ConversationSheet>
     </div>

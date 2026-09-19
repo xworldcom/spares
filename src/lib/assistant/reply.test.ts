@@ -10,6 +10,7 @@ import {
   createTicket,
   getTicket,
   resetStoreMemoryForTests,
+  setTicketAssistantPaused,
   updatePlatformAssistantSettings,
 } from "../store.ts";
 import { DEFAULT_TENANT_ID } from "../tenant.ts";
@@ -192,5 +193,178 @@ describe("replyAsAssistant", () => {
       },
     );
     assert.deepEqual(pausedAgain, { skipped: "policy" });
+  });
+
+  it("stays quiet when staff reply after the customer before AI runs", async () => {
+    await isolatedDataDir();
+    await updatePlatformAssistantSettings({ enabled: true });
+    const { machine, ticket } = await openTicket();
+    await appendTicketActivity(
+      ticket.id,
+      T,
+      {
+        id: "user-staff",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+      "Checking the cabinet now",
+    );
+    const result = await replyAsAssistant(
+      {
+        kind: "care",
+        id: ticket.id,
+        tenantId: T,
+        machineId: machine.id,
+        machineName: machine.name,
+        triggerText: "HMI shows E-14 after start.",
+        triggerRole: "customer",
+        triggerEmail: "customer@spares.local",
+      },
+      async () => {
+        throw new Error("generate should not run after staff jumped in");
+      },
+    );
+    assert.deepEqual(result, { skipped: "policy" });
+  });
+
+  it("answers staff only when they mention AI", async () => {
+    await isolatedDataDir();
+    await updatePlatformAssistantSettings({ enabled: true });
+    const { machine, ticket } = await openTicket();
+    await appendTicketActivity(
+      ticket.id,
+      T,
+      {
+        id: "user-staff",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+      "@AI which motor is on that axis?",
+    );
+    const result = await replyAsAssistant(
+      {
+        kind: "care",
+        id: ticket.id,
+        tenantId: T,
+        machineId: machine.id,
+        machineName: machine.name,
+        triggerText: "@AI which motor is on that axis?",
+        triggerRole: "staff",
+        triggerEmail: "staff@spares.local",
+      },
+      async (input) => {
+        assert.equal(input.speakerRole, "staff");
+        return { text: "PN-MTR-1 is the gearmotor on that axis.", escalate: false };
+      },
+    );
+    assert.deepEqual(result, { replied: true });
+  });
+
+  it("does not escalate from a staff 'get a human' note", async () => {
+    await isolatedDataDir();
+    await updatePlatformAssistantSettings({ enabled: true });
+    const { machine, ticket } = await openTicket();
+    await appendTicketActivity(
+      ticket.id,
+      T,
+      {
+        id: "user-staff",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+      "please escalate this",
+    );
+    const result = await replyAsAssistant(
+      {
+        kind: "care",
+        id: ticket.id,
+        tenantId: T,
+        machineId: machine.id,
+        machineName: machine.name,
+        triggerText: "please escalate this",
+        triggerRole: "staff",
+        triggerEmail: "staff@spares.local",
+      },
+      async () => {
+        throw new Error("staff escalate chatter should not call generate");
+      },
+    );
+    assert.deepEqual(result, { skipped: "policy" });
+    const loaded = await getTicket(ticket.id, T);
+    assert.equal(loaded?.assistantPaused, undefined);
+  });
+
+  it("drops a pending reply if staff turn AI off while it is generating", async () => {
+    await isolatedDataDir();
+    await updatePlatformAssistantSettings({ enabled: true });
+    const { machine, ticket } = await openTicket();
+    const result = await replyAsAssistant(
+      {
+        kind: "care",
+        id: ticket.id,
+        tenantId: T,
+        machineId: machine.id,
+        machineName: machine.name,
+        triggerText: "HMI shows E-14 after start.",
+        triggerRole: "customer",
+        triggerEmail: "customer@spares.local",
+      },
+      async () => {
+        await setTicketAssistantPaused(ticket.id, T, true);
+        return { text: "too late", escalate: false };
+      },
+    );
+    assert.deepEqual(result, { skipped: "policy" });
+    const loaded = await getTicket(ticket.id, T);
+    assert.equal(loaded?.assistantPaused, true);
+    assert.equal(loaded?.activities.some((row) => row.text === "too late"), false);
+  });
+
+  it("starts answering again after staff turn AI back on", async () => {
+    await isolatedDataDir();
+    await updatePlatformAssistantSettings({ enabled: true });
+    const { machine, ticket } = await openTicket();
+    await setTicketAssistantPaused(ticket.id, T, true);
+    const paused = await replyAsAssistant(
+      {
+        kind: "care",
+        id: ticket.id,
+        tenantId: T,
+        machineId: machine.id,
+        machineName: machine.name,
+        triggerText: "Still seeing E-14",
+        triggerRole: "customer",
+        triggerEmail: "customer@spares.local",
+      },
+      async () => {
+        throw new Error("paused thread should not generate");
+      },
+    );
+    assert.deepEqual(paused, { skipped: "policy" });
+    await setTicketAssistantPaused(ticket.id, T, false);
+    await appendTicketActivity(
+      ticket.id,
+      T,
+      {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
+      "Still seeing E-14",
+    );
+    const result = await replyAsAssistant(
+      {
+        kind: "care",
+        id: ticket.id,
+        tenantId: T,
+        machineId: machine.id,
+        machineName: machine.name,
+        triggerText: "Still seeing E-14",
+        triggerRole: "customer",
+        triggerEmail: "customer@spares.local",
+      },
+      async () => ({ text: "Try a reset from the operator manual.", escalate: false }),
+    );
+    assert.deepEqual(result, { replied: true });
   });
 });

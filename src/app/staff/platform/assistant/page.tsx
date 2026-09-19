@@ -137,9 +137,10 @@ function PlatformAssistantSettings() {
           <span>
             <span className="font-medium">Enable AI in chat</span>
             <span className="block text-sm text-muted mt-1">
-              Off by default. Platform-wide — every host on this install. AI replies to customer
-              messages, or when someone mentions AI. After it escalates a thread, it stays quiet
-              there so staff can take over.
+              Off by default. Platform-wide — every host on this install. AI replies when a
+              customer is the latest speaker, or when staff mention AI. If a technician jumps in,
+              it stays quiet. Staff can also turn AI off for one conversation. After it escalates
+              a thread, it stays quiet there until staff turn it back on.
             </span>
           </span>
         </label>

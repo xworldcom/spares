@@ -79,6 +79,9 @@ export function QuoteActivityFeed({
   subtitle,
   layout = "card",
   customerReadReceipts,
+  assistantAvailable,
+  assistantPaused,
+  onAssistantPausedChange,
 }: {
   activities: QuoteActivity[];
   role: Role;
@@ -93,6 +96,9 @@ export function QuoteActivityFeed({
   layout?: "card" | "sheet";
   /** Staff-only Care ticket read receipts (customers on thread). */
   customerReadReceipts?: TicketCustomerReadReceipt[];
+  assistantAvailable?: boolean;
+  assistantPaused?: boolean;
+  onAssistantPausedChange?: (paused: boolean) => Promise<void>;
 }) {
   const [text, setText] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -101,6 +107,7 @@ export function QuoteActivityFeed({
     null,
   );
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [toggleBusy, setToggleBusy] = useState(false);
   const scrollerRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -202,6 +209,23 @@ export function QuoteActivityFeed({
 
   const sendDisabled =
     busy || uploading || (!text.trim() && pendingFiles.length === 0);
+  const showAssistantToggle =
+    role === "staff" && Boolean(assistantAvailable && onAssistantPausedChange);
+
+  async function onToggleAssistant(nextPaused: boolean) {
+    if (!onAssistantPausedChange || toggleBusy) {
+      return;
+    }
+    setToggleBusy(true);
+    setComposerError(null);
+    try {
+      await onAssistantPausedChange(nextPaused);
+    } catch (cause) {
+      setComposerError(errorMessage(cause, "Could not update AI for this chat."));
+    } finally {
+      setToggleBusy(false);
+    }
+  }
 
   const cardClass =
     layout === "sheet" ? "imsg-card imsg-card--sheet" : "imsg-card";
@@ -350,6 +374,20 @@ export function QuoteActivityFeed({
         ) : null}
         {composerError ? (
           <p className="imsg-composer-error" role="alert">{composerError}</p>
+        ) : null}
+        {showAssistantToggle ? (
+          <label className="imsg-ai-toggle">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={!assistantPaused}
+              disabled={busy || toggleBusy}
+              onChange={(event) => {
+                void onToggleAssistant(!event.target.checked);
+              }}
+            />
+            <span>{assistantPaused ? "AI off for this chat" : "AI on this chat"}</span>
+          </label>
         ) : null}
         <div className="imsg-composer-row">
           <input

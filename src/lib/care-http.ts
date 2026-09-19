@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
 import { canAccessCareMachine, canManageCare, customerReadReceiptsForTicket, toPublicTicket } from "@/lib/care";
 import { error } from "@/lib/http";
 import { tenantIdForUser, userTenantId } from "@/lib/tenant";
@@ -82,7 +83,10 @@ export async function publicTicketForUser(
 ): Promise<ServiceTicket> {
   const tenantId = userTenantId(user);
   const customerUsers = user.role === "staff" ? await staffCustomerUsers(tenantId) : undefined;
-  return toPublicTicket(ticket, user, machineName, { customerUsers });
+  return attachStaffAssistantAvailability(
+    user,
+    toPublicTicket(ticket, user, machineName, { customerUsers }),
+  );
 }
 
 export async function ticketReadReceiptsForStaff(

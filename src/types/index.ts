@@ -187,6 +187,11 @@ export type Quote = {
   activities: QuoteActivity[];
   unread: boolean;
   invoiceNumber?: string;
+  /** When set, the plant assistant stops auto-replying on this quote. */
+  assistantPaused?: boolean;
+  assistantEscalatedAt?: string;
+  /** Staff-only: platform AI is on, so this thread can mute/unmute it. */
+  assistantAvailable?: boolean;
 };
 
 export type QuoteRecord = {
@@ -326,6 +331,8 @@ export type ServiceTicket = {
   customerReadReceipts?: TicketCustomerReadReceipt[];
   assistantPaused?: boolean;
   assistantEscalatedAt?: string;
+  /** Staff-only: platform AI is on, so this thread can mute/unmute it. */
+  assistantAvailable?: boolean;
 };
 
 export type ServiceVisitSnapshot = {

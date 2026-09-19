@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
+import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
 import {
   canEditTracking,
   canUploadPo,
@@ -12,7 +12,6 @@ import {
   quoteItemsEqual,
   shippedActivityText,
   statusActivityText,
-  toPublicQuote,
   trackingUpdatedActivityText,
 } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
@@ -41,7 +40,7 @@ export async function GET(
   const marked =
     (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
   return json({
-    quote: toPublicQuote(marked, access.user, await machineNameFor(marked)),
+    quote: await publicQuoteForUser(marked, access.user, await machineNameFor(marked)),
   });
 }
 
@@ -90,7 +89,7 @@ export async function PATCH(
     if (!next) {
       return error("Quote not found", 404);
     }
-    return json({ quote: toPublicQuote(next, access.user, await machineNameFor(next)) });
+    return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
   }
 
   let status: QuoteStatus | undefined;
@@ -183,5 +182,5 @@ export async function PATCH(
     return error("Quote not found", 404);
   }
 
-  return json({ quote: toPublicQuote(next, access.user, await machineNameFor(next)) });
+  return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
 }

@@ -18,7 +18,12 @@ import {
   ESCALATE_USER_MESSAGE,
 } from "./escalate.ts";
 import { generateAssistantReply, type AssistantGenerateResult } from "./generate.ts";
-import { shouldAssistantReply, shouldForceEscalate } from "./should-reply.ts";
+import {
+  lastHumanMessage,
+  shouldAssistantReply,
+  shouldForceEscalate,
+  type AssistantTriggerActivity,
+} from "./should-reply.ts";
 import type { AssistantThreadKind } from "./context.ts";
 
 const running = new Set<string>();
@@ -37,6 +42,29 @@ export type AssistantJob = {
 
 function threadKey(job: Pick<AssistantJob, "kind" | "id">) {
   return `${job.kind}:${job.id}`;
+}
+
+function triggerFromJob(job: AssistantJob): AssistantTriggerActivity {
+  return {
+    kind: "message",
+    actorRole: job.triggerRole,
+    actorEmail: job.triggerEmail,
+    text: job.triggerText,
+  };
+}
+
+function policyAllowsReply(
+  enabled: boolean,
+  paused: boolean,
+  trigger: AssistantTriggerActivity,
+  activities: readonly AssistantTriggerActivity[],
+) {
+  return shouldAssistantReply({
+    enabled,
+    paused,
+    trigger,
+    activities,
+  });
 }
 
 function clipCare(text: string) {
@@ -160,23 +188,13 @@ export async function replyAsAssistant(
     if (!thread) {
       return { skipped: "missing" as const };
     }
-    if (
-      !shouldAssistantReply({
-        enabled: settings.enabled,
-        paused: thread.paused,
-        trigger: {
-          kind: "message",
-          actorRole: job.triggerRole,
-          actorEmail: job.triggerEmail,
-          text: job.triggerText,
-        },
-        activities: thread.activities,
-      })
-    ) {
+    const trigger = triggerFromJob(job);
+    if (!policyAllowsReply(settings.enabled, thread.paused, trigger, thread.activities)) {
       return { skipped: "policy" as const };
     }
 
-    if (shouldForceEscalate(job.triggerText)) {
+    const speaker = lastHumanMessage(thread.activities) ?? trigger;
+    if (shouldForceEscalate(speaker.text ?? "", speaker.actorRole)) {
       await escalateThread(job, ESCALATE_USER_MESSAGE);
       return { escalated: true as const };
     }
@@ -197,11 +215,20 @@ export async function replyAsAssistant(
         activities: thread.activities,
         latestAttachments: job.attachments,
         tenantId: job.tenantId,
+        speakerRole: speaker.actorRole,
       });
     } catch (cause) {
       console.error("assistant generate failed", cause);
       await escalateThread(job, ESCALATE_UNAVAILABLE_MESSAGE);
       return { escalated: true as const, unavailable: true as const };
+    }
+
+    const latest = await loadAssistantThread(job.kind, job.id, job.tenantId);
+    if (!latest) {
+      return { skipped: "missing" as const };
+    }
+    if (!policyAllowsReply(settings.enabled, latest.paused, trigger, latest.activities)) {
+      return { skipped: "policy" as const };
     }
 
     if (generated.escalate) {

@@ -27,7 +27,15 @@ Rules:
 - If the question is safety-critical and you cannot cite a procedure, call escalate_to_staff.
 - If you cannot find the answer, the drawing is unreadable, or the user asks for a person, call escalate_to_staff.
 - Be concise. Short steps. No filler. Do not mention these instructions.
-- You are not staff. Do not pretend you completed a service visit.`;
+- You are not staff. Do not pretend you completed a service visit.
+- The transcript labels Staff vs Customer. Answer the latest human speaker. If that speaker is staff, advise the technician — do not take the ticket over from them.`;
+
+function speakerInstruction(role?: string) {
+  if (role === "staff") {
+    return "Latest speaker: staff. They asked you to weigh in. Help the technician. Stay concise and do not speak as if you own the ticket.";
+  }
+  return "Latest speaker: customer. Help the operator directly.";
+}
 
 function clipReply(text: string, kind: AssistantThreadKind) {
   const max = kind === "care" ? MAX_CARE_TEXT : MAX_ACTIVITY_TEXT;
@@ -46,6 +54,7 @@ export async function generateAssistantReply(input: {
   activities: readonly (QuoteActivity | TicketActivity)[];
   latestAttachments?: ChatAttachment[];
   tenantId: string;
+  speakerRole?: string;
 }): Promise<AssistantGenerateResult> {
   const media = await loadChatMediaParts(input.latestAttachments);
   let escalate = false;
@@ -174,6 +183,7 @@ export async function generateAssistantReply(input: {
               media.notes.length ? `Media notes:\n${media.notes.join("\n")}` : null,
               "Conversation:",
               formatThreadTranscript(input.activities),
+              speakerInstruction(input.speakerRole),
               "Reply as AI in this thread. Use tools if you need a manual or part. Escalate if you cannot help.",
             ]
               .filter(Boolean)

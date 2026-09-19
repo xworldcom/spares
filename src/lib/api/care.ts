@@ -163,6 +163,16 @@ export async function updateTicketStatus(id: string, status: TicketStatus) {
   return data.ticket;
 }
 
+export async function setTicketAssistantPaused(id: string, paused: boolean) {
+  const data = await apiFetch<TicketResponse>(`/api/tickets/${id}/assistant`, {
+    method: "PATCH",
+    body: JSON.stringify({ paused }),
+  });
+  invalidateWarmRead(`ticket:${id}`);
+  invalidateWarmRead("tickets:accessible");
+  return data.ticket;
+}
+
 export async function postTicketActivity(
   id: string,
   input: { text: string; attachments?: import("@/types").ChatAttachment[] },

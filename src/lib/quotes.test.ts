@@ -529,6 +529,25 @@ describe("role-aware items and unread", () => {
     );
     assert.equal(afterPo.invoiceNumber, "INV-1042");
   });
+
+  it("exposes a paused assistant flag on the public quote", () => {
+    const paused = toPublicQuote(
+      { ...record, assistantPaused: true, assistantEscalatedAt: "2026-01-02T00:00:00.000Z" },
+      {
+        id: "staff-1",
+        email: "staff@spares.local",
+        role: "staff",
+      },
+    );
+    assert.equal(paused.assistantPaused, true);
+    assert.equal(paused.assistantEscalatedAt, "2026-01-02T00:00:00.000Z");
+    const open = toPublicQuote(record, {
+      id: "staff-1",
+      email: "staff@spares.local",
+      role: "staff",
+    });
+    assert.equal(open.assistantPaused, undefined);
+  });
 });
 
 describe("quoteItemsEqual", () => {

@@ -104,6 +104,30 @@ describe("shouldAssistantReply", () => {
       false,
     );
   });
+
+  it("stays quiet when staff jump in after the customer, even if the job was queued for that customer note", () => {
+    assert.equal(
+      shouldAssistantReply({
+        enabled: true,
+        paused: false,
+        trigger: customerNote,
+        activities: [customerNote, staffNote],
+      }),
+      false,
+    );
+  });
+
+  it("replies again after staff when the customer is the latest human", () => {
+    assert.equal(
+      shouldAssistantReply({
+        enabled: true,
+        paused: false,
+        trigger: customerNote,
+        activities: [staffNote, customerNote],
+      }),
+      true,
+    );
+  });
 });
 
 describe("shouldForceEscalate", () => {
@@ -111,5 +135,10 @@ describe("shouldForceEscalate", () => {
     assert.equal(shouldForceEscalate("Can I talk to a real person?"), true);
     assert.equal(shouldForceEscalate("please escalate this"), true);
     assert.equal(shouldForceEscalate("HMI shows E-14"), false);
+  });
+
+  it("does not treat staff chatter as a customer handoff", () => {
+    assert.equal(shouldForceEscalate("please escalate this", "staff"), false);
+    assert.equal(shouldForceEscalate("this isn't helping", "staff"), false);
   });
 });

@@ -68,6 +68,16 @@ export async function updateQuote(
   return data.quote;
 }
 
+export async function setQuoteAssistantPaused(idOrNumber: string, paused: boolean) {
+  const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}/assistant`, {
+    method: "PATCH",
+    body: JSON.stringify({ paused }),
+  });
+  invalidateWarmRead(`quote:${idOrNumber}`);
+  invalidateWarmRead("quotes:list");
+  return data.quote;
+}
+
 export async function postQuoteActivity(
   idOrNumber: string,
   input: { text: string; attachments?: import("@/types").ChatAttachment[] },

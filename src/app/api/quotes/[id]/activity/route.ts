@@ -1,8 +1,8 @@
 import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
 import { parseChatActivityBody } from "@/lib/chat-attachments";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
-import { actorOf, machineNameFor, requireQuoteAccess } from "@/lib/quote-http";
-import { MAX_ACTIVITY_TEXT, toPublicQuote } from "@/lib/quotes";
+import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
+import { MAX_ACTIVITY_TEXT } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
 import { scheduleAssistantReply } from "@/lib/assistant/schedule";
@@ -86,7 +86,7 @@ export async function POST(
   });
 
   return json(
-    { quote: toPublicQuote(next, access.user, machineName) },
+    { quote: await publicQuoteForUser(next, access.user, machineName) },
     201,
   );
 }
