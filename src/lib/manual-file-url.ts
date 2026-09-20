@@ -1,4 +1,3 @@
-import { shouldUseCrossOriginObjectUrl } from "./cors.ts";
 import {
   createManualDownloadUrl,
   manualExistsInS3,
@@ -19,9 +18,6 @@ export async function manualFileUrl(
   if (selectManualStoreKind() === "s3") {
     const inS3 = await manualExistsInS3(manual.storedFileName);
     if (inS3) {
-      if (!shouldUseCrossOriginObjectUrl(request)) {
-        return proxyUrl;
-      }
       const { downloadUrl } = await createManualDownloadUrl(manual.storedFileName);
       return downloadUrl;
     }

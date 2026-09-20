@@ -90,7 +90,7 @@ describe("resolveMachineFileServe", () => {
     delete process.env.VERCEL;
   });
 
-  it("streams from R2 when cross-origin presigned URLs are not allowed", async () => {
+  it("redirects to R2 instead of streaming when the object exists", async () => {
     configureS3Env();
     setPersistenceForTests(createMemoryPersistence());
     setTestS3Objects(
@@ -100,11 +100,12 @@ describe("resolveMachineFileServe", () => {
     const result = await resolveMachineFileServe({
       storedFileName: "in-r2.glb",
       originalFileName: "in-r2.glb",
-      crossOriginObjectUrl: false,
     });
-    assert.equal(result.kind, "stream");
-    if (result.kind === "stream") {
-      assert.equal(result.bytes.toString(), "from-r2");
+    assert.equal(result.kind, "redirect");
+    if (result.kind === "redirect") {
+      const parsed = new URL(result.url);
+      assert.match(parsed.hostname, /cloudflarestorage\.com$/);
+      assert.ok(parsed.searchParams.has("X-Amz-Signature"));
     }
   });
 

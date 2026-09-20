@@ -1,9 +1,5 @@
 import { requireMachineAccess } from "@/lib/care-http";
-import {
-  corsPreflightResponse,
-  shouldUseCrossOriginObjectUrl,
-  withModelAssetCors,
-} from "@/lib/cors";
+import { corsPreflightResponse, withModelAssetCors } from "@/lib/cors";
 import { error } from "@/lib/http";
 import { manualFileUrl } from "@/lib/manual-file-url";
 import { readManualFile, selectManualStoreKind } from "@/lib/manual-storage";
@@ -31,13 +27,15 @@ export async function GET(
     return error("Manual not found", 404);
   }
 
-  if (
-    selectManualStoreKind() === "s3" &&
-    shouldUseCrossOriginObjectUrl(request)
-  ) {
+  if (selectManualStoreKind() === "s3") {
     const signed = await manualFileUrl(request, access.machine.id, manual);
-    if (signed.startsWith("http://") || signed.startsWith("https://")) {
-      return Response.redirect(signed, 302);
+    try {
+      const dest = new URL(signed);
+      if (dest.origin !== new URL(request.url).origin) {
+        return Response.redirect(signed, 302);
+      }
+    } catch {
+      // Fall through to the credentialed stream for leftover non-R2 files.
     }
   }
 

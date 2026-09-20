@@ -15,6 +15,7 @@ import {
   safeStoredFileName,
   type StoreKind,
 } from "./persistence.ts";
+import { ensureR2BrowserCors } from "./r2-cors-sync.ts";
 import {
   isS3Configured,
   modelDownloadUrlTtlSeconds,
@@ -205,6 +206,7 @@ export async function createManualUploadUrl(
   storedFileName: string,
   expiresInSeconds = 3600,
 ) {
+  await ensureR2BrowserCors();
   assertManualUploadAllowed();
   if (selectManualStoreKind() !== "s3") {
     throw new Error("S3 object storage is not configured");
@@ -225,6 +227,7 @@ export async function createManualDownloadUrl(
   storedFileName: string,
   expiresInSeconds = modelDownloadUrlTtlSeconds(),
 ) {
+  await ensureR2BrowserCors();
   if (selectManualStoreKind() !== "s3") {
     throw new Error("S3 object storage is not configured");
   }

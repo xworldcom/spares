@@ -1,9 +1,5 @@
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
-import {
-  corsPreflightResponse,
-  shouldUseCrossOriginObjectUrl,
-  withModelAssetCors,
-} from "@/lib/cors";
+import { corsPreflightResponse, withModelAssetCors } from "@/lib/cors";
 import { safeDownloadFilename } from "@/lib/download-filename";
 import { error } from "@/lib/http";
 import { machineHasModel } from "@/lib/machines";
@@ -40,7 +36,6 @@ export async function GET(
   const result = await resolveMachineFileServe({
     storedFileName: machine.storedFileName,
     originalFileName: machine.originalFileName,
-    crossOriginObjectUrl: shouldUseCrossOriginObjectUrl(request),
   });
 
   if (result.kind === "redirect") {

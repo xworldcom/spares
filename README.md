@@ -163,9 +163,9 @@ Several automation companies (“hosts”) can share one OEE360 deployment. Each
   - `S3_REGION` — use `auto` for Cloudflare R2
   - `S3_BUCKET` — bucket name
   - `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` — R2 API token
-  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base for **local dev only**. On Vercel, machine models always use short-lived presigned GET URLs (or the credentialed `/file` proxy) so CAD stays private.
+  - `S3_PUBLIC_BASE_URL` — optional public CDN/custom domain base for **local dev only**. On Vercel, machine models always use short-lived presigned GET URLs so CAD stays private. The credentialed `/file` proxy is only for leftovers that are not in R2 yet (≤ 5 MB).
   - `S3_SIGNED_URL_TTL_SECONDS` — optional lifetime for presigned GET URLs in `fileUrl` (default `3600`, hard-capped at one hour). Presigned PUT tickets for staff uploads expire in 15 minutes.
-  - `SPARES_CORS_ORIGINS` — optional comma-separated extra browser origins for model/manual asset CORS (e.g. a Vercel Preview hostname). Soft Launch aliases and localhost are always included.
+  - `SPARES_CORS_ORIGINS` — optional comma-separated extra browser origins allowed to mint signed model/manual URLs. Soft Launch aliases, localhost, and `spares-*.vercel.app` previews are always included.
 
 ### Kevin: Entra app for Microsoft sign-in
 
@@ -182,23 +182,24 @@ Several automation companies (“hosts”) can share one OEE360 deployment. Each
 
 ### CORS for model assets (Kevin)
 
-Browser loads of presigned R2 URLs require a **fail-closed** bucket CORS policy. Spares only allows Spares deployment hosts — not arbitrary sites.
+The R2 bucket stays **private**. Browsers load models with a short-lived signed URL. Bucket CORS is `*` for GET/HEAD/PUT so every Spares host — including `spares-*.vercel.app` previews — can read that URL without streaming the GLB through Vercel. The app still fail-closes who can **mint** a URL (auth + `Origin` allowlist).
 
-**Allowed by default**
+**App origins that may mint signed URLs**
 
-- `https://spares-yonder3.vercel.app` (Soft Launch)
-- `https://spares-liart.vercel.app` (Soft Launch)
-- `http://localhost:3000` and `http://127.0.0.1:3000` (local dev)
-- Any origins listed in `SPARES_CORS_ORIGINS`
+- `https://oee360.com` / `https://www.oee360.com`
+- `https://spares-yonder3.vercel.app` / `https://spares-liart.vercel.app`
+- `http://localhost:3000` and `http://127.0.0.1:3000`
+- Other `spares-*.vercel.app` previews
+- Any extras in `SPARES_CORS_ORIGINS`
 
 **Behaviour**
 
-- Soft Launch origins receive presigned R2 GET/PUT URLs in API responses (direct browser → R2).
-- Other Spares Vercel preview hostnames (`spares-*.vercel.app`) are accepted by the app but fall back to the credentialed same-origin `/file` proxy (server streams from R2) until that preview URL is added to the bucket or `SPARES_CORS_ORIGINS`.
+- If the object is in R2, `fileUrl` is a signed R2 GET (browser → R2). `/file` redirects to the same. Bytes never leave through Vercel.
+- `/file` only streams leftover Blob/fs models that are not in R2 yet, and only if they are ≤ 5 MB.
 - Disallowed `Origin` headers on upload signing routes receive `403`.
 - `S3_PUBLIC_BASE_URL` stays **off** on Vercel — signed GET only.
 
-**Apply R2 bucket CORS** (once per bucket, or after adding preview origins):
+**Apply R2 bucket CORS** (once per bucket; Vercel also refreshes this on the first signed URL after deploy):
 
 ```bash
 # Dry-run the policy JSON
@@ -206,9 +207,6 @@ npm run configure:r2-cors -- --dry-run
 
 # Apply with current S3_* credentials
 npm run configure:r2-cors
-
-# Add a one-off preview origin
-npm run configure:r2-cors -- --add-origin=https://spares-git-main-xworldcom.vercel.app
 ```
 
 ### Tess: wire Cloudflare R2 for model files (recommended)

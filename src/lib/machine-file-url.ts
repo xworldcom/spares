@@ -1,4 +1,3 @@
-import { shouldUseCrossOriginObjectUrl } from "./cors.ts";
 import { machineHasModel } from "./machines.ts";
 import {
   createModelDownloadUrl,
@@ -24,9 +23,6 @@ export async function machineFileUrl(
   if (selectModelStoreKind() === "s3") {
     const inS3 = await modelExistsInS3(machine.storedFileName);
     if (inS3) {
-      if (!shouldUseCrossOriginObjectUrl(request)) {
-        return proxyUrl;
-      }
       const publicUrl = modelPublicUrl(machine.storedFileName);
       if (publicUrl) {
         return publicUrl;
@@ -40,9 +36,6 @@ export async function machineFileUrl(
     return proxyUrl;
   }
 
-  if (!shouldUseCrossOriginObjectUrl(request)) {
-    return proxyUrl;
-  }
   const publicUrl = modelPublicUrl(machine.storedFileName);
   if (publicUrl) {
     return publicUrl;
