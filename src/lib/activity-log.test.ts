@@ -163,4 +163,22 @@ describe("activity log", () => {
       ["2"],
     );
   });
+
+  it("does not read or write when the log is paused", async () => {
+    process.env.SPARES_ACTIVITY_LOG = "false";
+    try {
+      const event = await recordAccountActivity({
+        tenantId: "tenant-a",
+        actor: { userId: "u1", email: "staff@host.test", role: "staff" },
+        action: "auth.login",
+        summary: "should not persist while paused",
+      });
+      assert.equal(event, null);
+      const listed = await listAccountActivity({ tenantId: "tenant-a" });
+      assert.equal(listed.total, 0);
+      assert.deepEqual(listed.events, []);
+    } finally {
+      delete process.env.SPARES_ACTIVITY_LOG;
+    }
+  });
 });
