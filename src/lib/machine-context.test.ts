@@ -31,6 +31,7 @@ describe("machine context paths", () => {
     assert.equal(machineContextTabFromPath("/machines/palletizer/care/manuals"), "manuals");
     assert.equal(machineContextTabFromPath("/machines/palletizer/care/service"), "service");
     assert.equal(machineContextTabFromPath("/machines/palletizer/care/usage"), "service");
+    assert.equal(machineContextTabFromPath("/machines/palletizer/unknown"), "overview");
   });
 
   it("builds stable tab hrefs", () => {

@@ -33,16 +33,11 @@ export function MachineContextNav({
   const pathname = usePathname();
   const router = useRouter();
   const staff = user?.role === "staff";
-  const [name, setName] = useState(machineName?.trim() || "Machine");
+  const [fetchedName, setFetchedName] = useState<string | null>(null);
   const current = activeTab ?? machineContextTabFromPath(pathname) ?? "model";
   const tabs = machineContextTabs(staff);
   const Heading = asHeading ? "h1" : "p";
-
-  useEffect(() => {
-    if (machineName?.trim()) {
-      setName(machineName.trim());
-    }
-  }, [machineName]);
+  const name = machineName?.trim() || fetchedName || "Machine";
 
   useEffect(() => {
     for (const href of prefetchCareTabRoutes(machineId, staff)) {
@@ -62,12 +57,12 @@ export function MachineContextNav({
     getMachine(machineId, user?.role)
       .then((machine) => {
         if (!cancelled) {
-          setName(machine.name);
+          setFetchedName(machine.name);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setName("Machine");
+          setFetchedName(null);
         }
       });
     return () => {

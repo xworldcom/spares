@@ -11,8 +11,6 @@ export type MachineContextTabDef = {
   label: string;
 };
 
-const STAFF_ONLY_TABS = new Set<MachineContextTab>(["service"]);
-
 export function machineIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/machines\/([^/]+)/);
   if (!match || match[1] === "new") {
@@ -85,8 +83,4 @@ export function machineContextTabs(staff: boolean): MachineContextTabDef[] {
     tabs.push({ id: "service", label: "Service" });
   }
   return tabs;
-}
-
-export function isMachineContextTabVisible(tab: MachineContextTab, staff: boolean) {
-  return staff || !STAFF_ONLY_TABS.has(tab);
 }

@@ -58,6 +58,16 @@ export function NewQuoteForm({
   const quoteSites = staff ? (quoteScope?.sites ?? []) : sites;
   const quoteMachines =
     staff && personAccountId ? (quoteScope?.machines ?? []) : machines;
+  const lockedMachine =
+    initialMachineId
+      ? machines.find((row) => row.id === initialMachineId) ??
+        quoteMachines.find((row) => row.id === initialMachineId)
+      : undefined;
+  const lockedMachineBlocked =
+    Boolean(initialMachineId) &&
+    staff &&
+    Boolean(personAccountId) &&
+    !quoteMachines.some((row) => row.id === initialMachineId);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,6 +130,10 @@ export function NewQuoteForm({
       setError("Pick a machine for this quote.");
       return;
     }
+    if (lockedMachineBlocked) {
+      setError("This customer cannot access this machine.");
+      return;
+    }
     if (lines.length === 0) {
       setError("Add at least one part.");
       return;
@@ -157,7 +171,9 @@ export function NewQuoteForm({
         </button>
       </div>
       <p className="spares-muted text-sm leading-relaxed">
-        Type a machine name if it is not listed. Add parts by number and description.
+        {initialMachineId
+          ? "Add parts by number and description. This quote stays on this machine."
+          : "Type a machine name if it is not listed. Add parts by number and description."}
       </p>
       {staff ? (
         <SearchableSelect
@@ -181,18 +197,30 @@ export function NewQuoteForm({
           This person has no customer yet. Grant them a site in People first.
         </p>
       ) : null}
-      <MachineTypeahead
-        key={personId || "machine"}
-        machines={quoteMachines}
-        onMachines={setMachines}
-        accounts={staff ? quoteAccounts : accounts}
-        sites={quoteSites}
-        machineId={machineId}
-        onMachineId={setMachineId}
-        role={role}
-        disabled={busy || (staff && !personAccountId) || Boolean(initialMachineId)}
-        lockAccount={staff && Boolean(personAccountId)}
-      />
+      {initialMachineId ? (
+        <p className="text-sm leading-relaxed">
+          <span className="spares-muted">Machine · </span>
+          {lockedMachine?.name ?? "This machine"}
+        </p>
+      ) : (
+        <MachineTypeahead
+          key={personId || "machine"}
+          machines={quoteMachines}
+          onMachines={setMachines}
+          accounts={staff ? quoteAccounts : accounts}
+          sites={quoteSites}
+          machineId={machineId}
+          onMachineId={setMachineId}
+          role={role}
+          disabled={busy || (staff && !personAccountId)}
+          lockAccount={staff && Boolean(personAccountId)}
+        />
+      )}
+      {lockedMachineBlocked ? (
+        <p className="text-sm text-[#f0c4c0]" role="alert">
+          This customer cannot access this machine. Pick someone at this plant.
+        </p>
+      ) : null}
       <ManualQuoteLines
         lines={lines}
         onAdd={(line) => setLines((current) => [...current, line])}
@@ -222,7 +250,7 @@ export function NewQuoteForm({
       ) : null}
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || lockedMachineBlocked}
         className="btn-primary inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold disabled:opacity-60"
       >
         {busy ? "Sending…" : staff ? "Create quote" : "Request quote"}
