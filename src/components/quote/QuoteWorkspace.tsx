@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
@@ -271,11 +272,20 @@ export function QuoteWorkspace({
     >
       <div className="quote-workspace-main space-y-5">
       <div>
+        {quote.machineId ? (
+          <div className="machine-context-embed">
+            <MachineContextNav
+              machineId={quote.machineId}
+              machineName={quote.machineName}
+              activeTab="quotes"
+            />
+          </div>
+        ) : null}
         <Link
           href={listHref}
           className="spares-muted inline-flex h-11 items-center text-sm font-medium"
         >
-          ← Quotes
+          ← All quotes
         </Link>
         <h1 className="mt-2 text-[28px] font-semibold tracking-tight">
           {quoteTitle(quote)}

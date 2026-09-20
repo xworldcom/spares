@@ -1079,3 +1079,8 @@ export function formatMoney(value: number) {
 export function quoteHref(role: Role, quote: { number: number }) {
   return role === "staff" ? `/staff/quotes/${quote.number}` : `/quotes/${quote.number}`;
 }
+
+/** True while a quote is still in flight. Delivered stays open until staff close it. */
+export function quoteIsOpen(status: QuoteStatus) {
+  return status !== "closed" && status !== "cancelled";
+}

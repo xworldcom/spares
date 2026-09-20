@@ -29,6 +29,7 @@ describe("nav active state", () => {
     assert.deepEqual(actives("/machines/palletizer"), ["/machines"]);
     assert.deepEqual(actives("/machines/palletizer/care"), ["/machines"]);
     assert.deepEqual(actives("/machines/palletizer/care/tickets"), ["/machines"]);
+    assert.deepEqual(actives("/machines/palletizer/quotes"), ["/machines"]);
   });
 
   it("highlights only the matching staff route", () => {

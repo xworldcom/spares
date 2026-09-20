@@ -51,6 +51,8 @@ export function warmMachineCareTabs(machineId: string, staff: boolean) {
 
 export function prefetchCareTabRoutes(machineId: string, staff: boolean) {
   const routes = [
+    `/machines/${machineId}`,
+    `/machines/${machineId}/quotes`,
     `/machines/${machineId}/care`,
     `/machines/${machineId}/care/manuals`,
     `/machines/${machineId}/care/tickets`,

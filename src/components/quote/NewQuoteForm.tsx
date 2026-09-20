@@ -20,10 +20,12 @@ import type { CustomerAccount, MachineSummary, PublicUser, Role, Site } from "@/
 
 export function NewQuoteForm({
   role = "customer",
+  initialMachineId,
   onCreated,
   onCancel,
 }: {
   role?: Role;
+  initialMachineId?: string;
   onCreated: (href: string) => void;
   onCancel: () => void;
 }) {
@@ -33,7 +35,7 @@ export function NewQuoteForm({
   const [people, setPeople] = useState<PublicUser[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [personId, setPersonId] = useState("");
-  const [machineId, setMachineId] = useState("");
+  const [machineId, setMachineId] = useState(initialMachineId ?? "");
   const [lines, setLines] = useState<ManualQuoteLine[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,7 +90,9 @@ export function NewQuoteForm({
         if (org.people.length === 1) {
           setPersonId(org.people[0].id);
         }
-        if (!staff && next.length === 1) {
+        if (initialMachineId) {
+          setMachineId(initialMachineId);
+        } else if (!staff && next.length === 1) {
           setMachineId(next[0].id);
         }
       })
@@ -100,7 +104,7 @@ export function NewQuoteForm({
     return () => {
       cancelled = true;
     };
-  }, [customerSites, staff]);
+  }, [customerSites, initialMachineId, staff]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -166,7 +170,7 @@ export function NewQuoteForm({
           value={personId}
           onChange={(next) => {
             setPersonId(next);
-            setMachineId("");
+            setMachineId(initialMachineId ?? "");
             setError(null);
           }}
           placeholder="Search people…"
@@ -186,7 +190,7 @@ export function NewQuoteForm({
         machineId={machineId}
         onMachineId={setMachineId}
         role={role}
-        disabled={busy || (staff && !personAccountId)}
+        disabled={busy || (staff && !personAccountId) || Boolean(initialMachineId)}
         lockAccount={staff && Boolean(personAccountId)}
       />
       <ManualQuoteLines

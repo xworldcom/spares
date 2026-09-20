@@ -12,8 +12,8 @@ Machines lets an authenticated user open the catalog, choose a machine pack, ins
 ## How to get to it (user POV)
 
 - Sign in, land on **Machines**.
-- Choose a machine name link (seed: **Hardware fixture** or **Palletizer** locally).
-- Click a part row or pick geometry in the canvas.
+- Choose a machine name link (seed: **Hardware fixture** or **Palletizer** locally). Cards also offer **Quotes**, **Tickets**, and **Manuals** for that machine.
+- Click a part row or pick geometry in the canvas. The machine context bar stays available for quotes and tickets.
 
 ## Driving it with control-oee360
 

@@ -8,10 +8,12 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { StaffMachinesDesktopNav } from "@/components/nav/MachinesNavMenu";
+import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
+import { isMachineStagePath, machineIdFromPath } from "@/lib/machine-context";
 import { isNavActive } from "@/lib/nav-active";
 import { useSignedInTabPrefetch } from "@/components/nav/useSignedInTabPrefetch";
 import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
@@ -88,7 +90,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const machineStage = /^\/machines\/[^/]+$/.test(pathname) && pathname !== "/machines/new";
+  const machineId = machineIdFromPath(pathname);
+  const machineStage = isMachineStagePath(pathname);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -135,8 +138,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           : onLogin
             ? "spares-app spares-app-login min-h-dvh"
             : machineStage
-              ? "spares-app spares-app-stage flex min-h-dvh flex-col"
-              : showTabs
+              ? "spares-app spares-app-stage spares-app-machine-context flex min-h-dvh flex-col"
+              : machineId
+                ? showTabs
+                  ? "spares-app spares-app-tabs spares-app-machine-context min-h-dvh"
+                  : "spares-app spares-app-machine-context min-h-dvh"
+                : showTabs
                 ? "spares-app spares-app-tabs min-h-dvh"
                 : "spares-app min-h-dvh"
       }
@@ -153,12 +160,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ‹
                 </span>
                 <span className="truncate">Machines</span>
-              </Link>
-              <Link
-                href={`${pathname}/care`}
-                className="spares-muted inline-flex h-11 items-center px-2 text-sm font-medium tracking-tight transition-colors duration-200 hover:text-[var(--spares-ink)] lg:hidden"
-              >
-                Care
               </Link>
             </div>
           ) : (
@@ -272,6 +273,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="px-4 py-2 text-sm text-[#f0c4c0]" role="alert">
             {logoutError}
           </p>
+        ) : null}
+        {signedIn && machineId ? (
+          <div className="spares-header-context mx-auto w-full max-w-none">
+            <MachineContextNav machineId={machineId} asHeading />
+          </div>
         ) : null}
       </header>
       <main
