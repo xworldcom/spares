@@ -23,12 +23,13 @@ export function useConversationWatch(
       return;
     }
 
+    const watching = target;
     let cancelled = false;
     let since = 0;
     const controller = new AbortController();
 
     async function poke() {
-      invalidateConversationWarmRead(target.kind, target.id);
+      invalidateConversationWarmRead(watching.kind, watching.id);
       await pokeRef.current();
     }
 
@@ -51,8 +52,8 @@ export function useConversationWatch(
         }
         try {
           const next = await waitForConversationWatch({
-            kind: target.kind,
-            id: target.id,
+            kind: watching.kind,
+            id: watching.id,
             since,
             signal: controller.signal,
           });
