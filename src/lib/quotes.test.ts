@@ -17,6 +17,7 @@ import {
   quoteItemsEqual,
   quotePricingComplete,
   quoteHasReached,
+  quoteIsOpen,
   quoteOwnerIdForCreate,
   staffQuoteAccountMatch,
   quotePoNextStep,
@@ -635,6 +636,16 @@ describe("findQuoteInList", () => {
     assert.equal(findQuoteInList([host, satellite], "1")?.id, "quote-host");
     assert.equal(findQuoteInList([satellite], "1")?.id, "quote-sat");
     assert.equal(findQuoteInList([satellite], "quote-host"), null);
+  });
+});
+
+describe("quoteIsOpen", () => {
+  it("treats in-flight and delivered quotes as open", () => {
+    assert.equal(quoteIsOpen("requested"), true);
+    assert.equal(quoteIsOpen("quoted"), true);
+    assert.equal(quoteIsOpen("delivered"), true);
+    assert.equal(quoteIsOpen("closed"), false);
+    assert.equal(quoteIsOpen("cancelled"), false);
   });
 });
 

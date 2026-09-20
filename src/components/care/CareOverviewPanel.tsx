@@ -9,8 +9,11 @@ import { LoadingState } from "@/components/states/LoadingState";
 import { formatDay } from "@/components/quote/quote-format";
 import { getCareOverview } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
+import { listQuotes } from "@/lib/api/quotes";
 import { careHref, machineTicketsHref } from "@/lib/care";
-import { warmCareOverview, warmTicketDetail } from "@/lib/nav/prefetch";
+import { machineQuotesHref } from "@/lib/machine-context";
+import { warmCareOverview, warmQuotesList, warmTicketDetail } from "@/lib/nav/prefetch";
+import { quoteIsOpen } from "@/lib/quotes";
 import { siteLabel } from "@/lib/access";
 import type { CareOverview, ServiceTicket } from "@/types";
 
@@ -18,19 +21,28 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
   const { user } = useAuth();
   const [overview, setOverview] = useState<CareOverview | null>(null);
   const [recent, setRecent] = useState<ServiceTicket[]>([]);
+  const [quotesOpen, setQuotesOpen] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
 
   useEffect(() => {
     let cancelled = false;
-    getCareOverview(machineId)
-      .then((data) => {
+    Promise.all([
+      getCareOverview(machineId),
+      listQuotes().catch(() => ({ quotes: [] })),
+    ])
+      .then(([data, quoteData]) => {
         if (cancelled) {
           return;
         }
         setOverview(data.overview);
         setRecent(data.recentTickets ?? []);
+        setQuotesOpen(
+          quoteData.quotes.filter(
+            (quote) => quote.machineId === machineId && quoteIsOpen(quote.status),
+          ).length,
+        );
         setError(null);
       })
       .catch((cause: unknown) => {
@@ -77,6 +89,16 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
           <span className="care-stat-value">{overview.manuals}</span>
           <span className="care-stat-label">
             {overview.manuals === 1 ? "Manual" : "Manuals"}
+          </span>
+        </PrefetchLink>
+        <PrefetchLink
+          href={machineQuotesHref(machineId)}
+          warm={() => warmQuotesList()}
+          className="care-stat"
+        >
+          <span className="care-stat-value">{quotesOpen}</span>
+          <span className="care-stat-label">
+            Open {quotesOpen === 1 ? "quote" : "quotes"}
           </span>
         </PrefetchLink>
         <PrefetchLink

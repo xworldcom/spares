@@ -18,7 +18,13 @@ import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
 import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
 import type { Quote, Role } from "@/lib/api/types";
 
-export function QuotesList({ role }: { role: Role }) {
+export function QuotesList({
+  role,
+  machineId,
+}: {
+  role: Role;
+  machineId?: string;
+}) {
   const router = useRouter();
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
@@ -79,17 +85,23 @@ export function QuotesList({ role }: { role: Role }) {
     );
   }
 
-  if (quotes.length === 0) {
+  const visible = machineId
+    ? quotes.filter((quote) => quote.machineId === machineId)
+    : quotes;
+
+  if (visible.length === 0) {
     return (
       <EmptyState
         title={role === "staff" ? "No quotes yet" : "No quotes yet"}
         message={
-          role === "staff"
+          machineId
+            ? "Request parts for this machine, or add them from the model."
+            : role === "staff"
             ? "Start a quote from here, or wait for a customer request."
             : "Start a quote from here, or open a machine and add parts."
         }
         action={
-          user?.role === "customer" ? (
+          user?.role === "customer" && !machineId ? (
             <Link
               href="/machines"
               className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
@@ -104,7 +116,7 @@ export function QuotesList({ role }: { role: Role }) {
 
   return (
     <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
-      {quotes.map((quote) => {
+      {visible.map((quote) => {
         const lines = quote.items.length;
         const title = quote.machineName ?? "Machine";
         return (
@@ -125,7 +137,9 @@ export function QuotesList({ role }: { role: Role }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[17px] font-medium tracking-tight">
                   Quote {quote.number}
-                  <span className="spares-muted font-normal"> · {title}</span>
+                  {machineId ? null : (
+                    <span className="spares-muted font-normal"> · {title}</span>
+                  )}
                 </p>
                 <p className="spares-muted mt-0.5 truncate text-sm">
                   {formatDay(quote.createdAt)}

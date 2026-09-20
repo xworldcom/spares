@@ -10,8 +10,8 @@ Staff log service visits on a machine (primarily **last service date** and **not
 
 ## How to get to it (user POV)
 
-- Sign in as staff, open **Machines**, pick a machine, open **Care** (or machine care entry).
-- Choose the **Service** tab.
+- Sign in as staff, open **Machines**, pick a machine.
+- Use the machine context bar and choose the **Service** tab.
 - Set **Last service**, add **Notes**, tap **Save visit** (meters optional under **Optional meters**).
 - Tap a row under **Edit history** to read that visit’s notes.
 

@@ -21,17 +21,14 @@ export function CareHubFrame({ children }: { children: React.ReactNode }) {
   const current = tabFromPath(pathname);
 
   return (
-    <div className="care-page care-page-wide">
-      <header className="care-hero">
-        <Link href="/machines" className="care-back">
-          <span aria-hidden="true">‹</span> Machines
-        </Link>
-        <p className="care-kicker">Care</p>
-        <h1>Service hub</h1>
-        <p className="spares-muted care-lede">
-          Pick a machine, browse manuals, and work tickets across your plant.
+    <div className="catalog-page care-page-wide">
+      <div className="catalog-page-intro">
+        <h1>Care</h1>
+        <p>
+          Open tickets across your plant. Open a machine when you need the
+          model, a quote, or manuals.
         </p>
-      </header>
+      </div>
 
       <nav className="care-tabs" aria-label="Care sections">
         {TABS.map((tab) => {

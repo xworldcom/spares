@@ -18,7 +18,7 @@ import { viewerNeedsReset } from "@/components/viewer/assemblyView";
 import Link from "next/link";
 import { getMachine, updateMachinePart } from "@/lib/api/machines";
 import { machineHasModel } from "@/lib/machines";
-import { careHref } from "@/lib/care";
+import { machineTabHref } from "@/lib/machine-context";
 import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
@@ -366,14 +366,20 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               </p>
               <p className="chrome-quiet mt-2 max-w-sm text-[14px] leading-relaxed">
                 {machine.oem ? `${machine.oem}. ` : ""}
-                Care and quotes still work for this machine.
+                Quotes and tickets still work for this machine.
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <Link
-                  href={careHref(machine.id)}
+                  href={machineTabHref(machine.id, "tickets")}
                   className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
                 >
-                  Open Care
+                  Tickets
+                </Link>
+                <Link
+                  href={machineTabHref(machine.id, "quotes")}
+                  className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+                >
+                  Quotes
                 </Link>
                 {!isCustomer ? (
                   <Link

@@ -10,16 +10,21 @@ import { MachineGlyph } from "@/components/catalog/CatalogGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { listSites, listCustomerAccounts } from "@/lib/api/auth";
+import { listAccessibleTickets } from "@/lib/api/care";
 import { listMachines, deleteMachine, updateMachineName, updateMachineSite } from "@/lib/api/machines";
+import { listQuotes } from "@/lib/api/quotes";
 import { errorMessage, isUnauthorized } from "@/lib/api/errors";
 import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
+import { ticketIsOpen } from "@/lib/care";
+import { machineTabHref } from "@/lib/machine-context";
+import { quoteIsOpen } from "@/lib/quotes";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
 import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
 import { useRouter } from "next/navigation";
 import { machineHasModel, sitesForMachineCreate } from "@/lib/machines";
-import { warmCareOverview } from "@/lib/nav/prefetch";
+import { warmCareOverview, warmQuotesList } from "@/lib/nav/prefetch";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -30,6 +35,11 @@ async function loadMachines(heal: boolean): Promise<MachineSummary[]> {
   }
   return listMachines({ heal: true });
 }
+
+type MachineWork = {
+  quotesOpen: number;
+  ticketsOpen: number;
+};
 
 function machinePlant(machine: MachineSummary, role?: string) {
   if (machine.company && machine.siteName) {
@@ -54,6 +64,9 @@ export function MachinesList() {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MachineSummary | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [workByMachine, setWorkByMachine] = useState<Record<string, MachineWork>>(
+    {},
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +108,39 @@ export function MachinesList() {
       cancelled = true;
     };
   }, [user?.role, user?.sites]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      listQuotes().catch(() => ({ quotes: [] })),
+      listAccessibleTickets().catch(() => ({ tickets: [] })),
+    ]).then(([quoteData, ticketData]) => {
+      if (cancelled) {
+        return;
+      }
+      const next: Record<string, MachineWork> = {};
+      for (const quote of quoteData.quotes) {
+        if (!quoteIsOpen(quote.status) || !quote.machineId) {
+          continue;
+        }
+        const row = next[quote.machineId] ?? { quotesOpen: 0, ticketsOpen: 0 };
+        row.quotesOpen += 1;
+        next[quote.machineId] = row;
+      }
+      for (const ticket of ticketData.tickets) {
+        if (!ticketIsOpen(ticket.status) || !ticket.machineId) {
+          continue;
+        }
+        const row = next[ticket.machineId] ?? { quotesOpen: 0, ticketsOpen: 0 };
+        row.ticketsOpen += 1;
+        next[ticket.machineId] = row;
+      }
+      setWorkByMachine(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     return machines.filter((machine) =>
@@ -395,6 +441,10 @@ export function MachinesList() {
             const open = menuId === machine.id;
             const renaming = editingNameId === machine.id;
             const plant = machinePlant(machine, user?.role);
+            const work = workByMachine[machine.id] ?? {
+              quotesOpen: 0,
+              ticketsOpen: 0,
+            };
             return (
               <li key={machine.id} className="catalog-machine-card" data-open={open ? "true" : "false"}>
                 <div className="catalog-machine-main">
@@ -453,15 +503,6 @@ export function MachinesList() {
                       )}
                     </PrefetchLink>
                   )}
-                  {!staff && !renaming ? (
-                    <PrefetchLink
-                      href={`/machines/${machine.id}/care`}
-                      warm={() => warmCareOverview(machine.id)}
-                      className="catalog-care-link"
-                    >
-                      Care
-                    </PrefetchLink>
-                  ) : null}
                   {staff ? (
                     <button
                       type="button"
@@ -476,6 +517,35 @@ export function MachinesList() {
                       ⋯
                     </button>
                   ) : null}
+                </div>
+                <div className="catalog-machine-work">
+                  <PrefetchLink
+                    href={machineTabHref(machine.id, "quotes")}
+                    warm={() => warmQuotesList()}
+                    className="catalog-machine-work-link"
+                    data-active={work.quotesOpen > 0 ? "true" : undefined}
+                  >
+                    {work.quotesOpen > 0
+                      ? `${work.quotesOpen} ${work.quotesOpen === 1 ? "quote" : "quotes"}`
+                      : "Quotes"}
+                  </PrefetchLink>
+                  <PrefetchLink
+                    href={machineTabHref(machine.id, "tickets")}
+                    warm={() => warmCareOverview(machine.id)}
+                    className="catalog-machine-work-link"
+                    data-active={work.ticketsOpen > 0 ? "true" : undefined}
+                  >
+                    {work.ticketsOpen > 0
+                      ? `${work.ticketsOpen} ${work.ticketsOpen === 1 ? "ticket" : "tickets"}`
+                      : "Tickets"}
+                  </PrefetchLink>
+                  <PrefetchLink
+                    href={machineTabHref(machine.id, "manuals")}
+                    warm={() => warmCareOverview(machine.id)}
+                    className="catalog-machine-work-link"
+                  >
+                    Manuals
+                  </PrefetchLink>
                 </div>
                 {staff && open ? (
                   <div id={`machine-actions-${machine.id}`} className="catalog-machine-actions">
@@ -497,10 +567,10 @@ export function MachinesList() {
                         </button>
                       )}
                       <PrefetchLink
-                        href={`/machines/${machine.id}/care`}
+                        href={machineTabHref(machine.id, "overview")}
                         warm={() => warmCareOverview(machine.id)}
                       >
-                        Care
+                        Overview
                       </PrefetchLink>
                       <Link href={`/machines/new?replace=${machine.id}`}>Replace pack</Link>
                       <button
