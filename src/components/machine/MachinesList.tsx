@@ -566,12 +566,6 @@ export function MachinesList() {
                           Rename
                         </button>
                       )}
-                      <PrefetchLink
-                        href={machineTabHref(machine.id, "overview")}
-                        warm={() => warmCareOverview(machine.id)}
-                      >
-                        Overview
-                      </PrefetchLink>
                       <Link href={`/machines/new?replace=${machine.id}`}>Replace pack</Link>
                       <button
                         type="button"

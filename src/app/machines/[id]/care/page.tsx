@@ -1,4 +1,5 @@
-import { CareOverviewPanel } from "@/components/care/CareOverviewPanel";
+import { redirect } from "next/navigation";
+import { machineTabHref } from "@/lib/machine-context";
 
 export default async function CareOverviewPage({
   params,
@@ -6,5 +7,5 @@ export default async function CareOverviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <CareOverviewPanel machineId={id} />;
+  redirect(machineTabHref(id, "tickets"));
 }
