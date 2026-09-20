@@ -24,6 +24,16 @@ describe("chat watch doorbell", () => {
     assert.equal(waited, rev);
   });
 
+  it("waits from revision zero until the first post", async () => {
+    setPersistenceForTests(createMemoryPersistence());
+    const channel = chatWatchChannel("ticket", "t0");
+    const pending = waitForChatWatch(channel, 0, { maxMs: 2_000 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const rev = await bumpChatWatch(channel);
+    assert.equal(await pending, rev);
+    assert.ok(rev > 0);
+  });
+
   it("wakes a waiter when the same process posts", async () => {
     setPersistenceForTests(createMemoryPersistence());
     const channel = chatWatchChannel("quote", "q1");

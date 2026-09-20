@@ -145,7 +145,7 @@ export async function waitForChatWatch(
   const deadline = Date.now() + maxMs;
 
   const first = await readChatWatch(channel);
-  if (since <= 0 || first > since) {
+  if (first > since) {
     return first;
   }
 
