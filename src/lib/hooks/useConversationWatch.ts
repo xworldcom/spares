@@ -7,9 +7,7 @@ import {
 } from "@/lib/api/chat-watch";
 import type { ChatWatchKind } from "@/lib/chat-watch";
 
-const SAFETY_REFRESH_MS = 60_000;
-
-/** Wait for a doorbell tap instead of asking the server every 1.5s. */
+/** Wait for a doorbell tap. Reload only on a tap, or when the tab comes back. */
 export function useConversationWatch(
   enabled: boolean,
   target: { kind: ChatWatchKind; id: string } | null,
@@ -75,16 +73,10 @@ export function useConversationWatch(
     }
 
     void listen();
-    const safety = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void poke();
-      }
-    }, SAFETY_REFRESH_MS);
 
     return () => {
       cancelled = true;
       controller.abort();
-      window.clearInterval(safety);
     };
   }, [enabled, target?.id, target?.kind]);
 }
