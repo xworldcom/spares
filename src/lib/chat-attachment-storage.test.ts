@@ -57,7 +57,7 @@ describe("chat-attachment-storage", () => {
     assert.equal(chatMultipartPartCount(sizeBytes), 2);
   });
 
-  it("returns a proxy ticket for Preview origins not on the R2 allowlist", async () => {
+  it("returns a presigned PUT ticket for Preview origins", async () => {
     const request = new Request("https://spares-abc123.vercel.app/api/tickets/t1/attachments/upload", {
       headers: { Origin: "https://spares-abc123.vercel.app" },
     });
@@ -74,14 +74,11 @@ describe("chat-attachment-storage", () => {
     );
     assert.equal(planned.ok, true);
     if (planned.ok) {
-      assert.equal(planned.ticket.method, "proxy");
-      if (planned.ticket.method === "proxy") {
-        assert.equal(planned.ticket.uploadUrl, "/api/tickets/t1/attachments/proxy");
-      }
+      assert.equal(planned.ticket.method, "PUT");
     }
   });
 
-  it("refuses large files on Preview with a clear message", async () => {
+  it("sends large Preview uploads to R2 instead of the Vercel proxy", async () => {
     const request = new Request("https://spares-abc123.vercel.app/api/tickets/t1/attachments/upload", {
       headers: { Origin: "https://spares-abc123.vercel.app" },
     });
@@ -95,10 +92,9 @@ describe("chat-attachment-storage", () => {
       },
       "/api/tickets/t1/attachments/proxy",
     );
-    assert.equal(planned.ok, false);
-    if (!planned.ok) {
-      assert.equal(planned.status, 413);
-      assert.match(planned.error, /Soft Launch/);
+    assert.equal(planned.ok, true);
+    if (planned.ok) {
+      assert.notEqual(planned.ticket.method, "proxy");
     }
   });
 

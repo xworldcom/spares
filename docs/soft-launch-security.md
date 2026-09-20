@@ -56,7 +56,7 @@ Preview deployments and Soft Launch share `BLOB_READ_WRITE_TOKEN`, so a Preview 
 
 - Presigned GET TTL default 1h, hard-capped at 1h — `src/lib/s3-config.ts`
 - Presigned PUT (staff uploads) TTL 15 minutes
-- Bucket CORS is allowlist-only (not `*`); apply with `npm run configure:r2-cors` — `scripts/configure-r2-cors.mjs`, `src/lib/cors.ts`
+- Bucket CORS is `*` for signed GET/HEAD/PUT (objects stay private; the signed URL is the capability). The app fail-closes who can mint a URL. Apply with `npm run configure:r2-cors` — `scripts/configure-r2-cors.mjs`, `src/lib/cors.ts`
 
 ## HTTP headers
 

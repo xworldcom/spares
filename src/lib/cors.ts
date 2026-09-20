@@ -1,11 +1,12 @@
 /**
- * Fail-closed CORS for Spares model/manual asset delivery.
+ * Fail-closed CORS for who may mint signed R2 URLs.
  *
- * Browser fetches of presigned R2 URLs require matching bucket CORS rules.
- * API routes that stream bytes or sign upload URLs use the same allowlist.
+ * The private bucket uses `*` CORS so a browser that already has a signed URL
+ * can GET/PUT without streaming through Vercel. API routes still reject
+ * unknown Origins before they can sign anything.
  */
 
-/** Soft Launch deployment aliases (also applied to the R2 bucket via configure-r2-cors). */
+/** Soft Launch / production aliases that may mint signed object URLs. */
 export const SPARES_SOFT_LAUNCH_ORIGINS = [
   "https://spares-yonder3.vercel.app",
   "https://spares-liart.vercel.app",
@@ -46,7 +47,7 @@ function parseExtraOrigins() {
     .filter(Boolean);
 }
 
-/** Exact origins written to the private R2 bucket CORS policy. */
+/** Exact origins allowed to mint signed model/manual/chat URLs. */
 export function r2CorsOrigins(): string[] {
   const origins = new Set<string>([
     ...SPARES_SOFT_LAUNCH_ORIGINS,
@@ -97,17 +98,13 @@ export function isSameOriginRequest(request: Request) {
 }
 
 /**
- * Presigned R2 GET/PUT URLs only work in the browser when the page origin is
- * listed on the bucket CORS policy. Preview deploys that match the Spares
- * hostname pattern but are not in the bucket list fall back to the credentialed
- * same-origin proxy (server streams from R2).
+ * Presigned R2 GET/PUT URLs are used for every origin the app already allows,
+ * including Spares preview hosts. The bucket CORS policy uses `*` for GET/HEAD/PUT
+ * so those signed URLs work without streaming bytes through Vercel. The app still
+ * fail-closes who can mint a URL (`rejectDisallowedOrigin` / auth).
  */
 export function shouldUseCrossOriginObjectUrl(request: Request) {
-  const origin = requestOrigin(request);
-  if (!origin) {
-    return false;
-  }
-  return r2CorsOrigins().includes(origin);
+  return isAllowedModelAssetOrigin(requestOrigin(request));
 }
 
 export function corsHeadersForOrigin(origin: string | null | undefined) {
@@ -165,12 +162,15 @@ export function rejectDisallowedOrigin(request: Request) {
   });
 }
 
-/** S3-compatible CORS rules for the private models/manuals bucket. */
+/**
+ * S3-compatible CORS rules for the private models/manuals bucket.
+ * `*` is safe here because objects stay private — the browser still needs a
+ * short-lived signed URL, and those are only minted for authenticated app origins.
+ */
 export function r2ModelAssetCorsRules(): R2CorsRule[] {
-  const origins = r2CorsOrigins();
   return [
     {
-      AllowedOrigins: origins,
+      AllowedOrigins: ["*"],
       AllowedMethods: ["GET", "HEAD", "PUT"],
       AllowedHeaders: ["*"],
       ExposeHeaders: ["ETag", "Content-Length", "Content-Type"],

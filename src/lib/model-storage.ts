@@ -22,6 +22,7 @@ import {
   s3Region,
 } from "./s3-config.ts";
 import { modelObjectKey } from "./model-url.ts";
+import { ensureR2BrowserCors } from "./r2-cors-sync.ts";
 
 export type ModelStoreKind = "s3" | "inline";
 
@@ -207,6 +208,7 @@ export async function createModelUploadUrl(
   storedFileName: string,
   expiresInSeconds = 3600,
 ) {
+  await ensureR2BrowserCors();
   const name = safeStoredFileName(storedFileName);
   const command = new PutObjectCommand({
     Bucket: s3Bucket(),
@@ -223,6 +225,7 @@ export async function createModelDownloadUrl(
   storedFileName: string,
   expiresInSeconds = 3600,
 ) {
+  await ensureR2BrowserCors();
   const name = safeStoredFileName(storedFileName);
   const command = new GetObjectCommand({
     Bucket: s3Bucket(),

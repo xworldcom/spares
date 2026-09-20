@@ -5,6 +5,7 @@ import {
   isAllowedModelAssetOrigin,
   isSameOriginRequest,
   r2CorsOrigins,
+  r2ModelAssetCorsRules,
   rejectDisallowedOrigin,
   shouldUseCrossOriginObjectUrl,
   SPARES_SOFT_LAUNCH_ORIGINS,
@@ -15,7 +16,7 @@ describe("model asset CORS allowlist", () => {
     delete process.env.SPARES_CORS_ORIGINS;
   });
 
-  it("includes Soft Launch aliases and localhost in the R2 bucket list", () => {
+  it("includes Soft Launch aliases and localhost in the mint-URL allowlist", () => {
     const origins = r2CorsOrigins();
     for (const origin of SPARES_SOFT_LAUNCH_ORIGINS) {
       assert.ok(origins.includes(origin));
@@ -23,7 +24,7 @@ describe("model asset CORS allowlist", () => {
     assert.ok(origins.includes("http://localhost:3000"));
   });
 
-  it("merges SPARES_CORS_ORIGINS into the R2 bucket list", () => {
+  it("merges SPARES_CORS_ORIGINS into the mint-URL allowlist", () => {
     process.env.SPARES_CORS_ORIGINS =
       "https://spares-git-main-xworldcom.vercel.app,https://extra.example.test";
     const origins = r2CorsOrigins();
@@ -53,7 +54,7 @@ describe("model asset CORS allowlist", () => {
     assert.equal(isAllowedModelAssetOrigin(null), false);
   });
 
-  it("uses presigned object URLs only for bucket-listed origins", () => {
+  it("uses presigned object URLs for Soft Launch and preview origins", () => {
     const allowed = new Request("https://spares-yonder3.vercel.app/api/machines/m1", {
       headers: { Origin: "https://spares-yonder3.vercel.app" },
     });
@@ -66,7 +67,15 @@ describe("model asset CORS allowlist", () => {
       },
     );
     assert.equal(shouldUseCrossOriginObjectUrl(allowed), true);
-    assert.equal(shouldUseCrossOriginObjectUrl(preview), false);
+    assert.equal(shouldUseCrossOriginObjectUrl(preview), true);
+  });
+
+  it("writes wildcard GET/HEAD/PUT CORS so signed R2 URLs work on preview hosts", () => {
+    const rules = r2ModelAssetCorsRules();
+    assert.equal(rules.length, 1);
+    assert.deepEqual(rules[0]?.AllowedOrigins, ["*"]);
+    assert.ok(rules[0]?.AllowedMethods.includes("GET"));
+    assert.ok(rules[0]?.AllowedMethods.includes("PUT"));
   });
 
   it("rejects disallowed Origin headers on asset routes", () => {

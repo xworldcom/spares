@@ -18,6 +18,7 @@ import {
   validateChatUploadInput,
 } from "./chat-attachments.ts";
 import { shouldUseCrossOriginObjectUrl } from "./cors.ts";
+import { ensureR2BrowserCors } from "./r2-cors-sync.ts";
 import { StoredFileClaimedError } from "./stored-file-claim.ts";
 import {
   isS3Configured,
@@ -251,6 +252,7 @@ export async function createChatAttachmentUploadTicket(input: {
   sizeBytes: number;
   contentType?: string;
 }): Promise<ChatPutUploadTicket | ChatMultipartUploadTicket> {
+  await ensureR2BrowserCors();
   assertChatAttachmentUploadAllowed();
   if (selectChatAttachmentStoreKind() !== "s3") {
     throw new Error("Direct-to-storage upload is only available when R2/S3 is configured.");
@@ -435,6 +437,7 @@ export async function createChatAttachmentDownloadUrl(
   storedFileName: string,
   expiresInSeconds = modelDownloadUrlTtlSeconds(),
 ) {
+  await ensureR2BrowserCors();
   if (selectChatAttachmentStoreKind() !== "s3") {
     throw new Error("S3 object storage is not configured");
   }
