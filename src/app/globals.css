@@ -587,8 +587,10 @@
 
 .machine-context-tabs {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
   gap: 0.2rem;
   padding: 0.2rem;
   overflow-x: auto;
