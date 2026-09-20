@@ -39,7 +39,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       credentials: "include",
       headers,
     });
-  } catch {
+  } catch (cause) {
+    if (init?.signal?.aborted) {
+      throw cause;
+    }
     throw new ApiError(
       "Could not reach the API. It may not be available on this preview yet.",
       0,

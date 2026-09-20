@@ -38,6 +38,11 @@ import {
   safeStoredFileName,
 } from "./persistence.ts";
 import {
+  bumpChatWatch,
+  chatWatchChannel,
+  conversationWatchChanged,
+} from "./chat-watch.ts";
+import {
   assignMissingQuoteNumbers,
   findQuoteInList,
   nextQuoteNumber,
@@ -3369,6 +3374,9 @@ export function mutateQuote(
       ...db,
       quotes: db.quotes.map((quote) => (quote.id === current.id ? next : quote)),
     });
+    if (conversationWatchChanged(current, next)) {
+      await bumpChatWatch(chatWatchChannel("quote", next.id));
+    }
     return next;
   });
 }
@@ -3607,6 +3615,9 @@ function mutateTicket(
       ticket.id === current.id ? next : ticket,
     );
     await writeDatabase({ ...db, ...careCollections(db), tickets });
+    if (conversationWatchChanged(current, next)) {
+      await bumpChatWatch(chatWatchChannel("ticket", next.id));
+    }
     return next;
   });
 }
