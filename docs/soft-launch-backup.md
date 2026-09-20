@@ -32,7 +32,7 @@ On every write the app mirrors Care into both `db.json` and `care.json`, but **`
 
 ### 2b. Vercel Blob — Activity Log sidecar (`spares/activity.json`)
 
-Append-only staff **Activity Log**. Separate so catalog heals cannot wipe the record. There is no delete API. Back it up with the `db.json` + `care.json` pair.
+Append-only staff **Activity Log**. Separate so catalog heals cannot wipe the record. There is no delete API. Recording and the live page are **paused** in the app; back up any existing `activity.json` with the `db.json` + `care.json` pair.
 
 ### 3. Vercel Blob — small files (`spares/files/…`)
 

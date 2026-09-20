@@ -14,6 +14,7 @@ import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isNavActive } from "@/lib/nav-active";
 import { useSignedInTabPrefetch } from "@/components/nav/useSignedInTabPrefetch";
+import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
 
 const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes"] as const;
 const STAFF_NAV_HREFS = [
@@ -192,9 +193,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <NavLink href="/staff/directory" hrefs={navHrefs}>
                     Directory
                   </NavLink>
-                  <NavLink href="/staff/activity" hrefs={navHrefs}>
-                    Activity Log
-                  </NavLink>
+                  {ACTIVITY_LOG_ENABLED ? (
+                    <NavLink href="/staff/activity" hrefs={navHrefs}>
+                      Activity Log
+                    </NavLink>
+                  ) : null}
                   <NavLinkWithBadge
                     href="/staff/quotes"
                     hrefs={navHrefs}

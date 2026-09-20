@@ -12,6 +12,7 @@ import {
   staffMachinesMenuLinks,
 } from "@/components/nav/MachinesNavMenu";
 import { isNavActive } from "@/lib/nav-active";
+import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
 
 function MachinesIcon({ active }: { active: boolean }) {
   return (
@@ -174,12 +175,14 @@ export function MobileTabBar() {
             >
               Directory
             </Link>
-            <Link
-              href="/staff/activity"
-              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
-            >
-              Activity Log
-            </Link>
+            {ACTIVITY_LOG_ENABLED ? (
+              <Link
+                href="/staff/activity"
+                className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+              >
+                Activity Log
+              </Link>
+            ) : null}
             <Link
               href="/staff/bugs"
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"

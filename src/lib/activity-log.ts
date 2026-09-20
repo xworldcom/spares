@@ -8,6 +8,7 @@ import {
   type ActivityTarget,
   type RecordAccountActivityInput,
 } from "./activity-log-types.ts";
+import { isActivityLogEnabled } from "./activity-log-public.ts";
 import { getPersistence, PersistenceReadError } from "./persistence.ts";
 
 export const ACTIVITY_LOG_SCHEMA_VERSION = 1;
@@ -224,6 +225,9 @@ export async function listAccountActivity(options: {
   before?: string;
   limit?: number;
 }) {
+  if (!isActivityLogEnabled()) {
+    return { events: [], accounts: [], total: 0 };
+  }
   const document = await readDocument();
   const tenantEvents = options.tenantId
     ? document.events.filter((event) => event.tenantId === options.tenantId)
@@ -238,6 +242,9 @@ export async function listAccountActivity(options: {
 export async function recordAccountActivity(
   input: RecordAccountActivityInput,
 ): Promise<ActivityEvent | null> {
+  if (!isActivityLogEnabled()) {
+    return null;
+  }
   const tenantId = input.tenantId.trim();
   const summary = input.summary.trim().slice(0, 400);
   if (!tenantId || !summary) {

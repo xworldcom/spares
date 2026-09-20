@@ -1,10 +1,14 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { listAccountActivity } from "@/lib/activity-log";
+import { isActivityLogEnabled } from "@/lib/activity-log-public";
 import { error, json } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  if (!isActivityLogEnabled()) {
+    return error("Activity Log is paused", 404);
+  }
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
