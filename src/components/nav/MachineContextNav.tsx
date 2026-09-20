@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
-import { getMachine } from "@/lib/api/machines";
+import { useMachineName } from "@/components/nav/useMachineName";
 import {
   machineContextTabFromPath,
   machineContextTabs,
@@ -33,11 +33,12 @@ export function MachineContextNav({
   const pathname = usePathname();
   const router = useRouter();
   const staff = user?.role === "staff";
-  const [fetchedName, setFetchedName] = useState<string | null>(null);
   const current = activeTab ?? machineContextTabFromPath(pathname) ?? "model";
   const tabs = machineContextTabs(staff);
   const Heading = asHeading ? "h1" : "p";
-  const name = machineName?.trim() || fetchedName || "Machine";
+  const provided = machineName?.trim() || "";
+  const fetchedName = useMachineName(provided ? null : machineId);
+  const name = provided || fetchedName || "Machine";
 
   useEffect(() => {
     for (const href of prefetchCareTabRoutes(machineId, staff)) {
@@ -48,27 +49,6 @@ export function MachineContextNav({
     warmCareOverview(machineId);
     warmQuotesList();
   }, [machineId, router, staff]);
-
-  useEffect(() => {
-    if (machineName?.trim()) {
-      return;
-    }
-    let cancelled = false;
-    getMachine(machineId, user?.role)
-      .then((machine) => {
-        if (!cancelled) {
-          setFetchedName(machine.name);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFetchedName(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [machineId, machineName, user?.role]);
 
   return (
     <div className="machine-context">

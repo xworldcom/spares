@@ -13,7 +13,7 @@ Machines lets an authenticated user open the catalog, choose a machine pack, ins
 
 - Sign in, land on **Machines**.
 - Choose a machine name link (seed: **Hardware fixture** or **Palletizer** locally). Cards also offer **Quotes**, **Tickets**, and **Manuals** for that machine.
-- Click a part row or pick geometry in the canvas. The machine context bar stays available for quotes and tickets.
+- Click a part row or pick geometry in the canvas. The machine header stays on quotes and tickets: on small screens the back title is the machine name (`‹ Palletizer`) over a tabs-only strip (Model, Quotes, Tickets, Manuals, Service for staff). Desktop keeps Brand or `‹ Machines` plus the name beside those tabs. There is no Overview tab.
 
 ## Driving it with control-oee360
 

@@ -9,6 +9,7 @@ import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { StaffMachinesDesktopNav } from "@/components/nav/MachinesNavMenu";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
+import { useMachineName } from "@/components/nav/useMachineName";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
@@ -92,6 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const machineId = machineIdFromPath(pathname);
   const machineStage = isMachineStagePath(pathname);
+  const machineName = useMachineName(machineId);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -150,18 +152,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     >
       <header className="spares-header sticky top-0 z-[60] shrink-0 backdrop-blur-md">
         <div className="spares-header-inner mx-auto flex h-14 w-full max-w-none items-center gap-2 px-3 sm:px-4 lg:px-5">
-          {machineStage ? (
-            <div className="flex min-w-0 items-center gap-1">
+          {machineId ? (
+            <>
               <Link
                 href="/machines"
-                className="inline-flex h-11 min-w-0 shrink items-center gap-1 px-2 text-[15px] font-semibold tracking-tight"
+                aria-label={`Back to machines, ${machineName ?? "Machine"}`}
+                className="inline-flex h-11 min-w-0 flex-1 items-center gap-1 px-2 text-[15px] font-semibold tracking-tight lg:hidden"
               >
                 <span aria-hidden="true" className="spares-muted text-lg leading-none">
                   ‹
                 </span>
-                <span className="truncate">Machines</span>
+                <span className="truncate">{machineName ?? "Machine"}</span>
               </Link>
-            </div>
+              {machineStage ? (
+                <div className="hidden min-w-0 items-center gap-1 lg:flex">
+                  <Link
+                    href="/machines"
+                    className="inline-flex h-11 min-w-0 shrink items-center gap-1 px-2 text-[15px] font-semibold tracking-tight"
+                  >
+                    <span aria-hidden="true" className="spares-muted text-lg leading-none">
+                      ‹
+                    </span>
+                    <span className="truncate">Machines</span>
+                  </Link>
+                </div>
+              ) : (
+                <Link
+                  href={signedIn ? "/machines" : "/"}
+                  className="relative hidden h-11 min-h-11 shrink-0 items-center px-2 before:absolute before:inset-0 before:min-h-11 before:min-w-11 before:content-[''] lg:inline-flex"
+                >
+                  <BrandMark />
+                </Link>
+              )}
+            </>
           ) : (
             <Link
               href={signedIn ? "/machines" : "/"}
@@ -276,7 +299,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : null}
         {signedIn && machineId ? (
           <div className="spares-header-context mx-auto w-full max-w-none">
-            <MachineContextNav machineId={machineId} asHeading />
+            <MachineContextNav
+              machineId={machineId}
+              machineName={machineName ?? undefined}
+              asHeading
+            />
           </div>
         ) : null}
       </header>

@@ -56,9 +56,6 @@ export function machineContextTabFromPath(pathname: string): MachineContextTab |
   if (rest === "/quotes" || rest.startsWith("/quotes/")) {
     return "quotes";
   }
-  if (rest === "/care") {
-    return "overview";
-  }
   if (rest.startsWith("/care/tickets")) {
     return "tickets";
   }
@@ -68,13 +65,15 @@ export function machineContextTabFromPath(pathname: string): MachineContextTab |
   if (rest.startsWith("/care/service") || rest.startsWith("/care/usage")) {
     return "service";
   }
-  return "overview";
+  if (rest === "/care") {
+    return "tickets";
+  }
+  return "model";
 }
 
 export function machineContextTabs(staff: boolean): MachineContextTabDef[] {
   const tabs: MachineContextTabDef[] = [
     { id: "model", label: "Model" },
-    { id: "overview", label: "Overview" },
     { id: "quotes", label: "Quotes" },
     { id: "tickets", label: "Tickets" },
     { id: "manuals", label: "Manuals" },

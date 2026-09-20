@@ -568,9 +568,10 @@
 }
 
 .machine-context-name {
+  display: none;
   margin: 0;
   min-width: 0;
-  max-width: 9.5rem;
+  max-width: 18rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -579,23 +580,28 @@
   letter-spacing: -0.02em;
 }
 
-@media (min-width: 640px) {
-  .machine-context-name {
-    max-width: 14rem;
-  }
-}
-
 .machine-context-tabs {
   display: flex;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   gap: 0.2rem;
   padding: 0.2rem;
   overflow-x: auto;
   border-radius: 999px;
   background: var(--spares-soft);
+}
+
+@media (min-width: 1024px) {
+  .machine-context-name {
+    display: block;
+  }
+
+  .machine-context-tabs {
+    width: fit-content;
+    flex: 0 1 auto;
+  }
 }
 
 .machine-context-tab {
