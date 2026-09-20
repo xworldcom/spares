@@ -7,7 +7,7 @@ import {
 } from "@/lib/api/chat-watch";
 import type { ChatWatchKind } from "@/lib/chat-watch";
 
-/** Wait for a doorbell tap. Reload only on a tap, or when the tab comes back. */
+/** Wait for a doorbell tap. Reload only when a tap lands. */
 export function useConversationWatch(
   enabled: boolean,
   target: { kind: ChatWatchKind; id: string } | null,
@@ -46,7 +46,6 @@ export function useConversationWatch(
           if (cancelled) {
             return;
           }
-          await poke();
         }
         try {
           const next = await waitForConversationWatch({
@@ -59,7 +58,7 @@ export function useConversationWatch(
             return;
           }
           const changed = next.changed && next.rev > since;
-          since = next.rev;
+          since = Math.max(since, next.rev);
           if (changed) {
             await poke();
           }

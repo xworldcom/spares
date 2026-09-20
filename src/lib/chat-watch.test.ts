@@ -3,6 +3,8 @@ import { afterEach, describe, it } from "node:test";
 import {
   bumpChatWatch,
   chatWatchChannel,
+  chatWatchFileName,
+  chatWatchWaiterCountForTests,
   conversationWatchChanged,
   readChatWatch,
   resetChatWatchForTests,
@@ -45,7 +47,7 @@ describe("chat watch doorbell", () => {
     assert.ok(rev > since);
   });
 
-  it("sees a revision written by another process via the tiny watch file", async () => {
+  it("sees a revision written by another process via that thread's watch file", async () => {
     const persistence = createMemoryPersistence();
     setPersistenceForTests(persistence);
     const channel = chatWatchChannel("ticket", "t2");
@@ -53,11 +55,36 @@ describe("chat watch doorbell", () => {
     resetChatWatchForTests();
     setPersistenceForTests(persistence);
     await persistence.writeFileBytes(
-      "chat-watch.json",
-      Buffer.from(JSON.stringify({ [channel]: since + 9 })),
+      chatWatchFileName(channel),
+      Buffer.from(JSON.stringify({ rev: since + 9 })),
     );
     const waited = await waitForChatWatch(channel, since, { maxMs: 1_500 });
     assert.equal(waited, since + 9);
+  });
+
+  it("does not let one thread clobber another thread's doorbell", async () => {
+    const persistence = createMemoryPersistence();
+    setPersistenceForTests(persistence);
+    const ticket = chatWatchChannel("ticket", "t-keep");
+    const quote = chatWatchChannel("quote", "q-other");
+    const ticketRev = await bumpChatWatch(ticket);
+    resetChatWatchForTests();
+    setPersistenceForTests(persistence);
+    const quoteRev = await bumpChatWatch(quote);
+    assert.equal(await readChatWatch(ticket), ticketRev);
+    assert.equal(await readChatWatch(quote), quoteRev);
+  });
+
+  it("drops a waiter when the hold is aborted", async () => {
+    setPersistenceForTests(createMemoryPersistence());
+    const channel = chatWatchChannel("ticket", "t-abort");
+    const controller = new AbortController();
+    const pending = waitForChatWatch(channel, 0, { maxMs: 5_000, signal: controller.signal });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(chatWatchWaiterCountForTests(channel), 1);
+    controller.abort();
+    await pending;
+    assert.equal(chatWatchWaiterCountForTests(channel), 0);
   });
 
   it("ignores read-only receipt changes", () => {
