@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
 import { careHref, ticketRefMatches } from "@/lib/care";
-import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { useTicketReadWatermark } from "@/lib/hooks/useTicketReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
@@ -128,7 +128,11 @@ export function TicketDetail({
   );
   useTicketReadWatermark(watermarkReady, ticketId, threadBump);
 
-  useConversationPoll(Boolean(ticket && user), pollTicket);
+  useConversationWatch(
+    Boolean(ticket && user),
+    ticket ? { kind: "ticket", id: ticket.id } : null,
+    pollTicket,
+  );
 
   async function onStatus(status: TicketStatus) {
     if (!ticket) {

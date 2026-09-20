@@ -26,7 +26,7 @@ import {
   updateQuote,
   uploadQuotePo,
 } from "@/lib/api/quotes";
-import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
+import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
   canEditTracking,
@@ -135,7 +135,11 @@ export function QuoteWorkspace({
     });
   }, [items, pendingStatus, quote, quoteRef, refresh]);
 
-  useConversationPoll(Boolean(quote && user), pollQuote);
+  useConversationWatch(
+    Boolean(quote && user),
+    quote ? { kind: "quote", id: quote.id } : null,
+    pollQuote,
+  );
 
   async function run(action: () => Promise<Quote>, success?: string) {
     let release: () => void = () => {};
