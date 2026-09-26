@@ -3,6 +3,7 @@ import { isAllowedModelAssetOrigin } from "../cors.ts";
 import { effectiveStaffTenantId } from "../tenant.ts";
 import { sanitizeNextPath } from "./safe-url.ts";
 import { sessionSecret } from "./session-token.ts";
+import { isEntraTenantId, MICROSOFT_CONSUMER_TID } from "./sso-domain.ts";
 
 import {
   MICROSOFT_ACCESS_DENIED_CODE,
@@ -17,14 +18,107 @@ export {
 export const MICROSOFT_OAUTH_COOKIE = "spares_microsoft_oauth";
 
 const STATE_MS = 1000 * 60 * 10;
-const GRAPH_ME_URL =
-  "https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,otherMails";
+const OIDC_SCOPE = "openid profile email";
 
 export type AzureAdConfig = {
   clientId: string;
   clientSecret: string;
   tenantId: string;
 };
+
+/** Claims the IdP asserted about the signed-in account. Parsed once at the boundary. */
+export type MicrosoftIdentity = {
+  tid: string;
+  oid: string;
+  emails: MicrosoftEmailClaim[];
+};
+
+/** `verified` = the IdP bound this address to `tid` (UPN suffix is a verified domain of the
+ *  tenant, or `xms_edov === true`). An unverified claim is only usable when the host enrolled
+ *  that `tid`. */
+export type MicrosoftEmailClaim = { email: string; verified: boolean };
+
+type IdTokenPayload = Record<string, unknown>;
+
+/** Trust table. Order is the order `emails` is built in. */
+const EMAIL_CLAIM_SOURCES: ReadonlyArray<{
+  claim: "preferred_username" | "upn" | "email";
+  verified: (payload: IdTokenPayload) => boolean;
+}> = [
+  { claim: "preferred_username", verified: () => true },
+  { claim: "upn", verified: () => true },
+  { claim: "email", verified: (p) => p.xms_edov === true || p.xms_edov === "true" },
+];
+
+function emailClaimValue(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const email = value.trim().toLowerCase();
+  return email.includes("@") && !email.includes("#ext#") ? email : null;
+}
+
+/** Personal accounts prove inbox control, not domain ownership, so nothing they claim is verified. */
+function microsoftEmailClaims(payload: IdTokenPayload, tid: string): MicrosoftEmailClaim[] {
+  const claims: MicrosoftEmailClaim[] = [];
+  for (const source of EMAIL_CLAIM_SOURCES) {
+    const email = emailClaimValue(payload[source.claim]);
+    if (!email || claims.some((row) => row.email === email)) {
+      continue;
+    }
+    claims.push({
+      email,
+      verified: tid !== MICROSOFT_CONSUMER_TID && source.verified(payload),
+    });
+  }
+  return claims;
+}
+
+function decodeJwtPart(part: string): IdTokenPayload | null {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as IdTokenPayload)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Signature is not verified. The token arrives from the token endpoint over TLS with
+ * client-secret auth, so OIDC Core 3.1.3.7 step 6 allows skipping the signature check on
+ * that channel.
+ */
+export function parseMicrosoftIdToken(
+  idToken: string,
+  expect: { clientId: string; nonce: string; now?: number },
+): MicrosoftIdentity | null {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const header = decodeJwtPart(parts[0]);
+  const payload = decodeJwtPart(parts[1]);
+  if (!header || !payload || header.alg !== "RS256") {
+    return null;
+  }
+  const tid = typeof payload.tid === "string" ? payload.tid.toLowerCase() : "";
+  const oid = typeof payload.oid === "string" ? payload.oid : "";
+  const now = expect.now ?? Date.now();
+  if (
+    !isEntraTenantId(tid) ||
+    !oid ||
+    payload.aud !== expect.clientId ||
+    payload.iss !== `https://login.microsoftonline.com/${tid}/v2.0` ||
+    typeof payload.exp !== "number" ||
+    payload.exp * 1000 <= now ||
+    payload.nonce !== expect.nonce
+  ) {
+    return null;
+  }
+  return { tid, oid, emails: microsoftEmailClaims(payload, tid) };
+}
 
 export type MicrosoftOAuthState = {
   nonce: string;
@@ -112,24 +206,34 @@ export function decodeMicrosoftOAuthState(token: string): MicrosoftOAuthState | 
   }
 }
 
-export function createMicrosoftOAuthState(origin: string, next: string) {
+/** `nonce` doubles as the OIDC nonce so the id_token can be tied to this state. */
+export function createMicrosoftOAuthState(
+  origin: string,
+  next: string,
+): { state: string; nonce: string } {
   const state: MicrosoftOAuthState = {
     nonce: randomBytes(16).toString("base64url"),
     origin: normalizeAuthOrigin(origin),
     next: sanitizeNextPath(next),
     exp: Date.now() + STATE_MS,
   };
-  return encodeMicrosoftOAuthState(state);
+  return { state: encodeMicrosoftOAuthState(state), nonce: state.nonce };
 }
 
-export function microsoftAuthorizeUrl(config: AzureAdConfig, redirectUri: string, state: string) {
+export function microsoftAuthorizeUrl(
+  config: AzureAdConfig,
+  redirectUri: string,
+  state: string,
+  nonce: string,
+) {
   const params = new URLSearchParams({
     client_id: config.clientId,
     response_type: "code",
     redirect_uri: redirectUri,
     response_mode: "query",
-    scope: "openid profile email User.Read offline_access",
+    scope: OIDC_SCOPE,
     state,
+    nonce,
     prompt: "select_account",
   });
   return `https://login.microsoftonline.com/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/authorize?${params}`;
@@ -153,24 +257,6 @@ export function oauthStateCookieOptions(maxAgeSeconds: number) {
   };
 }
 
-export function pickMicrosoftEmail(profile: {
-  mail?: string | null;
-  userPrincipalName?: string | null;
-  otherMails?: string[] | null;
-}) {
-  const candidates = [
-    profile.mail,
-    ...(profile.otherMails ?? []),
-    profile.userPrincipalName,
-  ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.includes("@")) {
-      return value.trim().toLowerCase();
-    }
-  }
-  return null;
-}
-
 export function resolveMicrosoftLogin(
   user: MicrosoftLoginLookup,
 ): { ok: true } | { ok: false; message: string } {
@@ -180,7 +266,7 @@ export function resolveMicrosoftLogin(
   return { ok: true };
 }
 
-/** Map Graph email → Spares session scope (same tenant rules as POST /api/auth/login). */
+/** Map the matched catalog user → Spares session scope (same tenant rules as POST /api/auth/login). */
 export function resolveMicrosoftSession(
   user: MicrosoftSessionUser | null,
 ):
@@ -209,14 +295,14 @@ export async function exchangeMicrosoftCode(
   config: AzureAdConfig,
   code: string,
   redirectUri: string,
-) {
+): Promise<{ idToken: string } | null> {
   const body = new URLSearchParams({
     client_id: config.clientId,
     client_secret: config.clientSecret,
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
-    scope: "openid profile email User.Read offline_access",
+    scope: OIDC_SCOPE,
   });
   const response = await fetch(microsoftTokenUrl(config), {
     method: "POST",
@@ -226,23 +312,9 @@ export async function exchangeMicrosoftCode(
   if (!response.ok) {
     return null;
   }
-  const data = (await response.json()) as { access_token?: string };
-  if (!data.access_token) {
+  const data = (await response.json()) as { id_token?: string };
+  if (typeof data.id_token !== "string" || !data.id_token) {
     return null;
   }
-  return data.access_token;
-}
-
-export async function fetchMicrosoftProfile(accessToken: string) {
-  const response = await fetch(GRAPH_ME_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) {
-    return null;
-  }
-  return (await response.json()) as {
-    mail?: string | null;
-    userPrincipalName?: string | null;
-    otherMails?: string[] | null;
-  };
+  return { idToken: data.id_token };
 }

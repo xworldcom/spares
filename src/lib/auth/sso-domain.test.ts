@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import type { Tenant } from "../../types/index.ts";
 import {
   emailSsoDomain,
-  findActiveTenantForSsoDomain,
+  findActiveTenantForSso,
   firstTakenSsoDomain,
   formatSsoDomains,
   formatSsoTenantIds,
@@ -139,31 +139,47 @@ describe("parseSsoAutoroute", () => {
 });
 
 describe("tenant SSO domain claims", () => {
-  const shape = tenant({ id: "tenant-shape", ssoDomains: ["shape.com"] });
+  const shape = tenant({
+    id: "tenant-shape",
+    ssoDomains: ["shape.com"],
+    ssoTenantIds: [SHAPE_TID],
+  });
   const host = tenant({ id: "tenant-oee360-host", ssoDomains: ["huzevka.com"] });
+  const claim = { domain: "shape.com", tid: SHAPE_TID };
 
   it("routes only when autoroute is on", () => {
-    assert.equal(findActiveTenantForSsoDomain([shape, host], "shape.com"), null);
-    const live = tenant({
-      id: "tenant-shape",
-      ssoDomains: ["shape.com"],
-      ssoAutoroute: true,
-    });
-    assert.equal(findActiveTenantForSsoDomain([live, host], "shape.com")?.id, "tenant-shape");
+    assert.equal(findActiveTenantForSso([shape, host], claim), null);
+    const live = tenant({ ...shape, ssoAutoroute: true });
+    assert.equal(findActiveTenantForSso([live, host], claim)?.id, "tenant-shape");
+  });
+
+  it("needs both the domain and the tid enrolled on the same host", () => {
+    const live = tenant({ ...shape, ssoAutoroute: true });
+    assert.equal(findActiveTenantForSso([live], { domain: "shape.com", tid: OTHER_TID }), null);
+    assert.equal(findActiveTenantForSso([live], { domain: "other.com", tid: SHAPE_TID }), null);
+    const legacy = tenant({ id: "tenant-legacy", ssoDomains: ["legacy.com"], ssoAutoroute: true });
+    assert.equal(findActiveTenantForSso([legacy], { domain: "legacy.com", tid: SHAPE_TID }), null);
   });
 
   it("ignores suspended and deleted hosts for first-time SSO", () => {
     const suspended = tenant({
-      id: "tenant-shape",
-      ssoDomains: ["shape.com"],
+      ...shape,
+      ssoAutoroute: true,
       inactiveAt: "2026-09-19T00:00:00.000Z",
     });
-    assert.equal(findActiveTenantForSsoDomain([suspended], "shape.com"), null);
+    assert.equal(findActiveTenantForSso([suspended], claim), null);
+    const deleted = tenant({
+      ...shape,
+      ssoAutoroute: true,
+      deletedAt: "2026-09-19T00:00:00.000Z",
+    });
+    assert.equal(findActiveTenantForSso([deleted], claim), null);
   });
 
-  it("fails closed when two hosts claim the same domain", () => {
-    const other = tenant({ id: "tenant-other", ssoDomains: ["shape.com"] });
-    assert.equal(findActiveTenantForSsoDomain([shape, other], "shape.com"), null);
+  it("fails closed when two hosts claim the same domain and tid", () => {
+    const first = tenant({ ...shape, ssoAutoroute: true });
+    const other = tenant({ ...shape, id: "tenant-other", ssoAutoroute: true });
+    assert.equal(findActiveTenantForSso([first, other], claim), null);
   });
 
   it("treats a claimed domain as taken except on the same host", () => {

@@ -24,9 +24,9 @@ export async function GET(request: Request) {
   }
 
   const next = sanitizeNextPath(url.searchParams.get("next"));
-  const state = createMicrosoftOAuthState(origin, next);
+  const { state, nonce } = createMicrosoftOAuthState(origin, next);
   const redirectUri = microsoftCallbackRedirectUri(origin);
-  const authorizeUrl = microsoftAuthorizeUrl(config, redirectUri, state);
+  const authorizeUrl = microsoftAuthorizeUrl(config, redirectUri, state, nonce);
 
   const response = NextResponse.redirect(authorizeUrl, 302);
   response.cookies.set(

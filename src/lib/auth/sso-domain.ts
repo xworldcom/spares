@@ -207,16 +207,18 @@ export function parseSsoAutoroute(input: unknown): boolean | undefined {
   return undefined;
 }
 
-export function findActiveTenantForSsoDomain(
+/** The host that may autoroute a first sign-in. Domain and tid must be enrolled on the same row. */
+export function findActiveTenantForSso(
   tenants: readonly Tenant[],
-  domain: string,
+  claim: { domain: string; tid: string },
 ): Tenant | null {
   const matches = tenants.filter(
     (tenant) =>
       !tenant.deletedAt &&
       !tenant.inactiveAt &&
       tenantSsoAutorouteEnabled(tenant) &&
-      tenantSsoDomains(tenant).includes(domain),
+      tenantSsoDomains(tenant).includes(claim.domain) &&
+      tenantEnrollsMicrosoftTenant(tenant, claim.tid),
   );
   return matches.length === 1 ? matches[0] : null;
 }
