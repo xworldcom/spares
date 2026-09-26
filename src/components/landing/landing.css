@@ -295,8 +295,43 @@
 }
 
 .landing-section--stage,
-.landing-section--cell {
+.landing-section--cell,
+.landing-section--ingest {
   max-width: 72rem;
+}
+
+.landing-section--hero .landing-cell {
+  height: min(42rem, 92vw);
+  min-height: 24rem;
+  margin-top: 1.25rem;
+}
+
+.landing-ingest-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-ingest-pill {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(236, 234, 228, 0.14);
+  border-radius: 0.5rem;
+  background: rgba(12, 13, 15, 0.55);
+  color: rgba(236, 234, 228, 0.82);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.landing-ingest-note {
+  margin: 1rem 0 0;
+  max-width: 38rem;
+  color: rgba(236, 234, 228, 0.5);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .landing-section:first-child {

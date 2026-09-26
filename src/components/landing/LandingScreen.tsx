@@ -43,11 +43,11 @@ export function LandingScreen({
         <div className="landing-veil" />
         <div className="landing-copy">
           <div className="landing-panel">
-            <p className="landing-kicker">Private</p>
+            <p className="landing-kicker">Machine care &amp; spares</p>
             <BrandMark size="hero" className="landing-wordmark" />
             <p className="landing-lede">
-              Overall equipment effectiveness, seen all the way around — the
-              machine, the spare, the quote, the care.
+              Support-first care and spare parts for industrial machines — quotes,
+              tickets, and the 3D schematic in one workspace. Invite-only today.
             </p>
             <LoginForm
               nextPath={nextPath}
