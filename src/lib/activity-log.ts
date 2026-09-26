@@ -35,6 +35,35 @@ type ActivityDocument = {
 
 const ACTION_SET = new Set<string>(ACTIVITY_ACTIONS);
 
+const VIEW_DEDUPE_WINDOW_MS = 60 * 60 * 1000;
+const VIEW_DEDUPE_MAX_KEYS = 4000;
+const lastViewAt = new Map<string, number>();
+
+/** Key is `${action}:${userId}:${targetId}`. True once per key per window. */
+export function shouldRecordView(
+  key: string,
+  now = Date.now(),
+  windowMs = VIEW_DEDUPE_WINDOW_MS,
+): boolean {
+  const previous = lastViewAt.get(key);
+  if (previous !== undefined && now - previous < windowMs) {
+    return false;
+  }
+  lastViewAt.set(key, now);
+  if (lastViewAt.size > VIEW_DEDUPE_MAX_KEYS) {
+    for (const [entryKey, stamp] of lastViewAt) {
+      if (now - stamp >= windowMs) {
+        lastViewAt.delete(entryKey);
+      }
+    }
+  }
+  return true;
+}
+
+export function resetViewDedupeForTests() {
+  lastViewAt.clear();
+}
+
 let queue: Promise<unknown> = Promise.resolve();
 
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
