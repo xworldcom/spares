@@ -78,38 +78,41 @@ for (const host of HOSTS) {
   for (const plant of host.plants) {
     const account = await store.createCustomerAccount(plant.name, tenantId);
     if (!("account" in account)) fail(`create plant ${plant.name}`, account);
-    const site = await store.createSite(tenantId, account.account.id, plant.site);
-    if (!("site" in site)) fail(`create site ${plant.site}`, site);
+    const sited = await store.createSite(tenantId, account.account.id, plant.site);
+    const site = "site" in sited ? sited.site : undefined;
+    if (!site) fail(`create site ${plant.site}`, sited);
     const slug = plant.machine.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const machine = await store.createMachine(tenantId, {
       name: plant.machine,
       storedFileName: `${slug}.glb`,
       originalFileName: `${slug}.glb`,
-      parts: [{ id: `${slug}-p1`, name: "Drive belt", qty: 2 }],
+      parts: [{ id: `${slug}-p1`, name: "Drive belt", qty: 2, meshName: `${slug}-p1` }],
       unmatched: [],
-      siteId: site.site.id,
+      siteId: site.id,
     });
-    const login = await store.createCustomer(tenantId, plant.login, passwordHash, {
-      siteIds: [site.site.id],
+    const created = await store.createCustomer(tenantId, plant.login, passwordHash, {
+      siteIds: [site.id],
       machineIds: [machine.id],
       name: `${plant.name} operations`,
     });
-    if (!("user" in login)) fail(`create login ${plant.login}`, login);
+    const user = "user" in created ? created.user : undefined;
+    if (!user) fail(`create login ${plant.login}`, created);
     const quote = await store.createQuote(tenantId, {
       machineId: machine.id,
       items: [{ id: `${slug}-p1`, qty: 1 }],
-      customerId: login.user.id,
-      customerEmail: login.user.email,
+      customerId: user.id,
+      customerEmail: user.email,
     });
     if ("error" in quote) fail(`create quote for ${plant.name}`, quote);
-    const ticket = await store.createTicket(tenantId, {
+    const opened = await store.createTicket(tenantId, {
       machineId: machine.id,
       title: `${plant.machine} stops on cycle start`,
-      customerId: login.user.id,
-      customerEmail: login.user.email,
-      actor: { id: login.user.id, email: login.user.email, role: "customer" },
+      customerId: user.id,
+      customerEmail: user.email,
+      actor: { id: user.id, email: user.email, role: "customer" },
     });
-    if (!("ticket" in ticket)) fail(`create ticket for ${plant.name}`, ticket);
+    const ticket = "ticket" in opened ? opened.ticket : undefined;
+    if (!ticket) fail(`create ticket for ${plant.name}`, opened);
     rows.push({
       host: host.name,
       role: "customer",
@@ -118,7 +121,7 @@ for (const host of HOSTS) {
       plant: plant.name,
       machineId: machine.id,
       quote: `#${quote.number} ${quote.id}`,
-      ticket: `#${ticket.ticket.number} ${ticket.ticket.id}`,
+      ticket: `#${ticket.number} ${ticket.id}`,
     });
   }
 }
