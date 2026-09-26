@@ -505,6 +505,69 @@ export function marketingCopyBan(text: string) {
   return /\bPlatform\b|\bHosts\b|\bHost staff\b|\bmulti-tenant\b/i.test(text);
 }
 
+export type WorkflowStep = "hub" | "find" | "select" | "quote" | "send" | "handoff";
+
+/** Scroll breakpoints for the parts→quote workflow chapter (~6 beats). */
+export const WORKFLOW_FIND_START = 0.14;
+export const WORKFLOW_SELECT_START = 0.3;
+export const WORKFLOW_QUOTE_START = 0.46;
+export const WORKFLOW_SEND_START = 0.62;
+export const WORKFLOW_HANDOFF_START = 0.78;
+
+export function workflowStep(playhead: number): WorkflowStep {
+  const p = clampDemoScrollProgress(playhead);
+  if (p >= WORKFLOW_HANDOFF_START) {
+    return "handoff";
+  }
+  if (p >= WORKFLOW_SEND_START) {
+    return "send";
+  }
+  if (p >= WORKFLOW_QUOTE_START) {
+    return "quote";
+  }
+  if (p >= WORKFLOW_SELECT_START) {
+    return "select";
+  }
+  if (p >= WORKFLOW_FIND_START) {
+    return "find";
+  }
+  return "hub";
+}
+
+/** 0–1 mix for sliding the model out into the quote-request view. */
+export function workflowHandoffMix(playhead: number) {
+  const p = clampDemoScrollProgress(playhead);
+  if (p <= WORKFLOW_HANDOFF_START) {
+    return 0;
+  }
+  const t = (p - WORKFLOW_HANDOFF_START) / (1 - WORKFLOW_HANDOFF_START);
+  return clampDemoScrollProgress(t);
+}
+
+/** Scroll-driven yaw for the marketing workflow cell (radians). */
+export function workflowSpinYaw(playhead: number) {
+  const p = clampDemoScrollProgress(playhead);
+  if (p < WORKFLOW_FIND_START) {
+    return 0.12;
+  }
+  if (p < WORKFLOW_SELECT_START) {
+    const t = (p - WORKFLOW_FIND_START) / (WORKFLOW_SELECT_START - WORKFLOW_FIND_START);
+    return 0.12 + t * 1.75;
+  }
+  return 1.87;
+}
+
+export const WORKFLOW_DEMO_PART = "PN-ROLL-2104";
+export const WORKFLOW_DEMO_PART_NAME = "Infeed drive roller";
+export const WORKFLOW_DEMO_QTY = 2;
+
+const TUTORIAL_COPY =
+  /\b(scroll to|watch|see how|imagine|discover|unlock|experience|journey|seamless|magic|keep scrolling|open the cell|orbit the|tap the roller)\b/i;
+
+export function marketingTutorialCopyBan(text: string) {
+  return TUTORIAL_COPY.test(text);
+}
+
 export const DEMO_ALL_SCRIPT_BEATS: readonly DemoBeat[] = [
   ...DEMO_QUOTE_SCRIPT,
   ...DEMO_TICKET_SCRIPT,

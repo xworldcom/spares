@@ -3,67 +3,72 @@
 import Link from "next/link";
 import { LandingCell } from "@/components/landing/LandingCell";
 import { LandingDemoScrub } from "@/components/landing/LandingDemoScrub";
-import { LandingProductDemo } from "@/components/landing/LandingProductDemo";
+import { LandingWorkflowDemo } from "@/components/landing/LandingWorkflowDemo";
 
 export function LandingMarketing() {
   return (
     <div className="landing-marketing" aria-label="About OEE360">
-      <section id="product-story" className="landing-section landing-section--stage">
-        <p className="landing-section-kicker">Care and quotes</p>
-        <h2 className="landing-section-title">Two threads. One workspace.</h2>
+      <section
+        id="machine-model"
+        className="landing-section landing-section--cell landing-section--hero"
+      >
+        <p className="landing-section-kicker">Machine model</p>
+        <h2 className="landing-section-title">Parts on the published schematic.</h2>
         <p className="landing-section-lede">
-          Scroll to walk a parts quote, then a Care ticket. The workspace stays on screen while the
-          story moves.
+          The same GLB your OEM published — quotes, tickets, manuals, and service
+          history stay on this machine, not in a separate portal.
+        </p>
+        <LandingCell />
+      </section>
+
+      <section id="cad-ingest" className="landing-section landing-section--ingest">
+        <p className="landing-section-kicker">SolidWorks &amp; CAD</p>
+        <h2 className="landing-section-title">Assembly packs beside your .sldasm.</h2>
+        <p className="landing-section-lede">
+          The Spares macro writes a GLB and parts list next to the assembly. Staff
+          publish once; plants quote against that output on the floor.
+        </p>
+        <ul className="landing-ingest-formats" aria-label="Supported upload formats">
+          <li className="landing-ingest-pill">.sldasm</li>
+          <li className="landing-ingest-pill">.sldprt</li>
+          <li className="landing-ingest-pill">.glb</li>
+          <li className="landing-ingest-pill">Spares macro pack</li>
+        </ul>
+        <p className="landing-ingest-note">
+          Upload path matches staff publish — one schematic for parts and care.
+        </p>
+      </section>
+
+      <section id="product-story" className="landing-section landing-section--stage">
+        <p className="landing-section-kicker">Parts quote</p>
+        <h2 className="landing-section-title">One machine hub. Quote from the model.</h2>
+        <p className="landing-section-lede">
+          Parts, tickets, manuals, and service reports on one machine. The chapter
+          below is the parts quote path — PN on the model through request received.
         </p>
 
         <div className="landing-demo">
           <div className="landing-demo-scrub-stack">
-            <LandingDemoScrub ariaLabel="Parts quote demo">
+            <LandingDemoScrub ariaLabel="Parts quote on machine model">
               {({ progress, reduceMotion }) => (
-                <LandingProductDemo
-                  variant="quote"
-                  progress={progress}
-                  reduceMotion={reduceMotion}
-                  scrubbed
-                />
-              )}
-            </LandingDemoScrub>
-
-            <LandingDemoScrub ariaLabel="Machine Care demo">
-              {({ progress, reduceMotion }) => (
-                <LandingProductDemo
-                  variant="ticket"
-                  progress={progress}
-                  reduceMotion={reduceMotion}
-                  scrubbed
-                />
+                <LandingWorkflowDemo progress={progress} reduceMotion={reduceMotion} />
               )}
             </LandingDemoScrub>
           </div>
         </div>
       </section>
 
-      <section className="landing-section landing-section--cell">
-        <p className="landing-section-kicker">The cell</p>
-        <h2 className="landing-section-title">Turn the machine. Then tap the part.</h2>
-        <p className="landing-section-lede">
-          Every spare sits on the model the floor already trusts. Drag to orbit. This is a
-          generic palletizer cell, not a customer asset.
-        </p>
-        <LandingCell />
-      </section>
-
       <section className="landing-section landing-section--cta">
         <h2 className="landing-section-title">Request access</h2>
         <p className="landing-section-lede">
-          OEE360 stays invite-only. Tell us about your company and we will review each inquiry.
-          No automatic accounts.
+          Invite-only for plants and OEM partners on palletizers, case packers, and
+          similar cells. Share your machines; we review each inquiry. No public signup.
         </p>
         <Link href="/inquire" className="landing-cta">
           Inquire about OEE360
         </Link>
         <p className="landing-section-foot">
-          Already have a login? Scroll up to sign in with password or Microsoft SSO.
+          Already have a login? Sign in above with password or Microsoft SSO.
         </p>
       </section>
     </div>

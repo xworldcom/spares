@@ -295,8 +295,43 @@
 }
 
 .landing-section--stage,
-.landing-section--cell {
+.landing-section--cell,
+.landing-section--ingest {
   max-width: 72rem;
+}
+
+.landing-section--hero .landing-cell {
+  height: min(42rem, 92vw);
+  min-height: 24rem;
+  margin-top: 1.25rem;
+}
+
+.landing-ingest-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-ingest-pill {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(236, 234, 228, 0.14);
+  border-radius: 0.5rem;
+  background: rgba(12, 13, 15, 0.55);
+  color: rgba(236, 234, 228, 0.82);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.landing-ingest-note {
+  margin: 1rem 0 0;
+  max-width: 38rem;
+  color: rgba(236, 234, 228, 0.5);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .landing-section:first-child {
@@ -845,6 +880,401 @@
 
   to {
     transform: rotate(5deg) scale(1.08);
+  }
+}
+
+.landing-workflow-cell {
+  position: absolute;
+  inset: 0;
+}
+
+.landing-workflow-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+@media (min-width: 900px) {
+  .landing-workflow-hub {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+  }
+}
+
+.landing-workflow-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.landing-workflow-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(236, 234, 228, 0.12);
+  color: rgba(236, 234, 228, 0.48);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.landing-workflow-tab.is-active {
+  border-color: rgba(236, 234, 228, 0.28);
+  background: rgba(236, 234, 228, 0.08);
+  color: rgba(236, 234, 228, 0.92);
+}
+
+.landing-workflow-stage {
+  --wf-handoff: 0;
+  position: relative;
+  display: grid;
+  gap: 0.85rem;
+  min-height: min(30rem, 68vw);
+  overflow: hidden;
+}
+
+@media (min-width: 900px) {
+  .landing-workflow-stage {
+    grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.8fr);
+    align-items: stretch;
+    min-height: 24rem;
+  }
+}
+
+.landing-workflow-model-panel {
+  position: relative;
+  min-height: 17rem;
+  transform: translate3d(calc(-108% * var(--wf-handoff)), 0, 0);
+  opacity: calc(1 - var(--wf-handoff) * 0.92);
+  transition:
+    transform 0.08s linear,
+    opacity 0.08s linear;
+}
+
+.landing-workflow-stage.is-reduced .landing-workflow-model-panel {
+  transition: none;
+}
+
+.landing-workflow-model {
+  position: relative;
+  height: 100%;
+  min-height: 17rem;
+  overflow: hidden;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(236, 234, 228, 0.1);
+  background: #07080a;
+}
+
+.landing-workflow-hotspot {
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  left: 52%;
+  top: 46%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.28s ease;
+}
+
+.landing-workflow-hotspot.is-on {
+  opacity: 1;
+}
+
+.landing-workflow-hotspot-ring {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  border: 2px solid rgba(10, 132, 255, 0.85);
+  box-shadow: 0 0 0 5px rgba(10, 132, 255, 0.16);
+}
+
+.landing-workflow-hotspot-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.3rem);
+  transform: translateX(-50%);
+  padding: 0.18rem 0.42rem;
+  border-radius: 0.35rem;
+  background: rgba(10, 132, 255, 0.92);
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.landing-workflow-part-sheet {
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
+  top: 3.25rem;
+  left: 0.75rem;
+  max-width: min(20rem, calc(100% - 1.5rem));
+  border-radius: 1rem;
+  background: rgba(16, 17, 20, 0.92);
+  border: 1px solid rgba(236, 234, 228, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.landing-workflow-part-sheet-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.landing-workflow-part-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.landing-workflow-part-id {
+  margin: 0.15rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: rgba(236, 234, 228, 0.55);
+}
+
+.landing-workflow-part-meta {
+  margin: 0.15rem 0 0;
+  font-size: 11px;
+  color: rgba(236, 234, 228, 0.45);
+}
+
+.landing-workflow-add {
+  flex-shrink: 0;
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.landing-workflow-side {
+  display: flex;
+  min-height: 12rem;
+  opacity: calc(1 - var(--wf-handoff));
+  transform: translate3d(calc(12% * var(--wf-handoff)), 0, 0);
+  transition:
+    opacity 0.08s linear,
+    transform 0.08s linear;
+}
+
+.landing-workflow-stage.is-handoff .landing-workflow-side {
+  pointer-events: none;
+}
+
+.landing-workflow-quote-sheet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0.55rem 1rem 1rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(236, 234, 228, 0.14);
+  background: rgba(12, 13, 15, 0.96);
+}
+
+.landing-workflow-quote-sheet-handle {
+  align-self: center;
+  width: 2.5rem;
+  height: 0.28rem;
+  margin-bottom: 0.55rem;
+  border-radius: 999px;
+  background: rgba(236, 234, 228, 0.22);
+}
+
+.landing-workflow-quote-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.landing-workflow-quote-sub {
+  margin: 0.2rem 0 0;
+  color: rgba(236, 234, 228, 0.55);
+  font-size: 14px;
+}
+
+.landing-workflow-quote-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: rgba(236, 234, 228, 0.88);
+}
+
+.landing-workflow-quote-lines {
+  flex: 1;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-workflow-quote-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.55rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(236, 234, 228, 0.1);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.landing-workflow-quote-line-main {
+  display: flex;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.landing-workflow-quote-thumb {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: #07080a;
+  color: rgba(236, 234, 228, 0.4);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.landing-workflow-quote-line-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.landing-workflow-quote-line-id {
+  margin: 0.15rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: rgba(236, 234, 228, 0.52);
+}
+
+.landing-workflow-quote-line-meta {
+  margin: 0.2rem 0 0;
+  font-size: 12px;
+  color: rgba(236, 234, 228, 0.45);
+}
+
+.landing-workflow-quote-qty {
+  flex-shrink: 0;
+  padding-top: 0.35rem;
+}
+
+.landing-workflow-quote-qty-num {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-workflow-request-quote {
+  margin-top: 0.85rem;
+  width: 100%;
+  min-height: 2.85rem;
+  border: 0;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.landing-workflow-quote-sheet.is-send .landing-workflow-request-quote {
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.35);
+}
+
+.landing-workflow-request {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.05rem 1.15rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(236, 234, 228, 0.12);
+  background: rgba(8, 9, 11, 0.98);
+  opacity: 0;
+  transform: translate3d(12%, 0, 0);
+  pointer-events: none;
+}
+
+.landing-workflow-request.is-visible {
+  opacity: var(--wf-handoff);
+  transform: translate3d(calc(12% * (1 - var(--wf-handoff))), 0, 0);
+}
+
+.landing-workflow-stage.is-handoff .landing-workflow-request.is-visible {
+  pointer-events: auto;
+}
+
+.landing-workflow-request-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.landing-workflow-request-status {
+  margin: 0;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(10, 132, 255, 0.32);
+  background: rgba(10, 132, 255, 0.1);
+  color: rgba(236, 234, 228, 0.88);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.landing-workflow-request-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-workflow-request-lines li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.55rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(236, 234, 228, 0.1);
+}
+
+.landing-workflow-request-line-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+}
+
+.landing-workflow-request-line-qty {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-workflow .quote-progress {
+  margin: 0;
+}
+
+.landing-workflow .quote-progress-caption {
+  color: rgba(236, 234, 228, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-workflow-model-panel,
+  .landing-workflow-side,
+  .landing-workflow-request.is-visible {
+    transition: none;
   }
 }
 

@@ -21,7 +21,16 @@ import {
   demoScrubDebugEnabled,
   demoSectionScrollProgress,
   marketingCopyBan,
+  marketingTutorialCopyBan,
   reduceDemoFrame,
+  workflowHandoffMix,
+  workflowSpinYaw,
+  workflowStep,
+  WORKFLOW_FIND_START,
+  WORKFLOW_HANDOFF_START,
+  WORKFLOW_QUOTE_START,
+  WORKFLOW_SELECT_START,
+  WORKFLOW_SEND_START,
 } from "./landing-demo.ts";
 
 const MARKETING_FILES = [
@@ -32,6 +41,8 @@ const MARKETING_FILES = [
   "src/components/landing/LandingScrollPeek.tsx",
   "src/components/landing/LandingCell.tsx",
   "src/components/landing/LandingBackToTop.tsx",
+  "src/components/landing/LandingWorkflowDemo.tsx",
+  "src/components/landing/LandingWorkflowCell.tsx",
 ];
 
 describe("reduceDemoFrame", () => {
@@ -283,7 +294,8 @@ describe("landing scrub layout", () => {
 
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
     const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
-    assert.equal((marketing.match(/<LandingDemoScrub/g) ?? []).length, 2);
+    assert.equal((marketing.match(/<LandingDemoScrub/g) ?? []).length, 1);
+    assert.ok(marketing.includes("LandingWorkflowDemo"));
     assert.equal(marketing.includes("LandingDemoPerspective"), false);
     assert.equal(marketing.includes("Staff (OEM)"), false);
     assert.equal(marketing.includes("Flip between"), false);
@@ -335,7 +347,32 @@ describe("landing cell stage", () => {
   });
 });
 
+describe("workflow demo", () => {
+  it("steps hub → find → select → quote → send → handoff as scroll advances", () => {
+    assert.equal(workflowStep(0), "hub");
+    assert.equal(workflowStep(WORKFLOW_FIND_START), "find");
+    assert.equal(workflowStep(WORKFLOW_SELECT_START), "select");
+    assert.equal(workflowStep(WORKFLOW_QUOTE_START), "quote");
+    assert.equal(workflowStep(WORKFLOW_SEND_START), "send");
+    assert.equal(workflowStep(WORKFLOW_HANDOFF_START), "handoff");
+    assert.equal(workflowStep(1), "handoff");
+    assert.equal(workflowHandoffMix(WORKFLOW_HANDOFF_START), 0);
+    assert.ok(workflowHandoffMix(1) > 0.9);
+    const midSpin = workflowSpinYaw((WORKFLOW_FIND_START + WORKFLOW_SELECT_START) / 2);
+    const endSpin = workflowSpinYaw(WORKFLOW_SELECT_START);
+    assert.ok(midSpin < endSpin);
+    assert.ok(endSpin > 1);
+  });
+});
+
 describe("marketing copy", () => {
+  it("keeps tutorial and prompt-sounding language out of home marketing", () => {
+    for (const file of MARKETING_FILES) {
+      const text = readFileSync(file, "utf8");
+      assert.equal(marketingTutorialCopyBan(text), false, file);
+    }
+  });
+
   it("keeps Platform and host-admin language out of home marketing", () => {
     for (const file of MARKETING_FILES) {
       const text = readFileSync(file, "utf8");
