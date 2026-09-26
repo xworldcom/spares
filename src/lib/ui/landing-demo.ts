@@ -559,7 +559,7 @@ export function workflowSpinYaw(playhead: number) {
 
 export const WORKFLOW_DEMO_PART = "PN-ROLL-2104";
 export const WORKFLOW_DEMO_PART_NAME = "Infeed drive roller";
-export const WORKFLOW_DEMO_QTY = 2;
+export const WORKFLOW_DEMO_QTY: number = 2;
 
 const TUTORIAL_COPY =
   /\b(scroll to|watch|see how|imagine|discover|unlock|experience|journey|seamless|magic|keep scrolling|open the cell|orbit the|tap the roller)\b/i;
