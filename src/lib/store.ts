@@ -2712,6 +2712,16 @@ export function updatePerson(
       }
     }
 
+    if (patch.companyAccess !== undefined) {
+      const companies = [
+        ...new Set(patch.companyAccess.map((row) => row.trim()).filter(Boolean)),
+      ];
+      next = {
+        ...next,
+        companyAccess: companies.length > 0 ? companies : undefined,
+      };
+    }
+
     if (patch.siteIds !== undefined || patch.machineIds !== undefined) {
       const known = new Set(
         activeSites(filterByTenant(db.sites ?? [], tenantId)).map((site) => site.id),
@@ -3034,6 +3044,13 @@ function withCustomerMachineGrant(
     return db;
   }
   if (canAccessMachine(user, machine, db.sites ?? [], db.customers ?? [])) {
+    return db;
+  }
+  const hasSiteIds = (user.siteIds?.length ?? 0) > 0;
+  const hasMachineIds = (user.machineIds?.length ?? 0) > 0;
+  const hasCompanyAccess = (user.companyAccess?.length ?? 0) > 0;
+  if (hasCompanyAccess && !hasSiteIds && !hasMachineIds) {
+    // Company-wide legacy access: never narrow to a single machineId.
     return db;
   }
   const users = db.users.slice();

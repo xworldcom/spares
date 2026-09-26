@@ -775,4 +775,66 @@ describe("model-less machines", () => {
     const loaded = await getMachine(created.machine.id, T);
     assert.equal(loaded?.storedFileName, "spare-press.glb");
   });
+
+  it("does not narrow legacy company-wide access when granting a quoted machine", async () => {
+    await isolatedDataDir();
+    process.env.SPARES_ALLOW_SEED = "false";
+    const account = await createCustomerAccount("Demo Co", T);
+    assert.equal("account" in account, true);
+    if (!("account" in account)) {
+      return;
+    }
+    const site = await createSite(T, account.account.id, "Plant 1");
+    assert.equal("site" in site, true);
+    if (!("site" in site)) {
+      return;
+    }
+    const lineA = await createMachine(T, {
+      name: "Line A",
+      siteId: site.site.id,
+      storedFileName: "line-a.glb",
+      originalFileName: "line-a.glb",
+      parts: [],
+      unmatched: [],
+    });
+    const lineB = await createMachine(T, {
+      name: "Line B",
+      siteId: site.site.id,
+      storedFileName: "line-b.glb",
+      originalFileName: "line-b.glb",
+      parts: [],
+      unmatched: [],
+    });
+    const person = await createCustomer(T, "user@demo.com", "hash", {});
+    assert.equal("user" in person, true);
+    if (!("user" in person)) {
+      return;
+    }
+    const { updatePerson: patchPerson, findUserById } = await import("./store.ts");
+    const withCompany = await patchPerson(person.user.id, T, {
+      companyAccess: ["Demo Co"],
+    });
+    assert.equal("user" in withCompany, true);
+    if (!("user" in withCompany)) {
+      return;
+    }
+    assert.deepEqual(withCompany.user.companyAccess, ["Demo Co"]);
+
+    await grantCustomerMachine(T, person.user.id, lineB.id);
+    const after = await findUserById(person.user.id);
+    assert.ok(after);
+    assert.deepEqual(after?.companyAccess, ["Demo Co"]);
+    assert.deepEqual(after?.machineIds, []);
+    const org = await import("./store.ts").then((m) => m.getOrgContext(T));
+    const sites = (await org).sites;
+    const customers = (await org).customers;
+    assert.equal(
+      canAccessMachine(after!, lineA, sites, customers),
+      true,
+    );
+    assert.equal(
+      canAccessMachine(after!, lineB, sites, customers),
+      true,
+    );
+  });
 });
