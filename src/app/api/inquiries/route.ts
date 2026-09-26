@@ -2,15 +2,25 @@ import {
   parseAccessInquiryBody,
   type AccessInquiryInput,
 } from "@/lib/access-inquiry";
+import { isSameOriginRequest } from "@/lib/cors";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { allowRateLimit, clientIp } from "@/lib/rate-limit";
 import { createAccessInquiry } from "@/lib/store";
 
 type CreateInquiryBody = AccessInquiryInput & { company_fax?: unknown };
 
+const MAX_INQUIRY_BYTES = 16 * 1024;
+
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return error("Origin not allowed", 403);
+  }
   if (!allowRateLimit(`inquiry:${clientIp(request)}`, 4, 60_000)) {
     return error("Too many requests. Try again in a minute.", 429);
+  }
+  const contentLength = Number(request.headers.get("content-length"));
+  if (contentLength > MAX_INQUIRY_BYTES) {
+    return error("Request too large", 413);
   }
 
   const body = await readJson<CreateInquiryBody>(request);
