@@ -475,6 +475,7 @@ export function QuoteWorkspace({
           activities={threadReady ? quote.activities : []}
           role={role}
           selfEmail={user.email}
+          viewerReadAt={quote.viewerReadAt}
           busy={busy || !threadReady}
           onSend={sendActivity}
           threadKind="quote"

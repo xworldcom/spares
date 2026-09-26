@@ -786,6 +786,7 @@ export function toPublicQuote(
     shipments: shipmentsForRole(quote.shipments, user.role, quote.status),
     activities: quote.activities,
     unread: isQuoteUnreadForUser(quote, user),
+    viewerReadAt: quote.lastReadAt[user.id],
     hasPoFile: Boolean(quote.poStoredFileName),
   };
   if (quote.note) {

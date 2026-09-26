@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useConversationSheetChrome } from "@/components/chat/ConversationSheetContext";
 import { ChatAttachmentView } from "@/components/chat/ChatAttachmentView";
 import { formatWhen } from "@/components/quote/quote-format";
 import {
@@ -14,6 +15,7 @@ import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
 import { assistantActorLabel, isAssistantActivity } from "@/lib/assistant/actor";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
+import { firstUnreadActivityIndex } from "@/lib/ui/conversation-unread";
 import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
 
 export type ActivitySendInput = {
@@ -82,6 +84,7 @@ export function QuoteActivityFeed({
   assistantAvailable,
   assistantPaused,
   onAssistantPausedChange,
+  viewerReadAt,
 }: {
   activities: QuoteActivity[];
   role: Role;
@@ -99,7 +102,10 @@ export function QuoteActivityFeed({
   assistantAvailable?: boolean;
   assistantPaused?: boolean;
   onAssistantPausedChange?: (paused: boolean) => Promise<void>;
+  /** Current viewer read watermark — used to jump to the first unread message. */
+  viewerReadAt?: string;
 }) {
+  const sheetChrome = useConversationSheetChrome();
   const [text, setText] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -113,8 +119,15 @@ export function QuoteActivityFeed({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const seenIdsRef = useRef(new Set<string>());
   const bootstrappedRef = useRef(false);
+  const unreadJumpedRef = useRef(false);
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
   const self = { email: selfEmail, role };
+  const firstUnreadIndex = firstUnreadActivityIndex(activities, self, viewerReadAt);
+  const lastOwnIndex = activities.reduce(
+    (found, activity, index) =>
+      activityLane(activity, self) === "own" ? index : found,
+    -1,
+  );
 
   useEffect(() => {
     if (!bootstrappedRef.current) {
@@ -139,16 +152,51 @@ export function QuoteActivityFeed({
   }, [activities]);
 
   useEffect(() => {
+    unreadJumpedRef.current = false;
+  }, [threadId]);
+
+  useEffect(() => {
     const root = scrollerRef.current;
     if (!root) {
       return;
     }
+    const sheetSnap = sheetChrome?.snap;
+    const shouldJumpUnread =
+      layout === "sheet" &&
+      firstUnreadIndex !== null &&
+      !unreadJumpedRef.current &&
+      sheetSnap &&
+      sheetSnap !== "peek" &&
+      sheetSnap !== "out";
+
+    if (shouldJumpUnread) {
+      const jump = () => {
+        const marker = root.querySelector<HTMLElement>(`[data-unread-anchor="true"]`);
+        if (!marker) {
+          return;
+        }
+        marker.scrollIntoView({ block: "start" });
+        unreadJumpedRef.current = true;
+      };
+      const id = window.setTimeout(jump, 460);
+      return () => {
+        window.clearTimeout(id);
+      };
+    }
+
     const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
-    // Sheet layout always docks to the latest context (peek/reply/full stick handler).
-    if (layout === "sheet" || nearBottom) {
+    // Sheet layout docks to latest unless we are browsing unread history at full.
+    if (layout === "sheet") {
+      if (sheetSnap === "full" && unreadJumpedRef.current) {
+        return;
+      }
+      root.scrollTop = root.scrollHeight;
+      return;
+    }
+    if (nearBottom) {
       root.scrollTop = root.scrollHeight;
     }
-  }, [activities, layout]);
+  }, [activities, layout, firstUnreadIndex, sheetChrome?.snap, threadId]);
 
   useEffect(() => {
     const node = inputRef.current;
@@ -281,6 +329,7 @@ export function QuoteActivityFeed({
               <li
                 key={activity.id}
                 className={rowClass}
+                data-unread-anchor={index === firstUnreadIndex ? "true" : undefined}
                 data-stacked={stacked ? "true" : "false"}
                 data-end={lastInStack ? "true" : "false"}
                 onAnimationEnd={() => {
@@ -310,6 +359,11 @@ export function QuoteActivityFeed({
                   )
                 ) : null}
                 <div className="imsg-stack">
+                  {index === firstUnreadIndex ? (
+                    <p className="imsg-unread-marker" role="status">
+                      Start reading here
+                    </p>
+                  ) : null}
                   {!own && !stacked ? (
                     <p className="imsg-meta">{label}</p>
                   ) : null}
@@ -329,14 +383,27 @@ export function QuoteActivityFeed({
                     ) : null}
                   </div>
                   {lastInStack ? (
-                    <p className="imsg-when">{formatWhen(activity.at)}</p>
+                    <p className="imsg-when">
+                      {formatWhen(activity.at)}
+                      {customerReadReceipts?.length && index === lastOwnIndex
+                        ? (
+                            <span className="imsg-when-read">
+                              {" · "}
+                              Read by{" "}
+                              {customerReadReceipts
+                                .map((row) => row.name?.trim() || displayNameFromEmail(row.email))
+                                .join(", ")}
+                            </span>
+                          )
+                        : null}
+                    </p>
                   ) : null}
                 </div>
               </li>
             );
           })
         )}
-        {customerReadReceipts?.length ? (
+        {customerReadReceipts?.length && layout !== "sheet" ? (
           <CustomerReadReceipts receipts={customerReadReceipts} />
         ) : null}
       </ol>

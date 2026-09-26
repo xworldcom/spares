@@ -2,12 +2,15 @@
 
 import { useRef, type ReactNode } from "react";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import {
+  ConversationSheetProvider,
+} from "@/components/chat/ConversationSheetContext";
 import { useSnapSheet } from "@/lib/hooks/useSnapSheet";
 
 export function ConversationSheet({
-  title: _title,
+  title,
   peekLine: _peekLine,
-  unread: _unread,
+  unread,
   children,
   layout = "overlay",
   open = true,
@@ -25,18 +28,26 @@ export function ConversationSheet({
 }) {
   const desktop = useDesktopStage();
   const card = useRef<HTMLElement>(null);
-  const { sheet, dragging, expand, toggleHandle, dragMoved, pointerHandlers } =
-    useSnapSheet({
-      cardRef: card,
-      open,
-      onOpenChange,
-      desktopStage: desktop,
-      scrollBodySelector: ".imsg-thread",
-    });
+  const {
+    sheet,
+    dragging,
+    expand,
+    toggleHandle,
+    dragMoved,
+    collapseToPeek,
+    pointerHandlers,
+  } = useSnapSheet({
+    cardRef: card,
+    open,
+    onOpenChange,
+    desktopStage: desktop,
+    scrollBodySelector: ".imsg-thread",
+  });
 
   const overlayMobile = layout === "overlay" && !desktop;
   const expanded =
     sheet === "full" || sheet === "reply" || (layout === "inline" && desktop);
+  const showChrome = overlayMobile && sheet !== "out";
 
   return (
     <aside
@@ -80,9 +91,45 @@ export function ConversationSheet({
           toggleHandle();
         }}
       />
-      <div className="conversation-sheet-body min-h-0 flex flex-1 flex-col">
-        {children}
-      </div>
+      {showChrome ? (
+        <div
+          className={
+            sheet === "peek"
+              ? "conversation-sheet-toolbar conversation-sheet-toolbar--peek"
+              : "conversation-sheet-toolbar"
+          }
+        >
+          <p className="conversation-sheet-toolbar-title">
+            {title}
+            {unread ? (
+              <span className="conversation-sheet-unread-dot" aria-label="Unread messages" />
+            ) : null}
+          </p>
+          {sheet === "peek" ? null : (
+            <button
+              type="button"
+              className="conversation-sheet-close"
+              onClick={(event) => {
+                event.stopPropagation();
+                collapseToPeek();
+              }}
+            >
+              Close
+            </button>
+          )}
+        </div>
+      ) : null}
+      <ConversationSheetProvider
+        value={{
+          snap: sheet,
+          dragging,
+          collapse: collapseToPeek,
+        }}
+      >
+        <div className="conversation-sheet-body min-h-0 flex flex-1 flex-col">
+          {children}
+        </div>
+      </ConversationSheetProvider>
     </aside>
   );
 }
