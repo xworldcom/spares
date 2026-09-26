@@ -14,12 +14,14 @@ export function LandingScreen({
   microsoftSignInEnabled = false,
   passwordLoginEnabled = true,
   authErrorCode = null,
+  deniedTenantId = null,
   showMarketing = false,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
   passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
+  deniedTenantId?: string | null;
   showMarketing?: boolean;
 }) {
   const [entered, setEntered] = useState(false);
@@ -54,6 +56,7 @@ export function LandingScreen({
               microsoftSignInEnabled={microsoftSignInEnabled}
               passwordLoginEnabled={passwordLoginEnabled}
               authErrorCode={authErrorCode}
+              deniedTenantId={deniedTenantId}
             />
           </div>
         </div>
