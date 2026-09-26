@@ -255,6 +255,7 @@ export function TicketDetail({
           activities={threadReady ? ticket.activities : []}
           role={user.role}
           selfEmail={user.email}
+          viewerReadAt={ticket.viewerReadAt}
           busy={busy || !threadReady}
           onSend={onSend}
           threadKind="ticket"

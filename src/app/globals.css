@@ -330,7 +330,7 @@
   --peek-h: 5.75rem;
   /* Peek thread stays put; composer opens into this delta; history waits for full. */
   --reply-h: 10.25rem;
-  --full-h: min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem));
+  --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
   --sheet-h: var(--peek-h);
   --drag-h: 0px;
 }
@@ -452,6 +452,79 @@
 
 .conversation-sheet-body {
   min-height: 0;
+}
+
+.conversation-sheet-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 1rem 0.35rem;
+}
+
+.conversation-sheet-toolbar--peek {
+  padding-bottom: 0.15rem;
+}
+
+.conversation-sheet-toolbar--peek .conversation-sheet-toolbar-title {
+  font-size: 13px;
+  color: var(--spares-muted);
+}
+
+.conversation-sheet-toolbar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.conversation-sheet-unread-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--spares-accent, #8ee0a8);
+}
+
+.conversation-sheet-close {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--spares-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.conversation-sheet:not(.is-inline).is-reply .conversation-sheet-body,
+.conversation-sheet:not(.is-inline).is-full .conversation-sheet-body {
+  min-height: 0;
+}
+
+.conversation-sheet:not(.is-inline).is-reply .imsg-card--sheet,
+.conversation-sheet:not(.is-inline).is-full .imsg-card--sheet {
+  min-height: 0;
+}
+
+.imsg-unread-marker {
+  margin: 0 0 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(142, 224, 168, 0.16);
+  color: var(--spares-accent, #8ee0a8);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.imsg-when-read {
+  color: var(--spares-muted);
+  font-weight: 500;
 }
 
 @media (min-width: 1024px) {
@@ -1328,7 +1401,7 @@ html.spares-embed .spares-app-stage {
   .quote-workspace .conversation-sheet-spacer,
   .care-stack .conversation-sheet-spacer {
     display: block;
-    height: calc(var(--peek-h, 5.75rem) + 0.5rem);
+    height: calc(var(--peek-h, 5.75rem) + 2.25rem);
   }
 }
 
@@ -2832,6 +2905,13 @@ html.spares-embed .spares-app-stage {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+@media (max-width: 1023px) {
+  .tickets-workspace-detail .care-stack {
+    padding-bottom: calc(var(--peek-h, 5.75rem) + 1rem);
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 
 .care-stats {

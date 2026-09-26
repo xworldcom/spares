@@ -317,6 +317,7 @@ export function toPublicTicket(
     customerEmail: ticket.customerEmail,
     activities: ticket.activities,
     unread: isTicketUnreadForUser(ticket, user),
+    viewerReadAt: ticket.lastReadAt[user.id],
     assistantPaused: ticket.assistantPaused,
     assistantEscalatedAt: ticket.assistantEscalatedAt,
   };

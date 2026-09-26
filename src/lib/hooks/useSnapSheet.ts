@@ -40,6 +40,17 @@ function tabBarPx() {
   return Number.isFinite(parsed) ? parsed : 56;
 }
 
+function headerPx() {
+  if (typeof window === "undefined") {
+    return 56;
+  }
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue("--spares-header")
+    .trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 56;
+}
+
 function heightForSnap(snap: ConversationSheetSnap) {
   if (snap === "out") {
     return 0;
@@ -51,7 +62,8 @@ function heightForSnap(snap: ConversationSheetSnap) {
     // Peek thread + composer — history waits for full.
     return remPx(10.25);
   }
-  return Math.min(window.innerHeight * 0.92, window.innerHeight - tabBarPx() - 48);
+  const inset = tabBarPx() + headerPx() + 8;
+  return Math.min(window.innerHeight * 0.92, window.innerHeight - inset);
 }
 
 function nearestSnap(height: number, velocity: number): ConversationSheetSnap {
@@ -141,6 +153,8 @@ export function useSnapSheet({
   /** Ignore the synthetic click that follows a pointer step so peek does not skip to full. */
   const steppedAtRef = useRef(0);
 
+  const controlledOpen = typeof onOpenChange === "function";
+
   function setOpen(next: boolean) {
     onOpenChange?.(next);
   }
@@ -195,11 +209,18 @@ export function useSnapSheet({
       setDraggingClass(false);
       return;
     }
+    if (!controlledOpen && !desktopStage) {
+      setSheet("peek");
+      clearInlineHeight();
+      setDragging(false);
+      setDraggingClass(false);
+      return;
+    }
     setSheet("out");
     clearInlineHeight();
     setDragging(false);
     setDraggingClass(false);
-  }, [open, desktopStage, cardRef]);
+  }, [open, desktopStage, cardRef, controlledOpen]);
 
   useEffect(() => {
     const body = cardRef.current?.querySelector(scrollBodySelector);
@@ -226,10 +247,10 @@ export function useSnapSheet({
   }, [sheet, open, scrollBodySelector, cardRef]);
 
   useEffect(() => {
-    if (dragging || sheet === "out") {
+    if (dragging || sheet === "out" || sheet === "full") {
       return;
     }
-    // Peek/reply always show the latest context; full keeps dock if already there.
+    // Peek/reply always show the latest context.
     if (sheet === "peek" || sheet === "reply") {
       dockedRef.current = true;
     }
@@ -253,11 +274,25 @@ export function useSnapSheet({
   }, [sheet, dragging]);
 
   function dismiss() {
+    if (!controlledOpen && !desktopStage) {
+      collapseToPeek();
+      return;
+    }
     setSheet("out");
     clearInlineHeight();
     setDragging(false);
     setDraggingClass(false);
     setOpen(false);
+  }
+
+  function collapseToPeek() {
+    steppedAtRef.current = performance.now();
+    setSheet("peek");
+    setOpen(true);
+    clearInlineHeight();
+    setDragging(false);
+    setDraggingClass(false);
+    dockedRef.current = true;
   }
 
   function hide() {
@@ -414,17 +449,18 @@ export function useSnapSheet({
   function settleTo(next: ConversationSheetSnap) {
     drag.current.on = false;
     drag.current.pending = false;
+    drag.current.moved = false;
     if (next === "peek" || next === "reply") {
       dockedRef.current = true;
     }
     steppedAtRef.current = performance.now();
     const target = heightForSnap(next);
     const live = cardRef.current?.getBoundingClientRect().height ?? target;
+    setDragging(false);
+    setDraggingClass(false);
     paintHeight(live);
     setSheet(next);
     setOpen(true);
-    setDragging(false);
-    setDraggingClass(false);
     if (Math.abs(live - target) < 2) {
       clearInlineHeight();
       return;
@@ -523,11 +559,6 @@ export function useSnapSheet({
     setSheet((current) =>
       stepToward(current === "out" ? "peek" : current, "up"),
     );
-    setOpen(true);
-  }
-
-  function collapseToPeek() {
-    setSheet("peek");
     setOpen(true);
   }
 

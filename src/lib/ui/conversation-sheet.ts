@@ -17,7 +17,7 @@ export const CONVERSATION_SHEET_PEEK_H = "5.75rem";
 /** Latest context + composer; history opens on the way to full. */
 export const CONVERSATION_SHEET_REPLY_H = "10.25rem";
 export const CONVERSATION_SHEET_FULL_H =
-  "min(92dvh, calc(100dvh - var(--spares-tabbar) - 3rem))";
+  "min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem))";
 
 /** Extra upward travel held at reply so the type bar sits before history rolls in. */
 export const REPLY_DETENT_PX = 32;
