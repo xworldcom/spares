@@ -24,10 +24,13 @@ import {
   marketingTutorialCopyBan,
   reduceDemoFrame,
   workflowHandoffMix,
+  workflowQuoteChatPlayhead,
   workflowSpinYaw,
   workflowStep,
   WORKFLOW_FIND_START,
+  WORKFLOW_HANDOFF_COMPLETE,
   WORKFLOW_HANDOFF_START,
+  WORKFLOW_CHAT_START,
   WORKFLOW_QUOTE_START,
   WORKFLOW_SELECT_START,
   WORKFLOW_SEND_START,
@@ -274,7 +277,12 @@ describe("landing demo tree visibility", () => {
     const css = readFileSync("src/components/landing/landing.css", "utf8");
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
-    const desktop = css.split("@media (min-width: 900px)").at(-1)?.split("@media")[0] ?? "";
+    const desktopChunks = css
+      .split("@media (min-width: 900px)")
+      .slice(1)
+      .map((chunk) => chunk.split("@media")[0] ?? "");
+    const desktop =
+      desktopChunks.find((chunk) => chunk.includes(".landing-demo-workspace")) ?? "";
     assert.match(desktop, /\.landing-demo-workspace\s*\{[^}]*grid-template-columns/);
     assert.match(desktop, /\.landing-demo-tree\s*\{[^}]*display:\s*flex/);
   });
@@ -286,8 +294,8 @@ describe("landing scrub layout", () => {
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
-    assert.match(css, /var\(--landing-demo-scrub-extra,\s*280svh\)|--landing-demo-scrub-extra:\s*280svh/);
-    assert.equal(DEMO_SCRUB_EXTRA_SVH, 280);
+    assert.match(css, /var\(--landing-demo-scrub-extra,\s*340svh\)|--landing-demo-scrub-extra:\s*340svh/);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH, 340);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
   });
@@ -357,7 +365,11 @@ describe("workflow demo", () => {
     assert.equal(workflowStep(WORKFLOW_HANDOFF_START), "handoff");
     assert.equal(workflowStep(1), "handoff");
     assert.equal(workflowHandoffMix(WORKFLOW_HANDOFF_START), 0);
-    assert.ok(workflowHandoffMix(1) > 0.9);
+    assert.equal(workflowHandoffMix(WORKFLOW_HANDOFF_COMPLETE), 1);
+    assert.ok(workflowHandoffMix(1) >= 1);
+    assert.equal(workflowQuoteChatPlayhead(WORKFLOW_CHAT_START - 0.01), 0);
+    assert.equal(workflowQuoteChatPlayhead(1), 1);
+    assert.equal(reduceDemoFrame("quote", workflowQuoteChatPlayhead(1)).quoteStatus, "confirmed");
     const midSpin = workflowSpinYaw((WORKFLOW_FIND_START + WORKFLOW_SELECT_START) / 2);
     const endSpin = workflowSpinYaw(WORKFLOW_SELECT_START);
     assert.ok(midSpin < endSpin);

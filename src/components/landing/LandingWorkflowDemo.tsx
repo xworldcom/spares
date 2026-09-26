@@ -4,15 +4,20 @@ import { useMemo, type CSSProperties } from "react";
 import { QuoteStatusChip } from "@/components/quote/QuoteStatusChip";
 import { QuoteStatusStrip } from "@/components/quote/QuoteStatusStrip";
 import { LandingWorkflowCell } from "@/components/landing/LandingWorkflowCell";
+import { initialsFromEmail } from "@/lib/ui/initials";
 import {
   DEMO_MACHINE,
+  DEMO_OTHER_LABEL,
   DEMO_PLANT,
   DEMO_QUOTE_NUMBER,
   WORKFLOW_DEMO_PART,
   WORKFLOW_DEMO_PART_NAME,
   WORKFLOW_DEMO_QTY,
   demoPlayhead,
+  demoRowHidden,
+  reduceDemoFrame,
   workflowHandoffMix,
+  workflowQuoteChatPlayhead,
   workflowSpinYaw,
   workflowStep,
 } from "@/lib/ui/landing-demo";
@@ -36,18 +41,29 @@ export function LandingWorkflowDemo({
   const step = workflowStep(playhead);
   const spinYaw = useMemo(() => workflowSpinYaw(playhead), [playhead]);
   const handoff = reduceMotion && step === "handoff" ? 1 : workflowHandoffMix(playhead);
+  const chatPlayhead = useMemo(() => workflowQuoteChatPlayhead(playhead), [playhead]);
+  const quoteFrame = useMemo(() => reduceDemoFrame("quote", chatPlayhead), [chatPlayhead]);
+  const completeThread = useMemo(() => reduceDemoFrame("quote", 1), []);
+  const liveById = useMemo(
+    () => new Map(quoteFrame.rows.map((row) => [row.id, row])),
+    [quoteFrame.rows],
+  );
+  const threadRows = useMemo(
+    () => completeThread.rows.map((row) => liveById.get(row.id) ?? row),
+    [completeThread.rows, liveById],
+  );
+  const enteringId = reduceMotion ? null : quoteFrame.appearingId;
 
   const showHotspot = step === "select";
   const showPartSheet = step === "select";
   const showQuoteSheet = step === "quote" || step === "send";
-  const showRequestView = handoff > 0.02;
+  const showThreadView = handoff > 0.02;
 
   return (
     <div
       className="landing-demo-stage landing-workflow"
       data-demo="workflow"
       data-step={step}
-      style={{ "--wf-handoff": handoff } as CSSProperties}
     >
       <header className="landing-workflow-hub">
         <div className="landing-workflow-hub-title">
@@ -71,12 +87,14 @@ export function LandingWorkflowDemo({
         className={[
           "landing-workflow-stage",
           handoff > 0.55 ? "is-handoff" : "",
+          showQuoteSheet ? "is-quote-focus" : "",
           reduceMotion ? "is-reduced" : "",
         ]
           .filter(Boolean)
           .join(" ")}
+        style={{ "--wf-handoff": handoff } as CSSProperties}
       >
-        <div className="landing-workflow-model-panel" aria-hidden={showRequestView && handoff > 0.85}>
+        <div className="landing-workflow-model-panel" aria-hidden={showThreadView && handoff > 0.85}>
           <div className="landing-workflow-model">
             <LandingWorkflowCell spinYaw={spinYaw} />
             <div
@@ -106,7 +124,7 @@ export function LandingWorkflowDemo({
           ) : null}
         </div>
 
-        <div className="landing-workflow-side" aria-hidden={showRequestView && handoff > 0.4}>
+        <div className="landing-workflow-side" aria-hidden={showThreadView && handoff > 0.4}>
           {showQuoteSheet ? (
             <div
               className={[
@@ -151,10 +169,10 @@ export function LandingWorkflowDemo({
         </div>
 
         <div
-          className={["landing-workflow-request", showRequestView ? "is-visible" : ""]
+          className={["landing-workflow-request", showThreadView ? "is-visible" : ""]
             .filter(Boolean)
             .join(" ")}
-          aria-hidden={!showRequestView}
+          aria-hidden={!showThreadView}
         >
           <header className="landing-workflow-request-head">
             <div>
@@ -164,18 +182,63 @@ export function LandingWorkflowDemo({
                 {WORKFLOW_DEMO_PART_NAME} · {DEMO_MACHINE}
               </p>
             </div>
-            <QuoteStatusChip status="requested" current />
+            <QuoteStatusChip status={quoteFrame.quoteStatus} current />
           </header>
-          <QuoteStatusStrip status="requested" editable={false} role="customer" />
-          <p className="landing-workflow-request-status" role="status">
-            Quote request received. Staff will review pricing and lead time.
-          </p>
-          <ul className="landing-workflow-request-lines">
-            <li>
-              <span className="landing-workflow-request-line-id">{WORKFLOW_DEMO_PART}</span>
-              <span className="landing-workflow-request-line-qty">×{WORKFLOW_DEMO_QTY}</span>
-            </li>
-          </ul>
+          <QuoteStatusStrip status={quoteFrame.quoteStatus} editable={false} role="customer" />
+          <ol
+            className="imsg-thread landing-workflow-thread"
+            aria-live={reduceMotion ? "off" : "polite"}
+            data-scrubbed=""
+          >
+            {threadRows.map((row) => {
+              if (row.kind === "system") {
+                return (
+                  <li
+                    key={row.id}
+                    data-demo-at={row.at}
+                    hidden={demoRowHidden(row.at, chatPlayhead)}
+                    className={enteringId === row.id ? "imsg-system imsg-enter" : "imsg-system"}
+                  >
+                    <span className="imsg-chip">{row.text}</span>
+                  </li>
+                );
+              }
+
+              const own = row.lane === "own";
+              return (
+                <li
+                  key={row.id}
+                  data-demo-at={row.at}
+                  hidden={demoRowHidden(row.at, chatPlayhead)}
+                  data-stacked={row.stacked ? "true" : "false"}
+                  data-end={row.lastInStack ? "true" : "false"}
+                  className={[
+                    "imsg-row",
+                    own ? "imsg-own" : "imsg-other",
+                    enteringId === row.id ? "imsg-enter" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {own ? null : row.lastInStack ? (
+                    <span className="imsg-avatar" aria-hidden="true">
+                      {initialsFromEmail(row.actorEmail)}
+                    </span>
+                  ) : (
+                    <span className="imsg-avatar-spacer" aria-hidden="true" />
+                  )}
+                  <div className="imsg-stack">
+                    {row.stacked ? null : (
+                      <p className="imsg-meta">{own ? "You" : DEMO_OTHER_LABEL}</p>
+                    )}
+                    <div className="imsg-bubble">
+                      <p className="imsg-text">{row.text}</p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       </div>
     </div>

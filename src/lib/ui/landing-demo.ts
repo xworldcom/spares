@@ -15,7 +15,7 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-export const DEMO_SCRUB_EXTRA_SVH = 280;
+export const DEMO_SCRUB_EXTRA_SVH = 340;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
@@ -513,6 +513,10 @@ export const WORKFLOW_SELECT_START = 0.3;
 export const WORKFLOW_QUOTE_START = 0.46;
 export const WORKFLOW_SEND_START = 0.62;
 export const WORKFLOW_HANDOFF_START = 0.78;
+/** Handoff mix reaches 1 — model and tray have cleared the stage. */
+export const WORKFLOW_HANDOFF_COMPLETE = 0.86;
+/** Quote thread script playhead begins (may overlap tail of handoff mix). */
+export const WORKFLOW_CHAT_START = 0.82;
 
 export function workflowStep(playhead: number): WorkflowStep {
   const p = clampDemoScrollProgress(playhead);
@@ -534,14 +538,31 @@ export function workflowStep(playhead: number): WorkflowStep {
   return "hub";
 }
 
-/** 0–1 mix for sliding the model out into the quote-request view. */
+/** 0–1 mix for sliding the model out into the quote thread view. */
 export function workflowHandoffMix(playhead: number) {
   const p = clampDemoScrollProgress(playhead);
   if (p <= WORKFLOW_HANDOFF_START) {
     return 0;
   }
-  const t = (p - WORKFLOW_HANDOFF_START) / (1 - WORKFLOW_HANDOFF_START);
+  if (p >= WORKFLOW_HANDOFF_COMPLETE) {
+    return 1;
+  }
+  const span = WORKFLOW_HANDOFF_COMPLETE - WORKFLOW_HANDOFF_START;
+  const t = (p - WORKFLOW_HANDOFF_START) / span;
   return clampDemoScrollProgress(t);
+}
+
+/** 0–1 playhead for `reduceDemoFrame("quote", …)` during the workflow handoff chapter. */
+export function workflowQuoteChatPlayhead(playhead: number) {
+  const p = clampDemoScrollProgress(playhead);
+  if (p < WORKFLOW_CHAT_START) {
+    return 0;
+  }
+  const span = 1 - WORKFLOW_CHAT_START;
+  if (span <= 0) {
+    return 1;
+  }
+  return clampDemoScrollProgress((p - WORKFLOW_CHAT_START) / span);
 }
 
 /** Scroll-driven yaw for the marketing workflow cell (radians). */
