@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type CSSProperties } from "react";
+import { useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
 import { QuoteStatusChip } from "@/components/quote/QuoteStatusChip";
 import { QuoteStatusStrip } from "@/components/quote/QuoteStatusStrip";
 import { LandingWorkflowCell } from "@/components/landing/LandingWorkflowCell";
@@ -13,6 +13,7 @@ import {
   WORKFLOW_DEMO_PART,
   WORKFLOW_DEMO_PART_NAME,
   WORKFLOW_DEMO_QTY,
+  demoApplyAtVisibility,
   demoPlayhead,
   demoRowHidden,
   reduceDemoFrame,
@@ -53,6 +54,18 @@ export function LandingWorkflowDemo({
     [completeThread.rows, liveById],
   );
   const enteringId = reduceMotion ? null : quoteFrame.appearingId;
+  const threadRef = useRef<HTMLOListElement>(null);
+
+  useLayoutEffect(() => {
+    if (reduceMotion) {
+      return;
+    }
+    const thread = threadRef.current;
+    if (!thread) {
+      return;
+    }
+    demoApplyAtVisibility(thread.querySelectorAll<HTMLElement>("[data-demo-at]"), chatPlayhead);
+  }, [chatPlayhead, reduceMotion, handoff]);
 
   const showHotspot = step === "select";
   const showPartSheet = step === "select";
@@ -186,6 +199,7 @@ export function LandingWorkflowDemo({
           </header>
           <QuoteStatusStrip status={quoteFrame.quoteStatus} editable={false} role="customer" />
           <ol
+            ref={threadRef}
             className="imsg-thread landing-workflow-thread"
             aria-live={reduceMotion ? "off" : "polite"}
             data-scrubbed=""

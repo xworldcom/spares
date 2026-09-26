@@ -20,6 +20,7 @@ import {
   demoPlayhead,
   demoScrubDebugEnabled,
   demoWindowScrollY,
+  demoWorkflowThreadPlayhead,
 } from "@/lib/ui/landing-demo";
 
 export type LandingDemoScrubSnapshot = {
@@ -215,7 +216,11 @@ export function LandingDemoScrub({
         window.pageXOffset || 0,
       );
       section.dataset.progress = next.toFixed(3);
-      demoApplyAtVisibility(section.querySelectorAll<HTMLElement>("[data-demo-at]"), next);
+      const threadPlayhead = demoWorkflowThreadPlayhead(next);
+      demoApplyAtVisibility(
+        section.querySelectorAll<HTMLElement>("[data-demo-at]"),
+        threadPlayhead,
+      );
       store.set({ progress: next, reduceMotion: false });
       writeDebug(hud, [
         ["hydrated", 1],
