@@ -147,9 +147,7 @@ export async function POST(request: Request) {
     return error("Machine not found", 404);
   }
 
-  if (auth.user.role === "staff") {
-    await grantCustomerMachine(auth.tenantId, customerId, machineId);
-  }
+  await grantCustomerMachine(auth.tenantId, customerId, machineId);
 
   await recordAccountActivity({
     tenantId: auth.tenantId,

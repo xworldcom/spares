@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import { ApiError } from "./errors";
+import { invalidateWarmRead } from "./warm-read";
 import type {
   AuthUserResponse,
   CustomerAccount,
@@ -16,6 +17,9 @@ export async function login(email: string, password: string) {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+  invalidateWarmRead("care-hub:machines");
+  invalidateWarmRead("machines:list");
+  invalidateWarmRead("quotes:list");
   return data.user;
 }
 

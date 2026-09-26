@@ -28,18 +28,50 @@ import { warmCareOverview, warmQuotesList } from "@/lib/nav/prefetch";
 
 const RETRY_ATTEMPTS = 3;
 
-async function loadMachines(heal: boolean): Promise<MachineSummary[]> {
-  const next = await listMachines(heal ? { heal: true } : undefined);
-  if (next.length > 0 || heal) {
-    return next;
-  }
-  return listMachines({ heal: true });
-}
-
 type MachineWork = {
   quotesOpen: number;
   ticketsOpen: number;
 };
+
+async function loadMachines(options?: {
+  heal?: boolean;
+  fresh?: boolean;
+}): Promise<MachineSummary[]> {
+  const heal = options?.heal ?? false;
+  const fresh = options?.fresh ?? false;
+  const next = await listMachines(
+    heal || fresh ? { heal, fresh } : undefined,
+  );
+  if (next.length > 0 || heal) {
+    return next;
+  }
+  return listMachines({ heal: true, fresh: true });
+}
+
+async function loadMachineWork(): Promise<Record<string, MachineWork>> {
+  const [quoteData, ticketData] = await Promise.all([
+    listQuotes().catch(() => ({ quotes: [] })),
+    listAccessibleTickets().catch(() => ({ tickets: [] })),
+  ]);
+  const next: Record<string, MachineWork> = {};
+  for (const quote of quoteData.quotes) {
+    if (!quoteIsOpen(quote.status) || !quote.machineId) {
+      continue;
+    }
+    const row = next[quote.machineId] ?? { quotesOpen: 0, ticketsOpen: 0 };
+    row.quotesOpen += 1;
+    next[quote.machineId] = row;
+  }
+  for (const ticket of ticketData.tickets) {
+    if (!ticketIsOpen(ticket.status) || !ticket.machineId) {
+      continue;
+    }
+    const row = next[ticket.machineId] ?? { quotesOpen: 0, ticketsOpen: 0 };
+    row.ticketsOpen += 1;
+    next[ticket.machineId] = row;
+  }
+  return next;
+}
 
 function machinePlant(machine: MachineSummary, role?: string) {
   if (machine.company && machine.siteName) {
@@ -82,7 +114,7 @@ export function MachinesList() {
             sites: user?.sites ?? [],
             accounts: [] as CustomerAccount[],
           });
-    Promise.all([loadMachines(false), sitesLoad])
+    Promise.all([loadMachines({ fresh: true }), sitesLoad])
       .then(([next, org]) => {
         if (cancelled) {
           return;
@@ -111,35 +143,30 @@ export function MachinesList() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      listQuotes().catch(() => ({ quotes: [] })),
-      listAccessibleTickets().catch(() => ({ tickets: [] })),
-    ]).then(([quoteData, ticketData]) => {
-      if (cancelled) {
-        return;
+    loadMachineWork().then((next) => {
+      if (!cancelled) {
+        setWorkByMachine(next);
       }
-      const next: Record<string, MachineWork> = {};
-      for (const quote of quoteData.quotes) {
-        if (!quoteIsOpen(quote.status) || !quote.machineId) {
-          continue;
-        }
-        const row = next[quote.machineId] ?? { quotesOpen: 0, ticketsOpen: 0 };
-        row.quotesOpen += 1;
-        next[quote.machineId] = row;
-      }
-      for (const ticket of ticketData.tickets) {
-        if (!ticketIsOpen(ticket.status) || !ticket.machineId) {
-          continue;
-        }
-        const row = next[ticket.machineId] ?? { quotesOpen: 0, ticketsOpen: 0 };
-        row.ticketsOpen += 1;
-        next[ticket.machineId] = row;
-      }
-      setWorkByMachine(next);
     });
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    function refreshFromCache() {
+      void loadMachines({ fresh: true }).then((next) => {
+        setMachines(next);
+      });
+      void loadMachineWork().then(setWorkByMachine);
+    }
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        refreshFromCache();
+      }
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
 
   const filtered = useMemo(() => {
@@ -250,7 +277,7 @@ export function MachinesList() {
         if (attempt > 0) {
           await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
         }
-        const next = await listMachines({ heal: true });
+        const next = await listMachines({ heal: true, fresh: true });
         if (next.length > 0) {
           setMachines(next);
           setError(null);

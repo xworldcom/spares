@@ -26,6 +26,8 @@ export async function createQuote(input: {
     }),
   });
   invalidateWarmRead("quotes:list");
+  invalidateWarmRead("care-hub:machines");
+  invalidateWarmRead("machines:list");
   return data.quote;
 }
 
