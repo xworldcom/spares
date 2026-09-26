@@ -20,6 +20,7 @@ import {
   demoRowHidden,
   demoScrubDebugEnabled,
   demoSectionScrollProgress,
+  demoWorkflowThreadPlayhead,
   marketingCopyBan,
   marketingTutorialCopyBan,
   reduceDemoFrame,
@@ -184,6 +185,7 @@ describe("demo scroll scrub", () => {
     assert.match(src, /demoDocumentScrollProgress/);
     assert.match(src, /demoPickScrollY/);
     assert.match(src, /demoFindScrollRoot/);
+    assert.match(src, /demoWorkflowThreadPlayhead/);
     assert.match(src, /useSyncExternalStore/);
     assert.match(src, /requestAnimationFrame\(tick\)/);
     assert.match(src, /data-hydrated/);
@@ -368,7 +370,10 @@ describe("workflow demo", () => {
     assert.equal(workflowHandoffMix(WORKFLOW_HANDOFF_COMPLETE), 1);
     assert.ok(workflowHandoffMix(1) >= 1);
     assert.equal(workflowQuoteChatPlayhead(WORKFLOW_CHAT_START - 0.01), 0);
+    assert.equal(WORKFLOW_CHAT_START, WORKFLOW_HANDOFF_START);
+    assert.equal(workflowQuoteChatPlayhead(WORKFLOW_HANDOFF_START), 0);
     assert.equal(workflowQuoteChatPlayhead(1), 1);
+    assert.equal(demoWorkflowThreadPlayhead(0.9), workflowQuoteChatPlayhead(0.9));
     assert.equal(reduceDemoFrame("quote", workflowQuoteChatPlayhead(1)).quoteStatus, "confirmed");
     const midSpin = workflowSpinYaw((WORKFLOW_FIND_START + WORKFLOW_SELECT_START) / 2);
     const endSpin = workflowSpinYaw(WORKFLOW_SELECT_START);

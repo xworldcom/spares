@@ -1225,6 +1225,19 @@
   overflow: hidden;
 }
 
+.landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 0.35rem;
+  overflow: hidden;
+  overflow-y: hidden;
+  overscroll-behavior: none;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
+
 .landing-workflow-stage.is-handoff .landing-workflow-quote-sheet {
   opacity: calc(1 - var(--wf-handoff) * 0.35);
 }

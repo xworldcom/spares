@@ -515,8 +515,8 @@ export const WORKFLOW_SEND_START = 0.62;
 export const WORKFLOW_HANDOFF_START = 0.78;
 /** Handoff mix reaches 1 — model and tray have cleared the stage. */
 export const WORKFLOW_HANDOFF_COMPLETE = 0.86;
-/** Quote thread script playhead begins (may overlap tail of handoff mix). */
-export const WORKFLOW_CHAT_START = 0.82;
+/** Quote thread script playhead begins when the thread panel is on stage. */
+export const WORKFLOW_CHAT_START = WORKFLOW_HANDOFF_START;
 
 export function workflowStep(playhead: number): WorkflowStep {
   const p = clampDemoScrollProgress(playhead);
@@ -563,6 +563,11 @@ export function workflowQuoteChatPlayhead(playhead: number) {
     return 1;
   }
   return clampDemoScrollProgress((p - WORKFLOW_CHAT_START) / span);
+}
+
+/** Map workflow scrub progress to quote-thread beat visibility (matches LandingWorkflowDemo). */
+export function demoWorkflowThreadPlayhead(workflowProgress: number) {
+  return workflowQuoteChatPlayhead(workflowProgress);
 }
 
 /** Scroll-driven yaw for the marketing workflow cell (radians). */
