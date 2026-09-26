@@ -44,7 +44,7 @@ export function LandingMarketing() {
         <h2 className="landing-section-title">One machine hub. Quote from the model.</h2>
         <p className="landing-section-lede">
           Parts, tickets, manuals, and service reports on one machine. The chapter
-          below is the parts quote path — PN on the model through request received.
+          below is the parts quote path — PN on the model through PO confirmed.
         </p>
 
         <div className="landing-demo">
