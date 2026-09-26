@@ -1,5 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { requireRole } from "@/lib/auth";
+import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { rejectDisallowedOrigin } from "@/lib/cors";
 import { json, error } from "@/lib/http";
 import {
@@ -23,7 +23,7 @@ function blobClientUploadAvailable() {
 }
 
 export async function GET() {
-  const auth = await requireRole("staff");
+  const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   }
 
   if (isS3Configured()) {
-    const auth = await requireRole("staff");
+    const auth = await requireTenantStaff();
     if ("error" in auth) {
       return auth.error;
     }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async (pathname) => {
-        const auth = await requireRole("staff");
+        const auth = await requireTenantStaff();
         if ("error" in auth) {
           throw new Error("Staff sign-in is required to upload a machine pack.");
         }
