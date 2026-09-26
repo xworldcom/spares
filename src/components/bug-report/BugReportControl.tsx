@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { submitBugReport } from "@/lib/api/bugs";
 import { errorMessage } from "@/lib/api/errors";
+import { BUG_REPORT_ACK_MS } from "@/lib/bug-report/ack";
 import { buildClientLogText } from "@/lib/bug-report/client-logs";
 import {
   capturePageJpegBase64,
@@ -46,6 +47,16 @@ export function BugReportControl() {
       textareaRef.current?.focus();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (status !== "sent" || open) {
+      return;
+    }
+    const id = window.setTimeout(() => {
+      setStatus("idle");
+    }, BUG_REPORT_ACK_MS);
+    return () => window.clearTimeout(id);
+  }, [status, open]);
 
   useEffect(() => {
     if (!open) {
