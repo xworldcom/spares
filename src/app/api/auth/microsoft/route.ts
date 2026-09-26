@@ -8,8 +8,8 @@ import {
   microsoftAuthorizeUrl,
   microsoftCallbackRedirectUri,
   oauthStateCookieOptions,
-  sanitizeNextPath,
 } from "@/lib/auth/microsoft";
+import { sanitizeNextPath } from "@/lib/auth/safe-url";
 
 export async function GET(request: Request) {
   const config = azureAdConfig();

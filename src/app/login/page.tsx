@@ -1,6 +1,7 @@
 import { LandingPageGate } from "@/components/landing/LandingPageGate";
 import { PASSWORD_LOGIN_DISABLED_CODE } from "@/lib/auth/password-login-public";
 import { getSignInOptions } from "@/lib/auth/password-login.server";
+import { sanitizeNextPath } from "@/lib/auth/safe-url";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +11,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const { next, error } = await searchParams;
-  const nextPath =
-    next && next.startsWith("/") && !next.startsWith("//") ? next : "/machines";
+  const nextPath = sanitizeNextPath(next);
   const signIn = await getSignInOptions();
   const authErrorCode =
     error === PASSWORD_LOGIN_DISABLED_CODE || error === "password_login_disabled"

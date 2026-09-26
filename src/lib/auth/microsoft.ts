@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { isAllowedModelAssetOrigin } from "../cors.ts";
 import { effectiveStaffTenantId } from "../tenant.ts";
+import { sanitizeNextPath } from "./safe-url.ts";
 import { sessionSecret } from "./session-token.ts";
 
 import {
@@ -73,38 +74,6 @@ export function isAllowedAuthOrigin(origin: string | null | undefined) {
     return false;
   }
   return isAllowedModelAssetOrigin(normalized);
-}
-
-export function sanitizeNextPath(next: string | null | undefined) {
-  if (!next) {
-    return "/machines";
-  }
-  const trimmed = next.trim();
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || /[\\\0]/.test(trimmed)) {
-    return "/machines";
-  }
-  let decoded = trimmed;
-  try {
-    decoded = decodeURIComponent(trimmed);
-  } catch {
-    return "/machines";
-  }
-  if (!decoded.startsWith("/") || decoded.startsWith("//") || /[\\\0]/.test(decoded)) {
-    return "/machines";
-  }
-  try {
-    const resolved = new URL(trimmed, "https://spares.invalid");
-    if (resolved.origin !== "https://spares.invalid" || resolved.username || resolved.password) {
-      return "/machines";
-    }
-    const path = `${resolved.pathname}${resolved.search}${resolved.hash}`;
-    if (!path.startsWith("/") || path.startsWith("//")) {
-      return "/machines";
-    }
-    return path;
-  } catch {
-    return "/machines";
-  }
 }
 
 function signOAuthPayload(payload: string) {
