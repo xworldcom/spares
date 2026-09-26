@@ -196,6 +196,8 @@ export type Quote = {
   unread: boolean;
   /** Viewer read watermark for jumping to the first unread message in chat. */
   viewerReadAt?: string;
+  /** Present for staff when at least one customer has read through the latest activity. */
+  customerReadReceipts?: TicketCustomerReadReceipt[];
   invoiceNumber?: string;
   /** When set, the plant assistant stops auto-replying on this quote. */
   assistantPaused?: boolean;

@@ -47,28 +47,6 @@ function OtherAvatar({ email, assistant }: { email: string; assistant?: boolean 
   );
 }
 
-function CustomerReadReceipts({
-  receipts,
-}: {
-  receipts: TicketCustomerReadReceipt[];
-}) {
-  if (receipts.length === 0) {
-    return null;
-  }
-  return (
-    <li className="imsg-read-receipts" aria-label="Read by customers">
-      {receipts.map((row) => (
-        <span key={row.userId} className="imsg-read-receipt" title={row.email}>
-          <span className="imsg-avatar">{initialsFromEmail(row.email)}</span>
-          <span className="imsg-read-receipt-name">
-            {row.name?.trim() || displayNameFromEmail(row.email)}
-          </span>
-        </span>
-      ))}
-    </li>
-  );
-}
-
 export function QuoteActivityFeed({
   activities,
   role,
@@ -97,7 +75,7 @@ export function QuoteActivityFeed({
   subtitle?: string;
   /** `sheet` fills the conversation sheet body; `card` keeps the legacy capped thread. */
   layout?: "card" | "sheet";
-  /** Staff-only Care ticket read receipts (customers on thread). */
+  /** Staff-only thread read receipts (customers on thread). */
   customerReadReceipts?: TicketCustomerReadReceipt[];
   assistantAvailable?: boolean;
   assistantPaused?: boolean;
@@ -408,9 +386,6 @@ export function QuoteActivityFeed({
             );
           })
         )}
-        {customerReadReceipts?.length && layout !== "sheet" ? (
-          <CustomerReadReceipts receipts={customerReadReceipts} />
-        ) : null}
       </ol>
       <form
         className="imsg-composer"

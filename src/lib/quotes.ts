@@ -1,3 +1,4 @@
+import { customerReadReceiptsForThread } from "./care.ts";
 import { normalizeChatAttachments } from "./chat-attachments.ts";
 import type {
   Part,
@@ -774,6 +775,9 @@ export function toPublicQuote(
   quote: QuoteRecord,
   user: Pick<PublicUser, "id" | "email" | "role">,
   machineName?: string,
+  options?: {
+    customerUsers?: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[];
+  },
 ): Quote {
   const publicQuote: Quote = {
     id: quote.id,
@@ -812,6 +816,12 @@ export function toPublicQuote(
   }
   if (quote.assistantEscalatedAt) {
     publicQuote.assistantEscalatedAt = quote.assistantEscalatedAt;
+  }
+  if (user.role === "staff" && options?.customerUsers) {
+    const receipts = customerReadReceiptsForThread(quote, options.customerUsers);
+    if (receipts.length > 0) {
+      publicQuote.customerReadReceipts = receipts;
+    }
   }
   return publicQuote;
 }

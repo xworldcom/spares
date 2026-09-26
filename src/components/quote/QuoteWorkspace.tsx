@@ -37,7 +37,23 @@ import {
   quoteTitle,
 } from "@/lib/quotes";
 import { quoteSeedForRef } from "@/lib/nav/quote-list-seed";
-import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role } from "@/types";
+import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role, TicketCustomerReadReceipt } from "@/types";
+
+function sameReadReceipts(
+  a: TicketCustomerReadReceipt[] | undefined,
+  b: TicketCustomerReadReceipt[] | undefined,
+) {
+  if (!a?.length && !b?.length) {
+    return true;
+  }
+  if (!a || !b || a.length !== b.length) {
+    return false;
+  }
+  return a.every(
+    (row, index) =>
+      row.userId === b[index]?.userId && row.readAt === b[index]?.readAt,
+  );
+}
 
 export function QuoteWorkspace({
   quoteRef,
@@ -113,7 +129,8 @@ export function QuoteWorkspace({
       quote.status !== next.status ||
       quote.unread !== next.unread ||
       quote.assistantPaused !== next.assistantPaused ||
-      quote.assistantAvailable !== next.assistantAvailable;
+      quote.assistantAvailable !== next.assistantAvailable ||
+      !sameReadReceipts(quote.customerReadReceipts, next.customerReadReceipts);
     if (!touched) {
       return;
     }
@@ -130,6 +147,7 @@ export function QuoteWorkspace({
         status: next.status,
         activities,
         unread: next.unread,
+        customerReadReceipts: next.customerReadReceipts,
         assistantPaused: next.assistantPaused,
         assistantAvailable: next.assistantAvailable,
       };
@@ -481,6 +499,7 @@ export function QuoteWorkspace({
           threadKind="quote"
           threadId={quote.id}
           layout="sheet"
+          customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
           assistantPaused={quote.assistantPaused}
           onAssistantPausedChange={role === "staff" ? onAssistantPaused : undefined}

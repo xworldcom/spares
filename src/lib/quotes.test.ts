@@ -549,6 +549,43 @@ describe("role-aware items and unread", () => {
     });
     assert.equal(open.assistantPaused, undefined);
   });
+
+  it("builds staff-only customer read receipts from lastReadAt", () => {
+    const withStaffReply = {
+      ...record,
+      activities: [
+        ...record.activities,
+        {
+          id: "a2",
+          at: "2026-01-02T00:00:00.000Z",
+          actorRole: "staff" as const,
+          actorEmail: "staff@spares.local",
+          kind: "message" as const,
+          text: "Pricing soon",
+        },
+      ],
+      lastReadAt: {
+        "cust-1": "2026-01-02T01:00:00.000Z",
+        "staff-1": "2026-01-02T01:00:00.000Z",
+      },
+    };
+    const customers = [
+      { id: "cust-1", email: "c@example.test", name: "Casey", role: "customer" as const },
+    ];
+    const staffView = toPublicQuote(withStaffReply, {
+      id: "staff-1",
+      email: "staff@spares.local",
+      role: "staff",
+    }, undefined, { customerUsers: customers });
+    assert.equal(staffView.customerReadReceipts?.length, 1);
+    assert.equal(staffView.customerReadReceipts?.[0]?.email, "c@example.test");
+    const customerView = toPublicQuote(withStaffReply, {
+      id: "cust-1",
+      email: "c@example.test",
+      role: "customer",
+    }, undefined, { customerUsers: customers });
+    assert.equal(customerView.customerReadReceipts, undefined);
+  });
 });
 
 describe("quoteItemsEqual", () => {

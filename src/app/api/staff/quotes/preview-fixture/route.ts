@@ -1,4 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
+import { staffCustomerUsers } from "@/lib/care-http";
 import { error, json } from "@/lib/http";
 import { isSeedAllowed } from "@/lib/production-env";
 import { toPublicQuote } from "@/lib/quotes";
@@ -42,9 +43,12 @@ export async function POST() {
     listMachines(auth.tenantId),
   ]);
   const names = new Map(machines.map((row) => [row.id, row.name]));
+  const customerUsers = await staffCustomerUsers(auth.tenantId);
 
   return json({
     status: result.status,
-    quote: toPublicQuote(result.quote, auth.user, machine?.name ?? names.get(result.quote.machineId)),
+    quote: toPublicQuote(result.quote, auth.user, machine?.name ?? names.get(result.quote.machineId), {
+      customerUsers,
+    }),
   });
 }
