@@ -30,6 +30,39 @@ export function stripCredentialQuery(url: string): { href: string; stripped: boo
   };
 }
 
+/** Same-origin `next=` target or the `/machines` fallback. Query is data, not a target. */
+export function sanitizeNextPath(next: string | null | undefined) {
+  if (!next) {
+    return "/machines";
+  }
+  const trimmed = next.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || /[\\\0]/.test(trimmed)) {
+    return "/machines";
+  }
+  let decoded = trimmed;
+  try {
+    decoded = decodeURIComponent(trimmed);
+  } catch {
+    return "/machines";
+  }
+  if (!decoded.startsWith("/") || decoded.startsWith("//") || /[\\\0]/.test(decoded)) {
+    return "/machines";
+  }
+  try {
+    const resolved = new URL(trimmed, "https://spares.invalid");
+    if (resolved.origin !== "https://spares.invalid" || resolved.username || resolved.password) {
+      return "/machines";
+    }
+    const path = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+    if (!path.startsWith("/") || path.startsWith("//")) {
+      return "/machines";
+    }
+    return path;
+  } catch {
+    return "/machines";
+  }
+}
+
 export function stripCredentialQueryFromLocation() {
   if (typeof window === "undefined") {
     return;

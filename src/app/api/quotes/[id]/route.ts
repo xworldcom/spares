@@ -15,7 +15,7 @@ import {
   trackingUpdatedActivityText,
 } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
-import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
+import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { createQuoteActivity, markQuoteRead, mutateQuote } from "@/lib/store";
 import type { QuoteRecord, QuoteStatus } from "@/types";
 
@@ -40,6 +40,18 @@ export async function GET(
   const tenantId = userTenantId(access.user);
   const marked =
     (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
+  if (
+    access.user.role === "staff" &&
+    shouldRecordView(`quote.viewed:${access.user.id}:${marked.id}`)
+  ) {
+    await recordAccountActivity({
+      tenantId,
+      actor: actorFromUser(access.user),
+      action: "quote.viewed",
+      summary: `${access.user.email} opened quote #${marked.number}`,
+      target: { type: "quote", id: marked.id, label: `#${marked.number}` },
+    });
+  }
   return json({
     quote: await publicQuoteForUser(marked, access.user, await machineNameFor(marked)),
   });

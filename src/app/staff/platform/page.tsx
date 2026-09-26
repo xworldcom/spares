@@ -6,6 +6,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
 import { errorMessage, isForbidden } from "@/lib/api/errors";
+import { formatSsoSummary } from "@/lib/auth/sso-domain";
 import type { Tenant } from "@/types";
 
 type DeploymentRow = {
@@ -287,11 +288,8 @@ function PlatformHosts() {
                     {row.tenant.name}
                   </Link>
                   <div className="text-xs text-muted font-mono">{row.tenant.id}</div>
-                  {row.tenant.ssoDomains?.length ? (
-                    <div className="text-xs text-muted">
-                      SSO {row.tenant.ssoDomains.join(", ")} · Autoroute{" "}
-                      {row.tenant.ssoAutoroute ? "on" : "off"}
-                    </div>
+                  {formatSsoSummary(row.tenant) ? (
+                    <div className="text-xs text-muted">{formatSsoSummary(row.tenant)}</div>
                   ) : null}
                 </td>
                 <td className="py-2.5 pr-4 text-muted whitespace-nowrap">

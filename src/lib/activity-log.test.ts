@@ -5,6 +5,8 @@ import {
   listAccountActivity,
   parseActivityDocument,
   recordAccountActivity,
+  resetViewDedupeForTests,
+  shouldRecordView,
 } from "./activity-log.ts";
 import { createMemoryPersistence, setPersistenceForTests } from "./persistence.ts";
 
@@ -162,6 +164,19 @@ describe("activity log", () => {
       earlier.map((row) => row.id),
       ["2"],
     );
+  });
+
+  it("records a staff view once per key per hour", () => {
+    resetViewDedupeForTests();
+    const start = Date.parse("2026-01-01T00:00:00.000Z");
+    const hour = 60 * 60 * 1000;
+    assert.equal(shouldRecordView("quote.viewed:u1:q1", start), true);
+    assert.equal(shouldRecordView("quote.viewed:u1:q1", start + hour - 1), false);
+    assert.equal(shouldRecordView("quote.viewed:u1:q1", start + hour), true);
+    assert.equal(shouldRecordView("quote.viewed:u1:q2", start + 1), true);
+    assert.equal(shouldRecordView("ticket.viewed:u1:q1", start + 1), true);
+    resetViewDedupeForTests();
+    assert.equal(shouldRecordView("quote.viewed:u1:q1", start + 2), true);
   });
 
   it("does not read or write when the log is paused", async () => {

@@ -28,6 +28,15 @@ const BLOCKED_SSO_DOMAINS = new Set([
 
 const DOMAIN_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The shared tenant every personal Microsoft account signs in from. Never a host. */
+export const MICROSOFT_CONSUMER_TID = "9188040d-6c67-4c5b-b112-36a304b66dad";
+
+export function isEntraTenantId(value: string) {
+  return GUID_RE.test(value);
+}
+
 export type NormalizeSsoDomainFailure = {
   ok: false;
   reason: "empty" | "invalid" | "public";
@@ -71,7 +80,7 @@ export type ParseSsoDomainsResult =
   | { ok: true; domains: string[] }
   | { ok: false; message: string; status: number };
 
-function collectSsoDomainTokens(input: unknown): string[] | null {
+function collectSsoTokens(input: unknown): string[] | null {
   if (input === undefined || input === null) {
     return [];
   }
@@ -92,7 +101,7 @@ function collectSsoDomainTokens(input: unknown): string[] | null {
 }
 
 export function parseSsoDomains(input: unknown): ParseSsoDomainsResult {
-  const tokens = collectSsoDomainTokens(input);
+  const tokens = collectSsoTokens(input);
   if (!tokens) {
     return { ok: false, message: "SSO domains must be text", status: 400 };
   }
@@ -124,8 +133,67 @@ export function formatSsoDomains(domains: readonly string[] | undefined) {
   return (domains ?? []).join(", ");
 }
 
+export type ParseSsoTenantIdsResult =
+  | { ok: true; tenantIds: string[] }
+  | { ok: false; message: string; status: 400 };
+
+export function parseSsoTenantIds(input: unknown): ParseSsoTenantIdsResult {
+  const tokens = collectSsoTokens(input);
+  if (!tokens) {
+    return { ok: false, message: "Entra tenant IDs must be text", status: 400 };
+  }
+  const tenantIds: string[] = [];
+  for (const token of tokens) {
+    const tid = token.toLowerCase();
+    if (!isEntraTenantId(tid)) {
+      return {
+        ok: false,
+        message: "Enter an Entra tenant ID such as 11111111-2222-3333-4444-555555555555",
+        status: 400,
+      };
+    }
+    if (tid === MICROSOFT_CONSUMER_TID) {
+      return {
+        ok: false,
+        message: "Personal Microsoft accounts cannot be enrolled as a host tenant",
+        status: 400,
+      };
+    }
+    if (!tenantIds.includes(tid)) {
+      tenantIds.push(tid);
+    }
+  }
+  return { ok: true, tenantIds };
+}
+
+export function formatSsoTenantIds(ids: readonly string[] | undefined) {
+  return (ids ?? []).join(", ");
+}
+
+/** One-line host summary for the platform lists. `null` when nothing is enrolled. */
+export function formatSsoSummary(
+  tenant: Pick<Tenant, "ssoDomains" | "ssoTenantIds" | "ssoAutoroute">,
+): string | null {
+  const domains = tenant.ssoDomains ?? [];
+  const tenantCount = tenant.ssoTenantIds?.length ?? 0;
+  if (domains.length === 0 && tenantCount === 0) {
+    return null;
+  }
+  const domainText = domains.length > 0 ? domains.join(", ") : "—";
+  const tenantText = `${tenantCount} Entra tenant${tenantCount === 1 ? "" : "s"}`;
+  const autoroute = tenantSsoAutorouteEnabled(tenant) ? "on" : "off";
+  return `SSO ${domainText} · ${tenantText} · Autoroute ${autoroute}`;
+}
+
 export function tenantSsoDomains(tenant: Pick<Tenant, "ssoDomains">) {
   return tenant.ssoDomains ?? [];
+}
+
+export function tenantEnrollsMicrosoftTenant(
+  tenant: Pick<Tenant, "ssoTenantIds"> | undefined,
+  tid: string,
+) {
+  return tenant?.ssoTenantIds?.includes(tid) ?? false;
 }
 
 export function tenantSsoAutorouteEnabled(tenant: Pick<Tenant, "ssoAutoroute">) {
@@ -154,16 +222,18 @@ export function parseSsoAutoroute(input: unknown): boolean | undefined {
   return undefined;
 }
 
-export function findActiveTenantForSsoDomain(
+/** The host that may autoroute a first sign-in. Domain and tid must be enrolled on the same row. */
+export function findActiveTenantForSso(
   tenants: readonly Tenant[],
-  domain: string,
+  claim: { domain: string; tid: string },
 ): Tenant | null {
   const matches = tenants.filter(
     (tenant) =>
       !tenant.deletedAt &&
       !tenant.inactiveAt &&
       tenantSsoAutorouteEnabled(tenant) &&
-      tenantSsoDomains(tenant).includes(domain),
+      tenantSsoDomains(tenant).includes(claim.domain) &&
+      tenantEnrollsMicrosoftTenant(tenant, claim.tid),
   );
   return matches.length === 1 ? matches[0] : null;
 }

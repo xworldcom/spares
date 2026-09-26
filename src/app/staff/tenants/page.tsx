@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api/client";
 import { isForbidden, errorMessage } from "@/lib/api/errors";
 import { SsoAutorouteSelector } from "@/components/staff/SsoAutorouteSelector";
+import { formatSsoSummary } from "@/lib/auth/sso-domain";
 
 type TenantsResponse = { tenants: Tenant[] };
 
@@ -42,6 +43,7 @@ function PlatformTenants() {
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
   const [ssoDomains, setSsoDomains] = useState("");
+  const [ssoTenantIds, setSsoTenantIds] = useState("");
   const [ssoAutoroute, setSsoAutoroute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -94,6 +96,7 @@ function PlatformTenants() {
           staffEmail: staffEmail.trim() || undefined,
           staffPassword: staffPassword || undefined,
           ssoDomains: ssoDomains.trim() || undefined,
+          ssoTenantIds: ssoTenantIds.trim() || undefined,
           ssoAutoroute,
         }),
       });
@@ -101,6 +104,7 @@ function PlatformTenants() {
       setStaffEmail("");
       setStaffPassword("");
       setSsoDomains("");
+      setSsoTenantIds("");
       setSsoAutoroute(false);
       if (result.staffUser?.tenantId) {
         setNotice(
@@ -168,6 +172,21 @@ function PlatformTenants() {
             shapetech.com).
           </p>
         </label>
+        <label className="stack gap-1">
+          <span className="text-sm font-medium">Entra tenant ID (optional)</span>
+          <input
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+            value={ssoTenantIds}
+            onChange={(e) => setSsoTenantIds(e.target.value)}
+            placeholder="11111111-2222-3333-4444-555555555555"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <p className="spares-muted text-sm">
+            From Microsoft Entra admin center, Overview, Tenant ID. Autoroute needs both a
+            domain and a tenant ID.
+          </p>
+        </label>
         <SsoAutorouteSelector value={ssoAutoroute} onChange={setSsoAutoroute} />
         <label className="stack gap-1">
           <span className="text-sm font-medium">First staff email (optional)</span>
@@ -206,11 +225,8 @@ function PlatformTenants() {
             <li key={tenant.id} className="card p-4">
               <div className="font-medium">{tenant.name}</div>
               <div className="text-sm text-muted">{tenant.slug}</div>
-              {tenant.ssoDomains?.length ? (
-                <div className="text-sm text-muted">
-                  SSO {tenant.ssoDomains.join(", ")} · Autoroute{" "}
-                  {tenant.ssoAutoroute ? "on" : "off"}
-                </div>
+              {formatSsoSummary(tenant) ? (
+                <div className="text-sm text-muted">{formatSsoSummary(tenant)}</div>
               ) : null}
               <div className="text-xs text-muted font-mono">{tenant.id}</div>
             </li>

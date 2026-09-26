@@ -2,9 +2,39 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isPasswordQueryKey,
+  sanitizeNextPath,
   stripCredentialQuery,
   stripCredentialSearchParams,
 } from "./safe-url.ts";
+
+describe("sanitizeNextPath", () => {
+  it("keeps same-origin paths with query and hash", () => {
+    assert.equal(sanitizeNextPath("/machines"), "/machines");
+    assert.equal(sanitizeNextPath("/staff/quotes?tab=1"), "/staff/quotes?tab=1");
+    assert.equal(sanitizeNextPath("/quotes/abc?tab=po#top"), "/quotes/abc?tab=po#top");
+    assert.equal(
+      sanitizeNextPath("/machines?next=https://evil.example.test"),
+      "/machines?next=https://evil.example.test",
+    );
+    assert.equal(sanitizeNextPath("  /machines  "), "/machines");
+  });
+
+  it("falls back to /machines for empty input", () => {
+    assert.equal(sanitizeNextPath(null), "/machines");
+    assert.equal(sanitizeNextPath(undefined), "/machines");
+    assert.equal(sanitizeNextPath(""), "/machines");
+  });
+
+  it("rejects host-switching and scheme paths", () => {
+    assert.equal(sanitizeNextPath("//evil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("/\\evil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("/\t/evil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("/%5c%5cevil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("/%2f%2fevil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("https://evil.example.test"), "/machines");
+    assert.equal(sanitizeNextPath("javascript:alert(1)"), "/machines");
+  });
+});
 
 describe("stripCredentialSearchParams", () => {
   it("strips password from the query string and keeps next", () => {

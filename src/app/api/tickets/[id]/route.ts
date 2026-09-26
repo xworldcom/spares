@@ -2,7 +2,7 @@ import { isTicketStatus } from "@/lib/care";
 import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
-import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
+import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
@@ -22,6 +22,15 @@ export async function GET(
   let ticket = access.ticket;
   if (access.user.role === "staff") {
     ticket = (await markTicketRead(access.ticket.id, tenantId, access.user.id)) ?? ticket;
+    if (shouldRecordView(`ticket.viewed:${access.user.id}:${ticket.id}`)) {
+      await recordAccountActivity({
+        tenantId,
+        actor: actorFromUser(access.user),
+        action: "ticket.viewed",
+        summary: `${access.user.email} opened ticket #${ticket.number}`,
+        target: { type: "ticket", id: ticket.id, label: `#${ticket.number}` },
+      });
+    }
   }
   return json({
     ticket: await publicTicketForUser(ticket, access.user, access.machine.name),

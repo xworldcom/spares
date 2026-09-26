@@ -1,7 +1,12 @@
-import { parseSsoAutoroute, parseSsoDomains } from "@/lib/auth/sso-domain";
+import {
+  parseSsoAutoroute,
+  parseSsoDomains,
+  parseSsoTenantIds,
+} from "@/lib/auth/sso-domain";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
+import { AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE } from "@/lib/platform-tenant-create";
 import { updateTenantPlatformMeta, removePlatformTenant } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +17,7 @@ type PatchBody = {
   name?: unknown;
   inactive?: unknown;
   ssoDomains?: unknown;
+  ssoTenantIds?: unknown;
   ssoAutoroute?: unknown;
 };
 
@@ -37,12 +43,21 @@ export async function PATCH(request: Request, context: Params) {
     }
     ssoDomains = parsed.domains;
   }
+  let ssoTenantIds: string[] | undefined;
+  if (body.ssoTenantIds !== undefined) {
+    const parsed = parseSsoTenantIds(body.ssoTenantIds);
+    if (!parsed.ok) {
+      return error(parsed.message, parsed.status);
+    }
+    ssoTenantIds = parsed.tenantIds;
+  }
   const ssoAutoroute = parseSsoAutoroute(body.ssoAutoroute);
 
   if (
     name === undefined &&
     inactive === undefined &&
     ssoDomains === undefined &&
+    ssoTenantIds === undefined &&
     ssoAutoroute === undefined
   ) {
     return error("No changes requested", 400);
@@ -52,6 +67,7 @@ export async function PATCH(request: Request, context: Params) {
     name,
     inactive,
     ssoDomains,
+    ssoTenantIds,
     ssoAutoroute,
   });
   if ("error" in updated) {
@@ -63,6 +79,9 @@ export async function PATCH(request: Request, context: Params) {
     }
     if (updated.error === "domain-taken") {
       return error("That SSO domain is already assigned to another host", 409);
+    }
+    if (updated.error === "autoroute-needs-enrollment") {
+      return error(AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE, 400);
     }
     if (updated.error === "host-immutable") {
       return error("The Soft Launch host cannot be suspended", 400);
@@ -80,6 +99,7 @@ export async function PATCH(request: Request, context: Params) {
       name: name ?? null,
       inactive: inactive ?? null,
       ssoDomains: ssoDomains?.join(", ") ?? null,
+      ssoTenantIds: ssoTenantIds?.join(", ") ?? null,
       ssoAutoroute: ssoAutoroute ?? null,
     },
   });

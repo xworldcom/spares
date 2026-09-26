@@ -5,20 +5,23 @@ import {
   azureAdConfig,
   decodeMicrosoftOAuthState,
   exchangeMicrosoftCode,
-  fetchMicrosoftProfile,
   MICROSOFT_ACCESS_DENIED_CODE,
   MICROSOFT_OAUTH_COOKIE,
   microsoftCallbackRedirectUri,
   oauthStateCookieOptions,
-  pickMicrosoftEmail,
+  parseMicrosoftIdToken,
   resolveMicrosoftSession,
 } from "@/lib/auth/microsoft";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { resolveMicrosoftCatalogUser } from "@/lib/store";
 
-function loginErrorRedirect(origin: string, code: string) {
+/** `tid` lets the person hand their Entra tenant id to the host admin who enrolls it. */
+function loginErrorRedirect(origin: string, code: string, tid?: string) {
   const target = new URL("/login", origin);
   target.searchParams.set("error", code);
+  if (tid) {
+    target.searchParams.set("tid", tid);
+  }
   const response = NextResponse.redirect(target, 303);
   response.cookies.set(MICROSOFT_OAUTH_COOKIE, "", oauthStateCookieOptions(0));
   return response;
@@ -62,23 +65,23 @@ export async function GET(request: Request) {
   }
 
   const redirectUri = microsoftCallbackRedirectUri(state.origin);
-  const accessToken = await exchangeMicrosoftCode(config, code, redirectUri);
-  if (!accessToken) {
+  const exchanged = await exchangeMicrosoftCode(config, code, redirectUri);
+  if (!exchanged) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);
   }
 
-  const profile = await fetchMicrosoftProfile(accessToken);
-  const email = profile ? pickMicrosoftEmail(profile) : null;
-  if (!email) {
+  const identity = parseMicrosoftIdToken(exchanged.idToken, {
+    clientId: config.clientId,
+    nonce: state.nonce,
+  });
+  if (!identity) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);
   }
 
-  const resolved = await resolveMicrosoftCatalogUser(email);
-  const session = resolveMicrosoftSession(
-    "user" in resolved ? resolved.user ?? null : null,
-  );
+  const resolved = await resolveMicrosoftCatalogUser(identity);
+  const session = resolveMicrosoftSession("user" in resolved ? resolved.user : null);
   if (!session.ok) {
-    return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE);
+    return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE, identity.tid);
   }
 
   await setSessionCookie(session.userId, session.email, session.tenantId);

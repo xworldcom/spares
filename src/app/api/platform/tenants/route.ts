@@ -44,12 +44,11 @@ export async function POST(request: Request) {
           passwordHash: await hashPassword(parsed.value.staff.password),
         }
       : undefined,
-    parsed.value.ssoDomains || parsed.value.ssoAutoroute !== undefined
-      ? {
-          ssoDomains: parsed.value.ssoDomains,
-          ssoAutoroute: parsed.value.ssoAutoroute,
-        }
-      : undefined,
+    {
+      ssoDomains: parsed.value.ssoDomains,
+      ssoTenantIds: parsed.value.ssoTenantIds,
+      ssoAutoroute: parsed.value.ssoAutoroute,
+    },
   );
   if ("error" in created) {
     const mapped = mapCreateTenantStoreError(created.error);
@@ -73,6 +72,7 @@ export async function POST(request: Request) {
     target: { type: "tenant", id: created.tenant.id, label: created.tenant.name },
     details: {
       ssoDomains: parsed.value.ssoDomains?.join(", ") ?? "",
+      ssoTenantIds: parsed.value.ssoTenantIds?.join(", ") ?? "",
       ssoAutoroute: parsed.value.ssoAutoroute ?? false,
       staffEmail: staffUser?.email ?? "",
     },

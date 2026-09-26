@@ -11,12 +11,14 @@ export function LandingPageGate({
   microsoftSignInEnabled = false,
   passwordLoginEnabled = true,
   authErrorCode = null,
+  deniedTenantId = null,
   showMarketing = false,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
   passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
+  deniedTenantId?: string | null;
   showMarketing?: boolean;
 }) {
   const { status, user } = useAuth();
@@ -39,6 +41,7 @@ export function LandingPageGate({
       microsoftSignInEnabled={microsoftSignInEnabled}
       passwordLoginEnabled={passwordLoginEnabled}
       authErrorCode={authErrorCode}
+      deniedTenantId={deniedTenantId}
       showMarketing={showMarketing}
     />
   );

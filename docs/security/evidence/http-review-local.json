@@ -1,0 +1,448 @@
+{
+  "baseUrl": "http://localhost:3020",
+  "at": "2026-09-26T17:02:02.792Z",
+  "passed": 55,
+  "failed": 0,
+  "rows": [
+    {
+      "area": "login",
+      "id": "acmeStaff",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "login",
+      "id": "boltStaff",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "login",
+      "id": "northline",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "login",
+      "id": "southgate",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "login",
+      "id": "acme-staff-is-platform-owner",
+      "expect": "true",
+      "actual": "true",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "next",
+      "id": "login-page-%2F%2Fevil.example.test",
+      "expect": "true",
+      "actual": "/api/auth/microsoft?next=%2Fmachines",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "next",
+      "id": "login-page-%2F%5Cevil.example.test",
+      "expect": "true",
+      "actual": "/api/auth/microsoft?next=%2Fmachines",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "next",
+      "id": "login-page-https%3A%2F%2Fevil.example.test",
+      "expect": "true",
+      "actual": "/api/auth/microsoft?next=%2Fmachines",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "next",
+      "id": "login-page-%2F%252f%252fevil.example.test",
+      "expect": "true",
+      "actual": "/api/auth/microsoft?next=%2Fmachines",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "next",
+      "id": "login-page-keeps-relative",
+      "expect": "true",
+      "actual": "/api/auth/microsoft?next=%2Fquotes%3Ftab%3Dpo",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "microsoft",
+      "id": "authorize-redirects",
+      "expect": "302",
+      "actual": "302",
+      "pass": true,
+      "note": "403 means the base URL is not in SPARES_CORS_ORIGINS, 503 means AZURE_AD_* unset"
+    },
+    {
+      "area": "microsoft",
+      "id": "authorize-carries-nonce",
+      "expect": "true",
+      "actual": "present",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "microsoft",
+      "id": "authorize-scope-oidc-only",
+      "expect": "true",
+      "actual": "openid profile email",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "microsoft",
+      "id": "callback-forged-state",
+      "expect": "303",
+      "actual": "303",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "microsoft",
+      "id": "callback-forged-state-goes-to-login",
+      "expect": "true",
+      "actual": "http://localhost:3020/login?error=no_access",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "owner-lists-tenants",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "owner-clears-enrollment",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": "makes reruns on one store deterministic"
+    },
+    {
+      "area": "enroll",
+      "id": "bolt-staff-cannot-patch-host",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "customer-cannot-patch-host",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "rejects-non-guid-tid",
+      "expect": "400",
+      "actual": "400",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "rejects-consumer-tid",
+      "expect": "400",
+      "actual": "400",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "autoroute-without-tid-refused",
+      "expect": "400",
+      "actual": "400",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "autoroute-without-tid-message",
+      "expect": "true",
+      "actual": "Turn on autoroute after enrolling at least one work domain and one Entra tenant ID",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "autoroute-with-domain-and-tid",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "tenant-stores-tid",
+      "expect": "true",
+      "actual": "[\"11111111-2222-3333-4444-555555555555\"]",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "enroll",
+      "id": "second-host-cannot-take-domain",
+      "expect": "409",
+      "actual": "409",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-staff-sees-two-machines",
+      "expect": "true",
+      "actual": "2",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "hosts-share-no-machine",
+      "expect": "true",
+      "actual": "disjoint",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-staff-gets-bolt-machine",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-staff-gets-bolt-quote-id",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-staff-gets-bolt-quote-number",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-staff-gets-bolt-ticket-number",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-staff-lists-bolt-customers",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "host",
+      "id": "acme-customer-list-excludes-bolt",
+      "expect": "true",
+      "actual": "[\"ops@northline.test\",\"ops@southgate.test\"]",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-sees-one-machine",
+      "expect": "true",
+      "actual": "1",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-southgate-machine",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-southgate-tickets",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-southgate-manuals",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-southgate-file",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-southgate-quote",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-southgate-ticket",
+      "expect": "403|404",
+      "actual": "404",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "northline-gets-own-machine",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "customer-cannot-list-staff-tickets",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "plant",
+      "id": "customer-cannot-list-activity",
+      "expect": "403|404",
+      "actual": "403",
+      "pass": true,
+      "note": "404 when SPARES_ACTIVITY_LOG is off"
+    },
+    {
+      "area": "audit",
+      "id": "acme-staff-opens-own-quote",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "audit",
+      "id": "quote-viewed-row-written",
+      "expect": "true",
+      "actual": "3",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "audit",
+      "id": "second-open-within-hour-not-duplicated",
+      "expect": "true",
+      "actual": "3 -> 3",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "audit",
+      "id": "bolt-staff-cannot-read-acme-activity",
+      "expect": "true",
+      "actual": "0",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "inquire",
+      "id": "foreign-origin-refused",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "inquire",
+      "id": "oversized-refused",
+      "expect": "413",
+      "actual": "413",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "inquire",
+      "id": "honeypot-filled-rejected",
+      "expect": "400|201|202",
+      "actual": "400",
+      "pass": true,
+      "note": "app-defined outcome, recorded"
+    },
+    {
+      "area": "inquire",
+      "id": "same-origin-accepted",
+      "expect": "201",
+      "actual": "201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "inquire",
+      "id": "customer-cannot-read-inquiries",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "inquire",
+      "id": "bolt-staff-cannot-read-inquiries",
+      "expect": "403",
+      "actual": "403",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "area": "inquire",
+      "id": "owner-reads-inquiries",
+      "expect": "200",
+      "actual": "200",
+      "pass": true,
+      "note": ""
+    }
+  ]
+}

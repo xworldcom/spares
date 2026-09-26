@@ -23,11 +23,14 @@ export function LoginForm({
   microsoftSignInEnabled = false,
   passwordLoginEnabled = true,
   authErrorCode = null,
+  deniedTenantId = null,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
   passwordLoginEnabled?: boolean;
   authErrorCode?: string | null;
+  /** Entra tenant id from a denied Microsoft sign-in, for the person to hand to the host admin. */
+  deniedTenantId?: string | null;
 }) {
   const { login, status, user } = useAuth();
   const router = useRouter();
@@ -45,6 +48,7 @@ export function LoginForm({
     const params = new URLSearchParams(window.location.search);
     if (params.has("error")) {
       params.delete("error");
+      params.delete("tid");
       const nextSearch = params.toString();
       const href = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
       window.history.replaceState(window.history.state, "", href);
@@ -135,6 +139,12 @@ export function LoginForm({
       {authErrorCode === MICROSOFT_ACCESS_DENIED_CODE ? (
         <p className="text-sm text-[#f0b4b0]" role="alert">
           {MICROSOFT_ACCESS_DENIED_MESSAGE}
+          {deniedTenantId ? (
+            <>
+              <br />
+              Your Microsoft tenant ID is <code className="break-all">{deniedTenantId}</code>.
+            </>
+          ) : null}
         </p>
       ) : null}
       {authErrorCode === PASSWORD_LOGIN_DISABLED_CODE ? (

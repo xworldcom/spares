@@ -1,11 +1,16 @@
 import { passwordPolicyError } from "./auth/password.ts";
-import { parseSsoAutoroute, parseSsoDomains } from "./auth/sso-domain.ts";
+import {
+  parseSsoAutoroute,
+  parseSsoDomains,
+  parseSsoTenantIds,
+} from "./auth/sso-domain.ts";
 
 export type CreatePlatformTenantBody = {
   name?: unknown;
   staffEmail?: unknown;
   staffPassword?: unknown;
   ssoDomains?: unknown;
+  ssoTenantIds?: unknown;
   ssoAutoroute?: unknown;
 };
 
@@ -13,8 +18,12 @@ export type ParsedCreatePlatformTenant = {
   name: string;
   staff?: { email: string; password: string };
   ssoDomains?: string[];
+  ssoTenantIds?: string[];
   ssoAutoroute?: boolean;
 };
+
+export const AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE =
+  "Turn on autoroute after enrolling at least one work domain and one Entra tenant ID";
 
 type ParseFailure = { ok: false; message: string; status: number };
 type ParseSuccess = { ok: true; value: ParsedCreatePlatformTenant };
@@ -58,10 +67,23 @@ export function parseCreatePlatformTenantBody(
     }
     ssoDomains = parsedDomains.domains;
   }
+  let ssoTenantIds: string[] | undefined;
+  if (body.ssoTenantIds !== undefined) {
+    const parsedTenantIds = parseSsoTenantIds(body.ssoTenantIds);
+    if (!parsedTenantIds.ok) {
+      return {
+        ok: false,
+        message: parsedTenantIds.message,
+        status: parsedTenantIds.status,
+      };
+    }
+    ssoTenantIds = parsedTenantIds.tenantIds;
+  }
 
   const ssoAutoroute = parseSsoAutoroute(body.ssoAutoroute);
   const sso = {
     ...(ssoDomains ? { ssoDomains } : {}),
+    ...(ssoTenantIds ? { ssoTenantIds } : {}),
     ...(ssoAutoroute !== undefined ? { ssoAutoroute } : {}),
   };
 
@@ -84,7 +106,7 @@ export function parseCreatePlatformTenantBody(
 }
 
 export function mapCreateTenantStoreError(
-  code: "invalid" | "taken" | "email-taken" | "domain-taken",
+  code: "invalid" | "taken" | "email-taken" | "domain-taken" | "autoroute-needs-enrollment",
 ): { message: string; status: number } {
   if (code === "taken") {
     return { message: "A tenant with that name already exists", status: 409 };
@@ -94,6 +116,9 @@ export function mapCreateTenantStoreError(
   }
   if (code === "domain-taken") {
     return { message: "That SSO domain is already assigned to another host", status: 409 };
+  }
+  if (code === "autoroute-needs-enrollment") {
+    return { message: AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE, status: 400 };
   }
   return { message: "Tenant name is required", status: 400 };
 }
