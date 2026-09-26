@@ -14,6 +14,8 @@ import {
 } from "./store.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
+const SHAPE_TID = "11111111-2222-4333-8444-555555555555";
+
 async function isolated() {
   const dir = await mkdtemp(path.join(tmpdir(), "spares-sso-provision-"));
   process.env.SPARES_DATA_DIR = dir;
@@ -36,6 +38,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const created = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoTenantIds: [SHAPE_TID],
       ssoAutoroute: true,
     });
     assert.ok("tenant" in created);
@@ -69,6 +72,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const shape = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoTenantIds: [SHAPE_TID],
       ssoAutoroute: true,
     });
     assert.ok("tenant" in shape);
@@ -93,6 +97,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const created = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoTenantIds: [SHAPE_TID],
       ssoAutoroute: false,
     });
     assert.ok("tenant" in created);
@@ -118,6 +123,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoTenantIds: [SHAPE_TID],
       ssoAutoroute: true,
     });
     assert.deepEqual(await resolveMicrosoftCatalogUser("pat@other.com"), {
@@ -126,6 +132,48 @@ describe("Microsoft SSO domain provision", () => {
     assert.deepEqual(await resolveMicrosoftCatalogUser("pat@gmail.com"), {
       error: "unknown",
     });
+  });
+
+  it("refuses autoroute until a domain and an Entra tenant id are enrolled", async () => {
+    await isolated();
+    const created = await createTenantWithOptionalStaff("Shape", undefined, {
+      ssoDomains: ["shape.com"],
+    });
+    assert.ok("tenant" in created);
+    if (!("tenant" in created)) {
+      return;
+    }
+    assert.deepEqual(
+      await updateTenantPlatformMeta(created.tenant.id, { ssoAutoroute: true }),
+      { error: "autoroute-needs-enrollment" },
+    );
+    assert.deepEqual(
+      await createTenantWithOptionalStaff("Other Co", undefined, {
+        ssoTenantIds: [SHAPE_TID],
+        ssoAutoroute: true,
+      }),
+      { error: "autoroute-needs-enrollment" },
+    );
+    const enrolled = await updateTenantPlatformMeta(created.tenant.id, {
+      ssoTenantIds: [SHAPE_TID],
+      ssoAutoroute: true,
+    });
+    assert.ok("tenant" in enrolled);
+    if (!("tenant" in enrolled)) {
+      return;
+    }
+    assert.deepEqual(enrolled.tenant.ssoTenantIds, [SHAPE_TID]);
+    assert.equal(enrolled.tenant.ssoAutoroute, true);
+    const cleared = await updateTenantPlatformMeta(created.tenant.id, {
+      ssoTenantIds: [],
+      ssoAutoroute: false,
+    });
+    assert.ok("tenant" in cleared);
+    if (!("tenant" in cleared)) {
+      return;
+    }
+    assert.equal("ssoTenantIds" in cleared.tenant, false);
+    assert.equal("ssoAutoroute" in cleared.tenant, false);
   });
 
   it("refuses a second host claiming the same domain", async () => {
@@ -152,6 +200,7 @@ describe("Microsoft SSO domain provision", () => {
     await isolated();
     const created = await createTenantWithOptionalStaff("Shape", undefined, {
       ssoDomains: ["shape.com"],
+      ssoTenantIds: [SHAPE_TID],
       ssoAutoroute: true,
     });
     assert.ok("tenant" in created);

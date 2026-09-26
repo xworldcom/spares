@@ -17,7 +17,11 @@ export type Tenant = {
   bootstrapStaffEmail?: string;
   /** Work-email domains whose Microsoft SSO users join this host as staff. */
   ssoDomains?: string[];
-  /** When true, unknown Microsoft work emails at `ssoDomains` are created as staff. Off by default. */
+  /** Entra tenant ids (tid) a platform owner enrolled for this host. Autoroute and unverified
+   *  email claims need the token tid to be in this list. */
+  ssoTenantIds?: string[];
+  /** When true, unknown Microsoft work emails at `ssoDomains` from an enrolled `ssoTenantIds`
+   *  tenant are created as staff. Off by default. */
   ssoAutoroute?: boolean;
 };
 

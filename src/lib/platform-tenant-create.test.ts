@@ -99,6 +99,39 @@ describe("parseCreatePlatformTenantBody", () => {
     });
     assert.equal(result.ok, false);
   });
+
+  it("accepts an Entra tenant id list", () => {
+    const result = parseCreatePlatformTenantBody({
+      name: "Shape",
+      ssoDomains: "shape.com",
+      ssoTenantIds: "11111111-2222-4333-8444-555555555555, AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE",
+      ssoAutoroute: "on",
+    });
+    assert.deepEqual(result, {
+      ok: true,
+      value: {
+        name: "Shape",
+        ssoDomains: ["shape.com"],
+        ssoTenantIds: [
+          "11111111-2222-4333-8444-555555555555",
+          "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        ],
+        ssoAutoroute: true,
+      },
+    });
+  });
+
+  it("rejects a malformed Entra tenant id", () => {
+    const result = parseCreatePlatformTenantBody({
+      name: "Shape",
+      ssoTenantIds: "shape.com",
+    });
+    assert.deepEqual(result, {
+      ok: false,
+      message: "Enter an Entra tenant ID such as 11111111-2222-3333-4444-555555555555",
+      status: 400,
+    });
+  });
 });
 
 describe("platform host tenant create + persist", () => {
@@ -150,5 +183,9 @@ describe("platform host tenant create + persist", () => {
     assert.equal(mapCreateTenantStoreError("taken").status, 409);
     assert.equal(mapCreateTenantStoreError("email-taken").status, 409);
     assert.equal(mapCreateTenantStoreError("domain-taken").status, 409);
+    assert.deepEqual(mapCreateTenantStoreError("autoroute-needs-enrollment"), {
+      message: "Turn on autoroute after enrolling at least one work domain and one Entra tenant ID",
+      status: 400,
+    });
   });
 });

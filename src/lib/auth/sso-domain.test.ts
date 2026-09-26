@@ -6,10 +6,17 @@ import {
   findActiveTenantForSsoDomain,
   firstTakenSsoDomain,
   formatSsoDomains,
+  formatSsoTenantIds,
+  MICROSOFT_CONSUMER_TID,
   normalizeSsoDomain,
   parseSsoAutoroute,
   parseSsoDomains,
+  parseSsoTenantIds,
+  tenantEnrollsMicrosoftTenant,
 } from "./sso-domain.ts";
+
+const SHAPE_TID = "11111111-2222-4333-8444-555555555555";
+const OTHER_TID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 
 function tenant(partial: Partial<Tenant> & Pick<Tenant, "id" | "ssoDomains">): Tenant {
   return {
@@ -62,6 +69,62 @@ describe("parseSsoDomains", () => {
   it("rejects a public domain in a list", () => {
     const parsed = parseSsoDomains("shape.com, gmail.com");
     assert.equal(parsed.ok, false);
+  });
+});
+
+describe("parseSsoTenantIds", () => {
+  it("accepts a GUID list, lowercases, and de-dupes", () => {
+    assert.deepEqual(
+      parseSsoTenantIds(`${SHAPE_TID.toUpperCase()}, ${SHAPE_TID}; ${OTHER_TID}`),
+      { ok: true, tenantIds: [SHAPE_TID, OTHER_TID] },
+    );
+    assert.deepEqual(parseSsoTenantIds([SHAPE_TID]), { ok: true, tenantIds: [SHAPE_TID] });
+  });
+
+  it("allows clearing with an empty string", () => {
+    assert.deepEqual(parseSsoTenantIds(""), { ok: true, tenantIds: [] });
+    assert.deepEqual(parseSsoTenantIds(undefined), { ok: true, tenantIds: [] });
+  });
+
+  it("rejects non-GUID tokens", () => {
+    assert.deepEqual(parseSsoTenantIds("shape.com"), {
+      ok: false,
+      message: "Enter an Entra tenant ID such as 11111111-2222-3333-4444-555555555555",
+      status: 400,
+    });
+    assert.deepEqual(parseSsoTenantIds(42), {
+      ok: false,
+      message: "Entra tenant IDs must be text",
+      status: 400,
+    });
+  });
+
+  it("rejects the personal Microsoft account tenant", () => {
+    assert.deepEqual(parseSsoTenantIds(`${SHAPE_TID}, ${MICROSOFT_CONSUMER_TID}`), {
+      ok: false,
+      message: "Personal Microsoft accounts cannot be enrolled as a host tenant",
+      status: 400,
+    });
+  });
+
+  it("formats the list back for the input", () => {
+    assert.equal(formatSsoTenantIds([SHAPE_TID, OTHER_TID]), `${SHAPE_TID}, ${OTHER_TID}`);
+    assert.equal(formatSsoTenantIds(undefined), "");
+  });
+});
+
+describe("tenantEnrollsMicrosoftTenant", () => {
+  it("is true only for an enrolled tid", () => {
+    assert.equal(
+      tenantEnrollsMicrosoftTenant({ ssoTenantIds: [SHAPE_TID] }, SHAPE_TID),
+      true,
+    );
+    assert.equal(
+      tenantEnrollsMicrosoftTenant({ ssoTenantIds: [SHAPE_TID] }, OTHER_TID),
+      false,
+    );
+    assert.equal(tenantEnrollsMicrosoftTenant({}, SHAPE_TID), false);
+    assert.equal(tenantEnrollsMicrosoftTenant(undefined, SHAPE_TID), false);
   });
 });
 

@@ -5,6 +5,7 @@ import {
   findActiveTenantForSsoDomain,
   firstTakenSsoDomain,
   parseSsoDomains,
+  parseSsoTenantIds,
 } from "./auth/sso-domain.ts";
 import {
   loginRenameConflicts,
@@ -1666,6 +1667,15 @@ function withSsoDomains(tenant: Tenant, ssoDomains: string[] | undefined): Tenan
   return rest;
 }
 
+function withSsoTenantIds(tenant: Tenant, ssoTenantIds: string[] | undefined): Tenant {
+  if (ssoTenantIds && ssoTenantIds.length > 0) {
+    return { ...tenant, ssoTenantIds };
+  }
+  const rest = { ...tenant };
+  delete rest.ssoTenantIds;
+  return rest;
+}
+
 function withSsoAutoroute(tenant: Tenant, ssoAutoroute: boolean | undefined): Tenant {
   if (ssoAutoroute === undefined) {
     return tenant;
@@ -1677,14 +1687,52 @@ function withSsoAutoroute(tenant: Tenant, ssoAutoroute: boolean | undefined): Te
   return rest;
 }
 
+type SsoEnrollment = {
+  ssoDomains?: string[];
+  ssoTenantIds?: string[];
+  ssoAutoroute?: boolean;
+};
+
+type SsoEnrollmentError = "invalid" | "domain-taken" | "autoroute-needs-enrollment";
+
+/** Autoroute needs a domain and an Entra tenant on the same row. Legacy rows keep their flag. */
+function applySsoEnrollment(
+  tenant: Tenant,
+  tenants: readonly Tenant[],
+  patch: SsoEnrollment,
+  exceptTenantId?: string,
+): { ok: true; tenant: Tenant } | { ok: false; error: SsoEnrollmentError } {
+  let next = tenant;
+  if (patch.ssoDomains !== undefined) {
+    const assigned = attachSsoDomains(tenants, patch.ssoDomains, exceptTenantId);
+    if (!assigned.ok) {
+      return assigned;
+    }
+    next = withSsoDomains(next, assigned.ssoDomains);
+  }
+  if (patch.ssoTenantIds !== undefined) {
+    const parsed = parseSsoTenantIds(patch.ssoTenantIds);
+    if (!parsed.ok) {
+      return { ok: false, error: "invalid" };
+    }
+    next = withSsoTenantIds(next, parsed.tenantIds);
+  }
+  next = withSsoAutoroute(next, patch.ssoAutoroute);
+  if (
+    patch.ssoAutoroute === true &&
+    (!next.ssoDomains?.length || !next.ssoTenantIds?.length)
+  ) {
+    return { ok: false, error: "autoroute-needs-enrollment" };
+  }
+  return { ok: true, tenant: next };
+}
+
 export function updateTenantPlatformMeta(
   tenantId: string,
   patch: {
     name?: string;
     inactive?: boolean;
-    ssoDomains?: string[];
-    ssoAutoroute?: boolean;
-  },
+  } & SsoEnrollment,
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -1713,17 +1761,11 @@ export function updateTenantPlatformMeta(
       next = { ...next, name: trimmed };
     }
 
-    if (patch.ssoDomains !== undefined) {
-      const assigned = attachSsoDomains(tenants, patch.ssoDomains, tenantId);
-      if (!assigned.ok) {
-        return { error: assigned.error };
-      }
-      next = withSsoDomains(next, assigned.ssoDomains);
+    const enrolled = applySsoEnrollment(next, tenants, patch, tenantId);
+    if (!enrolled.ok) {
+      return { error: enrolled.error };
     }
-
-    if (patch.ssoAutoroute !== undefined) {
-      next = withSsoAutoroute(next, patch.ssoAutoroute);
-    }
+    next = enrolled.tenant;
 
     if (patch.inactive === true) {
       if (tenantId === DEFAULT_TENANT_ID) {
@@ -1892,11 +1934,11 @@ function tenantNameTaken(db: Database, trimmed: string) {
   return slugTaken || nameTaken;
 }
 
-type CreateTenantError = "invalid" | "taken" | "email-taken" | "domain-taken";
+type CreateTenantError = "taken" | "email-taken" | SsoEnrollmentError;
 
 export function createTenant(
   name: string,
-  options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
+  options?: SsoEnrollment,
 ): Promise<{ tenant: Tenant } | { error: CreateTenantError }> {
   return withLock(async () => {
     const db = await readDatabase();
@@ -1907,14 +1949,11 @@ export function createTenant(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const assigned = attachSsoDomains(db.tenants ?? [], options?.ssoDomains);
-    if (!assigned.ok) {
-      return { error: assigned.error };
+    const enrolled = applySsoEnrollment(newTenantFromName(trimmed), db.tenants ?? [], options ?? {});
+    if (!enrolled.ok) {
+      return { error: enrolled.error };
     }
-    const tenant = withSsoAutoroute(
-      withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains),
-      options?.ssoAutoroute,
-    );
+    const tenant = enrolled.tenant;
     await writeDatabase({
       ...db,
       schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
@@ -1928,7 +1967,7 @@ export function createTenant(
 export function createTenantWithOptionalStaff(
   name: string,
   staff?: { email: string; passwordHash: string },
-  options?: { ssoDomains?: string[]; ssoAutoroute?: boolean },
+  options?: SsoEnrollment,
 ): Promise<
   { tenant: Tenant; staffUser?: StoredUser } | { error: CreateTenantError }
 > {
@@ -1941,14 +1980,11 @@ export function createTenantWithOptionalStaff(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const assigned = attachSsoDomains(db.tenants ?? [], options?.ssoDomains);
-    if (!assigned.ok) {
-      return { error: assigned.error };
+    const enrolled = applySsoEnrollment(newTenantFromName(trimmed), db.tenants ?? [], options ?? {});
+    if (!enrolled.ok) {
+      return { error: enrolled.error };
     }
-    let tenant: Tenant = withSsoAutoroute(
-      withSsoDomains(newTenantFromName(trimmed), assigned.ssoDomains),
-      options?.ssoAutoroute,
-    );
+    let tenant: Tenant = enrolled.tenant;
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {
