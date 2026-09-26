@@ -330,6 +330,7 @@ export function QuoteActivityFeed({
                 key={activity.id}
                 className={rowClass}
                 data-unread-anchor={index === firstUnreadIndex ? "true" : undefined}
+                data-has-unread-divider={index === firstUnreadIndex ? "true" : undefined}
                 data-stacked={stacked ? "true" : "false"}
                 data-end={lastInStack ? "true" : "false"}
                 onAnimationEnd={() => {
@@ -351,6 +352,15 @@ export function QuoteActivityFeed({
                     : undefined
                 }
               >
+                {index === firstUnreadIndex ? (
+                  <div className="imsg-unread-divider" role="status" aria-label="New messages">
+                    <span className="imsg-unread-divider-chev" aria-hidden="true">↓</span>
+                    <span className="imsg-unread-divider-line" aria-hidden="true" />
+                    <span className="imsg-unread-divider-label">New</span>
+                    <span className="imsg-unread-divider-line" aria-hidden="true" />
+                    <span className="imsg-unread-divider-chev" aria-hidden="true">↓</span>
+                  </div>
+                ) : null}
                 {!own ? (
                   lastInStack ? (
                     <OtherAvatar email={activity.actorEmail} assistant={assistant} />
@@ -359,11 +369,6 @@ export function QuoteActivityFeed({
                   )
                 ) : null}
                 <div className="imsg-stack">
-                  {index === firstUnreadIndex ? (
-                    <p className="imsg-unread-marker" role="status">
-                      Start reading here
-                    </p>
-                  ) : null}
                   {!own && !stacked ? (
                     <p className="imsg-meta">{label}</p>
                   ) : null}
