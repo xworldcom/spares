@@ -48,6 +48,18 @@ Preview deployments and Soft Launch share `BLOB_READ_WRITE_TOKEN`, so a Preview 
 - Microsoft sign-in, what enrollment stores: `Tenant.ssoDomains` (work domains), `Tenant.ssoTenantIds` (Entra tenant ids, the `tid` claim), and the `ssoAutoroute` flag. Autoroute cannot be turned on until the row has at least one domain and one tenant id — `src/lib/auth/sso-domain.ts`, `src/lib/store.ts`
 - Microsoft sign-in, trust rule: the callback reads the `id_token` only (no Graph call) and matches on `tid` + `oid`. An existing login signs in when the token carries a verified UPN for its address, or an `email` claim from a `tid` its host enrolled. A first sign-in autoroutes only when the same host enrolled both the email's domain and the token `tid`; personal Microsoft accounts never autoroute. The first sign-in binds `microsoftTid` + `microsoftOid` on the row and later sign-ins must present the same pair — `src/lib/auth/microsoft.ts` `parseMicrosoftIdToken`, `src/lib/store.ts` `resolveMicrosoftCatalogUser`
 
+- Password path facts. There is no self-service reset, forgot-password, or invite token flow, so there is no reset token to expire. Staff set a password at create time (`POST /api/staff/customers`, `POST /api/staff/team`) and nobody can change it afterwards through the app. Policy is length 10 or more (`src/lib/auth/password.ts`). Lockout is the 8-per-15-minute window above, held in one Node process, so each Vercel instance counts separately. No second factor exists for password users. To require MFA for a host, set `PASSWORD_LOGIN=0` (or turn password sign-in off under Platform → Sign-in) so every login goes through Microsoft, where Entra Conditional Access enforces it.
+- Sign-in `next=` targets pass through one sanitizer, `sanitizeNextPath` in `src/lib/auth/safe-url.ts`, on the login page and on the Microsoft route. Anything that is not a same-origin relative path becomes `/machines`.
+
+## Staff audit
+
+- Staff opening a quote or a ticket writes `quote.viewed` / `ticket.viewed` to the activity log, once per staff login per record per hour — `src/app/api/quotes/[id]/route.ts`, `src/app/api/tickets/[id]/route.ts`, `shouldRecordView` in `src/lib/activity-log.ts`.
+- The activity log records only when `SPARES_ACTIVITY_LOG=true` (`src/lib/activity-log-public.ts`). Soft Launch runs with it off, so today neither logins nor views are written. Turning it on also turns the live poll back on; that is the open cost.
+
+## Inquire form
+
+- `POST /api/inquiries` writes to `accessInquiries` in the catalog. Platform owners read it under Platform → Inquiries. Guards: same-origin `Origin`, 4 posts per minute per IP, 16 KiB body cap, `company_fax` honeypot. No captcha.
+
 ## APIs and roles
 
 - Mutating staff routes use `requireTenantStaff` / `requireRole("staff")`
