@@ -1,4 +1,6 @@
+import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
+import { staffCustomerUsers } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import {
   hydrateQuoteItems,
@@ -8,6 +10,7 @@ import {
   toPublicQuote,
 } from "@/lib/quotes";
 import { canAccessMachine, customerIdFromGrant, grantFromUser } from "@/lib/access";
+import { publicQuoteForUser } from "@/lib/quote-http";
 import { isSeedAllowed } from "@/lib/production-env";
 import { belongsToTenant } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
@@ -49,8 +52,15 @@ export async function GET() {
       ? quotes
       : quotes.filter((quote) => quote.customerId === auth.user.id);
 
-  const publicQuotes = visible.map((quote) =>
-    toPublicQuote(quote, auth.user, names.get(quote.machineId)),
+  const customerUsers =
+    auth.user.role === "staff" ? await staffCustomerUsers(auth.tenantId) : undefined;
+  const publicQuotes = await Promise.all(
+    visible.map((quote) =>
+      attachStaffAssistantAvailability(
+        auth.user,
+        toPublicQuote(quote, auth.user, names.get(quote.machineId), { customerUsers }),
+      ),
+    ),
   );
 
   return json({
@@ -158,5 +168,5 @@ export async function POST(request: Request) {
     details: { machineId, customerEmail },
   });
 
-  return json({ quote: toPublicQuote(created, auth.user, machine.name) }, 201);
+  return json({ quote: await publicQuoteForUser(created, auth.user, machine.name) }, 201);
 }

@@ -249,7 +249,7 @@ export function countUnreadTickets<
 }
 
 export function ticketLatestActivityAt(
-  ticket: Pick<ServiceTicketRecord, "activities">,
+  ticket: { activities: ReadonlyArray<{ at: string }> },
 ) {
   return ticket.activities.at(-1)?.at;
 }
@@ -270,17 +270,20 @@ export function isCustomerReadThroughTicket(
   return readAt >= latest;
 }
 
-export function customerReadReceiptsForTicket(
-  ticket: ServiceTicketRecord,
+export function customerReadReceiptsForThread(
+  thread: {
+    activities: ReadonlyArray<{ at: string }>;
+    lastReadAt: Record<string, string>;
+  },
   customerUsers: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[],
 ): TicketCustomerReadReceipt[] {
-  const latest = ticketLatestActivityAt(ticket);
+  const latest = ticketLatestActivityAt(thread);
   if (!latest) {
     return [];
   }
   const byId = new Map(customerUsers.map((row) => [row.id, row]));
   const receipts: TicketCustomerReadReceipt[] = [];
-  for (const [userId, readAt] of Object.entries(ticket.lastReadAt)) {
+  for (const [userId, readAt] of Object.entries(thread.lastReadAt)) {
     const customer = byId.get(userId);
     if (!customer || customer.role !== "customer") {
       continue;
@@ -296,6 +299,13 @@ export function customerReadReceiptsForTicket(
   }
   receipts.sort((a, b) => a.email.localeCompare(b.email));
   return receipts;
+}
+
+export function customerReadReceiptsForTicket(
+  ticket: ServiceTicketRecord,
+  customerUsers: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[],
+): TicketCustomerReadReceipt[] {
+  return customerReadReceiptsForThread(ticket, customerUsers);
 }
 
 export function toPublicTicket(
