@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LandingCell } from "@/components/landing/LandingCell";
 import { LandingDemoScrub } from "@/components/landing/LandingDemoScrub";
 import { LandingProductDemo } from "@/components/landing/LandingProductDemo";
+import { LandingWorkflowDemo } from "@/components/landing/LandingWorkflowDemo";
 
 export function LandingMarketing() {
   return (
@@ -42,23 +43,19 @@ export function LandingMarketing() {
       </section>
 
       <section id="product-story" className="landing-section landing-section--stage">
-        <p className="landing-section-kicker">Care and quotes</p>
-        <h2 className="landing-section-title">Two threads. One workspace.</h2>
+        <p className="landing-section-kicker">The workflow</p>
+        <h2 className="landing-section-title">Model → part → quote. Keep scrolling.</h2>
         <p className="landing-section-lede">
-          Scroll to walk a parts quote, then a Care ticket. The workspace stays on
-          screen while the story moves — always tied to the machine model above.
+          One pinned chapter walks the floor path: open the cell, spin it, tap the
+          wear part, add lines, and send the quote request — then see how Care keeps
+          the same machine in thread.
         </p>
 
         <div className="landing-demo">
           <div className="landing-demo-scrub-stack">
-            <LandingDemoScrub ariaLabel="Parts quote demo">
+            <LandingDemoScrub ariaLabel="Model to quote workflow">
               {({ progress, reduceMotion }) => (
-                <LandingProductDemo
-                  variant="quote"
-                  progress={progress}
-                  reduceMotion={reduceMotion}
-                  scrubbed
-                />
+                <LandingWorkflowDemo progress={progress} reduceMotion={reduceMotion} />
               )}
             </LandingDemoScrub>
 

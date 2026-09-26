@@ -20,7 +20,13 @@ function isMesh(object: Object3D): object is Mesh {
   return "isMesh" in object && Boolean((object as Mesh).isMesh);
 }
 
-function FittedMachine({ paused }: { paused: boolean }) {
+function FittedMachine({
+  paused,
+  spinYaw,
+}: {
+  paused: boolean;
+  spinYaw?: number;
+}) {
   const root = useRef<Group>(null);
   const spin = useRef<Group>(null);
   const { scene } = useGLTF(MODEL);
@@ -71,7 +77,15 @@ function FittedMachine({ paused }: { paused: boolean }) {
   }, [model]);
 
   useFrame((_, delta) => {
-    if (paused || !spin.current) {
+    if (!spin.current) {
+      return;
+    }
+    if (spinYaw !== undefined) {
+      spin.current.rotation.y = spinYaw;
+      spin.current.rotation.x = Math.sin(spinYaw * 0.35) * 0.04;
+      return;
+    }
+    if (paused) {
       return;
     }
     spin.current.rotation.y += delta * 0.045;
@@ -100,7 +114,13 @@ function Lights() {
   );
 }
 
-export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
+export function OrbitStage({
+  interactive = false,
+  spinYaw,
+}: {
+  interactive?: boolean;
+  spinYaw?: number;
+}) {
   const [reduceMotion, setReduceMotion] = useState(true);
   const [dragging, setDragging] = useState(false);
 
@@ -112,7 +132,7 @@ export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  const paused = reduceMotion || dragging;
+  const paused = reduceMotion || dragging || spinYaw !== undefined;
 
   return (
     <div
@@ -132,7 +152,7 @@ export function OrbitStage({ interactive = false }: { interactive?: boolean }) {
         <Lights />
         <StudioGround />
         <Suspense fallback={null}>
-          <FittedMachine paused={paused} />
+          <FittedMachine paused={paused} spinYaw={spinYaw} />
         </Suspense>
         {interactive ? (
           <OrbitControls

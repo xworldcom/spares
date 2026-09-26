@@ -505,6 +505,46 @@ export function marketingCopyBan(text: string) {
   return /\bPlatform\b|\bHosts\b|\bHost staff\b|\bmulti-tenant\b/i.test(text);
 }
 
+export type WorkflowStep = "model" | "spin" | "pick" | "quote" | "submit";
+
+export const WORKFLOW_SPIN_START = 0.18;
+export const WORKFLOW_PICK_START = 0.38;
+export const WORKFLOW_QUOTE_START = 0.58;
+export const WORKFLOW_SUBMIT_START = 0.78;
+
+export function workflowStep(playhead: number): WorkflowStep {
+  const p = clampDemoScrollProgress(playhead);
+  if (p >= WORKFLOW_SUBMIT_START) {
+    return "submit";
+  }
+  if (p >= WORKFLOW_QUOTE_START) {
+    return "quote";
+  }
+  if (p >= WORKFLOW_PICK_START) {
+    return "pick";
+  }
+  if (p >= WORKFLOW_SPIN_START) {
+    return "spin";
+  }
+  return "model";
+}
+
+/** Scroll-driven yaw for the marketing workflow cell (radians). */
+export function workflowSpinYaw(playhead: number) {
+  const p = clampDemoScrollProgress(playhead);
+  if (p < WORKFLOW_SPIN_START) {
+    return 0.12;
+  }
+  if (p < WORKFLOW_PICK_START) {
+    const t = (p - WORKFLOW_SPIN_START) / (WORKFLOW_PICK_START - WORKFLOW_SPIN_START);
+    return 0.12 + t * 1.75;
+  }
+  return 1.87;
+}
+
+export const WORKFLOW_DEMO_PART = "PN-ROLL-2104";
+export const WORKFLOW_DEMO_QTY = 2;
+
 export const DEMO_ALL_SCRIPT_BEATS: readonly DemoBeat[] = [
   ...DEMO_QUOTE_SCRIPT,
   ...DEMO_TICKET_SCRIPT,

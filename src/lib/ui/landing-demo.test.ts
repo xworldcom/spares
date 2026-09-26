@@ -22,6 +22,12 @@ import {
   demoSectionScrollProgress,
   marketingCopyBan,
   reduceDemoFrame,
+  workflowSpinYaw,
+  workflowStep,
+  WORKFLOW_PICK_START,
+  WORKFLOW_QUOTE_START,
+  WORKFLOW_SPIN_START,
+  WORKFLOW_SUBMIT_START,
 } from "./landing-demo.ts";
 
 const MARKETING_FILES = [
@@ -32,6 +38,8 @@ const MARKETING_FILES = [
   "src/components/landing/LandingScrollPeek.tsx",
   "src/components/landing/LandingCell.tsx",
   "src/components/landing/LandingBackToTop.tsx",
+  "src/components/landing/LandingWorkflowDemo.tsx",
+  "src/components/landing/LandingWorkflowCell.tsx",
 ];
 
 describe("reduceDemoFrame", () => {
@@ -332,6 +340,21 @@ describe("landing cell stage", () => {
     const css = readFileSync("src/components/landing/landing.css", "utf8");
     assert.match(css, /\.landing-back-to-top/);
     assert.match(css, /z-index:\s*40/);
+  });
+});
+
+describe("workflow demo", () => {
+  it("steps through model → spin → pick → quote → submit as scroll advances", () => {
+    assert.equal(workflowStep(0), "model");
+    assert.equal(workflowStep(WORKFLOW_SPIN_START), "spin");
+    assert.equal(workflowStep(WORKFLOW_PICK_START), "pick");
+    assert.equal(workflowStep(WORKFLOW_QUOTE_START), "quote");
+    assert.equal(workflowStep(WORKFLOW_SUBMIT_START), "submit");
+    assert.equal(workflowStep(1), "submit");
+    const midSpin = workflowSpinYaw((WORKFLOW_SPIN_START + WORKFLOW_PICK_START) / 2);
+    const endSpin = workflowSpinYaw(WORKFLOW_PICK_START);
+    assert.ok(midSpin < endSpin);
+    assert.ok(endSpin > 1);
   });
 });
 
