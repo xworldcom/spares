@@ -243,7 +243,8 @@ export function filterActivityEvents(
     return true;
   });
 
-  scoped.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : a.id < b.id ? 1 : -1));
+  scoped.reverse();
+  scoped.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   return scoped.slice(0, limit);
 }
 
