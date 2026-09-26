@@ -170,6 +170,21 @@ export function formatSsoTenantIds(ids: readonly string[] | undefined) {
   return (ids ?? []).join(", ");
 }
 
+/** One-line host summary for the platform lists. `null` when nothing is enrolled. */
+export function formatSsoSummary(
+  tenant: Pick<Tenant, "ssoDomains" | "ssoTenantIds" | "ssoAutoroute">,
+): string | null {
+  const domains = tenant.ssoDomains ?? [];
+  const tenantCount = tenant.ssoTenantIds?.length ?? 0;
+  if (domains.length === 0 && tenantCount === 0) {
+    return null;
+  }
+  const domainText = domains.length > 0 ? domains.join(", ") : "—";
+  const tenantText = `${tenantCount} Entra tenant${tenantCount === 1 ? "" : "s"}`;
+  const autoroute = tenantSsoAutorouteEnabled(tenant) ? "on" : "off";
+  return `SSO ${domainText} · ${tenantText} · Autoroute ${autoroute}`;
+}
+
 export function tenantSsoDomains(tenant: Pick<Tenant, "ssoDomains">) {
   return tenant.ssoDomains ?? [];
 }

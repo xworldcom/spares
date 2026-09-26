@@ -6,6 +6,7 @@ import {
   findActiveTenantForSso,
   firstTakenSsoDomain,
   formatSsoDomains,
+  formatSsoSummary,
   formatSsoTenantIds,
   MICROSOFT_CONSUMER_TID,
   normalizeSsoDomain,
@@ -110,6 +111,28 @@ describe("parseSsoTenantIds", () => {
   it("formats the list back for the input", () => {
     assert.equal(formatSsoTenantIds([SHAPE_TID, OTHER_TID]), `${SHAPE_TID}, ${OTHER_TID}`);
     assert.equal(formatSsoTenantIds(undefined), "");
+  });
+});
+
+describe("formatSsoSummary", () => {
+  it("prints domains, tenant count, and the autoroute state", () => {
+    assert.equal(
+      formatSsoSummary({
+        ssoDomains: ["shape.com", "shapetech.com"],
+        ssoTenantIds: [SHAPE_TID],
+        ssoAutoroute: true,
+      }),
+      "SSO shape.com, shapetech.com · 1 Entra tenant · Autoroute on",
+    );
+    assert.equal(
+      formatSsoSummary({ ssoDomains: ["shape.com"] }),
+      "SSO shape.com · 0 Entra tenants · Autoroute off",
+    );
+    assert.equal(
+      formatSsoSummary({ ssoTenantIds: [SHAPE_TID, OTHER_TID] }),
+      "SSO — · 2 Entra tenants · Autoroute off",
+    );
+    assert.equal(formatSsoSummary({}), null);
   });
 });
 

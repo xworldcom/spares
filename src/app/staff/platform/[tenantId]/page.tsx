@@ -10,7 +10,12 @@ import { apiFetch } from "@/lib/api/client";
 import { deletePlatformTenant } from "@/lib/api/platform-directory";
 import { errorMessage } from "@/lib/api/errors";
 import { SsoAutorouteSelector } from "@/components/staff/SsoAutorouteSelector";
-import { formatSsoDomains, tenantSsoAutorouteEnabled } from "@/lib/auth/sso-domain";
+import {
+  formatSsoDomains,
+  formatSsoSummary,
+  formatSsoTenantIds,
+  tenantSsoAutorouteEnabled,
+} from "@/lib/auth/sso-domain";
 import type { Tenant } from "@/types";
 
 type DeploymentDetail = {
@@ -55,6 +60,7 @@ function TenantDetail() {
   const [detail, setDetail] = useState<DeploymentDetail | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [ssoDomains, setSsoDomains] = useState("");
+  const [ssoTenantIds, setSsoTenantIds] = useState("");
   const [ssoAutoroute, setSsoAutoroute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -73,6 +79,7 @@ function TenantDetail() {
       setDetail(data);
       setDisplayName(data.deployment.tenant.name);
       setSsoDomains(formatSsoDomains(data.deployment.tenant.ssoDomains));
+      setSsoTenantIds(formatSsoTenantIds(data.deployment.tenant.ssoTenantIds));
       setSsoAutoroute(tenantSsoAutorouteEnabled(data.deployment.tenant));
       setForbidden(false);
       setError(null);
@@ -99,7 +106,7 @@ function TenantDetail() {
     try {
       await apiFetch(`/api/platform/tenants/${encodeURIComponent(tenantId)}`, {
         method: "PATCH",
-        body: JSON.stringify({ ssoDomains, ssoAutoroute }),
+        body: JSON.stringify({ ssoDomains, ssoTenantIds, ssoAutoroute }),
       });
       setNotice("SSO settings updated.");
       await load();
@@ -227,6 +234,9 @@ function TenantDetail() {
         {new Date(deployment.tenant.createdAt).toLocaleString()}
         {deployment.inactive ? " · Suspended" : ""}
       </p>
+      {formatSsoSummary(deployment.tenant) ? (
+        <p className="text-muted text-sm">{formatSsoSummary(deployment.tenant)}</p>
+      ) : null}
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <section className="card p-4">
@@ -282,24 +292,39 @@ function TenantDetail() {
       </section>
 
       <section className="card p-4 mt-6 max-w-lg">
-        <h2 className="text-lg font-semibold mb-3">Microsoft SSO domain</h2>
+        <h2 className="text-lg font-semibold mb-3">Microsoft SSO</h2>
         <p className="text-sm text-muted mb-3">
-          Enroll the company work domain, then turn autoroute on when new Microsoft
-          sign-ins should create staff. Existing logins keep the host they already have.
+          Enroll the company work domain and its Entra tenant ID, then turn autoroute on
+          when new Microsoft sign-ins should create staff. Existing logins keep the host they
+          already have.
         </p>
-        <label className="sr-only" htmlFor="host-sso-domains">
-          Microsoft SSO domains
-        </label>
-        <div className="flex flex-wrap gap-2 mb-4">
+        <label className="stack gap-1 mb-4">
+          <span className="text-sm font-medium">Work domain</span>
           <input
             id="host-sso-domains"
-            className="spares-field h-12 flex-1 min-w-[12rem] rounded-2xl border-0 px-4 text-[16px] outline-none"
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             value={ssoDomains}
             onChange={(e) => setSsoDomains(e.target.value)}
             placeholder="shape.com"
             autoComplete="off"
           />
-        </div>
+        </label>
+        <label className="stack gap-1 mb-4">
+          <span className="text-sm font-medium">Entra tenant ID</span>
+          <input
+            id="host-sso-tenant-ids"
+            className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
+            value={ssoTenantIds}
+            onChange={(e) => setSsoTenantIds(e.target.value)}
+            placeholder="11111111-2222-3333-4444-555555555555"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <p className="text-sm text-muted">
+            From Microsoft Entra admin center, Overview, Tenant ID. Autoroute needs both a
+            domain and a tenant ID.
+          </p>
+        </label>
         <SsoAutorouteSelector
           value={ssoAutoroute}
           onChange={setSsoAutoroute}
