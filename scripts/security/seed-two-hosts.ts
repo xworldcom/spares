@@ -76,9 +76,10 @@ for (const host of HOSTS) {
   rows.push({ host: host.name, role: "staff", login: host.staff, tenantId, plant: "", machineId: "", quote: "", ticket: "" });
 
   for (const plant of host.plants) {
-    const account = await store.createCustomerAccount(plant.name, tenantId);
-    if (!("account" in account)) fail(`create plant ${plant.name}`, account);
-    const sited = await store.createSite(tenantId, account.account.id, plant.site);
+    const accounted = await store.createCustomerAccount(plant.name, tenantId);
+    const account = "account" in accounted ? accounted.account : undefined;
+    if (!account) fail(`create plant ${plant.name}`, accounted);
+    const sited = await store.createSite(tenantId, account.id, plant.site);
     const site = "site" in sited ? sited.site : undefined;
     if (!site) fail(`create site ${plant.site}`, sited);
     const slug = plant.machine.toLowerCase().replace(/[^a-z0-9]+/g, "-");
