@@ -46,6 +46,7 @@ import {
   chatWatchChannel,
   conversationWatchChanged,
 } from "./chat-watch.ts";
+import { readWatermarkNow } from "./read-watermark.ts";
 import {
   assignMissingQuoteNumbers,
   findQuoteInList,
@@ -3508,10 +3509,9 @@ export function appendQuoteActivity(
 }
 
 export function markQuoteRead(idOrNumber: string, tenantId: string, userId: string) {
-  const now = new Date().toISOString();
   return mutateQuote(idOrNumber, tenantId, (quote) => ({
     ...quote,
-    lastReadAt: { ...quote.lastReadAt, [userId]: now },
+    lastReadAt: { ...quote.lastReadAt, [userId]: readWatermarkNow(quote.activities) },
   }));
 }
 
@@ -3768,10 +3768,9 @@ export function appendTicketActivity(
 }
 
 export function markTicketRead(idOrNumber: string, tenantId: string, userId: string) {
-  const now = new Date().toISOString();
   return mutateTicket(idOrNumber, tenantId, (ticket) => ({
     ...ticket,
-    lastReadAt: { ...ticket.lastReadAt, [userId]: now },
+    lastReadAt: { ...ticket.lastReadAt, [userId]: readWatermarkNow(ticket.activities) },
   }));
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { NewTicketForm } from "@/components/care/NewTicketForm";
 import { TicketDetail } from "@/components/care/TicketDetail";
@@ -99,6 +99,16 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
     setReloadKey((key) => key + 1);
   }
 
+  const patchTicketInList = useCallback((patch: ServiceTicket) => {
+    setTickets((rows) =>
+      rows.map((row) =>
+        ticketRefMatches(row, patch.id)
+          ? { ...row, unread: patch.unread, viewerReadAt: patch.viewerReadAt }
+          : row,
+      ),
+    );
+  }, []);
+
   function onCreated(id: string, createdMachineId: string) {
     setCreating(false);
     const href =
@@ -191,6 +201,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
       backHref={listHref}
       embedded={desktop}
       onUpdated={refresh}
+      onTicketListPatch={patchTicketInList}
     />
   ) : (
     <div className="tickets-workspace-empty">

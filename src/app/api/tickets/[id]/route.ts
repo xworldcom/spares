@@ -3,6 +3,7 @@ import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-ht
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
+import { isWarmConversationRequest } from "@/lib/api/warm-intent";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
@@ -20,7 +21,7 @@ export async function GET(
   }
   const tenantId = userTenantId(access.user);
   let ticket = access.ticket;
-  if (access.user.role === "staff") {
+  if (access.user.role === "staff" && !isWarmConversationRequest(_request)) {
     ticket = (await markTicketRead(access.ticket.id, tenantId, access.user.id)) ?? ticket;
     if (shouldRecordView(`ticket.viewed:${access.user.id}:${ticket.id}`)) {
       await recordAccountActivity({

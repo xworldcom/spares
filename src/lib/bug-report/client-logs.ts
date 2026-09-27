@@ -124,11 +124,17 @@ export function installClientLogCapture() {
       }
       return response;
     } catch (cause) {
-      pushLimited(
-        failedFetches,
-        { t: new Date().toISOString(), url, status: 0 },
-        MAX_FETCHES,
-      );
+      const aborted =
+        init?.signal?.aborted ||
+        (cause instanceof DOMException && cause.name === "AbortError") ||
+        (cause instanceof Error && cause.name === "AbortError");
+      if (!aborted) {
+        pushLimited(
+          failedFetches,
+          { t: new Date().toISOString(), url, status: 0 },
+          MAX_FETCHES,
+        );
+      }
       throw cause;
     }
   };

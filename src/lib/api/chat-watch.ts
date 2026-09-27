@@ -2,8 +2,8 @@ import { apiFetch } from "./client";
 import { invalidateWarmRead } from "./warm-read";
 import type { ChatWatchKind } from "../chat-watch";
 
-/** Hang up a dead wait and listen again. Server hold is 25s. */
-export const CONVERSATION_WATCH_CLIENT_MS = 35_000;
+/** Hang up before the platform function limit; server hold is 25s. */
+export const CONVERSATION_WATCH_CLIENT_MS = 28_000;
 
 export async function waitForConversationWatch(input: {
   kind: ChatWatchKind;
