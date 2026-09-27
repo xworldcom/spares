@@ -136,133 +136,147 @@ function QuoteTrayForm({
             </Link>
           ) : null}
         </div>
-      ) : lines.length === 0 && !allowManual ? (
-        <div className="quote-sheet-empty mt-8 min-h-0 flex-1">
-          <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
-            Nothing here yet. Select a named part, then add it.
-          </p>
-        </div>
-      ) : !allowManual ? (
-      <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
-        {lines.map((line) => (
-          <li
-            key={line.part.id}
-            className="tray-line spares-field rounded-[18px] px-3 py-3"
-          >
-            <div className="flex items-start gap-3">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--spares-stage)]">
-                {line.thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={line.thumb}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium tracking-wide text-white/45">
-                    3D
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium">
-                  {line.part.name}
-                </p>
-                <p className="spares-muted truncate font-mono text-xs">{line.part.id}</p>
-                <p className="spares-muted mt-0.5 truncate text-[12px]">
-                  {line.part.meshName}
-                  {line.part.qty > 1 ? ` · BOM qty ${line.part.qty}` : ""}
+      ) : (
+        <>
+          <div className="quote-sheet-body mt-4 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+            {lines.length === 0 && !allowManual ? (
+              <div className="quote-sheet-empty mt-4">
+                <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
+                  Nothing here yet. Select a named part, then add it.
                 </p>
               </div>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                aria-label={`Decrease ${line.part.name}`}
-                disabled={line.qty <= 1}
-                onClick={() => onQty(line.part.id, Math.max(1, line.qty - 1))}
-                className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium disabled:opacity-30"
-              >
-                −
-              </button>
-              <span className="min-w-8 text-center text-[17px] tabular-nums">
-                {line.qty}
-              </span>
-              <button
-                type="button"
-                aria-label={`Increase ${line.part.name}`}
-                onClick={() => onQty(line.part.id, line.qty + 1)}
-                className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={() => onRemove(line.part.id)}
-                className="spares-muted ml-auto inline-flex h-11 items-center rounded-full px-3 text-sm font-medium"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      ) : null}
+            ) : null}
 
-      {allowManual && onAdd && !sent ? (
-        <div className="mt-4">
-          <ManualQuoteLines
-            lines={lines.map((line) => ({
-              id: line.part.id,
-              name: line.part.name,
-              qty: line.qty,
-            }))}
-            onAdd={(line) =>
-              onAdd(
-                {
-                  id: line.id,
-                  name: line.name,
-                  meshName: "",
+            {!allowManual && lines.length > 0 ? (
+              <ul className="space-y-2">
+                {lines.map((line) => (
+                  <li
+                    key={line.part.id}
+                    className="tray-line spares-field rounded-[18px] px-3 py-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--spares-stage)]">
+                        {line.thumb ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={line.thumb}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium tracking-wide text-white/45">
+                            3D
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-medium">
+                          {line.part.name}
+                        </p>
+                        <p className="spares-muted truncate font-mono text-xs">
+                          {line.part.id}
+                        </p>
+                        <p className="spares-muted mt-0.5 truncate text-[12px]">
+                          {line.part.meshName}
+                          {line.part.qty > 1 ? ` · BOM qty ${line.part.qty}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label={`Decrease ${line.part.name}`}
+                        disabled={line.qty <= 1}
+                        onClick={() =>
+                          onQty(line.part.id, Math.max(1, line.qty - 1))
+                        }
+                        className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium disabled:opacity-30"
+                      >
+                        −
+                      </button>
+                      <span className="min-w-8 text-center text-[17px] tabular-nums">
+                        {line.qty}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Increase ${line.part.name}`}
+                        onClick={() => onQty(line.part.id, line.qty + 1)}
+                        className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onRemove(line.part.id)}
+                        className="spares-muted ml-auto inline-flex h-11 items-center rounded-full px-3 text-sm font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {allowManual && onAdd ? (
+              <ManualQuoteLines
+                lines={lines.map((line) => ({
+                  id: line.part.id,
+                  name: line.part.name,
                   qty: line.qty,
-                },
-                line.qty,
-              )
-            }
-            onQty={onQty}
-            onRemove={onRemove}
-          />
-        </div>
-      ) : null}
+                }))}
+                onAdd={(line) =>
+                  onAdd(
+                    {
+                      id: line.id,
+                      name: line.name,
+                      meshName: "",
+                      qty: line.qty,
+                    },
+                    line.qty,
+                  )
+                }
+                onQty={onQty}
+                onRemove={onRemove}
+              />
+            ) : null}
 
-      {lines.length > 0 ? (
-      <label className="mt-3 block text-sm font-medium text-[var(--spares-muted)]">
-        Note
-        <textarea
-          rows={2}
-          value={note}
-          onChange={(event) => onNote(event.target.value)}
-          className="spares-field mt-1.5 w-full resize-none rounded-2xl border-0 px-3 py-2.5 text-[16px] outline-none"
-          placeholder="Optional — site, serial, need-by…"
-        />
-      </label>
-      ) : null}
+            {lines.length > 0 ? (
+              <label className="mt-3 block text-sm font-medium text-[var(--spares-muted)]">
+                Note
+                <textarea
+                  rows={2}
+                  value={note}
+                  onChange={(event) => onNote(event.target.value)}
+                  className="spares-field mt-1.5 w-full resize-none rounded-2xl border-0 px-3 py-2.5 text-[16px] outline-none"
+                  placeholder="Optional — site, serial, need-by…"
+                />
+              </label>
+            ) : null}
+          </div>
 
-      {error ? (
-        <p className="spares-alert mt-2 rounded-2xl px-3 py-2 text-sm" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {lines.length > 0 && !sent ? (
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={onSubmit}
-          className="btn-accent mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-30"
-        >
-          {submitting ? "Sending…" : "Request quote"}
-        </button>
-      ) : null}
+          {lines.length > 0 ? (
+            <div className="quote-sheet-actions shrink-0 pt-3">
+              {error ? (
+                <p
+                  className="spares-alert mb-2 rounded-2xl px-3 py-2 text-sm"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={onSubmit}
+                className="btn-accent inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-30"
+              >
+                {submitting ? "Sending…" : "Request quote"}
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -499,7 +513,7 @@ export function QuoteTray({
   function onCardPointerMove(event: ReactPointerEvent<HTMLElement>) {
     if (drag.current.pending && drag.current.from === "full") {
       const dy = event.clientY - drag.current.y;
-      const body = card.current?.querySelector(".quote-sheet-form");
+      const body = card.current?.querySelector(".quote-sheet-body");
       const atTop = body instanceof HTMLElement ? body.scrollTop <= 1 : true;
       if (dy > DRAG_SLOP && atTop) {
         drag.current.on = true;
