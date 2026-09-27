@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { LandingCell } from "@/components/landing/LandingCell";
 import { LandingDemoScrub } from "@/components/landing/LandingDemoScrub";
+import { LandingProductStoryIntro } from "@/components/landing/LandingProductStoryIntro";
 import { LandingWorkflowDemo } from "@/components/landing/LandingWorkflowDemo";
+import type { CSSProperties } from "react";
 
 export function LandingMarketing() {
   return (
@@ -40,19 +42,28 @@ export function LandingMarketing() {
       </section>
 
       <section id="product-story" className="landing-section landing-section--stage">
-        <p className="landing-section-kicker">Parts quote</p>
-        <h2 className="landing-section-title">One machine hub. Quote from the model.</h2>
-        <p className="landing-section-lede">
-          Parts, tickets, manuals, and service reports on one machine. The chapter
-          below is the parts quote path — PN on the model through PO confirmed.
-        </p>
+        <LandingProductStoryIntro className="landing-stage-section-copy" />
 
         <div className="landing-demo">
           <div className="landing-demo-scrub-stack">
             <LandingDemoScrub ariaLabel="Parts quote on machine model">
-              {({ progress, reduceMotion }) => (
-                <LandingWorkflowDemo progress={progress} reduceMotion={reduceMotion} />
-              )}
+              {({ progress, reduceMotion }) => {
+                const introFade = reduceMotion ? 0 : Math.max(0, 1 - progress / 0.32);
+                return (
+                  <>
+                    <LandingProductStoryIntro
+                      className="landing-stage-pin-intro"
+                      aria-hidden={introFade < 0.08 ? true : undefined}
+                      style={
+                        {
+                          "--landing-intro-fade": introFade,
+                        } as CSSProperties
+                      }
+                    />
+                    <LandingWorkflowDemo progress={progress} reduceMotion={reduceMotion} />
+                  </>
+                );
+              }}
             </LandingDemoScrub>
           </div>
         </div>

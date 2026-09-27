@@ -12,6 +12,28 @@ function readScrollY() {
   );
 }
 
+function readSparesHeaderPx() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--spares-header");
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 56;
+}
+
+function productStoryChapterActive() {
+  const story = document.getElementById("product-story");
+  if (!story) {
+    return false;
+  }
+  const scrub = story.querySelector<HTMLElement>(".landing-demo-scrub");
+  const rect = story.getBoundingClientRect();
+  const header = readSparesHeaderPx();
+  const pinned = rect.top <= header + 2 && rect.bottom > window.innerHeight * 0.4;
+  if (!pinned) {
+    return false;
+  }
+  const progress = scrub ? Number.parseFloat(scrub.dataset.progress ?? "0") : 0;
+  return progress > 0.03 && progress < 0.995;
+}
+
 function scrollPageToTop(reduceMotion: boolean) {
   const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
   try {
@@ -34,7 +56,9 @@ export function LandingBackToTop() {
 
     const syncVisible = () => {
       const threshold = Math.max(320, window.innerHeight * 0.45);
-      setVisible(readScrollY() > threshold);
+      const scrolled = readScrollY() > threshold;
+      const hideForStory = productStoryChapterActive();
+      setVisible(scrolled && !hideForStory);
     };
     syncVisible();
     window.addEventListener("scroll", syncVisible, { passive: true });

@@ -383,6 +383,10 @@
   margin-top: 1.35rem;
 }
 
+.landing-stage-pin-intro {
+  display: none;
+}
+
 .landing-demo-scrub {
   position: relative;
   --landing-demo-scrub-extra: 340svh;
@@ -732,24 +736,11 @@
     transform: translate3d(0, calc(12% * var(--wf-handoff)), 0);
   }
 
-  .landing-demo-stage.landing-workflow .landing-workflow-hub-title {
-    opacity: calc(1 - clamp(0, (var(--wf-handoff, 0) - 0.12) * 5, 1));
-    transition: opacity 0.12s linear;
-  }
-
-  .landing-demo-stage.landing-workflow .landing-workflow-tabs {
-    opacity: calc(1 - clamp(0, (var(--wf-handoff, 0) - 0.18) * 4, 1));
-    transition: opacity 0.12s linear;
-  }
-
-  .landing-demo-stage.landing-workflow:has(.landing-workflow-stage.is-handoff) .landing-workflow-tabs {
-    visibility: hidden;
-  }
-
   .landing-demo-stage.landing-workflow .landing-workflow-request {
+    z-index: 8;
     border: 0;
     border-radius: 0;
-    padding: 3.35rem 1.15rem 1rem;
+    padding: 1.1rem 1.15rem 1.35rem;
     background: linear-gradient(
       180deg,
       rgba(0, 0, 0, 0.72) 0%,
@@ -781,27 +772,74 @@
     min-width: 0;
   }
 
+  .landing-demo-stage.landing-workflow .landing-workflow-request-titleblock {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request-quote-id {
+    margin-top: 0;
+    font-size: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request-context {
+    margin-top: 0.2rem;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
   .landing-demo-stage.landing-workflow .landing-workflow-thread {
     width: 100%;
-    max-width: 32rem;
+    max-width: 30rem;
     align-self: center;
-    padding-inline: 0.35rem;
-    box-sizing: border-box;
-  }
-
-  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-system {
-    align-self: center;
-    width: 100%;
-  }
-
-  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-row {
-    width: 100%;
-    max-width: 100%;
+    padding-inline: 0.5rem;
     box-sizing: border-box;
   }
 
   .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-own.imsg-enter {
     animation-name: landing-imsg-enter-own;
+  }
+
+  .landing-section--stage {
+    padding-top: 1.25rem;
+  }
+
+  .landing-section--stage .landing-demo-scrub-stack {
+    margin-top: 0;
+  }
+
+  .landing-stage-section-copy {
+    display: none;
+  }
+
+  .landing-stage-pin-intro {
+    display: block;
+    position: absolute;
+    z-index: 7;
+    top: 0;
+    right: 0;
+    left: 0;
+    padding: 1.25rem clamp(1.25rem, 5vw, 3.5rem) 2.75rem;
+    pointer-events: none;
+    opacity: var(--landing-intro-fade, 1);
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.94) 0%,
+      rgba(0, 0, 0, 0.62) 38%,
+      rgba(0, 0, 0, 0.18) 68%,
+      transparent 100%
+    );
+    transition: opacity 0.12s linear;
+  }
+
+  .landing-stage-pin-intro .landing-section-title {
+    margin-top: 0.55rem;
+  }
+
+  .landing-stage-pin-intro .landing-section-lede {
+    margin-top: 0.75rem;
+    max-width: 34rem;
   }
 
   .landing-section--hero {
@@ -1376,7 +1414,7 @@
 .landing-workflow-request {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 8;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -1407,8 +1445,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 0.55rem;
-  padding-bottom: 0.35rem;
+  gap: 0.45rem;
+  padding-bottom: 1.15rem;
   overflow: hidden;
   overflow-y: hidden;
   overscroll-behavior: none;
@@ -1417,8 +1455,36 @@
   user-select: none;
 }
 
+.landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-system {
+  align-self: stretch;
+  justify-content: center;
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+  padding-inline: 0.15rem;
+  box-sizing: border-box;
+}
+
+.landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-chip {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0.65rem;
+}
+
+.landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-row {
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+  padding-inline: 0.15rem;
+  box-sizing: border-box;
+}
+
 .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-stack {
-  max-width: min(78%, 20rem);
+  max-width: min(82%, 21rem);
+}
+
+.landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-own .imsg-stack {
+  max-width: min(88%, 21rem);
 }
 
 .landing-workflow-stage.is-handoff .landing-workflow-quote-sheet {
