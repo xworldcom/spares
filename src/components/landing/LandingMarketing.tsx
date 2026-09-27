@@ -5,6 +5,7 @@ import { LandingCell } from "@/components/landing/LandingCell";
 import { LandingDemoScrub } from "@/components/landing/LandingDemoScrub";
 import { LandingProductStoryIntro } from "@/components/landing/LandingProductStoryIntro";
 import { LandingWorkflowDemo } from "@/components/landing/LandingWorkflowDemo";
+import { workflowIntroFade, workflowScrubPlayhead } from "@/lib/ui/landing-demo";
 import type { CSSProperties } from "react";
 
 export function LandingMarketing() {
@@ -48,18 +49,22 @@ export function LandingMarketing() {
           <div className="landing-demo-scrub-stack">
             <LandingDemoScrub ariaLabel="Parts quote on machine model">
               {({ progress, reduceMotion }) => {
-                const introFade = reduceMotion ? 0 : Math.max(0, 1 - progress / 0.32);
+                const introFade = reduceMotion
+                  ? 0
+                  : workflowIntroFade(workflowScrubPlayhead(progress));
                 return (
                   <>
-                    <LandingProductStoryIntro
-                      className="landing-stage-pin-intro"
-                      aria-hidden={introFade < 0.08 ? true : undefined}
-                      style={
-                        {
-                          "--landing-intro-fade": introFade,
-                        } as CSSProperties
-                      }
-                    />
+                    {introFade > 0.08 ? (
+                      <LandingProductStoryIntro
+                        className="landing-stage-pin-intro"
+                        style={
+                          {
+                            "--landing-intro-fade": introFade,
+                            opacity: introFade,
+                          } as CSSProperties
+                        }
+                      />
+                    ) : null}
                     <LandingWorkflowDemo progress={progress} reduceMotion={reduceMotion} />
                   </>
                 );

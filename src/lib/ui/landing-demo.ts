@@ -15,8 +15,8 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-/** Extra scroll travel for the workflow chapter (~3s dwell per beat at a comfortable scrub pace). */
-export const DEMO_SCRUB_EXTRA_SVH = 560;
+/** Extra scroll travel for the workflow chapter (~3s dwell per beat on a normal scrub). */
+export const DEMO_SCRUB_EXTRA_SVH = 400;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
@@ -515,7 +515,7 @@ export const WORKFLOW_QUOTE_START = 0.46;
 export const WORKFLOW_SEND_START = 0.62;
 export const WORKFLOW_HANDOFF_START = 0.78;
 /** Handoff mix reaches 1 — model and tray have cleared the stage. */
-export const WORKFLOW_HANDOFF_COMPLETE = 0.9;
+export const WORKFLOW_HANDOFF_COMPLETE = 0.86;
 /** Quote thread script playhead begins when the thread panel is on stage. */
 export const WORKFLOW_CHAT_START = WORKFLOW_HANDOFF_START;
 
@@ -524,17 +524,17 @@ type WorkflowScrubAnchor = { linear: number; visual: number };
 /** Scroll progress (linear) → story playhead with dwell time on each beat. */
 const WORKFLOW_SCRUB_MAP: readonly WorkflowScrubAnchor[] = [
   { linear: 0, visual: 0 },
-  { linear: 0.115, visual: 0 },
+  { linear: 0.055, visual: 0 },
+  { linear: 0.075, visual: WORKFLOW_FIND_START },
   { linear: 0.13, visual: WORKFLOW_FIND_START },
-  { linear: 0.248, visual: WORKFLOW_FIND_START },
-  { linear: 0.265, visual: WORKFLOW_SELECT_START },
-  { linear: 0.383, visual: WORKFLOW_SELECT_START },
-  { linear: 0.4, visual: WORKFLOW_QUOTE_START },
-  { linear: 0.518, visual: WORKFLOW_QUOTE_START },
-  { linear: 0.535, visual: WORKFLOW_SEND_START },
-  { linear: 0.653, visual: WORKFLOW_SEND_START },
-  { linear: 0.678, visual: WORKFLOW_HANDOFF_START },
-  { linear: 0.768, visual: WORKFLOW_HANDOFF_COMPLETE },
+  { linear: 0.15, visual: WORKFLOW_SELECT_START },
+  { linear: 0.205, visual: WORKFLOW_SELECT_START },
+  { linear: 0.225, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.28, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.3, visual: WORKFLOW_SEND_START },
+  { linear: 0.355, visual: WORKFLOW_SEND_START },
+  { linear: 0.38, visual: WORKFLOW_HANDOFF_START },
+  { linear: 0.48, visual: WORKFLOW_HANDOFF_COMPLETE },
   { linear: 1, visual: 1 },
 ];
 
@@ -614,6 +614,18 @@ export function workflowStep(playhead: number): WorkflowStep {
   return "hub";
 }
 
+export function workflowHubVisible(step: WorkflowStep) {
+  return step === "hub" || step === "find";
+}
+
+export function workflowIntroFade(playhead: number) {
+  const p = clampDemoScrollProgress(playhead);
+  if (p >= WORKFLOW_SELECT_START) {
+    return 0;
+  }
+  return clampDemoScrollProgress(1 - p / WORKFLOW_SELECT_START);
+}
+
 /** 0–1 mix for sliding the model out into the quote thread view. */
 export function workflowHandoffMix(playhead: number) {
   const p = clampDemoScrollProgress(playhead);
@@ -641,9 +653,9 @@ export function workflowQuoteChatPlayhead(playhead: number) {
   return clampDemoScrollProgress((p - WORKFLOW_CHAT_START) / span);
 }
 
-/** Map workflow scrub progress to quote-thread beat visibility (matches LandingWorkflowDemo). */
+/** Map linear scrub progress to quote-thread beat visibility (matches LandingWorkflowDemo). */
 export function demoWorkflowThreadPlayhead(workflowProgress: number) {
-  return workflowQuoteChatPlayhead(workflowProgress);
+  return workflowQuoteChatPlayhead(workflowScrubPlayhead(workflowProgress));
 }
 
 /** Scroll-driven yaw for the marketing workflow cell (radians). */

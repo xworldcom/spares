@@ -916,6 +916,14 @@ html.spares-embed .spares-app-stage {
   html:has(.spares-app-cinematic) body {
     overflow-x: visible;
     overflow-y: visible;
+    scrollbar-width: none;
+  }
+
+  html:has(.spares-app-cinematic)::-webkit-scrollbar,
+  html:has(.spares-app-cinematic) body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 
   body {

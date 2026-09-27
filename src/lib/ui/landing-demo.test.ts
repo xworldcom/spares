@@ -26,6 +26,8 @@ import {
   reduceDemoFrame,
   workflowGuideCue,
   workflowHandoffMix,
+  workflowHubVisible,
+  workflowIntroFade,
   workflowQuoteChatPlayhead,
   workflowScrubPlayhead,
   workflowSpinYaw,
@@ -299,7 +301,7 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
     assert.match(css, /var\(--landing-demo-scrub-extra,\s*340svh\)|--landing-demo-scrub-extra:\s*340svh/);
-    assert.equal(DEMO_SCRUB_EXTRA_SVH, 560);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH, 400);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
   });
@@ -332,8 +334,13 @@ describe("landing scrub layout", () => {
       cinematic,
       /html:has\(\.spares-app-cinematic\)[\s\S]*overflow-y:\s*visible/,
     );
+    assert.match(
+      cinematic,
+      /html:has\(\.spares-app-cinematic\)[\s\S]*scrollbar-width:\s*none/,
+    );
     const critical = readFileSync("src/app/layout.tsx", "utf8");
     assert.match(critical, /\.spares-app-cinematic\{[^}]*overflow-y:visible/);
+    assert.match(critical, /html:has\(\.spares-app-cinematic\)[^\{]*\{[^}]*scrollbar-width:none/);
   });
 });
 
@@ -377,14 +384,23 @@ describe("workflow desktop layout", () => {
 
 describe("workflow demo", () => {
   it("dwells on each beat before advancing the visual playhead", () => {
-    assert.equal(workflowScrubPlayhead(0.05), 0);
-    assert.equal(workflowStep(workflowScrubPlayhead(0.05)), "hub");
-    assert.equal(workflowStep(workflowScrubPlayhead(0.18)), "find");
-    assert.equal(workflowStep(workflowScrubPlayhead(0.32)), "select");
-    assert.equal(workflowStep(workflowScrubPlayhead(0.45)), "quote");
-    assert.equal(workflowStep(workflowScrubPlayhead(0.58)), "send");
-    assert.ok(workflowScrubPlayhead(0.72) >= WORKFLOW_HANDOFF_START);
+    const order: string[] = [];
+    const firstLinear: Partial<Record<string, number>> = {};
+    let last = "";
+    for (let p = 0; p <= 1.0001; p += 0.002) {
+      const step = workflowStep(workflowScrubPlayhead(p));
+      if (step !== last) {
+        order.push(step);
+        firstLinear[step] = p;
+        last = step;
+      }
+    }
+    assert.deepEqual(order, ["hub", "find", "select", "quote", "send", "handoff"]);
+    assert.equal(workflowScrubPlayhead(0), 0);
     assert.equal(workflowScrubPlayhead(1), 1);
+    const handoffAt = firstLinear.handoff ?? 1;
+    assert.ok(handoffAt <= 0.42);
+    assert.ok(1 - handoffAt >= 0.5);
     assert.ok(workflowGuideCue(WORKFLOW_SELECT_START).target === "hotspot");
     assert.ok(workflowGuideCue(WORKFLOW_SEND_START).target === "request");
     assert.equal(workflowGuideCue(WORKFLOW_HANDOFF_START).target, null);
@@ -437,6 +453,17 @@ describe("workflow demo", () => {
   it("drops hub chrome at select so the part sheet does not ghost", () => {
     const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
     assert.match(demo, /workflowHubVisible\(step\)/);
+    assert.equal(workflowHubVisible("hub"), true);
+    assert.equal(workflowHubVisible("find"), true);
+    assert.equal(workflowHubVisible("select"), false);
+    assert.equal(workflowHubVisible("quote"), false);
+    assert.equal(workflowHubVisible("send"), false);
+    assert.equal(workflowHubVisible("handoff"), false);
+    assert.ok(workflowIntroFade(0) > 0.9);
+    assert.equal(workflowIntroFade(WORKFLOW_SELECT_START), 0);
+    const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
+    assert.match(marketing, /workflowIntroFade/);
+    assert.match(marketing, /introFade > 0\.08/);
   });
 });
 
