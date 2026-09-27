@@ -15,7 +15,6 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-/** Extra scroll travel for the workflow chapter (~3s dwell per beat on a normal scrub). */
 export const DEMO_SCRUB_EXTRA_SVH = 400;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
@@ -523,19 +522,19 @@ type WorkflowScrubAnchor = { linear: number; visual: number };
 /** Scroll progress (linear) → story playhead with dwell time on each beat. */
 const WORKFLOW_SCRUB_MAP: readonly WorkflowScrubAnchor[] = [
   { linear: 0, visual: 0 },
-  { linear: 0.055, visual: 0 },
-  { linear: 0.075, visual: WORKFLOW_FIND_START },
-  { linear: 0.13, visual: WORKFLOW_FIND_START },
-  { linear: 0.15, visual: WORKFLOW_SELECT_START },
-  { linear: 0.175, visual: WORKFLOW_SELECT_START },
-  { linear: 0.183, visual: WORKFLOW_SELECT_ADD },
-  { linear: 0.208, visual: WORKFLOW_SELECT_ADD },
-  { linear: 0.225, visual: WORKFLOW_QUOTE_START },
-  { linear: 0.28, visual: WORKFLOW_QUOTE_START },
-  { linear: 0.3, visual: WORKFLOW_SEND_START },
-  { linear: 0.355, visual: WORKFLOW_SEND_START },
-  { linear: 0.38, visual: WORKFLOW_HANDOFF_START },
-  { linear: 0.48, visual: WORKFLOW_HANDOFF_COMPLETE },
+  { linear: 0.028, visual: 0 },
+  { linear: 0.044, visual: WORKFLOW_FIND_START },
+  { linear: 0.072, visual: WORKFLOW_FIND_START },
+  { linear: 0.088, visual: WORKFLOW_SELECT_START },
+  { linear: 0.102, visual: WORKFLOW_SELECT_START },
+  { linear: 0.114, visual: WORKFLOW_SELECT_ADD },
+  { linear: 0.13, visual: WORKFLOW_SELECT_ADD },
+  { linear: 0.146, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.174, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.19, visual: WORKFLOW_SEND_START },
+  { linear: 0.218, visual: WORKFLOW_SEND_START },
+  { linear: 0.236, visual: WORKFLOW_HANDOFF_START },
+  { linear: 0.34, visual: WORKFLOW_HANDOFF_COMPLETE },
   { linear: 1, visual: 1 },
 ];
 
@@ -598,6 +597,56 @@ export function workflowMeshNameMatchesPart(meshName: string, partId: string) {
   }
   const needle = partId.toLowerCase();
   return meshName.toLowerCase().includes(needle);
+}
+
+export type WorkflowAnchorMesh = {
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+};
+
+export const WORKFLOW_DEMO_MOTOR = "PN-MTR-3301";
+
+export type WorkflowStagePoint = { x: number; y: number };
+
+export type WorkflowStageAnchors = {
+  machine: WorkflowStagePoint | null;
+  part: WorkflowStagePoint | null;
+};
+
+function anchorDistance(a: WorkflowAnchorMesh, b: WorkflowAnchorMesh) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const dz = a.z - b.z;
+  return dx * dx + dy * dy + dz * dz;
+}
+
+export function workflowDemoRollerIndex(
+  meshes: readonly WorkflowAnchorMesh[],
+  partId: string,
+  motorName = WORKFLOW_DEMO_MOTOR,
+) {
+  const motor = meshes.find((mesh) => mesh.name === motorName);
+  const rollers = meshes
+    .map((mesh, index) => ({ mesh, index }))
+    .filter(({ mesh }) => mesh.name !== motorName && workflowMeshNameMatchesPart(mesh.name, partId));
+  if (rollers.length === 0) {
+    return null;
+  }
+  if (!motor) {
+    return rollers[0]?.index ?? null;
+  }
+  let best = rollers[0];
+  let bestDist = Number.POSITIVE_INFINITY;
+  for (const roller of rollers) {
+    const dist = anchorDistance(roller.mesh, motor);
+    if (dist < bestDist) {
+      best = roller;
+      bestDist = dist;
+    }
+  }
+  return best?.index ?? null;
 }
 
 export function workflowGuideCue(playhead: number): {

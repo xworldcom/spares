@@ -6,6 +6,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Box3,
+  Camera,
   Color,
   Group,
   Mesh,
@@ -13,7 +14,10 @@ import {
   Vector3,
   type Object3D,
 } from "three";
-import { workflowMeshNameMatchesPart } from "@/lib/ui/landing-demo";
+import {
+  workflowDemoRollerIndex,
+  type WorkflowStageAnchors,
+} from "@/lib/ui/landing-demo";
 
 const MODEL = "/placeholders/palletizer-placeholder.glb";
 const STAGE = "#07080a";
@@ -29,19 +33,28 @@ function asMaterials(material: Mesh["material"]) {
   return Array.isArray(material) ? material : [material];
 }
 
+function projectToStage(camera: Camera, point: Vector3) {
+  const ndc = point.clone().project(camera);
+  return {
+    x: (ndc.x * 0.5 + 0.5) * 100,
+    y: (-ndc.y * 0.5 + 0.5) * 100,
+  };
+}
+
 function FittedMachine({
   paused,
   spinYaw,
   highlightPartId,
-  onPartAnchor,
+  onAnchors,
 }: {
   paused: boolean;
   spinYaw?: number;
   highlightPartId?: string | null;
-  onPartAnchor?: (point: { x: number; y: number } | null) => void;
+  onAnchors?: (anchors: WorkflowStageAnchors) => void;
 }) {
   const root = useRef<Group>(null);
   const spin = useRef<Group>(null);
+  const rollerRef = useRef<Mesh | null>(null);
   const { scene } = useGLTF(MODEL);
 
   const model = useMemo(() => {
@@ -90,13 +103,31 @@ function FittedMachine({
   }, [model]);
 
   useLayoutEffect(() => {
+    const samples: { name: string; x: number; y: number; z: number; mesh: Mesh }[] = [];
+    model.updateWorldMatrix(true, true);
     model.traverse((object) => {
       if (!isMesh(object)) {
         return;
       }
-      const active = Boolean(
-        highlightPartId && workflowMeshNameMatchesPart(object.name, highlightPartId),
-      );
+      box.setFromObject(object);
+      box.getCenter(worldCenter);
+      samples.push({
+        name: object.name,
+        x: worldCenter.x,
+        y: worldCenter.y,
+        z: worldCenter.z,
+        mesh: object,
+      });
+    });
+    const index =
+      highlightPartId == null ? null : workflowDemoRollerIndex(samples, highlightPartId);
+    rollerRef.current = index == null ? null : samples[index]?.mesh ?? null;
+    const roller = rollerRef.current;
+    model.traverse((object) => {
+      if (!isMesh(object)) {
+        return;
+      }
+      const active = object === roller;
       for (const material of asMaterials(object.material)) {
         if (!(material instanceof MeshStandardMaterial)) {
           continue;
@@ -125,35 +156,21 @@ function FittedMachine({
       spin.current.rotation.x = Math.sin(spin.current.rotation.y * 0.35) * 0.04;
     }
 
-    if (!onPartAnchor || !highlightPartId) {
+    if (!onAnchors) {
       return;
     }
-    let found = false;
-    let nearestDist = Number.POSITIVE_INFINITY;
-    const nearest = new Vector3();
     model.updateWorldMatrix(true, true);
-    model.traverse((object) => {
-      if (!isMesh(object) || !workflowMeshNameMatchesPart(object.name, highlightPartId)) {
-        return;
-      }
-      box.setFromObject(object);
+    box.setFromObject(model);
+    box.getCenter(worldCenter);
+    const machine = projectToStage(state.camera, worldCenter);
+    const roller = rollerRef.current;
+    let part = null;
+    if (roller) {
+      box.setFromObject(roller);
       box.getCenter(worldCenter);
-      const dist = worldCenter.distanceTo(state.camera.position);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest.copy(worldCenter);
-        found = true;
-      }
-    });
-    if (!found) {
-      onPartAnchor(null);
-      return;
+      part = projectToStage(state.camera, worldCenter);
     }
-    nearest.project(state.camera);
-    onPartAnchor({
-      x: (nearest.x * 0.5 + 0.5) * 100,
-      y: (-nearest.y * 0.5 + 0.5) * 100,
-    });
+    onAnchors({ machine, part });
   });
 
   return (
@@ -182,12 +199,12 @@ export function OrbitStage({
   interactive = false,
   spinYaw,
   highlightPartId = null,
-  onPartAnchor,
+  onAnchors,
 }: {
   interactive?: boolean;
   spinYaw?: number;
   highlightPartId?: string | null;
-  onPartAnchor?: (point: { x: number; y: number } | null) => void;
+  onAnchors?: (anchors: WorkflowStageAnchors) => void;
 }) {
   const [reduceMotion, setReduceMotion] = useState(true);
   const [dragging, setDragging] = useState(false);
@@ -224,7 +241,7 @@ export function OrbitStage({
             paused={paused}
             spinYaw={spinYaw}
             highlightPartId={highlightPartId}
-            onPartAnchor={onPartAnchor}
+            onAnchors={onAnchors}
           />
         </Suspense>
         {interactive ? (

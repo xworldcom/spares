@@ -1300,11 +1300,9 @@
   background: #07080a;
 }
 
-.landing-workflow-scroll-cue-target {
+.landing-workflow-anchor {
   pointer-events: none;
   position: absolute;
-  left: 50%;
-  bottom: 14%;
   width: 0;
   height: 0;
 }
