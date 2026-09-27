@@ -123,7 +123,7 @@ if (await section.count()) {
     const track = box.height;
     for (const frac of [0.02, 0.12, 0.22, 0.32, 0.42, 0.52, 0.62, 0.7, 0.78, 0.86, 0.95]) {
       await page.evaluate((y) => window.scrollTo(0, y), start + track * frac);
-      await page.waitForTimeout(140);
+      await page.waitForTimeout(260);
       samples.push({ label: `frac-${frac}`, ...(await snapshot(page)) });
     }
   }

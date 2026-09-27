@@ -81,14 +81,14 @@ export function LandingWorkflowDemo({
   const showThreadView = handoff > 0.02;
   const showHubChrome = workflowHubVisible(step);
   const highlightPartId = workflowHighlightPartId(step);
-  const partAnchorRef = useRef({ x: 52, y: 46 });
-  const [partAnchor, setPartAnchor] = useState(partAnchorRef.current);
+  const partAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const [partAnchor, setPartAnchor] = useState<{ x: number; y: number } | null>(null);
   const onPartAnchor = useCallback((next: { x: number; y: number } | null) => {
     if (!next) {
       return;
     }
     const prev = partAnchorRef.current;
-    if (Math.abs(prev.x - next.x) < 0.4 && Math.abs(prev.y - next.y) < 0.4) {
+    if (prev && Math.abs(prev.x - next.x) < 0.4 && Math.abs(prev.y - next.y) < 0.4) {
       return;
     }
     partAnchorRef.current = next;
@@ -141,16 +141,16 @@ export function LandingWorkflowDemo({
               onPartAnchor={onPartAnchor}
             />
             <span className="landing-workflow-scroll-cue-target" data-guide-target="scroll" />
-            <div
-              className={["landing-workflow-hotspot", showHotspot ? "is-on" : ""]
-                .filter(Boolean)
-                .join(" ")}
-              aria-hidden="true"
-              style={{ left: `${partAnchor.x}%`, top: `${partAnchor.y}%` }}
-            >
-              <span className="landing-workflow-hotspot-ring" data-guide-target="hotspot" />
-              <span className="landing-workflow-hotspot-label">{WORKFLOW_DEMO_PART}</span>
-            </div>
+            {showHotspot && partAnchor ? (
+              <div
+                className="landing-workflow-hotspot is-on"
+                aria-hidden="true"
+                style={{ left: `${partAnchor.x}%`, top: `${partAnchor.y}%` }}
+              >
+                <span className="landing-workflow-hotspot-ring" data-guide-target="hotspot" />
+                <span className="landing-workflow-hotspot-label">{WORKFLOW_DEMO_PART}</span>
+              </div>
+            ) : null}
           </div>
 
           {showPartSheet ? (

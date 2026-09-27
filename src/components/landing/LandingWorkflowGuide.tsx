@@ -45,13 +45,15 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
         stage instanceof HTMLElement && target instanceof HTMLElement
           ? workflowGuideStagePoint(stage.getBoundingClientRect(), target.getBoundingClientRect())
           : null;
-      const x = next?.x ?? cue.x;
-      const y = next?.y ?? cue.y;
-      setPoint((prev) =>
-        prev.ready && Math.abs(prev.x - x) < 0.15 && Math.abs(prev.y - y) < 0.15
-          ? prev
-          : { x, y, ready: true },
-      );
+      if (!next) {
+        setPoint((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      } else {
+        setPoint((prev) =>
+          prev.ready && Math.abs(prev.x - next.x) < 0.15 && Math.abs(prev.y - next.y) < 0.15
+            ? prev
+            : { x: next.x, y: next.y, ready: true },
+        );
+      }
       frame = window.requestAnimationFrame(measure);
     };
 
