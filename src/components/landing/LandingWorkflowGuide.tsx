@@ -45,29 +45,30 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
       return;
     }
 
+    const targetName = cue.target;
     let frame = 0;
     const measure = () => {
       const guide = nodeRef.current;
       const stage = guide?.closest(".landing-workflow-stage");
-      const target = stage?.querySelector(workflowGuideTargetSelector(cue.target));
+      const target = stage?.querySelector(workflowGuideTargetSelector(targetName));
       const next =
         stage instanceof HTMLElement && target instanceof HTMLElement
           ? workflowGuideStagePoint(stage.getBoundingClientRect(), target.getBoundingClientRect())
           : null;
       if (!next) {
         setPoint((prev) =>
-          prev.ready || prev.target !== cue.target
-            ? { x: prev.x, y: prev.y, ready: false, target: cue.target }
+          prev.ready || prev.target !== targetName
+            ? { x: prev.x, y: prev.y, ready: false, target: targetName }
             : prev,
         );
       } else {
         setPoint((prev) =>
           prev.ready &&
-          prev.target === cue.target &&
+          prev.target === targetName &&
           Math.abs(prev.x - next.x) < 0.15 &&
           Math.abs(prev.y - next.y) < 0.15
             ? prev
-            : { x: next.x, y: next.y, ready: true, target: cue.target },
+            : { x: next.x, y: next.y, ready: true, target: targetName },
         );
       }
       frame = window.requestAnimationFrame(measure);

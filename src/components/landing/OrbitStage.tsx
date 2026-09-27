@@ -128,8 +128,9 @@ function FittedMachine({
     if (!onPartAnchor || !highlightPartId) {
       return;
     }
-    let nearest: Vector3 | null = null;
+    let found = false;
     let nearestDist = Number.POSITIVE_INFINITY;
+    const nearest = new Vector3();
     model.updateWorldMatrix(true, true);
     model.traverse((object) => {
       if (!isMesh(object) || !workflowMeshNameMatchesPart(object.name, highlightPartId)) {
@@ -140,10 +141,11 @@ function FittedMachine({
       const dist = worldCenter.distanceTo(state.camera.position);
       if (dist < nearestDist) {
         nearestDist = dist;
-        nearest = worldCenter.clone();
+        nearest.copy(worldCenter);
+        found = true;
       }
     });
-    if (!nearest) {
+    if (!found) {
       onPartAnchor(null);
       return;
     }

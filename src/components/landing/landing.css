@@ -643,6 +643,14 @@
   .landing-demo-scrub-pin {
     pointer-events: none;
   }
+
+  .landing-workflow-part-sheet {
+    top: auto;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    max-width: none;
+  }
 }
 
 .landing-demo-scrub[data-reduce-motion] .landing-demo-thread {
