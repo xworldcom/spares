@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { NewTicketForm } from "@/components/care/NewTicketForm";
 import { TicketDetail } from "@/components/care/TicketDetail";
