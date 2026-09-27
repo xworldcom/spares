@@ -1189,9 +1189,6 @@
   top: var(--wf-guide-y, 50%);
   width: 0;
   height: 0;
-  transition:
-    left 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    top 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .landing-workflow-guide-ring {
@@ -1217,7 +1214,7 @@
   border-radius: 999px;
   background: #ffffff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  transform: translate(-38%, -38%);
+  transform: translate(-50%, -50%);
   animation: landing-guide-tap 1.85s ease-in-out infinite;
 }
 
@@ -1262,11 +1259,11 @@
 @keyframes landing-guide-tap {
   0%,
   100% {
-    transform: translate(-38%, -38%) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 
   45% {
-    transform: translate(-38%, -38%) scale(0.82);
+    transform: translate(-50%, -50%) scale(0.82);
   }
 }
 
@@ -1301,6 +1298,15 @@
   border-radius: 1.15rem;
   border: 1px solid rgba(236, 234, 228, 0.1);
   background: #07080a;
+}
+
+.landing-workflow-scroll-cue-target {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  width: 0;
+  height: 0;
 }
 
 .landing-workflow-hotspot {
@@ -1352,6 +1358,16 @@
   background: rgba(16, 17, 20, 0.92);
   border: 1px solid rgba(236, 234, 228, 0.14);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 899px) {
+  .landing-workflow-part-sheet {
+    top: auto;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    max-width: none;
+  }
 }
 
 .landing-workflow-part-sheet-inner {

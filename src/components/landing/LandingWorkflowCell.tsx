@@ -4,13 +4,22 @@ import { useEffect, useState, type ComponentType } from "react";
 
 export function LandingWorkflowCell({
   spinYaw,
+  highlightPartId = null,
+  onPartAnchor,
   interactive = false,
 }: {
   spinYaw: number;
+  highlightPartId?: string | null;
+  onPartAnchor?: (point: { x: number; y: number } | null) => void;
   interactive?: boolean;
 }) {
   const [Stage, setStage] = useState<
-    ComponentType<{ interactive?: boolean; spinYaw?: number }> | null
+    ComponentType<{
+      interactive?: boolean;
+      spinYaw?: number;
+      highlightPartId?: string | null;
+      onPartAnchor?: (point: { x: number; y: number } | null) => void;
+    }> | null
   >(null);
 
   useEffect(() => {
@@ -34,7 +43,14 @@ export function LandingWorkflowCell({
         <span className="landing-cell-block landing-cell-block--arm" />
         <span className="landing-cell-block landing-cell-block--load" />
       </div>
-      {Stage ? <Stage interactive={interactive} spinYaw={spinYaw} /> : null}
+      {Stage ? (
+        <Stage
+          interactive={interactive}
+          spinYaw={spinYaw}
+          highlightPartId={highlightPartId}
+          onPartAnchor={onPartAnchor}
+        />
+      ) : null}
     </div>
   );
 }

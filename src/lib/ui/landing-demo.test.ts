@@ -26,13 +26,17 @@ import {
   marketingTutorialCopyBan,
   reduceDemoFrame,
   workflowGuideCue,
+  workflowGuideStagePoint,
   workflowHandoffMix,
+  workflowHighlightPartId,
+  workflowMeshNameMatchesPart,
   workflowHubVisible,
   workflowIntroFade,
   workflowQuoteChatPlayhead,
   workflowScrubPlayhead,
   workflowSpinYaw,
   workflowStep,
+  WORKFLOW_DEMO_PART,
   WORKFLOW_FIND_START,
   WORKFLOW_HANDOFF_COMPLETE,
   WORKFLOW_HANDOFF_START,
@@ -346,6 +350,10 @@ describe("landing scrub layout", () => {
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
     assert.match(mobile, /touch-action:\s*pan-y/);
     assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*pointer-events:\s*none/);
+    assert.match(
+      css,
+      /@media \(max-width: 899px\)\s*\{\s*\.landing-workflow-part-sheet\s*\{[^}]*bottom:\s*0.75rem/,
+    );
     const cinematic = readFileSync("src/app/globals.css", "utf8");
     assert.match(
       cinematic,
@@ -421,6 +429,49 @@ describe("workflow demo", () => {
     assert.ok(workflowGuideCue(WORKFLOW_SELECT_START).target === "hotspot");
     assert.ok(workflowGuideCue(WORKFLOW_SEND_START).target === "request");
     assert.equal(workflowGuideCue(WORKFLOW_HANDOFF_START).target, null);
+  });
+
+  it("places the tap cue on the measured hit target, not a guessed stage percent", () => {
+    const point = workflowGuideStagePoint(
+      { left: 0, top: 0, width: 200, height: 100 },
+      { left: 50, top: 20, width: 40, height: 20 },
+    );
+    assert.deepEqual(point, { x: 35, y: 30 });
+    assert.equal(workflowGuideStagePoint({ left: 0, top: 0, width: 0, height: 10 }, { left: 0, top: 0, width: 1, height: 1 }), null);
+    const guide = readFileSync("src/components/landing/LandingWorkflowGuide.tsx", "utf8");
+    assert.match(guide, /workflowGuideStagePoint/);
+    assert.match(guide, /workflowGuideTargetSelector/);
+    assert.match(guide, /data-guide=\{shown \? cue\.target : undefined\}/);
+    const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
+    assert.match(demo, /data-guide-target="hotspot"/);
+    assert.match(demo, /data-guide-target="add"/);
+    assert.match(demo, /data-guide-target="quote"/);
+    assert.match(demo, /data-guide-target="request"/);
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.match(
+      css,
+      /\.landing-workflow-guide-pointer\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\)/,
+    );
+    assert.doesNotMatch(css, /translate\(-38%/);
+    const guideRule = css.match(/\.landing-workflow-guide\s*\{[^}]+\}/)?.[0] ?? "";
+    assert.doesNotMatch(guideRule, /transition:/);
+  });
+
+  it("keeps the quote roller highlighted on the model from select through the tray", () => {
+    assert.equal(workflowHighlightPartId("hub"), null);
+    assert.equal(workflowHighlightPartId("find"), null);
+    assert.equal(workflowHighlightPartId("select"), WORKFLOW_DEMO_PART);
+    assert.equal(workflowHighlightPartId("quote"), WORKFLOW_DEMO_PART);
+    assert.equal(workflowHighlightPartId("send"), WORKFLOW_DEMO_PART);
+    assert.equal(workflowHighlightPartId("handoff"), null);
+    assert.equal(workflowMeshNameMatchesPart("PN-ROLL-2104", WORKFLOW_DEMO_PART), true);
+    assert.equal(workflowMeshNameMatchesPart("PN-FRAME-1000", WORKFLOW_DEMO_PART), false);
+    const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
+    assert.match(demo, /workflowHighlightPartId\(step\)/);
+    const orbit = readFileSync("src/components/landing/OrbitStage.tsx", "utf8");
+    assert.match(orbit, /highlightPartId/);
+    assert.match(orbit, /emissiveIntensity = 0.95/);
+    assert.match(orbit, /workflowMeshNameMatchesPart/);
   });
 
   it("steps hub → find → select → quote → send → handoff as scroll advances", () => {

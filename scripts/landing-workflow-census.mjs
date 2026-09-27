@@ -63,6 +63,18 @@ async function snapshot(page) {
     const strip = document.querySelector(
       ".landing-workflow-request .quote-progress-step[aria-current='step'] .quote-progress-label-full",
     );
+    const guideTargetName = guide?.getAttribute("data-guide") ?? null;
+    const hit = guideTargetName
+      ? document.querySelector(`[data-guide-target="${guideTargetName}"]`)
+      : null;
+    let guideOffset = null;
+    if (guide && hit) {
+      const g = guide.getBoundingClientRect();
+      const t = hit.getBoundingClientRect();
+      guideOffset = Math.round(
+        Math.hypot(g.left - (t.left + t.width / 2), g.top - (t.top + t.height / 2)),
+      );
+    }
     return {
       missing: false,
       progress: section.getAttribute("data-progress"),
@@ -80,7 +92,8 @@ async function snapshot(page) {
       introText: intro?.textContent?.replace(/\s+/g, " ").trim().slice(0, 60) ?? null,
       partPresent: Boolean(part),
       quotePresent: Boolean(quote),
-      guideTarget: guide?.getAttribute("data-guide") ?? null,
+      guideTarget: guideTargetName,
+      guideOffset,
       visibleRows: rows.filter((row) => !row.hidden).length,
       allRows: rows.length,
       quoteStatus: strip?.textContent?.trim() ?? null,
@@ -110,7 +123,7 @@ if (await section.count()) {
     const track = box.height;
     for (const frac of [0.02, 0.12, 0.22, 0.32, 0.42, 0.52, 0.62, 0.7, 0.78, 0.86, 0.95]) {
       await page.evaluate((y) => window.scrollTo(0, y), start + track * frac);
-      await page.waitForTimeout(140);
+      await page.waitForTimeout(260);
       samples.push({ label: `frac-${frac}`, ...(await snapshot(page)) });
     }
   }
@@ -146,6 +159,7 @@ const report = {
         s.stageBox?.overflowY === "hidden" ||
         ["auto", "scroll", "hidden"].includes(s.quoteBox?.overflowY ?? ""),
     ),
+    guideMiss: samples.some((s) => s.guideTarget && (s.guideOffset ?? 0) > 28),
   },
   samples,
 };

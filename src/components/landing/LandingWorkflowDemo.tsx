@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { QuoteStatusChip } from "@/components/quote/QuoteStatusChip";
 import { QuoteStatusStrip } from "@/components/quote/QuoteStatusStrip";
 import { LandingWorkflowCell } from "@/components/landing/LandingWorkflowCell";
@@ -19,6 +19,7 @@ import {
   demoRowHidden,
   reduceDemoFrame,
   workflowHandoffMix,
+  workflowHighlightPartId,
   workflowHubVisible,
   workflowQuoteChatPlayhead,
   workflowScrubPlayhead,
@@ -79,6 +80,20 @@ export function LandingWorkflowDemo({
   const showQuoteSheet = step === "quote" || step === "send";
   const showThreadView = handoff > 0.02;
   const showHubChrome = workflowHubVisible(step);
+  const highlightPartId = workflowHighlightPartId(step);
+  const partAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const [partAnchor, setPartAnchor] = useState<{ x: number; y: number } | null>(null);
+  const onPartAnchor = useCallback((next: { x: number; y: number } | null) => {
+    if (!next) {
+      return;
+    }
+    const prev = partAnchorRef.current;
+    if (prev && Math.abs(prev.x - next.x) < 0.4 && Math.abs(prev.y - next.y) < 0.4) {
+      return;
+    }
+    partAnchorRef.current = next;
+    setPartAnchor(next);
+  }, []);
 
   return (
     <div
@@ -119,17 +134,23 @@ export function LandingWorkflowDemo({
       >
         <LandingWorkflowGuide playhead={playhead} reduceMotion={reduceMotion} />
         <div className="landing-workflow-model-panel" aria-hidden={showThreadView && handoff > 0.85}>
-          <div className="landing-workflow-model">
-            <LandingWorkflowCell spinYaw={spinYaw} />
-            <div
-              className={["landing-workflow-hotspot", showHotspot ? "is-on" : ""]
-                .filter(Boolean)
-                .join(" ")}
-              aria-hidden="true"
-            >
-              <span className="landing-workflow-hotspot-ring" />
-              <span className="landing-workflow-hotspot-label">{WORKFLOW_DEMO_PART}</span>
-            </div>
+          <div className="landing-workflow-model" data-guide-target="orbit">
+            <LandingWorkflowCell
+              spinYaw={spinYaw}
+              highlightPartId={highlightPartId}
+              onPartAnchor={onPartAnchor}
+            />
+            <span className="landing-workflow-scroll-cue-target" data-guide-target="scroll" />
+            {showHotspot && partAnchor ? (
+              <div
+                className="landing-workflow-hotspot is-on"
+                aria-hidden="true"
+                style={{ left: `${partAnchor.x}%`, top: `${partAnchor.y}%` }}
+              >
+                <span className="landing-workflow-hotspot-ring" data-guide-target="hotspot" />
+                <span className="landing-workflow-hotspot-label">{WORKFLOW_DEMO_PART}</span>
+              </div>
+            ) : null}
           </div>
 
           {showPartSheet ? (
@@ -140,7 +161,12 @@ export function LandingWorkflowDemo({
                   <p className="landing-workflow-part-id">{WORKFLOW_DEMO_PART}</p>
                   <p className="landing-workflow-part-meta">Infeed · BOM qty 2</p>
                 </div>
-                <button type="button" className="btn-accent landing-workflow-add" tabIndex={-1}>
+                <button
+                  type="button"
+                  className="btn-accent landing-workflow-add"
+                  data-guide-target="add"
+                  tabIndex={-1}
+                >
                   Add to quote
                 </button>
               </div>
@@ -167,7 +193,7 @@ export function LandingWorkflowDemo({
                 </p>
               </div>
               <ul className="landing-workflow-quote-lines">
-                <li className="landing-workflow-quote-line tray-line">
+                <li className="landing-workflow-quote-line tray-line" data-guide-target="quote">
                   <div className="landing-workflow-quote-line-main">
                     <span className="landing-workflow-quote-thumb" aria-hidden="true">3D</span>
                     <div>
@@ -184,6 +210,7 @@ export function LandingWorkflowDemo({
               <button
                 type="button"
                 className="landing-workflow-request-quote btn-accent"
+                data-guide-target="request"
                 tabIndex={-1}
               >
                 Request quote

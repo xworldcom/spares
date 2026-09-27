@@ -560,6 +560,41 @@ export function workflowScrubPlayhead(linearProgress: number) {
 
 export type WorkflowGuideTarget = "scroll" | "orbit" | "hotspot" | "add" | "quote" | "request";
 
+export function workflowGuideStagePoint(
+  stage: { left: number; top: number; width: number; height: number },
+  target: { left: number; top: number; width: number; height: number },
+) {
+  if (stage.width <= 0 || stage.height <= 0) {
+    return null;
+  }
+  return {
+    x: ((target.left + target.width / 2 - stage.left) / stage.width) * 100,
+    y: ((target.top + target.height / 2 - stage.top) / stage.height) * 100,
+  };
+}
+
+export function workflowGuideTargetSelector(target: WorkflowGuideTarget) {
+  return `[data-guide-target="${target}"]`;
+}
+
+export function workflowHighlightPartId(step: WorkflowStep) {
+  if (step === "select" || step === "quote" || step === "send") {
+    return WORKFLOW_DEMO_PART;
+  }
+  return null;
+}
+
+export function workflowMeshNameMatchesPart(meshName: string, partId: string) {
+  if (!meshName || !partId) {
+    return false;
+  }
+  if (meshName === partId) {
+    return true;
+  }
+  const needle = partId.toLowerCase();
+  return meshName.toLowerCase().includes(needle);
+}
+
 export function workflowGuideCue(playhead: number): {
   target: WorkflowGuideTarget | null;
   x: number;
