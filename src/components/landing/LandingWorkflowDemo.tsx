@@ -5,6 +5,7 @@ import { QuoteStatusChip } from "@/components/quote/QuoteStatusChip";
 import { QuoteStatusStrip } from "@/components/quote/QuoteStatusStrip";
 import { LandingWorkflowCell } from "@/components/landing/LandingWorkflowCell";
 import { initialsFromEmail } from "@/lib/ui/initials";
+import { LandingWorkflowGuide } from "@/components/landing/LandingWorkflowGuide";
 import {
   DEMO_MACHINE,
   DEMO_OTHER_LABEL,
@@ -19,6 +20,7 @@ import {
   reduceDemoFrame,
   workflowHandoffMix,
   workflowQuoteChatPlayhead,
+  workflowScrubPlayhead,
   workflowSpinYaw,
   workflowStep,
 } from "@/lib/ui/landing-demo";
@@ -38,7 +40,11 @@ export function LandingWorkflowDemo({
   progress: number;
   reduceMotion: boolean;
 }) {
-  const playhead = demoPlayhead(reduceMotion, progress);
+  const linearProgress = demoPlayhead(reduceMotion, progress);
+  const playhead = useMemo(
+    () => (reduceMotion ? linearProgress : workflowScrubPlayhead(linearProgress)),
+    [linearProgress, reduceMotion],
+  );
   const step = workflowStep(playhead);
   const spinYaw = useMemo(() => workflowSpinYaw(playhead), [playhead]);
   const handoff = reduceMotion && step === "handoff" ? 1 : workflowHandoffMix(playhead);
@@ -110,6 +116,7 @@ export function LandingWorkflowDemo({
           .filter(Boolean)
           .join(" ")}
       >
+        <LandingWorkflowGuide playhead={playhead} reduceMotion={reduceMotion} />
         <div className="landing-workflow-model-panel" aria-hidden={showThreadView && handoff > 0.85}>
           <div className="landing-workflow-model">
             <LandingWorkflowCell spinYaw={spinYaw} />

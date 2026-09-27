@@ -24,8 +24,10 @@ import {
   marketingCopyBan,
   marketingTutorialCopyBan,
   reduceDemoFrame,
+  workflowGuideCue,
   workflowHandoffMix,
   workflowQuoteChatPlayhead,
+  workflowScrubPlayhead,
   workflowSpinYaw,
   workflowStep,
   WORKFLOW_FIND_START,
@@ -297,7 +299,7 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
     assert.match(css, /var\(--landing-demo-scrub-extra,\s*340svh\)|--landing-demo-scrub-extra:\s*340svh/);
-    assert.equal(DEMO_SCRUB_EXTRA_SVH, 340);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH, 560);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
   });
@@ -374,6 +376,20 @@ describe("workflow desktop layout", () => {
 });
 
 describe("workflow demo", () => {
+  it("dwells on each beat before advancing the visual playhead", () => {
+    assert.equal(workflowScrubPlayhead(0.05), 0);
+    assert.equal(workflowStep(workflowScrubPlayhead(0.05)), "hub");
+    assert.equal(workflowStep(workflowScrubPlayhead(0.18)), "find");
+    assert.equal(workflowStep(workflowScrubPlayhead(0.32)), "select");
+    assert.equal(workflowStep(workflowScrubPlayhead(0.45)), "quote");
+    assert.equal(workflowStep(workflowScrubPlayhead(0.58)), "send");
+    assert.ok(workflowScrubPlayhead(0.72) >= WORKFLOW_HANDOFF_START);
+    assert.equal(workflowScrubPlayhead(1), 1);
+    assert.ok(workflowGuideCue(WORKFLOW_SELECT_START).target === "hotspot");
+    assert.ok(workflowGuideCue(WORKFLOW_SEND_START).target === "request");
+    assert.equal(workflowGuideCue(WORKFLOW_HANDOFF_START).target, null);
+  });
+
   it("steps hub → find → select → quote → send → handoff as scroll advances", () => {
     assert.equal(workflowStep(0), "hub");
     assert.equal(workflowStep(WORKFLOW_FIND_START), "find");
