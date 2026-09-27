@@ -19,6 +19,7 @@ import {
   demoRowHidden,
   reduceDemoFrame,
   workflowHandoffMix,
+  workflowHubVisible,
   workflowQuoteChatPlayhead,
   workflowScrubPlayhead,
   workflowSpinYaw,
@@ -77,7 +78,7 @@ export function LandingWorkflowDemo({
   const showPartSheet = step === "select";
   const showQuoteSheet = step === "quote" || step === "send";
   const showThreadView = handoff > 0.02;
-  const showHubChrome = !showThreadView;
+  const showHubChrome = workflowHubVisible(step);
 
   return (
     <div

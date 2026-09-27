@@ -53,6 +53,7 @@
   background: #000;
   overflow-x: visible;
   overflow-y: visible;
+  scrollbar-width: none;
 }
 
 .spares-app-cinematic .spares-header {
@@ -1155,8 +1156,11 @@
   color: rgba(236, 234, 228, 0.92);
 }
 
-.landing-workflow-stage {
+.landing-demo-stage.landing-workflow {
   --wf-handoff: 0;
+}
+
+.landing-workflow-stage {
   position: relative;
   display: grid;
   gap: 0.85rem;

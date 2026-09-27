@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 
 const CRITICAL_CSS = `
 html,body{margin:0;min-height:100%;background:#0c0d0f;color:#eceae4;color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
-html:has(.spares-app-cinematic),html:has(.spares-app-cinematic) body{overflow-x:visible;overflow-y:visible;}
+html:has(.spares-app-cinematic),html:has(.spares-app-cinematic) body{overflow-x:visible;overflow-y:visible;scrollbar-width:none;}
 @layer base{
 a{color:inherit;text-decoration:none;}
 button,input,textarea,select{font:inherit;color:inherit;}
