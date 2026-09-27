@@ -4,6 +4,22 @@ import type { Role } from "../types/index.ts";
 
 export type WorkListKind = "quotes" | "tickets";
 
+export function workListNoun(kind: WorkListKind) {
+  return kind === "quotes" ? "quotes" : "tickets";
+}
+
+export function workListAllLabel(kind: WorkListKind) {
+  return kind === "quotes" ? "All quotes" : "All tickets";
+}
+
+export function workListTitle(kind: WorkListKind, machineName?: string | null) {
+  const name = machineName?.trim();
+  if (name) {
+    return `${name} ${workListNoun(kind)}`;
+  }
+  return workListAllLabel(kind);
+}
+
 export function workListAllHref(kind: WorkListKind, role: Role = "customer") {
   if (kind === "tickets") {
     return hubTicketsHref();

@@ -41,25 +41,20 @@ export function QuotesWorkspace({
             : "catalog-page-intro catalog-page-intro-split"
         }
       >
-        <div className={scoped ? "min-w-0 flex-1 space-y-2.5" : "min-w-0 flex-1 space-y-3"}>
-          <WorkListScopeBar kind="quotes" machineId={machineId} role={role} />
-          {scoped ? (
-            <>
-              <h2 className="text-[19px] font-semibold tracking-tight">Quotes</h2>
-              <p className="spares-muted mt-1 text-sm leading-relaxed">
-                Only quotes for the machine named above.
-              </p>
-            </>
-          ) : (
-            <>
-              <h1>Quotes</h1>
-              <p>
-                {role === "staff"
-                  ? "Every quote in your queue. Switch to one machine to see its model and tickets."
-                  : "Every parts request across your plant. Switch to one machine to pick from the model."}
-              </p>
-            </>
-          )}
+        <div className="min-w-0 flex-1">
+          <WorkListScopeBar
+            kind="quotes"
+            machineId={machineId}
+            role={role}
+            headingLevel={scoped ? "h2" : "h1"}
+            lede={
+              scoped
+                ? "Only this machine."
+                : role === "staff"
+                  ? "Every quote in your queue. Open one machine to see its model and tickets."
+                  : "Every parts request across your plant. Open one machine to pick from the model."
+            }
+          />
         </div>
         <button
           type="button"

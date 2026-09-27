@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { workListAllHref, workListMachineHref } from "./work-list-scope.ts";
+import {
+  workListAllHref,
+  workListAllLabel,
+  workListMachineHref,
+  workListTitle,
+} from "./work-list-scope.ts";
 
 describe("workListAllHref", () => {
   it("routes tickets to the Care hub list", () => {
@@ -23,5 +28,28 @@ describe("workListMachineHref", () => {
 
   it("routes quotes to machine quotes", () => {
     assert.equal(workListMachineHref("quotes", "m1"), "/machines/m1/quotes");
+  });
+});
+
+describe("workListTitle", () => {
+  it("names the hub list as all items", () => {
+    assert.equal(workListTitle("quotes"), "All quotes");
+    assert.equal(workListTitle("tickets"), "All tickets");
+  });
+
+  it("puts the machine name in the scoped title", () => {
+    assert.equal(workListTitle("quotes", "Palletizer"), "Palletizer quotes");
+    assert.equal(workListTitle("tickets", "Palletizer"), "Palletizer tickets");
+  });
+
+  it("treats blank machine names as the hub title", () => {
+    assert.equal(workListTitle("quotes", "  "), "All quotes");
+  });
+});
+
+describe("workListAllLabel", () => {
+  it("matches the hub title for the back link", () => {
+    assert.equal(workListAllLabel("quotes"), "All quotes");
+    assert.equal(workListAllLabel("tickets"), "All tickets");
   });
 });
