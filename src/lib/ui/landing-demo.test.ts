@@ -195,8 +195,10 @@ describe("demo scroll scrub", () => {
     assert.match(src, /data-hydrated/);
     assert.doesNotMatch(src, /flushSync/);
     assert.doesNotMatch(src, /getBoundingClientRect\(\)\.top/);
-    assert.doesNotMatch(src, /addEventListener\("scroll"/);
+    assert.doesNotMatch(src, /window\.addEventListener\("scroll"/);
     assert.doesNotMatch(src, /addEventListener\("touchmove"/);
+    assert.match(src, /visualViewport\?\.addEventListener\("scroll"/);
+    assert.doesNotMatch(src, /demoPickScrollY\(0,/);
   });
 
   it("picks the scroll root or visual pageTop when window Y is stale", () => {
@@ -329,6 +331,7 @@ describe("landing scrub layout", () => {
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
     assert.match(mobile, /touch-action:\s*pan-y/);
+    assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*pointer-events:\s*none/);
     const cinematic = readFileSync("src/app/globals.css", "utf8");
     assert.match(
       cinematic,
@@ -448,6 +451,17 @@ describe("workflow demo", () => {
     assert.doesNotMatch(css, /^\.landing-workflow-stage\s*\{[^}]*--wf-handoff:\s*0/m);
     const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
     assert.match(demo, /"--wf-handoff":/);
+  });
+
+  it("keeps quote tray and handoff chrome from capturing iOS pans", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.match(css, /\.landing-workflow-quote-sheet\s*\{[^}]*pointer-events:\s*none/);
+    assert.match(css, /\.landing-workflow-side\s*\{[^}]*pointer-events:\s*none/);
+    assert.doesNotMatch(
+      css,
+      /\.landing-workflow-stage\.is-handoff \.landing-workflow-request\.is-visible\s*\{[^}]*pointer-events:\s*auto/,
+    );
+    assert.match(css, /\.landing-workflow-stage\s*\{[^}]*overflow:\s*clip/);
   });
 
   it("drops hub chrome at select so the part sheet does not ghost", () => {
