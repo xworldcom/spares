@@ -71,6 +71,7 @@ export function LandingWorkflowDemo({
   const showPartSheet = step === "select";
   const showQuoteSheet = step === "quote" || step === "send";
   const showThreadView = handoff > 0.02;
+  const showHubChrome = !showThreadView;
 
   return (
     <div
@@ -79,23 +80,25 @@ export function LandingWorkflowDemo({
       data-step={step}
       style={{ "--wf-handoff": handoff } as CSSProperties}
     >
-      <header className="landing-workflow-hub">
-        <div className="landing-workflow-hub-title">
-          <p className="landing-demo-kicker">{DEMO_PLANT}</p>
-          <h3 className="landing-demo-title">{DEMO_MACHINE}</h3>
-        </div>
-        <nav className="landing-workflow-tabs" aria-label="Machine">
-          {HUB_TABS.map((tab) => (
-            <span
-              key={tab.id}
-              className={tab.active ? "landing-workflow-tab is-active" : "landing-workflow-tab"}
-              aria-current={tab.active ? "page" : undefined}
-            >
-              {tab.label}
-            </span>
-          ))}
-        </nav>
-      </header>
+      {showHubChrome ? (
+        <header className="landing-workflow-hub">
+          <div className="landing-workflow-hub-title">
+            <p className="landing-demo-kicker">{DEMO_PLANT}</p>
+            <h3 className="landing-demo-title">{DEMO_MACHINE}</h3>
+          </div>
+          <nav className="landing-workflow-tabs" aria-label="Machine">
+            {HUB_TABS.map((tab) => (
+              <span
+                key={tab.id}
+                className={tab.active ? "landing-workflow-tab is-active" : "landing-workflow-tab"}
+                aria-current={tab.active ? "page" : undefined}
+              >
+                {tab.label}
+              </span>
+            ))}
+          </nav>
+        </header>
+      ) : null}
 
       <div
         className={[
@@ -188,10 +191,11 @@ export function LandingWorkflowDemo({
           aria-hidden={!showThreadView}
         >
           <header className="landing-workflow-request-head">
-            <div>
-              <p className="landing-demo-kicker">{DEMO_PLANT}</p>
-              <h3 className="landing-demo-title">Quote {DEMO_QUOTE_NUMBER}</h3>
-              <p className="landing-demo-meta">
+            <div className="landing-workflow-request-titleblock">
+              <h3 className="landing-demo-title landing-workflow-request-quote-id">
+                Quote {DEMO_QUOTE_NUMBER}
+              </h3>
+              <p className="landing-demo-meta landing-workflow-request-context">
                 {WORKFLOW_DEMO_PART_NAME} · {DEMO_MACHINE}
               </p>
             </div>
