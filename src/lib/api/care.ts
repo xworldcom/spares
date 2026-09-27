@@ -6,6 +6,7 @@ import {
 } from "../care.ts";
 import { ApiError } from "./errors";
 import { apiFetch } from "./client";
+import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm } from "./warm-read";
 import type {
   CareOverviewResponse,
@@ -147,10 +148,16 @@ export async function createTicket(
 }
 
 export async function getTicket(idOrNumber: string): Promise<ServiceTicket> {
-  return readIfWarm(`ticket:${idOrNumber}`, async () => {
+  return readIfWarm(`ticket:${idOrNumber}:view`, async () => {
     const data = await apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`);
     return data.ticket;
   });
+}
+
+export function warmTicketDetailFetch(idOrNumber: string) {
+  return apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`, {
+    headers: { [SPARES_WARM_HEADER]: "1" },
+  }).then((data) => data.ticket);
 }
 
 export async function updateTicketStatus(id: string, status: TicketStatus) {

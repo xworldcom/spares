@@ -17,6 +17,7 @@ import {
 } from "@/lib/quotes";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
+import { isWarmConversationRequest } from "@/lib/api/warm-intent";
 import { createQuoteActivity, markQuoteRead, mutateQuote } from "@/lib/store";
 import type { QuoteRecord, QuoteStatus } from "@/types";
 
@@ -40,9 +41,11 @@ export async function GET(
 
   const tenantId = userTenantId(access.user);
   const beforeRead = access.quote.lastReadAt;
-  const marked =
-    (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
-  if (access.user.role === "customer") {
+  const warm = isWarmConversationRequest(_request);
+  const marked = warm
+    ? access.quote
+    : (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
+  if (!warm && access.user.role === "customer") {
     await bumpConversationWatchForCustomerRead(
       "quote",
       marked.id,

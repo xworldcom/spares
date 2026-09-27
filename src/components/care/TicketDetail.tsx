@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
+import { ConversationReadWatermark } from "@/components/chat/ConversationReadWatermark";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
@@ -19,7 +20,6 @@ import {
 import { errorMessage } from "@/lib/api/errors";
 import { careHref, ticketRefMatches } from "@/lib/care";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
-import { useTicketReadWatermark } from "@/lib/hooks/useTicketReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
 
@@ -45,6 +45,7 @@ export function TicketDetail({
   backHref,
   embedded = false,
   onUpdated,
+  onTicketListPatch,
   seedTicket,
 }: {
   machineId: string;
@@ -52,6 +53,8 @@ export function TicketDetail({
   backHref?: string;
   embedded?: boolean;
   onUpdated?: () => void;
+  /** Keep the split-pane ticket tree in sync when read state changes. */
+  onTicketListPatch?: (ticket: ServiceTicket) => void;
   /** Row from the tickets list — paints header immediately while detail loads. */
   seedTicket?: ServiceTicket | null;
 }) {
@@ -77,6 +80,7 @@ export function TicketDetail({
           return;
         }
         setTicket(next);
+        onTicketListPatch?.(next);
         setError(null);
         void refreshCareAlerts();
       })
@@ -89,7 +93,7 @@ export function TicketDetail({
     return () => {
       cancelled = true;
     };
-  }, [ticketId, reloadKey, refreshCareAlerts, seedTicket]);
+  }, [ticketId, reloadKey, refreshCareAlerts, seedTicket, onTicketListPatch]);
 
   const pollTicket = useCallback(async () => {
     const next = await getTicket(ticketId);
@@ -110,7 +114,7 @@ export function TicketDetail({
       return;
     }
     void refreshCareAlerts();
-    setTicket({
+    const merged = {
       ...ticket,
       status: next.status,
       activities,
@@ -118,16 +122,16 @@ export function TicketDetail({
       customerReadReceipts: next.customerReadReceipts,
       assistantPaused: next.assistantPaused,
       assistantAvailable: next.assistantAvailable,
-    });
-  }, [ticket, ticketId, refreshCareAlerts]);
+    };
+    setTicket(merged);
+    onTicketListPatch?.(merged);
+  }, [ticket, ticketId, refreshCareAlerts, onTicketListPatch]);
 
   const threadBump =
     ticket?.activities.at(-1)?.at ?? ticket?.activities.at(-1)?.id ?? ticketId;
   const watermarkReady = Boolean(
     ticket && user && user.role === "customer" && ticketRefMatches(ticket, ticketId),
   );
-  useTicketReadWatermark(watermarkReady, ticketId, threadBump);
-
   useConversationWatch(
     Boolean(ticket && user),
     ticket ? { kind: "ticket", id: ticket.id } : null,
@@ -251,6 +255,25 @@ export function TicketDetail({
         unread={ticket.unread}
         layout={embedded ? "inline" : "overlay"}
       >
+        <ConversationReadWatermark
+          enabled={watermarkReady}
+          ticketId={ticketId}
+          threadBump={threadBump}
+          layout={embedded ? "inline" : "overlay"}
+          onRead={(next) => {
+            setTicket((current) =>
+              current && ticketRefMatches(current, ticketId)
+                ? {
+                    ...current,
+                    unread: next.unread,
+                    viewerReadAt: next.viewerReadAt,
+                  }
+                : current,
+            );
+            onTicketListPatch?.(next);
+            void refreshCareAlerts();
+          }}
+        />
         <QuoteActivityFeed
           activities={threadReady ? ticket.activities : []}
           role={user.role}

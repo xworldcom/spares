@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 import type {
   CreateQuoteResponse,
@@ -42,13 +43,19 @@ export async function listQuotes(): Promise<QuotesListResponse> {
 }
 
 export async function getQuote(idOrNumber: string): Promise<Quote> {
-  return readIfWarm(`quote:${idOrNumber}`, async () => {
+  return readIfWarm(`quote:${idOrNumber}:view`, async () => {
     const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`);
     const quote = data.quote;
-    warmRead(`quote:${quote.id}`, () => Promise.resolve(quote));
-    warmRead(`quote:${String(quote.number)}`, () => Promise.resolve(quote));
+    warmRead(`quote:${quote.id}:view`, () => Promise.resolve(quote));
+    warmRead(`quote:${String(quote.number)}:view`, () => Promise.resolve(quote));
     return quote;
   });
+}
+
+export function warmQuoteDetailFetch(idOrNumber: string) {
+  return apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`, {
+    headers: { [SPARES_WARM_HEADER]: "1" },
+  }).then((data) => data.quote);
 }
 
 export async function updateQuote(

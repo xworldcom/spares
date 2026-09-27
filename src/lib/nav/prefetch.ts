@@ -3,11 +3,11 @@ type AppRouter = {
 };
 import {
   getCareOverview,
-  getTicket,
+  warmTicketDetailFetch,
   listAccessibleTickets,
 } from "@/lib/api/care";
 import { listMachines } from "@/lib/api/machines";
-import { getQuote, listQuotes } from "@/lib/api/quotes";
+import { listQuotes, warmQuoteDetailFetch } from "@/lib/api/quotes";
 import { warmRead } from "@/lib/api/warm-read";
 
 export function prefetchAppRoute(router: AppRouter, href: string) {
@@ -22,13 +22,13 @@ export function prefetchAppRoute(router: AppRouter, href: string) {
 }
 
 export function warmTicketDetail(ticketId: string) {
-  warmRead(`ticket:${ticketId}`, () => getTicket(ticketId));
+  warmRead(`ticket:${ticketId}:warm`, () => warmTicketDetailFetch(ticketId));
 }
 
 export function warmQuoteDetail(quote: { id: string; number: number }) {
   const byNumber = String(quote.number);
-  warmRead(`quote:${byNumber}`, () => getQuote(byNumber));
-  warmRead(`quote:${quote.id}`, () => getQuote(byNumber));
+  warmRead(`quote:${byNumber}:warm`, () => warmQuoteDetailFetch(byNumber));
+  warmRead(`quote:${quote.id}:warm`, () => warmQuoteDetailFetch(byNumber));
 }
 
 export function warmCareOverview(machineId: string) {
