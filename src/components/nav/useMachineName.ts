@@ -34,5 +34,5 @@ export function useMachineName(machineId: string | null) {
   if (!machineId) {
     return null;
   }
-  return resolved?.id === machineId ? resolved.name : "Machine";
+  return resolved?.id === machineId ? resolved.name : null;
 }

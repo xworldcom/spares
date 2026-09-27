@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useMachineName } from "@/components/nav/useMachineName";
 import { listMachines } from "@/lib/api/machines";
@@ -20,12 +20,14 @@ export function WorkListScopeBar({
   role = "customer",
   headingLevel = "h2",
   lede,
+  action,
 }: {
   kind: WorkListKind;
   machineId?: string;
   role?: Role;
   headingLevel?: "h1" | "h2";
   lede: string;
+  action?: ReactNode;
 }) {
   const router = useRouter();
   const machineName = useMachineName(machineId ?? null);
@@ -35,7 +37,7 @@ export function WorkListScopeBar({
   const allHref = workListAllHref(kind, role);
   const allLabel = workListAllLabel(kind);
   const scoped = Boolean(machineId);
-  const title = workListTitle(kind, scoped ? machineName : null);
+  const title = workListTitle(kind, scoped ? machineName : null, scoped);
   const Heading = headingLevel;
 
   useEffect(() => {
@@ -76,27 +78,32 @@ export function WorkListScopeBar({
           <span aria-hidden="true">‹</span> {allLabel}
         </PrefetchLink>
       ) : null}
-      <Heading>{title}</Heading>
-      <p className="work-list-scope-lede">{lede}</p>
-      {!scoped ? (
-        <label className="work-list-scope-filter">
-          <select
-            className="work-list-scope-filter-select"
-            value=""
-            onChange={(event) => onPickMachine(event.target.value)}
-            aria-label={`Show ${kind} for one machine`}
-          >
-            <option value="" disabled hidden>
-              One machine…
-            </option>
-            {machineOptions.map((machine) => (
-              <option key={machine.id} value={machine.id}>
-                {machine.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
+      <div className="work-list-scope-row">
+        <div className="work-list-scope-copy">
+          <Heading>{title}</Heading>
+          <p className="work-list-scope-lede">{lede}</p>
+          {!scoped ? (
+            <label className="work-list-scope-filter">
+              <select
+                className="work-list-scope-filter-select"
+                value=""
+                onChange={(event) => onPickMachine(event.target.value)}
+                aria-label={`Show ${kind} for one machine`}
+              >
+                <option value="" disabled hidden>
+                  One machine…
+                </option>
+                {machineOptions.map((machine) => (
+                  <option key={machine.id} value={machine.id}>
+                    {machine.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+        {action}
+      </div>
     </div>
   );
 }

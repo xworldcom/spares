@@ -45,6 +45,11 @@ describe("workListTitle", () => {
   it("treats blank machine names as the hub title", () => {
     assert.equal(workListTitle("quotes", "  "), "All quotes");
   });
+
+  it("uses the bare noun while a scoped name is loading", () => {
+    assert.equal(workListTitle("quotes", null, true), "Quotes");
+    assert.equal(workListTitle("tickets", undefined, true), "Tickets");
+  });
 });
 
 describe("workListAllLabel", () => {

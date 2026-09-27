@@ -34,36 +34,30 @@ export function QuotesWorkspace({
 
   return (
     <div className={scoped ? "space-y-4" : "catalog-page"}>
-      <div
-        className={
-          scoped
-            ? "tickets-workspace-toolbar"
-            : "catalog-page-intro catalog-page-intro-split"
-        }
-      >
-        <div className="min-w-0 flex-1">
-          <WorkListScopeBar
-            kind="quotes"
-            machineId={machineId}
-            role={role}
-            headingLevel={scoped ? "h2" : "h1"}
-            lede={
-              scoped
-                ? "Only this machine."
-                : role === "staff"
-                  ? "Every quote in your queue. Open one machine to see its model and tickets."
-                  : "Every parts request across your plant. Open one machine to pick from the model."
-            }
-          />
-        </div>
-        <button
-          type="button"
-          className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-          aria-expanded={creating}
-          onClick={() => setCreating((open) => !open)}
-        >
-          {creating ? "Close" : "New quote"}
-        </button>
+      <div className={scoped ? undefined : "catalog-page-intro"}>
+        <WorkListScopeBar
+          kind="quotes"
+          machineId={machineId}
+          role={role}
+          headingLevel={scoped ? "h2" : "h1"}
+          lede={
+            scoped
+              ? "Only this machine."
+              : role === "staff"
+                ? "Every quote in your queue. Open one machine to see its model and tickets."
+                : "Every parts request across your plant. Open one machine to pick from the model."
+          }
+          action={
+            <button
+              type="button"
+              className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+              aria-expanded={creating}
+              onClick={() => setCreating((open) => !open)}
+            >
+              {creating ? "Close" : "New quote"}
+            </button>
+          }
+        />
       </div>
       {creating ? (
         <NewQuoteForm

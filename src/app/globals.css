@@ -2946,9 +2946,25 @@ html.spares-embed .spares-app-stage {
 .work-list-scope {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   min-width: 0;
   gap: 0.2rem;
+}
+
+.work-list-scope-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.work-list-scope-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .work-list-scope h1,

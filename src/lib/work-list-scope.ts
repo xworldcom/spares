@@ -12,10 +12,17 @@ export function workListAllLabel(kind: WorkListKind) {
   return kind === "quotes" ? "All quotes" : "All tickets";
 }
 
-export function workListTitle(kind: WorkListKind, machineName?: string | null) {
+export function workListTitle(
+  kind: WorkListKind,
+  machineName?: string | null,
+  scoped = false,
+) {
   const name = machineName?.trim();
   if (name) {
     return `${name} ${workListNoun(kind)}`;
+  }
+  if (scoped) {
+    return kind === "quotes" ? "Quotes" : "Tickets";
   }
   return workListAllLabel(kind);
 }
