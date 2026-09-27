@@ -600,6 +600,33 @@ export function workflowMeshNameMatchesPart(meshName: string, partId: string) {
   return meshName.toLowerCase().includes(needle);
 }
 
+export type WorkflowAnchorMesh = {
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+};
+
+export const WORKFLOW_DEMO_MOTOR = "PN-MTR-3301";
+
+export function workflowDemoRollerIndex(
+  meshes: readonly WorkflowAnchorMesh[],
+  partId: string,
+  motorName = WORKFLOW_DEMO_MOTOR,
+) {
+  const motor = meshes.find((mesh) => mesh.name === motorName);
+  const rollers = meshes
+    .map((mesh, index) => ({ mesh, index }))
+    .filter(({ mesh }) => mesh.name !== motorName && workflowMeshNameMatchesPart(mesh.name, partId));
+  if (rollers.length === 0) {
+    return null;
+  }
+  if (!motor) {
+    return rollers[0]?.index ?? null;
+  }
+  return rollers[0]?.index ?? null;
+}
+
 export function workflowGuideCue(playhead: number): {
   target: WorkflowGuideTarget | null;
   x: number;

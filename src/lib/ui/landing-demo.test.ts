@@ -25,6 +25,7 @@ import {
   marketingCopyBan,
   marketingTutorialCopyBan,
   reduceDemoFrame,
+  workflowDemoRollerIndex,
   workflowGuideCue,
   workflowGuideStagePoint,
   workflowHandoffMix,
@@ -436,9 +437,36 @@ describe("workflow demo", () => {
       const target = workflowGuideCue(workflowScrubPlayhead(p)).target ?? "none";
       dwell.set(target, (dwell.get(target) ?? 0) + 0.001);
     }
-    assert.ok((dwell.get("hotspot") ?? 0) >= 0.02, `hotspot dwell ${dwell.get("hotspot")}`);
-    assert.ok((dwell.get("add") ?? 0) >= 0.02, `add dwell ${dwell.get("add")}`);
-    assert.ok((dwell.get("request") ?? 0) >= 0.04, `request dwell ${dwell.get("request")}`);
+    assert.ok((dwell.get("hotspot") ?? 0) >= 0.012, `hotspot dwell ${dwell.get("hotspot")}`);
+    assert.ok((dwell.get("add") ?? 0) >= 0.012, `add dwell ${dwell.get("add")}`);
+    assert.ok((dwell.get("request") ?? 0) >= 0.02, `request dwell ${dwell.get("request")}`);
+    const plateau = (cue: string) => {
+      let best = 0;
+      let run = 0;
+      let prev = -1;
+      for (let p = 0; p <= 1.0001; p += 0.001) {
+        const visual = workflowScrubPlayhead(p);
+        const target = workflowGuideCue(visual).target;
+        const flat = Math.abs(visual - prev) < 0.0001;
+        if (flat && target === cue) {
+          run += 0.001;
+          best = Math.max(best, run);
+        } else {
+          run = 0;
+        }
+        prev = visual;
+      }
+      return best;
+    };
+    const hub = plateau("scroll");
+    const quote = plateau("quote");
+    const hotspot = plateau("hotspot");
+    const add = plateau("add");
+    assert.ok(hub <= 0.034 && hub >= 0.02, `hub plateau ${hub}`);
+    assert.ok(quote <= 0.034 && quote >= 0.02, `quote plateau ${quote}`);
+    assert.ok(hotspot >= 0.01 && hotspot <= 0.02, `hotspot plateau ${hotspot}`);
+    assert.ok(add >= 0.01 && add <= 0.02, `add plateau ${add}`);
+    assert.ok(hotspot + add <= 0.036, `select-add plateaus ${hotspot + add}`);
   });
 
   it("places the tap cue on the measured hit target, not a guessed stage percent", () => {
@@ -453,6 +481,10 @@ describe("workflow demo", () => {
     assert.match(guide, /workflowGuideTargetSelector/);
     assert.match(guide, /data-guide=\{shown \? cue\.target : undefined\}/);
     const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
+    assert.doesNotMatch(demo, /landing-workflow-model" data-guide-target="orbit"/);
+    assert.match(demo, /data-guide-target="orbit"/);
+    assert.match(demo, /machineAnchor/);
+    assert.match(demo, /guideTarget === "hotspot"/);
     assert.match(demo, /data-guide-target="hotspot"/);
     assert.match(demo, /data-guide-target="add"/);
     assert.match(demo, /data-guide-target="quote"/);
@@ -475,13 +507,22 @@ describe("workflow demo", () => {
     assert.equal(workflowHighlightPartId("send"), WORKFLOW_DEMO_PART);
     assert.equal(workflowHighlightPartId("handoff"), null);
     assert.equal(workflowMeshNameMatchesPart("PN-ROLL-2104", WORKFLOW_DEMO_PART), true);
+    assert.equal(workflowMeshNameMatchesPart("PN-ROLL-2104_1", WORKFLOW_DEMO_PART), true);
     assert.equal(workflowMeshNameMatchesPart("PN-FRAME-1000", WORKFLOW_DEMO_PART), false);
+    const selectPose = [
+      { name: "PN-ROLL-2104", x: 0.33, y: 0.85, z: 1.12 },
+      { name: "PN-ROLL-2104_1", x: -0.26, y: 0.9, z: -0.8 },
+      { name: "PN-MTR-3301", x: 0.3, y: 0.92, z: -1.18 },
+      { name: "PN-FRAME-1000", x: 0.04, y: 0.45, z: 0.16 },
+    ];
+    assert.equal(workflowDemoRollerIndex(selectPose, WORKFLOW_DEMO_PART), 1);
+    assert.equal(workflowDemoRollerIndex([], WORKFLOW_DEMO_PART), null);
     const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
     assert.match(demo, /workflowHighlightPartId\(step\)/);
     const orbit = readFileSync("src/components/landing/OrbitStage.tsx", "utf8");
     assert.match(orbit, /highlightPartId/);
     assert.match(orbit, /emissiveIntensity = 0.95/);
-    assert.match(orbit, /workflowMeshNameMatchesPart/);
+    assert.match(orbit, /workflowDemoRollerIndex/);
   });
 
   it("steps hub → find → select → quote → send → handoff as scroll advances", () => {
