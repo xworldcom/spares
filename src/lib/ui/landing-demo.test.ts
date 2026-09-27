@@ -42,6 +42,7 @@ import {
   WORKFLOW_HANDOFF_START,
   WORKFLOW_CHAT_START,
   WORKFLOW_QUOTE_START,
+  WORKFLOW_SELECT_ADD,
   WORKFLOW_SELECT_START,
   WORKFLOW_SEND_START,
 } from "./landing-demo.ts";
@@ -427,8 +428,17 @@ describe("workflow demo", () => {
     assert.ok(handoffAt <= 0.42);
     assert.ok(1 - handoffAt >= 0.5);
     assert.ok(workflowGuideCue(WORKFLOW_SELECT_START).target === "hotspot");
+    assert.equal(workflowGuideCue(WORKFLOW_SELECT_ADD).target, "add");
     assert.ok(workflowGuideCue(WORKFLOW_SEND_START).target === "request");
     assert.equal(workflowGuideCue(WORKFLOW_HANDOFF_START).target, null);
+    const dwell = new Map<string, number>();
+    for (let p = 0; p <= 1.0001; p += 0.001) {
+      const target = workflowGuideCue(workflowScrubPlayhead(p)).target ?? "none";
+      dwell.set(target, (dwell.get(target) ?? 0) + 0.001);
+    }
+    assert.ok((dwell.get("hotspot") ?? 0) >= 0.02, `hotspot dwell ${dwell.get("hotspot")}`);
+    assert.ok((dwell.get("add") ?? 0) >= 0.02, `add dwell ${dwell.get("add")}`);
+    assert.ok((dwell.get("request") ?? 0) >= 0.04, `request dwell ${dwell.get("request")}`);
   });
 
   it("places the tap cue on the measured hit target, not a guessed stage percent", () => {
