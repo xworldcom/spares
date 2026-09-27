@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
 import { QuotesList } from "@/components/quote/QuotesList";
+import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
 import type { Role } from "@/types";
 
 export function MachineQuotesWorkspace({ machineId }: { machineId: string }) {
@@ -40,12 +41,13 @@ export function QuotesWorkspace({
             : "catalog-page-intro catalog-page-intro-split"
         }
       >
-        <div>
+        <div className={scoped ? "min-w-0 flex-1 space-y-2.5" : "min-w-0 flex-1 space-y-3"}>
+          <WorkListScopeBar kind="quotes" machineId={machineId} role={role} />
           {scoped ? (
             <>
               <h2 className="text-[19px] font-semibold tracking-tight">Quotes</h2>
               <p className="spares-muted mt-1 text-sm leading-relaxed">
-                Parts requests for this machine.
+                Only quotes for the machine named above.
               </p>
             </>
           ) : (
@@ -53,8 +55,8 @@ export function QuotesWorkspace({
               <h1>Quotes</h1>
               <p>
                 {role === "staff"
-                  ? "Open work across machines. Jump into a machine when you need the model or tickets."
-                  : "Request parts from a machine. Open the machine to pick from the model."}
+                  ? "Every quote in your queue. Switch to one machine to see its model and tickets."
+                  : "Every parts request across your plant. Switch to one machine to pick from the model."}
               </p>
             </>
           )}

@@ -2935,6 +2935,77 @@ html.spares-embed .spares-app-stage {
   color: var(--spares-on-ink);
 }
 
+.work-list-scope {
+  display: flex;
+  width: 100%;
+  max-width: 28rem;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--spares-soft);
+}
+
+.work-list-scope-seg {
+  display: inline-flex;
+  max-width: min(100%, 16rem);
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0 0.95rem;
+  color: var(--spares-muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.work-list-scope-seg.is-active {
+  background: var(--spares-ink);
+  color: var(--spares-on-ink);
+}
+
+.work-list-scope-this {
+  flex-shrink: 0;
+}
+
+.work-list-scope-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  opacity: 0.88;
+}
+
+.work-list-scope-pick {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 8.5rem;
+  min-height: 2.5rem;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 0.75rem;
+  color: var(--spares-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.work-list-scope-select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.work-list-scope-select option {
+  color: var(--spares-on-ink);
+  background: var(--spares-ink);
+}
+
 .care-stack {
   display: flex;
   flex-direction: column;
