@@ -15,6 +15,7 @@ import {
   demoDocumentScrollProgress,
   demoFindScrollRoot,
   demoOffsetInDocument,
+  demoParkedNestedRoot,
   demoPickScrollY,
   demoPinPlacement,
   demoPlayhead,
@@ -186,10 +187,11 @@ export function LandingDemoScrub({
       const windowY = readWindowScrollY();
       const rootY = root?.scrollTop ?? 0;
       const visualPageTop = readVisualPageTop();
-      const scrollY = root
-        ? demoPickScrollY(0, rootY, visualPageTop)
-        : demoPickScrollY(windowY, 0, visualPageTop);
-      const sectionTop = root
+      const parkedRoot = Boolean(root) && demoParkedNestedRoot(windowY, rootY, visualPageTop);
+      const scrollY = parkedRoot || !root
+        ? demoPickScrollY(windowY, 0, visualPageTop)
+        : Math.max(0, rootY);
+      const sectionTop = root && !parkedRoot
         ? layout.sectionTop - demoOffsetInDocument(root).y
         : layout.sectionTop;
       const next = demoPlayhead(
@@ -210,7 +212,7 @@ export function LandingDemoScrub({
           layout.sectionHeight,
           layout.pinHeight,
           layout.stickyTop,
-          !root,
+          parkedRoot || !root,
         ),
         section,
         window.pageXOffset || 0,
@@ -244,9 +246,13 @@ export function LandingDemoScrub({
         return;
       }
       const root = findPageScrollRoot(section);
-      const y = root
-        ? demoPickScrollY(0, root.scrollTop, readVisualPageTop())
-        : demoPickScrollY(readWindowScrollY(), 0, readVisualPageTop());
+      const windowY = readWindowScrollY();
+      const rootY = root?.scrollTop ?? 0;
+      const visualPageTop = readVisualPageTop();
+      const parkedRoot = Boolean(root) && demoParkedNestedRoot(windowY, rootY, visualPageTop);
+      const y = parkedRoot || !root
+        ? demoPickScrollY(windowY, 0, visualPageTop)
+        : Math.max(0, rootY);
       if (y !== lastY) {
         lastY = y;
         apply();
@@ -274,12 +280,14 @@ export function LandingDemoScrub({
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.visualViewport?.addEventListener("resize", onResize, { passive: true });
+    window.visualViewport?.addEventListener("scroll", onResize, { passive: true });
 
     return () => {
       running = false;
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
       window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
       if (frame) {
         window.cancelAnimationFrame(frame);
       }

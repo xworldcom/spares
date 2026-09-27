@@ -282,16 +282,12 @@ export function demoDocumentScrollProgress(
 }
 
 export function demoPickScrollY(windowY: number, rootY: number, visualPageTop: number) {
-  const windowScroll = Math.max(0, windowY);
-  const rootScroll = Math.max(0, rootY);
-  const visualScroll = Math.max(0, visualPageTop);
-  if (rootScroll > windowScroll + 1) {
-    return rootScroll;
-  }
-  if (visualScroll > windowScroll + 1) {
-    return visualScroll;
-  }
-  return Math.max(windowScroll, rootScroll, visualScroll);
+  return Math.max(0, windowY, rootY, visualPageTop);
+}
+
+/** Nested overflow is a ghost when the window or visual viewport is the live scroll. */
+export function demoParkedNestedRoot(windowY: number, rootY: number, visualPageTop = 0) {
+  return rootY <= Math.max(windowY, visualPageTop) + 1;
 }
 
 export function demoWindowScrollY(windowY: number, documentY: number, bodyY: number, scrollingY: number) {

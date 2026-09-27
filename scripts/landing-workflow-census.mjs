@@ -139,6 +139,13 @@ const report = {
     selectGhost: samples.some(
       (s) => s.step === "select" && s.partPresent && (s.hubPresent || (s.introOpacity ?? 0) > 0.2),
     ),
+    iosQuoteSteal: samples.some((s) => s.quoteBox?.pointerEvents === "auto"),
+    iosRequestSteal: samples.some((s) => s.requestBox?.pointerEvents === "auto"),
+    iosThreadScrollport: samples.some(
+      (s) =>
+        s.stageBox?.overflowY === "hidden" ||
+        ["auto", "scroll", "hidden"].includes(s.quoteBox?.overflowY ?? ""),
+    ),
   },
   samples,
 };

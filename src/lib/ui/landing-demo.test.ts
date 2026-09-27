@@ -14,6 +14,7 @@ import {
   demoDocumentScrollProgress,
   demoFindScrollRoot,
   demoIsNestedScrollPort,
+  demoParkedNestedRoot,
   demoPickScrollY,
   demoPinPlacement,
   demoPlayhead,
@@ -207,6 +208,16 @@ describe("demo scroll scrub", () => {
     assert.equal(demoPickScrollY(10, 80, 12), 80);
     assert.equal(demoPickScrollY(10, 10, 64), 64);
     assert.equal(demoPickScrollY(-4, -2, -1), 0);
+    assert.equal(demoPickScrollY(0, 80, 200), 200);
+    assert.equal(demoParkedNestedRoot(120, 0, 12), true);
+    assert.equal(demoParkedNestedRoot(0, 80, 200), true);
+    assert.equal(demoParkedNestedRoot(0, 80, 0), false);
+    const parkedWindow = demoParkedNestedRoot(120, 0, 12);
+    assert.equal(parkedWindow ? demoPickScrollY(120, 0, 12) : 80, 120);
+    const parkedVisual = demoParkedNestedRoot(0, 80, 200);
+    assert.equal(parkedVisual ? demoPickScrollY(0, 0, 200) : 80, 200);
+    const liveNested = demoParkedNestedRoot(0, 80, 0);
+    assert.equal(liveNested ? demoPickScrollY(0, 0, 0) : 80, 80);
   });
 
   it("treats overflow-y auto or scroll as a nested port only when it actually scrolls", () => {
@@ -323,7 +334,10 @@ describe("landing scrub layout", () => {
     const css = readFileSync("src/components/landing/landing.css", "utf8");
     assert.match(css, /overflow-y:\s*visible/);
     assert.ok(css.includes(".landing-demo-stage .imsg-thread.landing-demo-thread[data-scrubbed]"));
-    assert.ok(css.includes("overflow-y: hidden"));
+    assert.match(
+      css,
+      /\.landing-demo-stage \.imsg-thread\.landing-demo-thread\[data-scrubbed\]\s*\{[^}]*overflow-y:\s*clip/,
+    );
     assert.ok(css.includes("var(--spares-header)"));
     assert.equal(css.includes(".landing-perspective"), false);
     assert.ok(css.includes("margin-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px))"));
@@ -462,6 +476,11 @@ describe("workflow demo", () => {
       /\.landing-workflow-stage\.is-handoff \.landing-workflow-request\.is-visible\s*\{[^}]*pointer-events:\s*auto/,
     );
     assert.match(css, /\.landing-workflow-stage\s*\{[^}]*overflow:\s*clip/);
+    assert.match(
+      css,
+      /\.landing-workflow-stage \.imsg-thread\.landing-workflow-thread\[data-scrubbed\]\s*\{[^}]*overflow:\s*clip/,
+    );
+    assert.match(css, /\.landing-workflow-request\s*\{[^}]*overflow:\s*clip/);
   });
 
   it("drops hub chrome at select so the part sheet does not ghost", () => {
