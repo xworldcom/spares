@@ -5,6 +5,7 @@ import {
   workflowGuideCue,
   workflowGuideStagePoint,
   workflowGuideTargetSelector,
+  type WorkflowGuideTarget,
 } from "@/lib/ui/landing-demo";
 
 export function LandingWorkflowGuide({
@@ -21,18 +22,26 @@ export function LandingWorkflowGuide({
   return <LandingWorkflowGuideLive playhead={playhead} />;
 }
 
+type GuidePoint = {
+  x: number;
+  y: number;
+  ready: boolean;
+  target: WorkflowGuideTarget | null;
+};
+
 function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
   const cue = workflowGuideCue(playhead);
   const nodeRef = useRef<HTMLDivElement>(null);
-  const [point, setPoint] = useState<{ x: number; y: number; ready: boolean }>({
+  const [point, setPoint] = useState<GuidePoint>({
     x: cue.x,
     y: cue.y,
     ready: false,
+    target: null,
   });
 
   useLayoutEffect(() => {
     if (!cue.target) {
-      setPoint((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      setPoint((prev) => (prev.ready || prev.target ? { ...prev, ready: false, target: null } : prev));
       return;
     }
 
@@ -46,12 +55,19 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
           ? workflowGuideStagePoint(stage.getBoundingClientRect(), target.getBoundingClientRect())
           : null;
       if (!next) {
-        setPoint((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+        setPoint((prev) =>
+          prev.ready || prev.target !== cue.target
+            ? { x: prev.x, y: prev.y, ready: false, target: cue.target }
+            : prev,
+        );
       } else {
         setPoint((prev) =>
-          prev.ready && Math.abs(prev.x - next.x) < 0.15 && Math.abs(prev.y - next.y) < 0.15
+          prev.ready &&
+          prev.target === cue.target &&
+          Math.abs(prev.x - next.x) < 0.15 &&
+          Math.abs(prev.y - next.y) < 0.15
             ? prev
-            : { x: next.x, y: next.y, ready: true },
+            : { x: next.x, y: next.y, ready: true, target: cue.target },
         );
       }
       frame = window.requestAnimationFrame(measure);
@@ -63,12 +79,13 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
         window.cancelAnimationFrame(frame);
       }
     };
-  }, [cue.target, cue.x, cue.y]);
+  }, [cue.target]);
 
   if (!cue.target) {
     return null;
   }
 
+  const shown = point.ready && point.target === cue.target;
   const targetClass =
     cue.target === "scroll" ? "landing-workflow-guide is-scroll" : "landing-workflow-guide";
 
@@ -76,13 +93,13 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
     <div
       ref={nodeRef}
       className={targetClass}
-      data-guide={cue.target}
+      data-guide={shown ? cue.target : undefined}
       aria-hidden="true"
       style={
         {
           "--wf-guide-x": `${point.x}%`,
           "--wf-guide-y": `${point.y}%`,
-          visibility: point.ready ? "visible" : "hidden",
+          visibility: shown ? "visible" : "hidden",
         } as CSSProperties
       }
     >

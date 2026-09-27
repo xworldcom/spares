@@ -437,6 +437,7 @@ describe("workflow demo", () => {
     const guide = readFileSync("src/components/landing/LandingWorkflowGuide.tsx", "utf8");
     assert.match(guide, /workflowGuideStagePoint/);
     assert.match(guide, /workflowGuideTargetSelector/);
+    assert.match(guide, /data-guide=\{shown \? cue\.target : undefined\}/);
     const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
     assert.match(demo, /data-guide-target="hotspot"/);
     assert.match(demo, /data-guide-target="add"/);
