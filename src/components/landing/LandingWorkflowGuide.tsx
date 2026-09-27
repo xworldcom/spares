@@ -24,10 +24,15 @@ export function LandingWorkflowGuide({
 function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
   const cue = workflowGuideCue(playhead);
   const nodeRef = useRef<HTMLDivElement>(null);
-  const [point, setPoint] = useState({ x: cue.x, y: cue.y });
+  const [point, setPoint] = useState<{ x: number; y: number; ready: boolean }>({
+    x: cue.x,
+    y: cue.y,
+    ready: false,
+  });
 
   useLayoutEffect(() => {
     if (!cue.target) {
+      setPoint((prev) => (prev.ready ? { ...prev, ready: false } : prev));
       return;
     }
 
@@ -36,20 +41,17 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
       const guide = nodeRef.current;
       const stage = guide?.closest(".landing-workflow-stage");
       const target = stage?.querySelector(workflowGuideTargetSelector(cue.target));
-      if (stage instanceof HTMLElement && target instanceof HTMLElement) {
-        const next = workflowGuideStagePoint(
-          stage.getBoundingClientRect(),
-          target.getBoundingClientRect(),
-        );
-        if (next) {
-          setPoint((prev) =>
-            Math.abs(prev.x - next.x) < 0.2 && Math.abs(prev.y - next.y) < 0.2 ? prev : next,
-          );
-          frame = window.requestAnimationFrame(measure);
-          return;
-        }
-      }
-      setPoint({ x: cue.x, y: cue.y });
+      const next =
+        stage instanceof HTMLElement && target instanceof HTMLElement
+          ? workflowGuideStagePoint(stage.getBoundingClientRect(), target.getBoundingClientRect())
+          : null;
+      const x = next?.x ?? cue.x;
+      const y = next?.y ?? cue.y;
+      setPoint((prev) =>
+        prev.ready && Math.abs(prev.x - x) < 0.15 && Math.abs(prev.y - y) < 0.15
+          ? prev
+          : { x, y, ready: true },
+      );
       frame = window.requestAnimationFrame(measure);
     };
 
@@ -78,6 +80,7 @@ function LandingWorkflowGuideLive({ playhead }: { playhead: number }) {
         {
           "--wf-guide-x": `${point.x}%`,
           "--wf-guide-y": `${point.y}%`,
+          visibility: point.ready ? "visible" : "hidden",
         } as CSSProperties
       }
     >

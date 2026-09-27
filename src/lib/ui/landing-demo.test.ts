@@ -448,6 +448,8 @@ describe("workflow demo", () => {
       /\.landing-workflow-guide-pointer\s*\{[^}]*transform:\s*translate\(-50%,\s*-50%\)/,
     );
     assert.doesNotMatch(css, /translate\(-38%/);
+    const guideRule = css.match(/\.landing-workflow-guide\s*\{[^}]+\}/)?.[0] ?? "";
+    assert.doesNotMatch(guideRule, /transition:/);
   });
 
   it("keeps the quote roller highlighted on the model from select through the tray", () => {

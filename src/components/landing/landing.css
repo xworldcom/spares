@@ -1189,9 +1189,6 @@
   top: var(--wf-guide-y, 50%);
   width: 0;
   height: 0;
-  transition:
-    left 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    top 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .landing-workflow-guide-ring {
