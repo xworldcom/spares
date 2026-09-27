@@ -627,8 +627,21 @@
   }
 
   .landing-demo-scrub-pin,
-  .landing-demo-stage {
+  .landing-demo-stage,
+  .landing-workflow-stage,
+  .landing-workflow-request,
+  .landing-workflow-quote-sheet,
+  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] {
     touch-action: pan-y;
+    overflow: clip;
+    overflow-x: clip;
+    overflow-y: clip;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  .landing-demo-scrub-pin {
+    pointer-events: none;
   }
 }
 
@@ -948,8 +961,8 @@
   flex-direction: column;
   justify-content: flex-end;
   padding-bottom: 2.25rem;
-  overflow: hidden;
-  overflow-y: hidden;
+  overflow: clip;
+  overflow-y: clip;
   overscroll-behavior: none;
   pointer-events: none;
   touch-action: none;
@@ -1165,7 +1178,7 @@
   display: grid;
   gap: 0.85rem;
   min-height: min(30rem, 68vw);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .landing-workflow-guide {
@@ -1377,6 +1390,7 @@
 }
 
 .landing-workflow-side {
+  pointer-events: none;
   display: flex;
   min-height: 12rem;
   opacity: calc(1 - min(1, var(--wf-handoff) * 1.15));
@@ -1391,9 +1405,11 @@
 }
 
 .landing-workflow-quote-sheet {
+  pointer-events: none;
   display: flex;
   flex: 1;
   flex-direction: column;
+  overflow: clip;
   padding: 0.55rem 1rem 1rem;
   border-radius: 1.15rem;
   border: 1px solid rgba(236, 234, 228, 0.14);
@@ -1520,6 +1536,7 @@
   flex-direction: column;
   gap: 0.65rem;
   min-height: 0;
+  overflow: clip;
   padding: 1rem 1.05rem 1.15rem;
   border-radius: 1.15rem;
   border: 1px solid rgba(236, 234, 228, 0.12);
@@ -1542,7 +1559,7 @@
   min-height: 0;
   margin: 0;
   padding: 0.15rem 0 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] {
@@ -1551,12 +1568,13 @@
   justify-content: flex-end;
   gap: 0.45rem;
   padding-bottom: 1.15rem;
-  overflow: hidden;
-  overflow-y: hidden;
+  overflow: clip;
+  overflow-y: clip;
   overscroll-behavior: none;
   pointer-events: none;
   touch-action: none;
   user-select: none;
+  -webkit-overflow-scrolling: auto;
 }
 
 .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-system {
@@ -1596,7 +1614,7 @@
 }
 
 .landing-workflow-stage.is-handoff .landing-workflow-request.is-visible {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .landing-workflow-request-head {

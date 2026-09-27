@@ -44,6 +44,22 @@ async function snapshot(page) {
     }
     const varOf = (el, name) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : null);
     const opacityOf = (el) => (el ? Number.parseFloat(getComputedStyle(el).opacity) : null);
+    const boxOf = (el) => {
+      if (!el) {
+        return null;
+      }
+      const style = getComputedStyle(el);
+      return {
+        overflowX: style.overflowX,
+        overflowY: style.overflowY,
+        pointerEvents: style.pointerEvents,
+        touchAction: style.touchAction,
+        position: style.position,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        canScroll: el.scrollHeight > el.clientHeight + 1,
+      };
+    };
     const strip = document.querySelector(
       ".landing-workflow-request .quote-progress-step[aria-current='step'] .quote-progress-label-full",
     );
@@ -69,6 +85,13 @@ async function snapshot(page) {
       allRows: rows.length,
       quoteStatus: strip?.textContent?.trim() ?? null,
       scrollbarWidth: window.innerWidth - document.documentElement.clientWidth,
+      pinBox: boxOf(pin),
+      stageBox: boxOf(stage),
+      sideBox: boxOf(document.querySelector(".landing-workflow-side")),
+      quoteBox: boxOf(quote),
+      requestBox: boxOf(request),
+      windowY: Math.round(window.scrollY),
+      pageTop: Math.round(window.visualViewport?.pageTop ?? 0),
     };
   });
 }
@@ -115,6 +138,13 @@ const report = {
     ),
     selectGhost: samples.some(
       (s) => s.step === "select" && s.partPresent && (s.hubPresent || (s.introOpacity ?? 0) > 0.2),
+    ),
+    iosQuoteSteal: samples.some((s) => s.quoteBox?.pointerEvents === "auto"),
+    iosRequestSteal: samples.some((s) => s.requestBox?.pointerEvents === "auto"),
+    iosThreadScrollport: samples.some(
+      (s) =>
+        s.stageBox?.overflowY === "hidden" ||
+        ["auto", "scroll", "hidden"].includes(s.quoteBox?.overflowY ?? ""),
     ),
   },
   samples,
