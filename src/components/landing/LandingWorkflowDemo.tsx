@@ -77,6 +77,7 @@ export function LandingWorkflowDemo({
       className="landing-demo-stage landing-workflow"
       data-demo="workflow"
       data-step={step}
+      style={{ "--wf-handoff": handoff } as CSSProperties}
     >
       <header className="landing-workflow-hub">
         <div className="landing-workflow-hub-title">
@@ -105,7 +106,6 @@ export function LandingWorkflowDemo({
         ]
           .filter(Boolean)
           .join(" ")}
-        style={{ "--wf-handoff": handoff } as CSSProperties}
       >
         <div className="landing-workflow-model-panel" aria-hidden={showThreadView && handoff > 0.85}>
           <div className="landing-workflow-model">

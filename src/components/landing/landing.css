@@ -731,6 +731,115 @@
     max-height: min(30rem, 56vh);
     transform: translate3d(0, calc(12% * var(--wf-handoff)), 0);
   }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-hub-title {
+    opacity: calc(1 - clamp(0, (var(--wf-handoff, 0) - 0.12) * 5, 1));
+    transition: opacity 0.12s linear;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-tabs {
+    opacity: calc(1 - clamp(0, (var(--wf-handoff, 0) - 0.18) * 4, 1));
+    transition: opacity 0.12s linear;
+  }
+
+  .landing-demo-stage.landing-workflow:has(.landing-workflow-stage.is-handoff) .landing-workflow-tabs {
+    visibility: hidden;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request {
+    border: 0;
+    border-radius: 0;
+    padding: 3.35rem 1.15rem 1rem;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.72) 0%,
+      rgba(8, 9, 11, 0.97) 22%,
+      rgba(8, 9, 11, 0.98) 100%
+    );
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request-head {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 0.75rem;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request-head > div:first-child {
+    min-width: 0;
+    flex: 1 1 10rem;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request-head .btn-primary,
+  .landing-demo-stage.landing-workflow .landing-workflow-request-head .btn-soft,
+  .landing-demo-stage.landing-workflow .landing-workflow-request-head .btn-danger {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress {
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-thread {
+    width: 100%;
+    max-width: 32rem;
+    align-self: center;
+    padding-inline: 0.35rem;
+    box-sizing: border-box;
+  }
+
+  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-system {
+    align-self: center;
+    width: 100%;
+  }
+
+  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-row {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-own.imsg-enter {
+    animation-name: landing-imsg-enter-own;
+  }
+
+  .landing-section--hero {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .landing-section--hero > :not(.landing-cell) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: clamp(2rem, 6vw, 4.75rem);
+  }
+
+  .landing-section--hero .landing-cell {
+    width: 100vw;
+    max-width: 100vw;
+    height: min(48rem, calc(100svh - var(--spares-header) - 5rem));
+    min-height: 26rem;
+    margin-top: 1.25rem;
+    margin-inline: calc(50% - 50vw);
+    border-radius: 0;
+    border-inline: 0;
+    background: #000;
+  }
+}
+
+@keyframes landing-imsg-enter-own {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 .landing-demo-head {
@@ -876,6 +985,13 @@
 .landing-back-to-top-icon {
   font-size: 15px;
   line-height: 1;
+}
+
+@media (min-width: 900px) {
+  .landing-scroll .landing-back-to-top {
+    right: auto;
+    left: max(1rem, env(safe-area-inset-left, 0px));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1291,6 +1407,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  gap: 0.55rem;
   padding-bottom: 0.35rem;
   overflow: hidden;
   overflow-y: hidden;
@@ -1298,6 +1415,10 @@
   pointer-events: none;
   touch-action: none;
   user-select: none;
+}
+
+.landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] .imsg-stack {
+  max-width: min(78%, 20rem);
 }
 
 .landing-workflow-stage.is-handoff .landing-workflow-quote-sheet {
