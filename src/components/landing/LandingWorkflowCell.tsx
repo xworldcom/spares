@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
+import type { WorkflowStageAnchors } from "@/lib/ui/landing-demo";
 
 export function LandingWorkflowCell({
   spinYaw,
   highlightPartId = null,
-  onPartAnchor,
+  onAnchors,
   interactive = false,
 }: {
   spinYaw: number;
   highlightPartId?: string | null;
-  onPartAnchor?: (point: { x: number; y: number } | null) => void;
+  onAnchors?: (anchors: WorkflowStageAnchors) => void;
   interactive?: boolean;
 }) {
   const [Stage, setStage] = useState<
@@ -18,7 +19,7 @@ export function LandingWorkflowCell({
       interactive?: boolean;
       spinYaw?: number;
       highlightPartId?: string | null;
-      onPartAnchor?: (point: { x: number; y: number } | null) => void;
+      onAnchors?: (anchors: WorkflowStageAnchors) => void;
     }> | null
   >(null);
 
@@ -48,7 +49,7 @@ export function LandingWorkflowCell({
           interactive={interactive}
           spinYaw={spinYaw}
           highlightPartId={highlightPartId}
-          onPartAnchor={onPartAnchor}
+          onAnchors={onAnchors}
         />
       ) : null}
     </div>

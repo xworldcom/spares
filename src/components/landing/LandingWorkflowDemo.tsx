@@ -18,6 +18,7 @@ import {
   demoPlayhead,
   demoRowHidden,
   reduceDemoFrame,
+  workflowGuideCue,
   workflowHandoffMix,
   workflowHighlightPartId,
   workflowHubVisible,
@@ -25,6 +26,8 @@ import {
   workflowScrubPlayhead,
   workflowSpinYaw,
   workflowStep,
+  type WorkflowStageAnchors,
+  type WorkflowStagePoint,
 } from "@/lib/ui/landing-demo";
 
 const HUB_TABS = [
@@ -81,18 +84,24 @@ export function LandingWorkflowDemo({
   const showThreadView = handoff > 0.02;
   const showHubChrome = workflowHubVisible(step);
   const highlightPartId = workflowHighlightPartId(step);
-  const partAnchorRef = useRef<{ x: number; y: number } | null>(null);
-  const [partAnchor, setPartAnchor] = useState<{ x: number; y: number } | null>(null);
-  const onPartAnchor = useCallback((next: { x: number; y: number } | null) => {
-    if (!next) {
+  const guideTarget = workflowGuideCue(playhead).target;
+  const anchorRef = useRef<WorkflowStageAnchors>({ machine: null, part: null });
+  const [machineAnchor, setMachineAnchor] = useState<WorkflowStagePoint | null>(null);
+  const [partAnchor, setPartAnchor] = useState<WorkflowStagePoint | null>(null);
+  const onAnchors = useCallback((next: WorkflowStageAnchors) => {
+    const same = (a: WorkflowStagePoint | null, b: WorkflowStagePoint | null) => {
+      if (!a || !b) {
+        return a === b;
+      }
+      return Math.abs(a.x - b.x) < 0.4 && Math.abs(a.y - b.y) < 0.4;
+    };
+    const prev = anchorRef.current;
+    if (same(prev.machine, next.machine) && same(prev.part, next.part)) {
       return;
     }
-    const prev = partAnchorRef.current;
-    if (prev && Math.abs(prev.x - next.x) < 0.4 && Math.abs(prev.y - next.y) < 0.4) {
-      return;
-    }
-    partAnchorRef.current = next;
-    setPartAnchor(next);
+    anchorRef.current = next;
+    setMachineAnchor(next.machine);
+    setPartAnchor(next.part);
   }, []);
 
   return (
@@ -134,20 +143,35 @@ export function LandingWorkflowDemo({
       >
         <LandingWorkflowGuide playhead={playhead} reduceMotion={reduceMotion} />
         <div className="landing-workflow-model-panel" aria-hidden={showThreadView && handoff > 0.85}>
-          <div className="landing-workflow-model" data-guide-target="orbit">
+          <div className="landing-workflow-model">
             <LandingWorkflowCell
               spinYaw={spinYaw}
               highlightPartId={highlightPartId}
-              onPartAnchor={onPartAnchor}
+              onAnchors={onAnchors}
             />
-            <span className="landing-workflow-scroll-cue-target" data-guide-target="scroll" />
+            {machineAnchor ? (
+              <>
+                <span
+                  className="landing-workflow-anchor"
+                  data-guide-target="scroll"
+                  style={{ left: `${machineAnchor.x}%`, top: `${machineAnchor.y}%` }}
+                />
+                <span
+                  className="landing-workflow-anchor"
+                  data-guide-target="orbit"
+                  style={{ left: `${machineAnchor.x}%`, top: `${machineAnchor.y}%` }}
+                />
+              </>
+            ) : null}
             {showHotspot && partAnchor ? (
               <div
                 className="landing-workflow-hotspot is-on"
                 aria-hidden="true"
                 style={{ left: `${partAnchor.x}%`, top: `${partAnchor.y}%` }}
               >
-                <span className="landing-workflow-hotspot-ring" data-guide-target="hotspot" />
+                {guideTarget === "hotspot" ? (
+                  <span className="landing-workflow-hotspot-ring" data-guide-target="hotspot" />
+                ) : null}
                 <span className="landing-workflow-hotspot-label">{WORKFLOW_DEMO_PART}</span>
               </div>
             ) : null}
