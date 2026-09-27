@@ -200,6 +200,15 @@
   cursor: grab;
 }
 
+.quote-sheet-body {
+  -webkit-overflow-scrolling: touch;
+}
+
+.quote-sheet-actions {
+  background: var(--spares-lift);
+  box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.18);
+}
+
 .quote-sheet {
   z-index: 40;
   position: absolute;
