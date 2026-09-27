@@ -1,30 +1,33 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useMachineName } from "@/components/nav/useMachineName";
 import { listMachines } from "@/lib/api/machines";
 import {
   workListAllHref,
+  workListAllLabel,
   workListMachineHref,
+  workListTitle,
   type WorkListKind,
 } from "@/lib/work-list-scope";
 import type { Role } from "@/types";
-
-const KIND_LABEL: Record<WorkListKind, string> = {
-  quotes: "Quotes",
-  tickets: "Tickets",
-};
 
 export function WorkListScopeBar({
   kind,
   machineId,
   role = "customer",
+  headingLevel = "h2",
+  lede,
+  action,
 }: {
   kind: WorkListKind;
   machineId?: string;
   role?: Role;
+  headingLevel?: "h1" | "h2";
+  lede: string;
+  action?: ReactNode;
 }) {
   const router = useRouter();
   const machineName = useMachineName(machineId ?? null);
@@ -32,8 +35,10 @@ export function WorkListScopeBar({
     [],
   );
   const allHref = workListAllHref(kind, role);
+  const allLabel = workListAllLabel(kind);
   const scoped = Boolean(machineId);
-  const scopeLabel = KIND_LABEL[kind];
+  const title = workListTitle(kind, scoped ? machineName : null, scoped);
+  const Heading = headingLevel;
 
   useEffect(() => {
     if (scoped) {
@@ -67,38 +72,38 @@ export function WorkListScopeBar({
   }
 
   return (
-    <nav className="work-list-scope" aria-label={`${scopeLabel} scope`}>
-      <PrefetchLink
-        href={allHref}
-        className={scoped ? "work-list-scope-seg" : "work-list-scope-seg is-active"}
-        aria-current={scoped ? undefined : "page"}
-      >
-        All machines
-      </PrefetchLink>
+    <div className="work-list-scope">
       {scoped ? (
-        <span className="work-list-scope-seg is-active" aria-current="page">
-          <span className="work-list-scope-this">This machine</span>
-          <span className="work-list-scope-name">{machineName ?? "…"}</span>
-        </span>
-      ) : (
-        <label className="work-list-scope-pick">
-          <select
-            className="work-list-scope-select"
-            value=""
-            onChange={(event) => onPickMachine(event.target.value)}
-            aria-label={`Show ${scopeLabel.toLowerCase()} for one machine`}
-          >
-            <option value="" disabled hidden>
-              This machine…
-            </option>
-            {machineOptions.map((machine) => (
-              <option key={machine.id} value={machine.id}>
-                {machine.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-    </nav>
+        <PrefetchLink href={allHref} className="work-list-scope-back">
+          <span aria-hidden="true">‹</span> {allLabel}
+        </PrefetchLink>
+      ) : null}
+      <div className="work-list-scope-row">
+        <div className="work-list-scope-copy">
+          <Heading>{title}</Heading>
+          <p className="work-list-scope-lede">{lede}</p>
+          {!scoped ? (
+            <label className="work-list-scope-filter">
+              <select
+                className="work-list-scope-filter-select"
+                value=""
+                onChange={(event) => onPickMachine(event.target.value)}
+                aria-label={`Show ${kind} for one machine`}
+              >
+                <option value="" disabled hidden>
+                  One machine…
+                </option>
+                {machineOptions.map((machine) => (
+                  <option key={machine.id} value={machine.id}>
+                    {machine.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+        {action}
+      </div>
+    </div>
   );
 }

@@ -2945,60 +2945,85 @@ html.spares-embed .spares-app-stage {
 
 .work-list-scope {
   display: flex;
-  width: 100%;
-  max-width: 28rem;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 999px;
-  background: var(--spares-soft);
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  gap: 0.2rem;
 }
 
-.work-list-scope-seg {
-  display: inline-flex;
-  max-width: min(100%, 16rem);
-  min-height: 2.5rem;
-  align-items: center;
-  gap: 0.35rem;
-  border-radius: 999px;
-  padding: 0 0.95rem;
-  color: var(--spares-muted);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
+.work-list-scope-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.work-list-scope-seg.is-active {
-  background: var(--spares-ink);
-  color: var(--spares-on-ink);
-}
-
-.work-list-scope-this {
-  flex-shrink: 0;
-}
-
-.work-list-scope-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 500;
-  opacity: 0.88;
-}
-
-.work-list-scope-pick {
+.work-list-scope-copy {
   display: flex;
   min-width: 0;
-  flex: 1 1 8.5rem;
-  min-height: 2.5rem;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.work-list-scope h1,
+.work-list-scope h2 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.work-list-scope h1 {
+  font-size: 2rem;
+}
+
+.work-list-scope h2 {
+  font-size: 19px;
+}
+
+.work-list-scope-lede {
+  margin: 0.2rem 0 0;
+  max-width: 36rem;
+  color: var(--spares-muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.tickets-workspace-toolbar .work-list-scope-lede {
+  font-size: 14px;
+}
+
+.work-list-scope-back {
+  display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 0 0.75rem;
+  gap: 0.2rem;
+  min-height: 2rem;
+  margin: 0 0 0.05rem -0.25rem;
+  padding: 0 0.25rem;
   color: var(--spares-muted);
   font-size: 14px;
   font-weight: 600;
 }
 
-.work-list-scope-select {
-  width: 100%;
+.work-list-scope-filter {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 2.25rem;
+  align-items: center;
+  margin-top: 0.55rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  background: var(--spares-soft);
+  color: var(--spares-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.work-list-scope-filter-select {
   min-width: 0;
+  max-width: 14rem;
   border: 0;
   background: transparent;
   color: inherit;
@@ -3009,7 +3034,7 @@ html.spares-embed .spares-app-stage {
   text-overflow: ellipsis;
 }
 
-.work-list-scope-select option {
+.work-list-scope-filter-select option {
   color: var(--spares-on-ink);
   background: var(--spares-ink);
 }

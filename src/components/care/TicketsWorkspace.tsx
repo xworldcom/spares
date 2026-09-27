@@ -128,28 +128,26 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   const listPanel = (
     <div className="tickets-workspace-list">
       <div className="tickets-workspace-toolbar">
-        <div className="min-w-0 flex-1 space-y-2.5">
-          <WorkListScopeBar
-            kind="tickets"
-            machineId={scope === "machine" ? machineId : undefined}
-          />
-          <div>
-            <h2 className="text-[19px] font-semibold tracking-tight">Tickets</h2>
-            <p className="spares-muted mt-1 text-sm leading-relaxed">
-              {scope === "hub"
-                ? "Every open and closed ticket in your plant."
-                : "Only tickets for the machine named above."}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="btn-primary tickets-workspace-new"
-          aria-expanded={creating}
-          onClick={() => setCreating((open) => !open)}
-        >
-          {creating ? "Close" : "New ticket"}
-        </button>
+        <WorkListScopeBar
+          kind="tickets"
+          machineId={scope === "machine" ? machineId : undefined}
+          headingLevel="h2"
+          lede={
+            scope === "hub"
+              ? "Every open and closed ticket in your plant."
+              : "Only this machine."
+          }
+          action={
+            <button
+              type="button"
+              className="btn-primary tickets-workspace-new"
+              aria-expanded={creating}
+              onClick={() => setCreating((open) => !open)}
+            >
+              {creating ? "Close" : "New ticket"}
+            </button>
+          }
+        />
       </div>
 
       {creating ? (
