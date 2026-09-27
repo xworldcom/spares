@@ -329,11 +329,12 @@ export function useSnapSheet({
       moved: false,
       samples: [{ t: performance.now(), y: event.clientY }],
     };
+    // Capture immediately so pointermove/up stay on the sheet (Firefox + handle button).
+    event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
       setDragging(true);
       setDraggingClass(true);
       paintHeight(startH);
-      event.currentTarget.setPointerCapture(event.pointerId);
     }
   }
 
@@ -499,7 +500,14 @@ export function useSnapSheet({
     settleTo(nearestSnap(currentH, velocity));
   }
 
+  function releaseCapture(event: ReactPointerEvent<HTMLElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   function onCardPointerUp(event: ReactPointerEvent<HTMLElement>) {
+    releaseCapture(event);
     if (drag.current.pending) {
       const from = drag.current.from;
       drag.current.pending = false;
@@ -573,7 +581,8 @@ export function useSnapSheet({
     toggleHandle,
     dragMoved: () => drag.current.moved,
     pointerHandlers: {
-      onPointerDown: onCardPointerDown,
+      // Capture so drags from the handle <button> work in Firefox (no bubble to aside).
+      onPointerDownCapture: onCardPointerDown,
       onPointerMove: onCardPointerMove,
       onPointerUp: onCardPointerUp,
       onPointerCancel: onCardPointerUp,

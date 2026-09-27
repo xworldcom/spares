@@ -23,6 +23,15 @@ describe("conversation sheet startup snap", () => {
 
 const heights = { peekH: 92, replyH: 200, fullH: 700 };
 
+/**
+ * Firefox (#197): drag the sheet by `.snap-sheet-handle` on a mobile viewport
+ * (`/staff/quotes/<n>`). Chromium bubbles pointer events from the handle button;
+ * Firefox does not — the sheet root uses `onPointerDownCapture` in useSnapSheet.
+ *
+ * Playwright smoke (after `control-oee360 launch`):
+ * `page.locator('.snap-sheet-handle').hover(); page.mouse.down(); page.mouse.move(x, y-40); page.mouse.up();`
+ * expect `[data-snap="reply"]`.
+ */
 describe("conversation sheet staged pull-up", () => {
   it("holds the first peek pull at reply instead of overshooting into rollout", () => {
     assert.equal(
