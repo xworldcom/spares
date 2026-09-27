@@ -405,12 +405,38 @@ describe("workflow demo", () => {
     assert.equal(WORKFLOW_CHAT_START, WORKFLOW_HANDOFF_START);
     assert.equal(workflowQuoteChatPlayhead(WORKFLOW_HANDOFF_START), 0);
     assert.equal(workflowQuoteChatPlayhead(1), 1);
-    assert.equal(demoWorkflowThreadPlayhead(0.9), workflowQuoteChatPlayhead(0.9));
+    assert.equal(
+      demoWorkflowThreadPlayhead(0.9),
+      workflowQuoteChatPlayhead(workflowScrubPlayhead(0.9)),
+    );
     assert.equal(reduceDemoFrame("quote", workflowQuoteChatPlayhead(1)).quoteStatus, "confirmed");
     const midSpin = workflowSpinYaw((WORKFLOW_FIND_START + WORKFLOW_SELECT_START) / 2);
     const endSpin = workflowSpinYaw(WORKFLOW_SELECT_START);
     assert.ok(midSpin < endSpin);
     assert.ok(endSpin > 1);
+  });
+
+  it("lets the remapped handoff drive chat row visibility before linear 0.78", () => {
+    const linear = 0.7;
+    const remapped = workflowScrubPlayhead(linear);
+    assert.ok(remapped >= WORKFLOW_HANDOFF_START);
+    assert.equal(demoWorkflowThreadPlayhead(linear), workflowQuoteChatPlayhead(remapped));
+    assert.ok(demoWorkflowThreadPlayhead(linear) > 0);
+    assert.ok(
+      reduceDemoFrame("quote", demoWorkflowThreadPlayhead(1)).quoteStatus === "confirmed",
+    );
+  });
+
+  it("does not reset --wf-handoff on the inner stage so the mix can inherit", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.doesNotMatch(css, /^\.landing-workflow-stage\s*\{[^}]*--wf-handoff:\s*0/m);
+    const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
+    assert.match(demo, /"--wf-handoff":/);
+  });
+
+  it("drops hub chrome at select so the part sheet does not ghost", () => {
+    const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
+    assert.match(demo, /workflowHubVisible\(step\)/);
   });
 });
 
