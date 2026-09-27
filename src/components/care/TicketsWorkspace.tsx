@@ -21,6 +21,7 @@ import {
   ticketRefMatches,
 } from "@/lib/care";
 import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
+import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
 import type { ServiceTicket } from "@/types";
 
 type TicketsWorkspaceProps = {
@@ -117,13 +118,19 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   const listPanel = (
     <div className="tickets-workspace-list">
       <div className="tickets-workspace-toolbar">
-        <div>
-          <h2 className="text-[19px] font-semibold tracking-tight">Tickets</h2>
-          <p className="spares-muted mt-1 text-sm leading-relaxed">
-            {scope === "hub"
-              ? "Across every machine you can access."
-              : "Service history for this machine."}
-          </p>
+        <div className="min-w-0 flex-1 space-y-2.5">
+          <WorkListScopeBar
+            kind="tickets"
+            machineId={scope === "machine" ? machineId : undefined}
+          />
+          <div>
+            <h2 className="text-[19px] font-semibold tracking-tight">Tickets</h2>
+            <p className="spares-muted mt-1 text-sm leading-relaxed">
+              {scope === "hub"
+                ? "Every open and closed ticket in your plant."
+                : "Only tickets for the machine named above."}
+            </p>
+          </div>
         </div>
         <button
           type="button"
