@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { formatWhen } from "@/components/quote/quote-format";
@@ -26,6 +27,21 @@ function dateInputValue(value?: string) {
   return date.toISOString().slice(0, 10);
 }
 
+function formatDay(value?: string) {
+  if (!value) {
+    return "—";
+  }
+  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function ServicePanel({
   machineId,
   visitId,
@@ -33,6 +49,8 @@ export function ServicePanel({
   machineId: string;
   visitId?: string;
 }) {
+  const { user } = useAuth();
+  const staff = user?.role === "staff";
   const [usage, setUsage] = useState<MachineUsage | null>(null);
   const [hours, setHours] = useState("");
   const [cycles, setCycles] = useState("");
@@ -142,8 +160,13 @@ export function ServicePanel({
     );
   }
 
+  const showMeters =
+    usage &&
+    (usage.hours != null || usage.cycles != null);
+
   return (
     <div className="care-stack">
+      {staff ? (
       <form
         className="care-card care-form"
         onSubmit={(event) => {
@@ -154,7 +177,7 @@ export function ServicePanel({
         <h2>Service</h2>
         <p className="spares-muted text-sm leading-relaxed">
           Log a service visit with the date and what the tech did on site. No live
-          meters required. Customers do not see this tab.
+          meters required. Customers see visit notes here after you save.
         </p>
         <label className="care-field">
           <span>Last service</span>
@@ -220,13 +243,51 @@ export function ServicePanel({
           {busy ? "Saving…" : "Save visit"}
         </button>
       </form>
+      ) : (
+        <section className="care-card care-stack">
+          <header className="care-card-head">
+            <h2>Service</h2>
+            <p className="spares-muted text-sm leading-relaxed">
+              Onsite service visits logged by your service team for this machine.
+            </p>
+          </header>
+          <div className="care-field">
+            <span className="text-sm font-semibold">Last service</span>
+            <p className="mt-1 text-[17px] font-semibold tracking-tight">
+              {formatDay(usage?.lastServiceAt)}
+            </p>
+          </div>
+          <div className="care-field">
+            <span className="text-sm font-semibold">Notes</span>
+            <p className="spares-muted mt-2 whitespace-pre-wrap text-sm leading-relaxed">
+              {usage?.notes?.trim()
+                ? usage.notes
+                : "No notes from the latest visit yet."}
+            </p>
+          </div>
+          {showMeters ? (
+            <dl className="care-visit-fields care-visit-fields-optional">
+              <div>
+                <dt>Hours (optional)</dt>
+                <dd>{usage?.hours ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>Cycles (optional)</dt>
+                <dd>{usage?.cycles ?? "—"}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </section>
+      )}
 
       <section className="care-card">
         <header className="care-card-head">
-          <h2>Edit history</h2>
+          <h2>{staff ? "Edit history" : "Visit history"}</h2>
         </header>
         {(usage?.history ?? []).length === 0 ? (
-          <p className="spares-muted text-sm leading-relaxed">No edits yet.</p>
+          <p className="spares-muted text-sm leading-relaxed">
+            {staff ? "No edits yet." : "No service visits logged yet."}
+          </p>
         ) : (
           <ul className="care-list">
             {usage?.history.map((entry) => (

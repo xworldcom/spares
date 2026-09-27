@@ -112,25 +112,27 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
           </span>
           <span className="care-stat-meta">{overview.ticketsTotal} total</span>
         </PrefetchLink>
-        {staff ? (
-          <PrefetchLink
-            href={careHref(machineId, "service")}
-            warm={() => warmCareOverview(machineId)}
-            className="care-stat"
-          >
-            <span className="care-stat-value">
-              {overview.usage?.lastServiceAt
-                ? formatDay(overview.usage.lastServiceAt)
-                : "—"}
-            </span>
-            <span className="care-stat-label">Service</span>
-            <span className="care-stat-meta">
-              {overview.usage?.notes?.trim()
+        <PrefetchLink
+          href={careHref(machineId, "service")}
+          warm={() => warmCareOverview(machineId)}
+          className="care-stat"
+        >
+          <span className="care-stat-value">
+            {overview.usage?.lastServiceAt
+              ? formatDay(overview.usage.lastServiceAt)
+              : "—"}
+          </span>
+          <span className="care-stat-label">Service</span>
+          <span className="care-stat-meta">
+            {overview.usage?.notes?.trim()
+              ? staff
                 ? "Latest visit notes on file"
-                : "Log date and notes on site"}
-            </span>
-          </PrefetchLink>
-        ) : null}
+                : "Latest visit notes from your service team"
+              : staff
+                ? "Log date and notes on site"
+                : "No service visits logged yet"}
+          </span>
+        </PrefetchLink>
       </section>
 
       {plant ? <p className="spares-muted text-sm">{plant}</p> : null}

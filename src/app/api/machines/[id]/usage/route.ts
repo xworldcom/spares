@@ -4,7 +4,7 @@ import {
   parseOptionalDate,
   parseOptionalNumber,
 } from "@/lib/care";
-import { requireStaffMachine } from "@/lib/care-http";
+import { requireMachineAccess, requireStaffMachine } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { getMachineUsage, updateMachineUsage } from "@/lib/store";
@@ -21,7 +21,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const access = await requireStaffMachine(id);
+  const access = await requireMachineAccess(id);
   if ("error" in access) {
     return access.error;
   }

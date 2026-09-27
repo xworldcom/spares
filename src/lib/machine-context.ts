@@ -71,15 +71,12 @@ export function machineContextTabFromPath(pathname: string): MachineContextTab |
   return "model";
 }
 
-export function machineContextTabs(staff: boolean): MachineContextTabDef[] {
-  const tabs: MachineContextTabDef[] = [
+export function machineContextTabs(): MachineContextTabDef[] {
+  return [
     { id: "model", label: "Model" },
     { id: "quotes", label: "Quotes" },
     { id: "tickets", label: "Tickets" },
     { id: "manuals", label: "Manuals" },
+    { id: "service", label: "Service" },
   ];
-  if (staff) {
-    tabs.push({ id: "service", label: "Service" });
-  }
-  return tabs;
 }

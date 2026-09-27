@@ -42,13 +42,9 @@ describe("machine context paths", () => {
     assert.equal(machineTabHref("m1", "overview"), "/machines/m1/care");
   });
 
-  it("hides Service from customers", () => {
+  it("includes Service for machine context nav", () => {
     assert.deepEqual(
-      machineContextTabs(false).map((tab) => tab.id),
-      ["model", "quotes", "tickets", "manuals"],
-    );
-    assert.deepEqual(
-      machineContextTabs(true).map((tab) => tab.id),
+      machineContextTabs().map((tab) => tab.id),
       ["model", "quotes", "tickets", "manuals", "service"],
     );
   });

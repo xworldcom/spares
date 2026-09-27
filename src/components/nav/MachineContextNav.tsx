@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useMachineName } from "@/components/nav/useMachineName";
 import {
@@ -29,26 +28,24 @@ export function MachineContextNav({
   activeTab?: MachineContextTab;
   asHeading?: boolean;
 }) {
-  const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const staff = user?.role === "staff";
   const current = activeTab ?? machineContextTabFromPath(pathname) ?? "model";
-  const tabs = machineContextTabs(staff);
+  const tabs = machineContextTabs();
   const Heading = asHeading ? "h1" : "p";
   const provided = machineName?.trim() || "";
   const fetchedName = useMachineName(provided ? null : machineId);
   const name = provided || fetchedName || "Machine";
 
   useEffect(() => {
-    for (const href of prefetchCareTabRoutes(machineId, staff)) {
+    for (const href of prefetchCareTabRoutes(machineId)) {
       prefetchAppRoute(router, href);
     }
     prefetchAppRoute(router, machineTabHref(machineId, "model"));
     prefetchAppRoute(router, machineTabHref(machineId, "quotes"));
     warmCareOverview(machineId);
     warmQuotesList();
-  }, [machineId, router, staff]);
+  }, [machineId, router]);
 
   return (
     <div className="machine-context">
