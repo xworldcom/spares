@@ -6,6 +6,7 @@ import {
   chatWatchFileName,
   chatWatchWaiterCountForTests,
   conversationWatchChanged,
+  customerReadWatchChanged,
   readChatWatch,
   resetChatWatchForTests,
   waitForChatWatch,
@@ -87,7 +88,7 @@ describe("chat watch doorbell", () => {
     assert.equal(chatWatchWaiterCountForTests(channel), 0);
   });
 
-  it("ignores read-only receipt changes", () => {
+  it("ignores read-only receipt changes on the activity doorbell", () => {
     assert.equal(
       conversationWatchChanged(
         { status: "open", activities: [{ id: "a" }] },
@@ -99,6 +100,25 @@ describe("chat watch doorbell", () => {
       conversationWatchChanged(
         { status: "open", activities: [{ id: "a" }] },
         { status: "closed", activities: [{ id: "a" }, { id: "b" }] },
+      ),
+      true,
+    );
+  });
+
+  it("detects customer read watermark changes without staff marks", () => {
+    assert.equal(
+      customerReadWatchChanged(
+        { "staff-1": "2026-01-01T00:00:00.000Z" },
+        { "staff-1": "2026-01-02T00:00:00.000Z" },
+        ["cust-1"],
+      ),
+      false,
+    );
+    assert.equal(
+      customerReadWatchChanged(
+        { "cust-1": "2026-01-01T00:00:00.000Z" },
+        { "cust-1": "2026-01-02T00:00:00.000Z" },
+        ["cust-1"],
       ),
       true,
     );

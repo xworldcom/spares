@@ -228,3 +228,30 @@ export function conversationWatchChanged(
     before.activities.at(-1)?.id !== after.activities.at(-1)?.id
   );
 }
+
+/** Ring the other party when a customer read watermark moves (staff read marks stay silent). */
+export function customerReadWatchChanged(
+  before: Record<string, string>,
+  after: Record<string, string>,
+  customerUserIds: readonly string[],
+) {
+  for (const userId of customerUserIds) {
+    if (before[userId] !== after[userId]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function bumpConversationWatchForCustomerRead(
+  kind: ChatWatchKind,
+  id: string,
+  before: Record<string, string>,
+  after: Record<string, string>,
+  customerUserIds: readonly string[],
+) {
+  if (!customerReadWatchChanged(before, after, customerUserIds)) {
+    return;
+  }
+  await bumpChatWatch(chatWatchChannel(kind, id));
+}

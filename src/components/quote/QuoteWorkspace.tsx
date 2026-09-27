@@ -28,6 +28,7 @@ import {
   uploadQuotePo,
 } from "@/lib/api/quotes";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
+import { useQuoteReadWatermark } from "@/lib/hooks/useQuoteReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
   canEditTracking,
@@ -154,8 +155,16 @@ export function QuoteWorkspace({
     });
   }, [items, pendingStatus, quote, quoteRef, refresh]);
 
+  const threadBump =
+    quote?.activities.at(-1)?.at ?? quote?.activities.at(-1)?.id ?? quoteRef;
+  const conversationReady = Boolean(quote && user && loadedRef === quoteRef);
+  const watermarkReady = Boolean(
+    conversationReady && user?.role === "customer",
+  );
+  useQuoteReadWatermark(watermarkReady, quote?.id ?? quoteRef, threadBump);
+
   useConversationWatch(
-    Boolean(quote && user),
+    conversationReady,
     quote ? { kind: "quote", id: quote.id } : null,
     pollQuote,
   );
