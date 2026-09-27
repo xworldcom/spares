@@ -357,6 +357,22 @@ describe("landing cell stage", () => {
   });
 });
 
+describe("workflow desktop layout", () => {
+  it("keeps the scrub model full-viewport on wide screens instead of a permanent two-column grid", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    const desktopChunks = css
+      .split("@media (min-width: 900px)")
+      .slice(1)
+      .map((chunk) => chunk.split("@media")[0] ?? "");
+    const desktop =
+      desktopChunks.find((chunk) => chunk.includes(".landing-demo-stage.landing-workflow")) ?? "";
+    assert.doesNotMatch(desktop, /\.landing-workflow-stage\s*\{[^}]*grid-template-columns/);
+    assert.match(desktop, /\.landing-demo-stage\.landing-workflow \.landing-workflow-stage\s*\{[^}]*flex:\s*1/);
+    assert.match(desktop, /\.landing-demo-stage\.landing-workflow \.landing-workflow-model-panel\s*\{[^}]*inset:\s*0/);
+    assert.match(desktop, /\.landing-section--stage \.landing-demo-scrub-stack\s*\{[^}]*100vw/);
+  });
+});
+
 describe("workflow demo", () => {
   it("steps hub → find → select → quote → send → handoff as scroll advances", () => {
     assert.equal(workflowStep(0), "hub");
