@@ -684,7 +684,7 @@ export function workflowQuoteChatPlayhead(playhead: number) {
   return clampDemoScrollProgress((p - WORKFLOW_CHAT_START) / span);
 }
 
-/** Map linear scrub progress to quote-thread beat visibility (matches LandingWorkflowDemo). */
+/** Map linear scrub progress to quote-thread beat visibility. */
 export function demoWorkflowThreadPlayhead(workflowProgress: number) {
   return workflowQuoteChatPlayhead(workflowScrubPlayhead(workflowProgress));
 }
