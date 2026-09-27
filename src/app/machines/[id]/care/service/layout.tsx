@@ -9,7 +9,7 @@ export default function MachineCareServiceLayout() {
   const machineId = typeof params.id === "string" ? params.id : "";
   const visitId = typeof params.visitId === "string" ? params.visitId : undefined;
   return (
-    <RequireAuth role="staff">
+    <RequireAuth>
       <ServicePanel machineId={machineId} visitId={visitId} />
     </RequireAuth>
   );

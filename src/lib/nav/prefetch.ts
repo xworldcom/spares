@@ -44,21 +44,18 @@ export function warmQuotesList() {
   warmRead("quotes:list", () => listQuotes());
 }
 
-export function warmMachineCareTabs(machineId: string, staff: boolean) {
-  prefetchCareTabRoutes(machineId, staff);
+export function warmMachineCareTabs(machineId: string) {
+  prefetchCareTabRoutes(machineId);
   warmCareOverview(machineId);
 }
 
-export function prefetchCareTabRoutes(machineId: string, staff: boolean) {
-  const routes = [
+export function prefetchCareTabRoutes(machineId: string) {
+  return [
     `/machines/${machineId}`,
     `/machines/${machineId}/quotes`,
     `/machines/${machineId}/care`,
     `/machines/${machineId}/care/manuals`,
     `/machines/${machineId}/care/tickets`,
+    `/machines/${machineId}/care/service`,
   ];
-  if (staff) {
-    routes.push(`/machines/${machineId}/care/service`);
-  }
-  return routes;
 }

@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
 import {
   prefetchAppRoute,
   prefetchCareTabRoutes,
@@ -16,16 +15,14 @@ export function CareFrame({
   machineId: string;
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
   const router = useRouter();
-  const staff = user?.role === "staff";
 
   useEffect(() => {
-    for (const href of prefetchCareTabRoutes(machineId, staff)) {
+    for (const href of prefetchCareTabRoutes(machineId)) {
       prefetchAppRoute(router, href);
     }
     warmCareOverview(machineId);
-  }, [machineId, router, staff]);
+  }, [machineId, router]);
 
   return <div className="care-page">{children}</div>;
 }

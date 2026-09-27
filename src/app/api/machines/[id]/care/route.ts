@@ -35,7 +35,7 @@ export async function GET(
     ticketsOpen: tickets.filter((ticket) => ticketIsOpen(ticket.status)).length,
     ticketsTotal: tickets.length,
   };
-  if (access.user.role === "staff" && usage) {
+  if (usage) {
     overview.usage = {
       hours: usage.hours,
       cycles: usage.cycles,
