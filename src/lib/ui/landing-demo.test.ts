@@ -350,7 +350,10 @@ describe("landing scrub layout", () => {
     assert.match(mobile, /\.landing-demo-tree\s*\{[^}]*display:\s*none/);
     assert.match(mobile, /touch-action:\s*pan-y/);
     assert.match(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*pointer-events:\s*none/);
-    assert.match(mobile, /\.landing-workflow-part-sheet\s*\{[^}]*bottom:\s*0.75rem/);
+    assert.match(
+      css,
+      /@media \(max-width: 899px\)\s*\{\s*\.landing-workflow-part-sheet\s*\{[^}]*bottom:\s*0.75rem/,
+    );
     const cinematic = readFileSync("src/app/globals.css", "utf8");
     assert.match(
       cinematic,

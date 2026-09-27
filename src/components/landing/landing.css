@@ -643,14 +643,6 @@
   .landing-demo-scrub-pin {
     pointer-events: none;
   }
-
-  .landing-workflow-part-sheet {
-    top: auto;
-    right: 0.75rem;
-    bottom: 0.75rem;
-    left: 0.75rem;
-    max-width: none;
-  }
 }
 
 .landing-demo-scrub[data-reduce-motion] .landing-demo-thread {
@@ -1366,6 +1358,16 @@
   background: rgba(16, 17, 20, 0.92);
   border: 1px solid rgba(236, 234, 228, 0.14);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 899px) {
+  .landing-workflow-part-sheet {
+    top: auto;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    max-width: none;
+  }
 }
 
 .landing-workflow-part-sheet-inner {
