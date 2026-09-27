@@ -99,7 +99,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
     setReloadKey((key) => key + 1);
   }
 
-  function patchTicketInList(patch: ServiceTicket) {
+  const patchTicketInList = useCallback((patch: ServiceTicket) => {
     setTickets((rows) =>
       rows.map((row) =>
         ticketRefMatches(row, patch.id)
@@ -107,7 +107,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           : row,
       ),
     );
-  }
+  }, []);
 
   function onCreated(id: string, createdMachineId: string) {
     setCreating(false);
