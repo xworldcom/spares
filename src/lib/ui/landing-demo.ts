@@ -15,7 +15,8 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-export const DEMO_SCRUB_EXTRA_SVH = 340;
+/** Extra scroll travel for the workflow chapter (~3s dwell per beat at a comfortable scrub pace). */
+export const DEMO_SCRUB_EXTRA_SVH = 560;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
@@ -514,9 +515,84 @@ export const WORKFLOW_QUOTE_START = 0.46;
 export const WORKFLOW_SEND_START = 0.62;
 export const WORKFLOW_HANDOFF_START = 0.78;
 /** Handoff mix reaches 1 — model and tray have cleared the stage. */
-export const WORKFLOW_HANDOFF_COMPLETE = 0.86;
+export const WORKFLOW_HANDOFF_COMPLETE = 0.9;
 /** Quote thread script playhead begins when the thread panel is on stage. */
 export const WORKFLOW_CHAT_START = WORKFLOW_HANDOFF_START;
+
+type WorkflowScrubAnchor = { linear: number; visual: number };
+
+/** Scroll progress (linear) → story playhead with dwell time on each beat. */
+const WORKFLOW_SCRUB_MAP: readonly WorkflowScrubAnchor[] = [
+  { linear: 0, visual: 0 },
+  { linear: 0.115, visual: 0 },
+  { linear: 0.13, visual: WORKFLOW_FIND_START },
+  { linear: 0.248, visual: WORKFLOW_FIND_START },
+  { linear: 0.265, visual: WORKFLOW_SELECT_START },
+  { linear: 0.383, visual: WORKFLOW_SELECT_START },
+  { linear: 0.4, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.518, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.535, visual: WORKFLOW_SEND_START },
+  { linear: 0.653, visual: WORKFLOW_SEND_START },
+  { linear: 0.678, visual: WORKFLOW_HANDOFF_START },
+  { linear: 0.768, visual: WORKFLOW_HANDOFF_COMPLETE },
+  { linear: 1, visual: 1 },
+];
+
+function interpolateWorkflowScrubMap(linear: number) {
+  const p = clampDemoScrollProgress(linear);
+  const first = WORKFLOW_SCRUB_MAP[0];
+  if (!first || p <= first.linear) {
+    return first?.visual ?? 0;
+  }
+  for (let i = 1; i < WORKFLOW_SCRUB_MAP.length; i += 1) {
+    const end = WORKFLOW_SCRUB_MAP[i];
+    const start = WORKFLOW_SCRUB_MAP[i - 1];
+    if (!end || !start || p > end.linear) {
+      continue;
+    }
+    const span = end.linear - start.linear;
+    const t = span <= 0 ? 1 : (p - start.linear) / span;
+    return start.visual + t * (end.visual - start.visual);
+  }
+  const last = WORKFLOW_SCRUB_MAP[WORKFLOW_SCRUB_MAP.length - 1];
+  return last?.visual ?? 1;
+}
+
+export function workflowScrubPlayhead(linearProgress: number) {
+  return clampDemoScrollProgress(interpolateWorkflowScrubMap(linearProgress));
+}
+
+export type WorkflowGuideTarget = "scroll" | "orbit" | "hotspot" | "add" | "quote" | "request";
+
+export function workflowGuideCue(playhead: number): {
+  target: WorkflowGuideTarget | null;
+  x: number;
+  y: number;
+} {
+  const p = clampDemoScrollProgress(playhead);
+  const step = workflowStep(p);
+  if (step === "handoff" || p >= WORKFLOW_HANDOFF_START) {
+    return { target: null, x: 50, y: 50 };
+  }
+  if (step === "send") {
+    return { target: "request", x: 79, y: 90 };
+  }
+  if (step === "quote") {
+    return { target: "quote", x: 84, y: 58 };
+  }
+  if (step === "select") {
+    const span = WORKFLOW_QUOTE_START - WORKFLOW_SELECT_START;
+    const mid = span <= 0 ? 1 : (p - WORKFLOW_SELECT_START) / span;
+    if (mid < 0.42) {
+      return { target: "hotspot", x: 52, y: 46 };
+    }
+    return { target: "add", x: 22, y: 26 };
+  }
+  if (step === "find") {
+    return { target: "orbit", x: 56, y: 50 };
+  }
+  return { target: "scroll", x: 50, y: 74 };
+}
 
 export function workflowStep(playhead: number): WorkflowStep {
   const p = clampDemoScrollProgress(playhead);
