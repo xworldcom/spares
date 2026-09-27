@@ -508,6 +508,9 @@ export type WorkflowStep = "hub" | "find" | "select" | "quote" | "send" | "hando
 export const WORKFLOW_FIND_START = 0.14;
 export const WORKFLOW_SELECT_START = 0.3;
 export const WORKFLOW_QUOTE_START = 0.46;
+/** Inside select, after the hotspot dwell, the cue sits on Add to quote. */
+export const WORKFLOW_SELECT_ADD =
+  WORKFLOW_SELECT_START + (WORKFLOW_QUOTE_START - WORKFLOW_SELECT_START) * 0.62;
 export const WORKFLOW_SEND_START = 0.62;
 export const WORKFLOW_HANDOFF_START = 0.78;
 /** Handoff mix reaches 1 — model and tray have cleared the stage. */
@@ -524,7 +527,9 @@ const WORKFLOW_SCRUB_MAP: readonly WorkflowScrubAnchor[] = [
   { linear: 0.075, visual: WORKFLOW_FIND_START },
   { linear: 0.13, visual: WORKFLOW_FIND_START },
   { linear: 0.15, visual: WORKFLOW_SELECT_START },
-  { linear: 0.205, visual: WORKFLOW_SELECT_START },
+  { linear: 0.175, visual: WORKFLOW_SELECT_START },
+  { linear: 0.183, visual: WORKFLOW_SELECT_ADD },
+  { linear: 0.208, visual: WORKFLOW_SELECT_ADD },
   { linear: 0.225, visual: WORKFLOW_QUOTE_START },
   { linear: 0.28, visual: WORKFLOW_QUOTE_START },
   { linear: 0.3, visual: WORKFLOW_SEND_START },
@@ -612,9 +617,7 @@ export function workflowGuideCue(playhead: number): {
     return { target: "quote", x: 84, y: 58 };
   }
   if (step === "select") {
-    const span = WORKFLOW_QUOTE_START - WORKFLOW_SELECT_START;
-    const mid = span <= 0 ? 1 : (p - WORKFLOW_SELECT_START) / span;
-    if (mid < 0.42) {
+    if (p < WORKFLOW_SELECT_ADD) {
       return { target: "hotspot", x: 52, y: 46 };
     }
     return { target: "add", x: 22, y: 26 };
