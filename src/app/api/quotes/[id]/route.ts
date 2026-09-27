@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
+import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
 import {
   canEditTracking,
   canUploadPo,
@@ -38,8 +39,18 @@ export async function GET(
   }
 
   const tenantId = userTenantId(access.user);
+  const beforeRead = access.quote.lastReadAt;
   const marked =
     (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
+  if (access.user.role === "customer") {
+    await bumpConversationWatchForCustomerRead(
+      "quote",
+      marked.id,
+      beforeRead,
+      marked.lastReadAt,
+      [access.user.id],
+    );
+  }
   if (
     access.user.role === "staff" &&
     shouldRecordView(`quote.viewed:${access.user.id}:${marked.id}`)

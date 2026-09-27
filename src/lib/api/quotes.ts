@@ -92,6 +92,15 @@ export async function postQuoteActivity(
   return data.quote;
 }
 
+export async function patchQuoteRead(idOrNumber: string) {
+  const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}/read`, {
+    method: "PATCH",
+  });
+  invalidateWarmRead(`quote:${idOrNumber}`);
+  invalidateWarmRead("quotes:list");
+  return data.quote;
+}
+
 export async function uploadQuotePo(
   idOrNumber: string,
   input: { file: File; poNumber?: string },
