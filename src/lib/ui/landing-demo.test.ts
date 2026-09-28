@@ -319,8 +319,11 @@ describe("landing scrub layout", () => {
     const mobile = css.split("@media (max-width: 899px)")[1]?.split("@media")[0] ?? "";
     assert.doesNotMatch(mobile, /\.landing-demo-scrub-pin\s*\{[^}]*height:\s*auto/);
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
-    assert.match(css, /var\(--landing-demo-scrub-extra,\s*340svh\)|--landing-demo-scrub-extra:\s*340svh/);
-    assert.equal(DEMO_SCRUB_EXTRA_SVH, 400);
+    assert.match(css, /var\(--landing-demo-scrub-extra,\s*1000svh\)|--landing-demo-scrub-extra:\s*1000svh/);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH, 1000);
+    assert.doesNotMatch(css, /\.landing-workflow-model-panel\s*\{[^}]*transition:/);
+    assert.doesNotMatch(css, /\.landing-workflow-side\s*\{[^}]*transition:/);
+    assert.doesNotMatch(css, /\.landing-workflow-request\.is-visible\s*\{[^}]*transition:/);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
   });
@@ -426,7 +429,8 @@ describe("workflow demo", () => {
     assert.equal(workflowScrubPlayhead(0), 0);
     assert.equal(workflowScrubPlayhead(1), 1);
     const handoffAt = firstLinear.handoff ?? 1;
-    assert.ok(handoffAt <= 0.42);
+    assert.ok(handoffAt >= 0.44, `handoff ${handoffAt}`);
+    assert.ok(handoffAt <= 0.52, `handoff ${handoffAt}`);
     assert.ok(1 - handoffAt >= 0.5);
     assert.ok(workflowGuideCue(WORKFLOW_SELECT_START).target === "hotspot");
     assert.equal(workflowGuideCue(WORKFLOW_SELECT_ADD).target, "add");
@@ -437,9 +441,10 @@ describe("workflow demo", () => {
       const target = workflowGuideCue(workflowScrubPlayhead(p)).target ?? "none";
       dwell.set(target, (dwell.get(target) ?? 0) + 0.001);
     }
-    assert.ok((dwell.get("hotspot") ?? 0) >= 0.012, `hotspot dwell ${dwell.get("hotspot")}`);
-    assert.ok((dwell.get("add") ?? 0) >= 0.012, `add dwell ${dwell.get("add")}`);
-    assert.ok((dwell.get("request") ?? 0) >= 0.02, `request dwell ${dwell.get("request")}`);
+    assert.ok((dwell.get("hotspot") ?? 0) >= 0.05, `hotspot dwell ${dwell.get("hotspot")}`);
+    assert.ok((dwell.get("add") ?? 0) >= 0.045, `add dwell ${dwell.get("add")}`);
+    assert.ok((dwell.get("request") ?? 0) >= 0.055, `request dwell ${dwell.get("request")}`);
+    assert.ok((dwell.get("orbit") ?? 0) >= 0.09, `orbit dwell ${dwell.get("orbit")}`);
     const plateau = (cue: string) => {
       let best = 0;
       let run = 0;
@@ -459,14 +464,17 @@ describe("workflow demo", () => {
       return best;
     };
     const hub = plateau("scroll");
+    const orbit = plateau("orbit");
     const quote = plateau("quote");
     const hotspot = plateau("hotspot");
     const add = plateau("add");
-    assert.ok(hub <= 0.034 && hub >= 0.02, `hub plateau ${hub}`);
-    assert.ok(quote <= 0.034 && quote >= 0.02, `quote plateau ${quote}`);
-    assert.ok(hotspot >= 0.01 && hotspot <= 0.02, `hotspot plateau ${hotspot}`);
-    assert.ok(add >= 0.01 && add <= 0.02, `add plateau ${add}`);
-    assert.ok(hotspot + add <= 0.036, `select-add plateaus ${hotspot + add}`);
+    const request = plateau("request");
+    assert.ok(hub >= 0.045, `hub plateau ${hub}`);
+    assert.ok(orbit >= 0.035, `orbit plateau ${orbit}`);
+    assert.ok(quote >= 0.045, `quote plateau ${quote}`);
+    assert.ok(hotspot >= 0.035, `hotspot plateau ${hotspot}`);
+    assert.ok(add >= 0.035, `add plateau ${add}`);
+    assert.ok(request >= 0.045, `request plateau ${request}`);
   });
 
   it("places the tap cue on the measured hit target, not a guessed stage percent", () => {
@@ -549,6 +557,21 @@ describe("workflow demo", () => {
     const endSpin = workflowSpinYaw(WORKFLOW_SELECT_START);
     assert.ok(midSpin < endSpin);
     assert.ok(endSpin > 1);
+    const yaw: number[] = [];
+    for (let p = 0; p <= 1.0001; p += 0.001) {
+      yaw.push(workflowSpinYaw(workflowScrubPlayhead(Number(p.toFixed(3)))));
+    }
+    const deltas: number[] = [];
+    for (let i = 1; i < yaw.length; i += 1) {
+      deltas.push(Math.abs((yaw[i] ?? 0) - (yaw[i - 1] ?? 0)));
+    }
+    const max = Math.max(...deltas);
+    assert.ok(max < (2.4 * Math.PI) / 180, `peak yaw step ${(max * 180) / Math.PI} deg`);
+    const moving = deltas.filter((delta) => delta > 0.002);
+    assert.ok(moving.length > 20, `moving samples ${moving.length}`);
+    const edge = Math.max(moving[0] ?? 0, moving[1] ?? 0, moving.at(-1) ?? 0, moving.at(-2) ?? 0);
+    const mid = moving[Math.floor(moving.length / 2)] ?? 0;
+    assert.ok(edge < mid * 0.55, `yaw ease edge ${edge} mid ${mid}`);
   });
 
   it("lets the remapped handoff drive chat row visibility before linear 0.78", () => {

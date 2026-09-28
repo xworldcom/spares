@@ -15,7 +15,7 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-export const DEMO_SCRUB_EXTRA_SVH = 400;
+export const DEMO_SCRUB_EXTRA_SVH = 1000;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
@@ -519,24 +519,40 @@ export const WORKFLOW_CHAT_START = WORKFLOW_HANDOFF_START;
 
 type WorkflowScrubAnchor = { linear: number; visual: number };
 
-/** Scroll progress (linear) → story playhead with dwell time on each beat. */
 const WORKFLOW_SCRUB_MAP: readonly WorkflowScrubAnchor[] = [
   { linear: 0, visual: 0 },
-  { linear: 0.028, visual: 0 },
-  { linear: 0.044, visual: WORKFLOW_FIND_START },
-  { linear: 0.072, visual: WORKFLOW_FIND_START },
-  { linear: 0.088, visual: WORKFLOW_SELECT_START },
-  { linear: 0.102, visual: WORKFLOW_SELECT_START },
-  { linear: 0.114, visual: WORKFLOW_SELECT_ADD },
-  { linear: 0.13, visual: WORKFLOW_SELECT_ADD },
-  { linear: 0.146, visual: WORKFLOW_QUOTE_START },
-  { linear: 0.174, visual: WORKFLOW_QUOTE_START },
-  { linear: 0.19, visual: WORKFLOW_SEND_START },
-  { linear: 0.218, visual: WORKFLOW_SEND_START },
-  { linear: 0.236, visual: WORKFLOW_HANDOFF_START },
-  { linear: 0.34, visual: WORKFLOW_HANDOFF_COMPLETE },
+  { linear: 0.05, visual: 0 },
+  { linear: 0.07, visual: WORKFLOW_FIND_START },
+  { linear: 0.11, visual: WORKFLOW_FIND_START },
+  { linear: 0.18, visual: WORKFLOW_SELECT_START },
+  { linear: 0.22, visual: WORKFLOW_SELECT_START },
+  { linear: 0.245, visual: WORKFLOW_SELECT_ADD },
+  { linear: 0.285, visual: WORKFLOW_SELECT_ADD },
+  { linear: 0.31, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.36, visual: WORKFLOW_QUOTE_START },
+  { linear: 0.385, visual: WORKFLOW_SEND_START },
+  { linear: 0.435, visual: WORKFLOW_SEND_START },
+  { linear: 0.46, visual: WORKFLOW_HANDOFF_START },
+  { linear: 0.56, visual: WORKFLOW_HANDOFF_COMPLETE },
   { linear: 1, visual: 1 },
 ];
+
+function smoothstep(t: number) {
+  return t * t * (3 - 2 * t);
+}
+
+function easeBetweenPlateaus(index: number) {
+  const end = WORKFLOW_SCRUB_MAP[index];
+  const start = WORKFLOW_SCRUB_MAP[index - 1];
+  if (!start || !end || start.visual === end.visual) {
+    return false;
+  }
+  const prev = WORKFLOW_SCRUB_MAP[index - 2];
+  const next = WORKFLOW_SCRUB_MAP[index + 1];
+  const fromRest = !prev || prev.visual === start.visual;
+  const toRest = !next || next.visual === end.visual;
+  return fromRest && toRest;
+}
 
 function interpolateWorkflowScrubMap(linear: number) {
   const p = clampDemoScrollProgress(linear);
@@ -551,7 +567,8 @@ function interpolateWorkflowScrubMap(linear: number) {
       continue;
     }
     const span = end.linear - start.linear;
-    const t = span <= 0 ? 1 : (p - start.linear) / span;
+    const linearT = span <= 0 ? 1 : (p - start.linear) / span;
+    const t = easeBetweenPlateaus(i) ? smoothstep(linearT) : linearT;
     return start.visual + t * (end.visual - start.visual);
   }
   const last = WORKFLOW_SCRUB_MAP[WORKFLOW_SCRUB_MAP.length - 1];
