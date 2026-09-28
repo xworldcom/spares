@@ -477,6 +477,17 @@ describe("workflow demo", () => {
     assert.ok(request >= 0.045, `request plateau ${request}`);
   });
 
+  it("puts the scrub story above the interactive model", () => {
+    const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
+    const story = marketing.indexOf('id="product-story"');
+    const model = marketing.indexOf('id="machine-model"');
+    assert.ok(story >= 0 && model > story);
+    assert.equal(marketing.includes("landing-section--hero"), false);
+    const peek = readFileSync("src/components/landing/LandingScrollPeek.tsx", "utf8");
+    assert.match(peek, /href="#product-story"/);
+    assert.doesNotMatch(peek, /href="#machine-model"/);
+  });
+
   it("places the tap cue on the measured hit target, not a guessed stage percent", () => {
     const point = workflowGuideStagePoint(
       { left: 0, top: 0, width: 200, height: 100 },
