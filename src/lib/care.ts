@@ -229,22 +229,29 @@ export function nextTicketNumber(tickets: readonly { number?: number }[]) {
 
 export function isTicketUnreadForUser(
   ticket: Pick<ServiceTicketRecord, "activities" | "lastReadAt">,
-  user: Pick<PublicUser, "id">,
+  user: Pick<PublicUser, "id" | "email" | "role">,
 ) {
-  const last = ticket.lastReadAt[user.id];
-  const latest = ticket.activities.at(-1)?.at;
-  if (!latest) {
-    return false;
+  const lastRead = ticket.lastReadAt[user.id];
+  const newestForeign = ticket.activities.reduce((max, activity) => {
+    if (activity.actorEmail === user.email && activity.actorRole === user.role) {
+      return max;
+    }
+    return activity.at > max ? activity.at : max;
+  }, "");
+
+  if (!lastRead) {
+    if (newestForeign) {
+      return true;
+    }
+    return user.role === "staff";
   }
-  if (!last) {
-    return true;
-  }
-  return latest > last;
+
+  return Boolean(newestForeign && newestForeign > lastRead);
 }
 
 export function countUnreadTickets<
   T extends Pick<ServiceTicketRecord, "activities" | "lastReadAt">,
->(tickets: readonly T[], user: Pick<PublicUser, "id">) {
+>(tickets: readonly T[], user: Pick<PublicUser, "id" | "email" | "role">) {
   return tickets.filter((ticket) => isTicketUnreadForUser(ticket, user)).length;
 }
 

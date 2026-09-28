@@ -15,6 +15,7 @@ import {
   manualExtension,
   manualOverLimitMessage,
   countUnreadTickets,
+  isTicketUnreadForUser,
   customerReadReceiptsForTicket,
   isCustomerReadThroughTicket,
   nextTicketNumber,
@@ -114,7 +115,36 @@ describe("care tickets", () => {
         lastReadAt: {},
       },
     ];
-    assert.equal(countUnreadTickets(tickets, { id: "user-customer" }), 1);
+    assert.equal(
+      countUnreadTickets(tickets, {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      }),
+      1,
+    );
+  });
+
+  it("does not mark a ticket unread for staff after their own status change", () => {
+    const ticket = {
+      activities: [
+        {
+          id: "a1",
+          at: "2026-01-02T00:00:00.000Z",
+          actorRole: "staff" as const,
+          actorEmail: "staff@spares.local",
+          kind: "status" as const,
+          text: "Status set to In progress",
+        },
+      ],
+      lastReadAt: { "staff-1": "2026-01-02T00:00:00.000Z" },
+    };
+    const staff = {
+      id: "staff-1",
+      email: "staff@spares.local",
+      role: "staff" as const,
+    };
+    assert.equal(isTicketUnreadForUser(ticket, staff), false);
   });
 
   it("marks unread from lastReadAt", () => {
@@ -140,7 +170,11 @@ describe("care tickets", () => {
         ],
         lastReadAt: { "user-customer": "2026-01-01T00:00:00.000Z" },
       },
-      { id: "user-customer" },
+      {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
       "Palletizer",
     );
     assert.equal(ticket.unread, true);

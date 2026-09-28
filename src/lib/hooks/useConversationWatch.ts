@@ -5,6 +5,7 @@ import {
   invalidateConversationWarmRead,
   waitForConversationWatch,
 } from "@/lib/api/chat-watch";
+import { isNotFound } from "@/lib/api/errors";
 import type { ChatWatchKind } from "@/lib/chat-watch";
 
 /** Wait for a doorbell tap. Reload only when a tap lands. */
@@ -62,8 +63,11 @@ export function useConversationWatch(
           if (changed) {
             await poke();
           }
-        } catch {
+        } catch (cause) {
           if (cancelled) {
+            return;
+          }
+          if (isNotFound(cause)) {
             return;
           }
           await new Promise((resolve) => setTimeout(resolve, 2_000));
