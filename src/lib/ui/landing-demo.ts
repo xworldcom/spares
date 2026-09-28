@@ -15,7 +15,6 @@ export const DEMO_OTHER_LABEL = "Staff";
 export const DEMO_QUOTE_NUMBER = "4418";
 export const DEMO_TICKET_NUMBER = "218";
 
-/** Scroll distance for the product-story pin. Plateaus are ~4.5s at 100px/s on a 900px viewport. */
 export const DEMO_SCRUB_EXTRA_SVH = 1000;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
@@ -520,11 +519,6 @@ export const WORKFLOW_CHAT_START = WORKFLOW_HANDOFF_START;
 
 type WorkflowScrubAnchor = { linear: number; visual: number };
 
-/**
- * Scroll progress (linear) → story playhead.
- * Holds are long on purpose. The find→select span is the model turn, and it
- * is eased so yaw starts and stops at rest instead of stepping between holds.
- */
 const WORKFLOW_SCRUB_MAP: readonly WorkflowScrubAnchor[] = [
   { linear: 0, visual: 0 },
   { linear: 0.05, visual: 0 },
