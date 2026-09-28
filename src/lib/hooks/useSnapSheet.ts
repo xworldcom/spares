@@ -127,6 +127,8 @@ export function useSnapSheet({
   onOpenChange,
   desktopStage,
   scrollBodySelector,
+  openForUnread,
+  resetKey,
 }: {
   cardRef: RefObject<HTMLElement | null>;
   open: boolean;
@@ -134,9 +136,13 @@ export function useSnapSheet({
   desktopStage: boolean;
   /** Scrollable thread; drag-to-collapse from full waits until scrollTop is 0. */
   scrollBodySelector: string;
+  /** Mobile overlay: start at reply when the thread has unread messages. */
+  openForUnread?: boolean;
+  /** When this changes, snap resets for a new thread. */
+  resetKey?: string;
 }) {
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
-    initialConversationSheetSnap(open, desktopStage),
+    initialConversationSheetSnap(open, desktopStage, openForUnread),
   );
   const [dragging, setDragging] = useState(false);
   const drag = useRef({
@@ -196,12 +202,23 @@ export function useSnapSheet({
   }
 
   useEffect(() => {
+    if (!resetKey) {
+      return;
+    }
+    setSheet(initialConversationSheetSnap(open, desktopStage, openForUnread));
+    dockedRef.current = true;
+    clearInlineHeight();
+    setDragging(false);
+    setDraggingClass(false);
+  }, [resetKey, open, desktopStage, openForUnread, cardRef]);
+
+  useEffect(() => {
     if (open) {
       setSheet((current) => {
         if (current !== "out") {
           return current;
         }
-        return initialConversationSheetSnap(true, desktopStage);
+        return initialConversationSheetSnap(true, desktopStage, openForUnread);
       });
       dockedRef.current = true;
       clearInlineHeight();

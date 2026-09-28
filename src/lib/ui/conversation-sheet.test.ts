@@ -16,6 +16,10 @@ describe("conversation sheet startup snap", () => {
     assert.equal(initialConversationSheetSnap(true, false), "peek");
   });
 
+  it("starts at reply on phone when the thread is unread", () => {
+    assert.equal(initialConversationSheetSnap(true, false, true), "reply");
+  });
+
   it("opens at reply on desktop overlay so the composer is ready", () => {
     assert.equal(initialConversationSheetSnap(true, true), "reply");
   });

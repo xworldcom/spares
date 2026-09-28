@@ -1,9 +1,10 @@
 import { getCurrentUser } from "@/lib/auth";
 import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
 import { canAccessCareMachine, canManageCare, customerReadReceiptsForTicket, toPublicTicket } from "@/lib/care";
+import { toPublicUser } from "@/lib/access";
 import { error } from "@/lib/http";
 import { tenantIdForUser, userTenantId } from "@/lib/tenant";
-import { getMachine, getOrgContext, getTicket, listCustomers, type StoredMachine } from "@/lib/store";
+import { getMachine, getOrgContext, getTicket, listCustomers, findUserById, type StoredMachine } from "@/lib/store";
 import type { PublicUser, ServiceTicket, ServiceTicketRecord, TicketCustomerReadReceipt } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -76,13 +77,35 @@ export async function staffCustomerUsers(tenantId: string) {
   return listCustomers(tenantId);
 }
 
+export async function staffCustomerUsersForThread(
+  tenantId: string,
+  ticket: Pick<ServiceTicketRecord, "customerId">,
+) {
+  const customers = await staffCustomerUsers(tenantId);
+  if (customers.some((row) => row.id === ticket.customerId)) {
+    return customers;
+  }
+  const stored = await findUserById(ticket.customerId);
+  if (!stored || stored.role !== "customer" || stored.deletedAt) {
+    return customers;
+  }
+  if (stored.tenantId !== tenantId) {
+    return customers;
+  }
+  const org = await getOrgContext(tenantId);
+  return [...customers, toPublicUser(stored, org.sites, org.customers)].sort((a, b) =>
+    a.email.localeCompare(b.email),
+  );
+}
+
 export async function publicTicketForUser(
   ticket: ServiceTicketRecord,
   user: PublicUser,
   machineName: string,
 ): Promise<ServiceTicket> {
   const tenantId = userTenantId(user);
-  const customerUsers = user.role === "staff" ? await staffCustomerUsers(tenantId) : undefined;
+  const customerUsers =
+    user.role === "staff" ? await staffCustomerUsersForThread(tenantId, ticket) : undefined;
   return attachStaffAssistantAvailability(
     user,
     toPublicTicket(ticket, user, machineName, { customerUsers }),
@@ -93,6 +116,6 @@ export async function ticketReadReceiptsForStaff(
   ticket: ServiceTicketRecord,
   tenantId: string,
 ): Promise<TicketCustomerReadReceipt[]> {
-  const customerUsers = await staffCustomerUsers(tenantId);
+  const customerUsers = await staffCustomerUsersForThread(tenantId, ticket);
   return customerReadReceiptsForTicket(ticket, customerUsers);
 }

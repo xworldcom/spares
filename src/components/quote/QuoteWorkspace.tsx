@@ -496,6 +496,7 @@ export function QuoteWorkspace({
         title="Conversation"
         peekLine={peek.text}
         unread={quote.unread}
+        threadKey={quote.id}
         layout={desktop ? "inline" : "overlay"}
       >
         <QuoteActivityFeed

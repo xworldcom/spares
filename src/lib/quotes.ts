@@ -818,10 +818,15 @@ export function toPublicQuote(
     publicQuote.assistantEscalatedAt = quote.assistantEscalatedAt;
   }
   if (user.role === "staff" && options?.customerUsers) {
-    const receipts = customerReadReceiptsForThread(quote, options.customerUsers);
-    if (receipts.length > 0) {
-      publicQuote.customerReadReceipts = receipts;
-    }
+    publicQuote.customerReadReceipts = customerReadReceiptsForThread(
+      {
+        activities: quote.activities,
+        lastReadAt: quote.lastReadAt,
+        customerId: quote.customerId,
+        customerEmail: quote.customerEmail,
+      },
+      options.customerUsers,
+    );
   }
   return publicQuote;
 }

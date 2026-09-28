@@ -1,6 +1,6 @@
 import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
 import { getCurrentUser } from "@/lib/auth";
-import { staffCustomerUsers } from "@/lib/care-http";
+import { staffCustomerUsersForThread } from "@/lib/care-http";
 import { error } from "@/lib/http";
 import { canViewQuote, toPublicQuote } from "@/lib/quotes";
 import { effectiveTenantId, tenantIdForUser, userTenantId } from "@/lib/tenant";
@@ -52,7 +52,9 @@ export async function publicQuoteForUser(
 ): Promise<Quote> {
   const tenantId = userTenantId(user);
   const customerUsers =
-    user.role === "staff" && tenantId ? await staffCustomerUsers(tenantId) : undefined;
+    user.role === "staff" && tenantId
+      ? await staffCustomerUsersForThread(tenantId, quote)
+      : undefined;
   return attachStaffAssistantAvailability(
     user,
     toPublicQuote(quote, user, machineName, { customerUsers }),
