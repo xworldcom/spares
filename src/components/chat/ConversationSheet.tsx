@@ -15,6 +15,7 @@ export function ConversationSheet({
   layout = "overlay",
   open = true,
   onOpenChange,
+  threadKey,
 }: {
   title: string;
   /** Kept for call-site compatibility; latest context now comes from the live thread. */
@@ -25,6 +26,8 @@ export function ConversationSheet({
   layout?: "overlay" | "inline";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Resets snap when switching tickets/quotes. */
+  threadKey?: string;
 }) {
   const desktop = useDesktopStage();
   const card = useRef<HTMLElement>(null);
@@ -42,6 +45,8 @@ export function ConversationSheet({
     onOpenChange,
     desktopStage: desktop,
     scrollBodySelector: ".imsg-thread",
+    openForUnread: Boolean(unread) && layout === "overlay" && !desktop,
+    resetKey: threadKey,
   });
 
   const overlayMobile = layout === "overlay" && !desktop;

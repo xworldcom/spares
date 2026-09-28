@@ -18,7 +18,7 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
-import { careHref, ticketRefMatches } from "@/lib/care";
+import { careHref, ticketContextLine, ticketRefMatches } from "@/lib/care";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
@@ -219,6 +219,7 @@ export function TicketDetail({
           role: user.role,
         })
       : { text: "Loading…", unreadHint: false };
+  const contextLine = threadReady ? ticketContextLine(ticket) : null;
 
   return (
     <div className="care-stack">
@@ -228,10 +229,13 @@ export function TicketDetail({
         </Link>
       ) : null}
       {threadReady ? (
-        <>
+        <div className="care-stack-head">
           <div>
             <p className="care-kicker">Ticket {ticket.number}</p>
             <h2 className="text-[28px] font-semibold tracking-tight">{ticket.title}</h2>
+            {contextLine ? (
+              <p className="care-ticket-detail">{contextLine}</p>
+            ) : null}
           </div>
           <TicketStatusStrip
             status={ticket.status}
@@ -239,7 +243,7 @@ export function TicketDetail({
             pending={busy}
             onChange={staff ? onStatus : undefined}
           />
-        </>
+        </div>
       ) : (
         <div className="h-24" aria-busy="true" aria-label="Loading conversation" />
       )}
@@ -253,6 +257,7 @@ export function TicketDetail({
         title="Notes"
         peekLine={peek.text}
         unread={ticket.unread}
+        threadKey={ticket.id}
         layout={embedded ? "inline" : "overlay"}
       >
         <ConversationReadWatermark

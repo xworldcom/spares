@@ -4,12 +4,20 @@ export type ConversationSheetSnap = "peek" | "reply" | "full" | "out";
 export function initialConversationSheetSnap(
   open: boolean,
   desktopStage: boolean,
+  /** Mobile: open straight to reply when the thread has unread messages. */
+  openForUnread = false,
 ): ConversationSheetSnap {
   if (!open) {
     return "out";
   }
   // Desktop overlay (rare) opens ready to type; mobile starts at the latest-context peek.
-  return desktopStage ? "reply" : "peek";
+  if (desktopStage) {
+    return "reply";
+  }
+  if (openForUnread) {
+    return "reply";
+  }
+  return "peek";
 }
 
 /** Sheet heights as CSS lengths — keep in sync with globals.css. */

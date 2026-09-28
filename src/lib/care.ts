@@ -274,6 +274,8 @@ export function customerReadReceiptsForThread(
   thread: {
     activities: ReadonlyArray<{ at: string }>;
     lastReadAt: Record<string, string>;
+    customerId?: string;
+    customerEmail?: string;
   },
   customerUsers: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[],
 ): TicketCustomerReadReceipt[] {
@@ -305,7 +307,15 @@ export function customerReadReceiptsForTicket(
   ticket: ServiceTicketRecord,
   customerUsers: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[],
 ): TicketCustomerReadReceipt[] {
-  return customerReadReceiptsForThread(ticket, customerUsers);
+  return customerReadReceiptsForThread(
+    {
+      activities: ticket.activities,
+      lastReadAt: ticket.lastReadAt,
+      customerId: ticket.customerId,
+      customerEmail: ticket.customerEmail,
+    },
+    customerUsers,
+  );
 }
 
 export function toPublicTicket(
@@ -332,10 +342,7 @@ export function toPublicTicket(
     assistantEscalatedAt: ticket.assistantEscalatedAt,
   };
   if (user.role === "staff" && options?.customerUsers) {
-    const receipts = customerReadReceiptsForTicket(ticket, options.customerUsers);
-    if (receipts.length > 0) {
-      base.customerReadReceipts = receipts;
-    }
+    base.customerReadReceipts = customerReadReceiptsForTicket(ticket, options.customerUsers);
   }
   return base;
 }
@@ -383,6 +390,23 @@ export function usageHistoryEntry(
     actorEmail,
     summary,
   };
+}
+
+/** First human note on the ticket — usually the reason the customer opened it. */
+export function ticketContextLine(
+  ticket: Pick<ServiceTicket, "activities" | "title">,
+): string | null {
+  for (const activity of ticket.activities) {
+    if (activity.kind !== "message") {
+      continue;
+    }
+    const text = activity.text?.trim();
+    if (!text || text === ticket.title.trim()) {
+      continue;
+    }
+    return text;
+  }
+  return null;
 }
 
 export function ticketRefMatches(

@@ -463,7 +463,43 @@
   min-height: 0;
 }
 
+.conversation-sheet:not(.is-inline).is-reply,
+.conversation-sheet:not(.is-inline).is-full {
+  z-index: 62;
+}
+
+@media (max-width: 1023px) {
+  .conversation-sheet:not(.is-inline).is-reply .conversation-sheet-toolbar,
+  .conversation-sheet:not(.is-inline).is-full .conversation-sheet-toolbar {
+    position: sticky;
+    top: 0;
+    padding-top: max(0.35rem, env(safe-area-inset-top, 0px));
+    background: color-mix(in srgb, var(--spares-lift) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+}
+
+.conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill {
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill::before {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  opacity: 1;
+}
+
 .conversation-sheet-toolbar {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -554,6 +590,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.01em;
+  text-transform: none;
 }
 
 .imsg-when-read {
@@ -3043,6 +3080,32 @@ html.spares-embed .spares-app-stage {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+@media (max-width: 1023px) {
+  .care-stack-head {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + var(--spares-header));
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-bottom: 0.35rem;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--spares-paper) 96%, transparent) 0%,
+      color-mix(in srgb, var(--spares-paper) 88%, transparent) 72%,
+      transparent 100%
+    );
+  }
+
+  .care-ticket-detail {
+    margin-top: 0.45rem;
+    color: var(--spares-muted);
+    font-size: 15px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
 }
 
 @media (max-width: 1023px) {

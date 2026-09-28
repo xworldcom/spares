@@ -144,7 +144,6 @@ export function QuoteActivityFeed({
       firstUnreadIndex !== null &&
       !unreadJumpedRef.current &&
       sheetSnap &&
-      sheetSnap !== "peek" &&
       sheetSnap !== "out";
 
     if (shouldJumpUnread) {
@@ -153,7 +152,7 @@ export function QuoteActivityFeed({
         if (!marker) {
           return;
         }
-        marker.scrollIntoView({ block: "start" });
+        marker.scrollIntoView({ block: "center" });
         unreadJumpedRef.current = true;
       };
       const id = window.setTimeout(jump, 460);
@@ -331,10 +330,14 @@ export function QuoteActivityFeed({
                 }
               >
                 {index === firstUnreadIndex ? (
-                  <div className="imsg-unread-divider" role="status" aria-label="New messages">
+                  <div
+                    className="imsg-unread-divider"
+                    role="status"
+                    aria-label="Start reading here"
+                  >
                     <span className="imsg-unread-divider-chev" aria-hidden="true">↓</span>
                     <span className="imsg-unread-divider-line" aria-hidden="true" />
-                    <span className="imsg-unread-divider-label">New</span>
+                    <span className="imsg-unread-divider-label">Start reading here</span>
                     <span className="imsg-unread-divider-line" aria-hidden="true" />
                     <span className="imsg-unread-divider-chev" aria-hidden="true">↓</span>
                   </div>
