@@ -317,7 +317,7 @@ export function customerReadReceiptsForTicket(
 
 export function toPublicTicket(
   ticket: ServiceTicketRecord,
-  user: Pick<PublicUser, "id" | "role">,
+  user: Pick<PublicUser, "id" | "email" | "role">,
   machineName?: string,
   options?: {
     customerUsers?: readonly Pick<PublicUser, "id" | "email" | "name" | "role">[];

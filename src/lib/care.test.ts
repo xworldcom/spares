@@ -224,15 +224,25 @@ describe("care tickets", () => {
     assert.equal(isCustomerReadThroughTicket(record, "cust-a"), true);
     assert.equal(isCustomerReadThroughTicket(record, "cust-b"), false);
 
-    const staffView = toPublicTicket(record, { id: "staff-1", role: "staff" }, "Line", {
+    const staffView = toPublicTicket(
+      record,
+      { id: "staff-1", email: "staff@spares.local", role: "staff" },
+      "Line",
+      {
       customerUsers: customers,
-    });
+      },
+    );
     assert.equal(staffView.customerReadReceipts?.length, 1);
     assert.equal(staffView.customerReadReceipts?.[0]?.email, "a@example.com");
 
-    const customerView = toPublicTicket(record, { id: "cust-a", role: "customer" }, "Line", {
+    const customerView = toPublicTicket(
+      record,
+      { id: "cust-a", email: "a@example.com", role: "customer" },
+      "Line",
+      {
       customerUsers: customers,
-    });
+      },
+    );
     assert.equal(customerView.customerReadReceipts, undefined);
   });
 });
