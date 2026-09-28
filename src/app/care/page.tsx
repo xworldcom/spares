@@ -1,5 +1,6 @@
-import { CareHubOverview } from "@/components/care/CareHubOverview";
+import { redirect } from "next/navigation";
+import { hubTicketsHref } from "@/lib/care";
 
 export default function CareHubPage() {
-  return <CareHubOverview />;
+  redirect(hubTicketsHref());
 }

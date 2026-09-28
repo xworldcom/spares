@@ -15,6 +15,7 @@ import {
   manualExtension,
   manualOverLimitMessage,
   countUnreadTickets,
+  isTicketUnreadForUser,
   customerReadReceiptsForTicket,
   isCustomerReadThroughTicket,
   nextTicketNumber,
@@ -114,7 +115,36 @@ describe("care tickets", () => {
         lastReadAt: {},
       },
     ];
-    assert.equal(countUnreadTickets(tickets, { id: "user-customer" }), 1);
+    assert.equal(
+      countUnreadTickets(tickets, {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      }),
+      1,
+    );
+  });
+
+  it("does not mark a ticket unread for staff after their own status change", () => {
+    const ticket = {
+      activities: [
+        {
+          id: "a1",
+          at: "2026-01-02T00:00:00.000Z",
+          actorRole: "staff" as const,
+          actorEmail: "staff@spares.local",
+          kind: "status" as const,
+          text: "Status set to In progress",
+        },
+      ],
+      lastReadAt: { "staff-1": "2026-01-02T00:00:00.000Z" },
+    };
+    const staff = {
+      id: "staff-1",
+      email: "staff@spares.local",
+      role: "staff" as const,
+    };
+    assert.equal(isTicketUnreadForUser(ticket, staff), false);
   });
 
   it("marks unread from lastReadAt", () => {
@@ -140,7 +170,11 @@ describe("care tickets", () => {
         ],
         lastReadAt: { "user-customer": "2026-01-01T00:00:00.000Z" },
       },
-      { id: "user-customer" },
+      {
+        id: "user-customer",
+        email: "customer@spares.local",
+        role: "customer",
+      },
       "Palletizer",
     );
     assert.equal(ticket.unread, true);
@@ -190,15 +224,25 @@ describe("care tickets", () => {
     assert.equal(isCustomerReadThroughTicket(record, "cust-a"), true);
     assert.equal(isCustomerReadThroughTicket(record, "cust-b"), false);
 
-    const staffView = toPublicTicket(record, { id: "staff-1", role: "staff" }, "Line", {
+    const staffView = toPublicTicket(
+      record,
+      { id: "staff-1", email: "staff@spares.local", role: "staff" },
+      "Line",
+      {
       customerUsers: customers,
-    });
+      },
+    );
     assert.equal(staffView.customerReadReceipts?.length, 1);
     assert.equal(staffView.customerReadReceipts?.[0]?.email, "a@example.com");
 
-    const customerView = toPublicTicket(record, { id: "cust-a", role: "customer" }, "Line", {
+    const customerView = toPublicTicket(
+      record,
+      { id: "cust-a", email: "a@example.com", role: "customer" },
+      "Line",
+      {
       customerUsers: customers,
-    });
+      },
+    );
     assert.equal(customerView.customerReadReceipts, undefined);
   });
 });
