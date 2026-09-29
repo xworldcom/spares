@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useMachineName } from "@/components/nav/useMachineName";
+import { LoadingState } from "@/components/states/LoadingState";
 import { listMachines } from "@/lib/api/machines";
 import {
   workListAllHref,
@@ -63,6 +64,14 @@ export function WorkListScopeBar({
       cancelled = true;
     };
   }, [scoped]);
+
+  if (scoped && !machineName) {
+    return (
+      <div className="work-list-scope">
+        <LoadingState label="Loading…" />
+      </div>
+    );
+  }
 
   function onPickMachine(nextId: string) {
     if (!nextId) {

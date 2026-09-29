@@ -7,7 +7,13 @@ export function proxy(request: NextRequest) {
   if (stripCredentialSearchParams(url.searchParams)) {
     return NextResponse.redirect(url, 303);
   }
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const proxyConfig = {

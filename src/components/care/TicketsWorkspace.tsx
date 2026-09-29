@@ -21,6 +21,7 @@ import {
   ticketRefMatches,
 } from "@/lib/care";
 import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
+import { useMachineName } from "@/components/nav/useMachineName";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
 import type { ServiceTicket } from "@/types";
 
@@ -55,6 +56,11 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   const [creating, setCreating] = useState(false);
   const listHref = listHrefFor(scope, machineId);
   const showMachine = scope === "hub";
+  const machineName = useMachineName(
+    scope === "machine" ? (machineId ?? null) : null,
+  );
+  const machineIdentityPending =
+    scope === "machine" && Boolean(machineId) && !machineName;
 
   useEffect(() => {
     let cancelled = false;
@@ -153,7 +159,9 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
         />
       ) : null}
 
-      {loading && tickets.length === 0 ? (
+      {machineIdentityPending ? (
+        <LoadingState label="Loading…" />
+      ) : loading && tickets.length === 0 ? (
         <LoadingState label="Loading tickets…" />
       ) : error && tickets.length === 0 ? (
         <ErrorState

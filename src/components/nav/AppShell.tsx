@@ -9,7 +9,9 @@ import { BugReportControl } from "@/components/bug-report/BugReportControl";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { StaffMachinesDesktopNav } from "@/components/nav/MachinesNavMenu";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
+import { MachineRouteProvider } from "@/components/nav/MachineRouteContext";
 import { useMachineName } from "@/components/nav/useMachineName";
+import type { MachineNameSeed } from "@/lib/machine-name-cache";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
@@ -83,7 +85,13 @@ function NavLinkWithBadge({
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  machineBootstrap = null,
+}: {
+  children: React.ReactNode;
+  machineBootstrap?: MachineNameSeed | null;
+}) {
   const { status, user, logout } = useAuth();
   const { unreadCount: careUnreadCount } = useCareAlerts();
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
@@ -133,6 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <MachineRouteProvider bootstrap={machineBootstrap}>
     <div
       className={
         cinematic
@@ -162,7 +171,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span aria-hidden="true" className="spares-muted text-lg leading-none">
                   ‹
                 </span>
-                <span className="truncate">{machineName ?? "Machine"}</span>
+                {machineName ? (
+                  <span className="truncate">{machineName}</span>
+                ) : (
+                  <span className="spares-muted truncate text-sm" aria-hidden="true">
+                    …
+                  </span>
+                )}
               </Link>
               {machineStage ? (
                 <div className="hidden min-w-0 items-center gap-1 lg:flex">
@@ -320,5 +335,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       {showTabs ? <MobileTabBar /> : null}
     </div>
+    </MachineRouteProvider>
   );
 }
