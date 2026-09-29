@@ -1,7 +1,7 @@
 .inquire-page {
   margin: -1.25rem -1rem 0;
   min-height: calc(100dvh - var(--spares-header));
-  padding: 1.5rem 1.15rem calc(2.5rem + env(safe-area-inset-bottom, 0px));
+  padding: 1.5rem 1.15rem calc(2.5rem + env(safe-area-inset-bottom, 0px) + var(--inquire-keyboard, 0px));
   background: #000;
 }
 
@@ -65,14 +65,20 @@
   grid-column: 1 / -1;
 }
 
-.inquire-field .login-input,
-.inquire-field .inquire-select,
-.inquire-field .inquire-textarea {
+.inquire-form :is(input, select, textarea) {
   font-size: 16px;
+  scroll-margin-top: calc(var(--spares-header) + 0.5rem);
+  scroll-margin-bottom: 7.5rem;
 }
 
-.inquire-select {
+.inquire-field .inquire-select {
   appearance: none;
+  padding-right: 2.5rem;
+  background-color: #181a1e;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23eceae4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 0.75rem 0.5rem;
 }
 
 .inquire-textarea {
@@ -116,6 +122,11 @@
 }
 
 .inquire-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-inline: 0.15rem;
+  padding-inline: 0.2rem;
   color: rgba(236, 234, 228, 0.82);
   text-decoration: underline;
   text-underline-offset: 3px;
