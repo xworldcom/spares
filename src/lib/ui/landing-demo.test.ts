@@ -658,11 +658,11 @@ describe("workflow demo", () => {
     );
     assert.match(
       css,
-      /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*0/,
+      /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*5rem/,
     );
     assert.match(
       css,
-      /^\.landing-workflow \.quote-progress-step \{\n  flex: 1 1 0;\n  min-width: 0;/m,
+      /^\.landing-workflow \.quote-progress-step \{\n  flex: 0 0 5rem;\n  min-width: 5rem;/m,
     );
     assert.match(
       css,

@@ -782,8 +782,8 @@
   }
 
   .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-step {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 0 0 5rem;
+    min-width: 5rem;
   }
 
   .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-label-full {
@@ -979,6 +979,13 @@
 
 .landing-demo-stage .quote-progress-track {
   overflow-x: hidden;
+}
+
+.landing-workflow-request .quote-progress-track {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scroll-padding-inline: 0.75rem;
 }
 
 .landing-cell {
@@ -1639,8 +1646,8 @@
 }
 
 .landing-workflow .quote-progress-step {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 5rem;
+  min-width: 5rem;
 }
 
 .landing-workflow .quote-progress-label-full,
