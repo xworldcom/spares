@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
@@ -28,7 +27,6 @@ export function QuotesWorkspace({
   role?: Role;
   machineId?: string;
 }) {
-  const router = useRouter();
   const [creating, setCreating] = useState(false);
   const scoped = Boolean(machineId);
 
@@ -56,9 +54,8 @@ export function QuotesWorkspace({
         <NewQuoteForm
           role={role}
           initialMachineId={machineId}
-          onCreated={(href) => {
+          onCreated={() => {
             setCreating(false);
-            router.push(href);
           }}
           onCancel={() => setCreating(false)}
         />

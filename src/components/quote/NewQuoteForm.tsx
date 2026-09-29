@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
@@ -14,7 +15,7 @@ import { errorMessage } from "@/lib/api/errors";
 import { SearchableSelect } from "@/components/staff/SearchableSelect";
 import { grantFromUser, staffQuotePersonScope } from "@/lib/access";
 import { sitesForMachineCreate } from "@/lib/machines";
-import { quoteHref } from "@/lib/quotes";
+import { navigateToQuoteDetail } from "@/lib/nav/quote-request-nav";
 import { displayPersonName } from "@/lib/ui/display-name";
 import type { CustomerAccount, MachineSummary, PublicUser, Role, Site } from "@/types";
 
@@ -26,9 +27,10 @@ export function NewQuoteForm({
 }: {
   role?: Role;
   initialMachineId?: string;
-  onCreated: (href: string) => void;
+  onCreated?: () => void;
   onCancel: () => void;
 }) {
+  const router = useRouter();
   const { user } = useAuth();
   const [machines, setMachines] = useState<MachineSummary[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
@@ -151,7 +153,8 @@ export function NewQuoteForm({
         note: note.trim() || undefined,
         ...(staff ? { customerId: personId } : {}),
       });
-      onCreated(quoteHref(role, created));
+      navigateToQuoteDetail(router, role, created);
+      onCreated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not request that quote."));
       setBusy(false);
@@ -159,7 +162,10 @@ export function NewQuoteForm({
   }
 
   return (
-    <form className="care-card care-form" onSubmit={(event) => void onSubmit(event)}>
+    <form
+      className="care-card care-form quote-timeline-handoff-source"
+      onSubmit={(event) => void onSubmit(event)}
+    >
       <div className="care-card-head">
         <h2>New quote</h2>
         <button

@@ -302,42 +302,44 @@ export function QuoteWorkspace({
       data-quote-layout={desktop ? "split" : "stack"}
     >
       <div className="quote-workspace-main space-y-5">
-      <div>
-        {quote.machineId ? (
-          <div className="machine-context-embed">
-            <MachineContextNav
-              machineId={quote.machineId}
-              machineName={quote.machineName}
-              activeTab="quotes"
-            />
-          </div>
-        ) : null}
-        <Link
-          href={listHref}
-          className="spares-muted inline-flex h-11 items-center text-sm font-medium"
-        >
-          ← All quotes
-        </Link>
-        <h1 className="mt-2 text-[28px] font-semibold tracking-tight">
-          {quoteTitle(quote)}
-        </h1>
-        <p className="spares-muted mt-1 text-sm">
-          {formatDay(quote.createdAt)}
-          {role === "staff" ? ` · ${quote.customerEmail}` : ""}
-          {quote.note ? ` · ${quote.note}` : ""}
-        </p>
-      </div>
+      <div className="quote-timeline-handoff-dest space-y-5">
+        <div>
+          {quote.machineId ? (
+            <div className="machine-context-embed">
+              <MachineContextNav
+                machineId={quote.machineId}
+                machineName={quote.machineName}
+                activeTab="quotes"
+              />
+            </div>
+          ) : null}
+          <Link
+            href={listHref}
+            className="spares-muted inline-flex h-11 items-center text-sm font-medium"
+          >
+            ← All quotes
+          </Link>
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight">
+            {quoteTitle(quote)}
+          </h1>
+          <p className="spares-muted mt-1 text-sm">
+            {formatDay(quote.createdAt)}
+            {role === "staff" ? ` · ${quote.customerEmail}` : ""}
+            {quote.note ? ` · ${quote.note}` : ""}
+          </p>
+        </div>
 
-      <QuoteStatusStrip
-        status={displayStatus}
-        editable={role === "staff"}
-        pending={busy}
-        role={role}
-        onChange={(status: QuoteStatus) => {
-          setError(null);
-          setPendingStatus(status);
-        }}
-      />
+        <QuoteStatusStrip
+          status={displayStatus}
+          editable={role === "staff"}
+          pending={busy}
+          role={role}
+          onChange={(status: QuoteStatus) => {
+            setError(null);
+            setPendingStatus(status);
+          }}
+        />
+      </div>
       {role === "staff" && statusDirty ? (
         <button
           type="button"

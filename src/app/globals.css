@@ -1204,6 +1204,54 @@ html.spares-embed .spares-app-stage {
   transform-origin: center;
 }
 
+/* Quote request → timeline (View Transitions API shared element) */
+.quote-timeline-handoff-source {
+  view-transition-name: quote-timeline-handoff;
+}
+
+.quote-timeline-handoff-dest {
+  view-transition-name: quote-timeline-handoff;
+  contain: layout;
+}
+
+html.is-quote-timeline-handoff::view-transition-old(root),
+html.is-quote-timeline-handoff::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-group(quote-timeline-handoff) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-old(quote-timeline-handoff),
+::view-transition-new(quote-timeline-handoff) {
+  height: 100%;
+  overflow: clip;
+  border-radius: 22px;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(quote-timeline-handoff) {
+  animation: quote-timeline-handoff-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes quote-timeline-handoff-reveal {
+  from {
+    filter: brightness(0.94);
+  }
+  to {
+    filter: brightness(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-timeline-handoff-source,
+  .quote-timeline-handoff-dest {
+    view-transition-name: none;
+  }
+}
+
 .quote-progress {
   display: flex;
   flex-direction: column;
