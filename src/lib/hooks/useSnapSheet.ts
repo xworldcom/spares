@@ -160,6 +160,8 @@ export function useSnapSheet({
   const steppedAtRef = useRef(0);
 
   const controlledOpen = typeof onOpenChange === "function";
+  const openForUnreadRef = useRef(openForUnread);
+  openForUnreadRef.current = openForUnread;
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
@@ -205,12 +207,15 @@ export function useSnapSheet({
     if (!resetKey) {
       return;
     }
-    setSheet(initialConversationSheetSnap(open, desktopStage, openForUnread));
+    setSheet(
+      initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
+    );
     dockedRef.current = true;
     clearInlineHeight();
     setDragging(false);
     setDraggingClass(false);
-  }, [resetKey, open, desktopStage, openForUnread, cardRef]);
+    // Only when switching threads — not when unread clears after mark-read.
+  }, [resetKey, open, desktopStage, cardRef]);
 
   useEffect(() => {
     if (open) {
