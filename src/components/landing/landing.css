@@ -742,33 +742,6 @@
     box-shadow: none;
   }
 
-  .landing-demo-stage.landing-workflow .landing-workflow-hub {
-    position: absolute;
-    z-index: 6;
-    top: 0.75rem;
-    right: 0.75rem;
-    left: 0.75rem;
-    margin-bottom: 0;
-    gap: 0.65rem;
-    pointer-events: none;
-  }
-
-  .landing-demo-stage.landing-workflow .landing-workflow-tabs {
-    margin-left: auto;
-  }
-
-  .landing-demo-stage.landing-workflow .landing-workflow-hub::before {
-    pointer-events: none;
-    position: absolute;
-    z-index: -1;
-    top: -0.75rem;
-    right: -0.75rem;
-    left: -0.75rem;
-    height: 7.5rem;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.82), transparent);
-    content: "";
-  }
-
   .landing-demo-stage.landing-workflow .landing-workflow-stage {
     display: block;
     min-height: 0;
@@ -805,12 +778,22 @@
     border: 0;
     border-radius: 0;
     padding: 1.1rem 1.15rem 1.35rem;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.72) 0%,
-      rgba(8, 9, 11, 0.97) 22%,
-      rgba(8, 9, 11, 0.98) 100%
+    background: radial-gradient(
+      ellipse 42rem 78% at 50% 58%,
+      rgba(8, 9, 11, 0.9) 0%,
+      rgba(8, 9, 11, 0.62) 42%,
+      rgba(8, 9, 11, 0.22) 100%
     );
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-step {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-label-full {
+    max-width: 100%;
+    font-size: 12px;
   }
 
   .landing-demo-stage.landing-workflow .landing-workflow-request-head {
@@ -1153,47 +1136,6 @@
   inset: 0;
 }
 
-.landing-workflow-hub {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
-}
-
-@media (min-width: 900px) {
-  .landing-workflow-hub {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1.25rem;
-  }
-}
-
-.landing-workflow-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.landing-workflow-tab {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  padding: 0 0.65rem;
-  border-radius: 999px;
-  border: 1px solid rgba(236, 234, 228, 0.12);
-  color: rgba(236, 234, 228, 0.48);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-.landing-workflow-tab.is-active {
-  border-color: rgba(236, 234, 228, 0.28);
-  background: rgba(236, 234, 228, 0.08);
-  color: rgba(236, 234, 228, 0.92);
-}
-
 .landing-demo-stage.landing-workflow {
   --wf-handoff: 0;
 }
@@ -1303,9 +1245,8 @@
 .landing-workflow-model-panel {
   position: relative;
   min-height: 17rem;
-  transform: translate3d(calc(-122% * var(--wf-handoff)), 0, 0)
-    scale(calc(1 - var(--wf-handoff) * 0.08));
-  opacity: calc(1 - var(--wf-handoff) * 0.98);
+  transform: scale(calc(1 - var(--wf-handoff) * 0.04));
+  opacity: calc(1 - var(--wf-handoff) * 0.5);
 }
 
 .landing-workflow-model {
@@ -1571,15 +1512,18 @@
   padding: 1rem 1.05rem 1.15rem;
   border-radius: 1.15rem;
   border: 1px solid rgba(236, 234, 228, 0.12);
-  background: rgba(8, 9, 11, 0.98);
+  background: linear-gradient(
+    180deg,
+    rgba(8, 9, 11, 0.28) 0%,
+    rgba(8, 9, 11, 0.72) 32%,
+    rgba(8, 9, 11, 0.84) 100%
+  );
   opacity: 0;
-  transform: translate3d(14%, 0, 0);
   pointer-events: none;
 }
 
 .landing-workflow-request.is-visible {
   opacity: clamp(0, var(--wf-handoff) * 1.05, 1);
-  transform: translate3d(calc(14% * (1 - var(--wf-handoff))), 0, 0);
 }
 
 .landing-workflow-request .landing-workflow-thread {

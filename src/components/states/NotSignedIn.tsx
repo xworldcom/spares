@@ -14,12 +14,20 @@ export function NotSignedIn() {
       <p className="mt-1 text-sm text-[#e8c27a]">
         Invite-only. Sign in to continue.
       </p>
-      <Link
-        href={href}
-        className="btn-primary mt-3 inline-flex rounded-full px-4 py-2 text-sm font-medium"
-      >
-        Sign in
-      </Link>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          href={href}
+          className="btn-primary inline-flex rounded-full px-4 py-2 text-sm font-medium"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/inquire"
+          className="btn-soft inline-flex rounded-full px-4 py-2 text-sm font-medium"
+        >
+          Request access
+        </Link>
+      </div>
     </div>
   );
 }

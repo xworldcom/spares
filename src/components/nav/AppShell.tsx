@@ -269,7 +269,7 @@ export function AppShell({
                 />
               )}
             </nav>
-          ) : onLogin && !signedIn ? (
+          ) : !signedIn && pathname !== "/inquire" ? (
             <nav className="ml-auto flex shrink-0 items-center gap-1" aria-label="Public">
               <Link
                 href="/inquire"
@@ -297,7 +297,7 @@ export function AppShell({
               >
                 Sign out
               </button>
-            ) : cinematic ? null : (
+            ) : cinematic || pathname === "/login" ? null : (
               <Link
                 href="/login"
                 className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
