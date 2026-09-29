@@ -31,7 +31,6 @@ import {
   workflowHandoffMix,
   workflowHighlightPartId,
   workflowMeshNameMatchesPart,
-  workflowHubVisible,
   workflowIntroFade,
   workflowQuoteChatPlayhead,
   workflowScrubPlayhead,
@@ -640,20 +639,26 @@ describe("workflow demo", () => {
     assert.match(css, /\.landing-workflow-request\s*\{[^}]*overflow:\s*clip/);
   });
 
-  it("drops hub chrome at select so the part sheet does not ghost", () => {
+  it("drops hub pills and keeps the model in frame through handoff", () => {
     const demo = readFileSync("src/components/landing/LandingWorkflowDemo.tsx", "utf8");
-    assert.match(demo, /workflowHubVisible\(step\)/);
-    assert.equal(workflowHubVisible("hub"), true);
-    assert.equal(workflowHubVisible("find"), true);
-    assert.equal(workflowHubVisible("select"), false);
-    assert.equal(workflowHubVisible("quote"), false);
-    assert.equal(workflowHubVisible("send"), false);
-    assert.equal(workflowHubVisible("handoff"), false);
+    assert.doesNotMatch(demo, /landing-workflow-tab/);
+    assert.doesNotMatch(demo, /HUB_TABS/);
     assert.ok(workflowIntroFade(0) > 0.9);
     assert.equal(workflowIntroFade(WORKFLOW_SELECT_START), 0);
     const marketing = readFileSync("src/components/landing/LandingMarketing.tsx", "utf8");
     assert.match(marketing, /workflowIntroFade/);
     assert.match(marketing, /introFade > 0\.08/);
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.doesNotMatch(css, /-122%/);
+    assert.doesNotMatch(css, /translate3d\(14%/);
+    assert.match(
+      css,
+      /\.landing-workflow-model-panel\s*\{[^}]*opacity:\s*calc\(1 - var\(--wf-handoff\) \* 0\.5\)/,
+    );
+    assert.match(
+      css,
+      /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*0/,
+    );
   });
 });
 

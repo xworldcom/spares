@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
     // Multipart fallback only. Large GLBs go client → Blob and never hit this.
     proxyClientMaxBodySize: "100mb",
   },
+  async redirects() {
+    return [
+      {
+        source: "/request",
+        destination: "/inquire",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

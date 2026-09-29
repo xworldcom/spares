@@ -714,10 +714,6 @@ export function workflowStep(playhead: number): WorkflowStep {
   return "hub";
 }
 
-export function workflowHubVisible(step: WorkflowStep) {
-  return step === "hub" || step === "find";
-}
-
 export function workflowIntroFade(playhead: number) {
   const p = clampDemoScrollProgress(playhead);
   if (p >= WORKFLOW_SELECT_START) {
@@ -726,7 +722,7 @@ export function workflowIntroFade(playhead: number) {
   return clampDemoScrollProgress(1 - p / WORKFLOW_SELECT_START);
 }
 
-/** 0–1 mix for sliding the model out into the quote thread view. */
+/** 0–1 mix for fading the model behind the quote thread. */
 export function workflowHandoffMix(playhead: number) {
   const p = clampDemoScrollProgress(playhead);
   if (p <= WORKFLOW_HANDOFF_START) {

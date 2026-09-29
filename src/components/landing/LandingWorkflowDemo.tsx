@@ -20,7 +20,6 @@ import {
   workflowGuideCue,
   workflowHandoffMix,
   workflowHighlightPartId,
-  workflowHubVisible,
   workflowQuoteChatPlayhead,
   workflowScrubPlayhead,
   workflowSpinYaw,
@@ -28,14 +27,6 @@ import {
   type WorkflowStageAnchors,
   type WorkflowStagePoint,
 } from "@/lib/ui/landing-demo";
-
-const HUB_TABS = [
-  { id: "parts", label: "Parts", active: true },
-  { id: "quotes", label: "Quotes", active: false },
-  { id: "tickets", label: "Tickets", active: false },
-  { id: "manuals", label: "Manuals", active: false },
-  { id: "service", label: "Service reports", active: false },
-] as const;
 
 export function LandingWorkflowDemo({
   progress,
@@ -81,7 +72,6 @@ export function LandingWorkflowDemo({
   const showPartSheet = step === "select";
   const showQuoteSheet = step === "quote" || step === "send";
   const showThreadView = handoff > 0.02;
-  const showHubChrome = workflowHubVisible(step);
   const highlightPartId = workflowHighlightPartId(step);
   const guideTarget = workflowGuideCue(playhead).target;
   const anchorRef = useRef<WorkflowStageAnchors>({ machine: null, part: null });
@@ -110,22 +100,6 @@ export function LandingWorkflowDemo({
       data-step={step}
       style={{ "--wf-handoff": handoff } as CSSProperties}
     >
-      {showHubChrome ? (
-        <header className="landing-workflow-hub">
-          <nav className="landing-workflow-tabs" aria-label="Machine">
-            {HUB_TABS.map((tab) => (
-              <span
-                key={tab.id}
-                className={tab.active ? "landing-workflow-tab is-active" : "landing-workflow-tab"}
-                aria-current={tab.active ? "page" : undefined}
-              >
-                {tab.label}
-              </span>
-            ))}
-          </nav>
-        </header>
-      ) : null}
-
       <div
         className={[
           "landing-workflow-stage",
