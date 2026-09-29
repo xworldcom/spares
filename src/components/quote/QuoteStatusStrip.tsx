@@ -28,7 +28,14 @@ export function QuoteStatusStrip({
   const trackRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
-    scrollCurrentInTrack(trackRef.current);
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    const run = () => scrollCurrentInTrack(track);
+    run();
+    const id = requestAnimationFrame(run);
+    return () => cancelAnimationFrame(id);
   }, [status]);
 
   return (

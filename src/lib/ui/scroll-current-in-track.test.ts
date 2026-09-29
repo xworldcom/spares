@@ -16,6 +16,7 @@ test("scrollCurrentInTrack centers the current step on the track", () => {
   const current = { offsetLeft: 200, offsetWidth: 40 };
   const track = {
     clientWidth: 120,
+    scrollWidth: 400,
     querySelector: () => current,
     scrollTo: (opts: { left: number; behavior: string }) => {
       calls.push(opts);
