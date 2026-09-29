@@ -646,6 +646,46 @@
   .landing-demo-scrub-pin {
     pointer-events: none;
   }
+
+  .landing-cell .landing-stage--interactive,
+  .landing-cell .landing-stage--interactive * {
+    touch-action: pan-y !important;
+  }
+
+  .landing-scroll .landing-hero {
+    max-height: calc(100dvh - var(--spares-header));
+    overflow: hidden;
+  }
+
+  .landing-scroll .landing-copy {
+    padding-bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .landing-kicker {
+    margin-bottom: 0.4rem;
+  }
+
+  .landing-lede {
+    margin-top: 0.65rem;
+  }
+
+  .landing-panel .login-form {
+    margin-top: 1rem;
+  }
+
+  .landing-scroll .landing-scroll-peek {
+    position: absolute;
+    left: 50%;
+    bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px));
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    margin: 0;
+    transform: translateX(-50%);
+  }
 }
 
 .landing-demo-scrub[data-reduce-motion] .landing-demo-thread {
