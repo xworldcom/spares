@@ -45,8 +45,10 @@ export function LandingScreen({
         <div className="landing-veil" />
         <div className="landing-copy">
           <div className="landing-panel">
-            <BrandMark size="hero" className="landing-wordmark" />
-            <p className="landing-lede">Spare parts and machine care. Invite-only.</p>
+            <div className="landing-hero-copy">
+              <BrandMark size="hero" className="landing-wordmark" />
+              <p className="landing-lede">Spare parts and machine care. Invite-only.</p>
+            </div>
             <LoginForm
               nextPath={nextPath}
               microsoftSignInEnabled={microsoftSignInEnabled}

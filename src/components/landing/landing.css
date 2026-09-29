@@ -1675,6 +1675,79 @@
   font-size: 13px;
 }
 
+.landing-hero-copy {
+  display: contents;
+}
+
+@media (max-height: 520px) and (min-width: 700px) {
+  .landing-copy {
+    justify-content: center;
+    min-height: 0;
+    padding: 3.1rem 1.15rem 0.5rem;
+  }
+
+  .landing-screen,
+  .spares-app-cinematic .landing-hero,
+  .spares-app-cinematic .landing-screen {
+    min-height: 0;
+  }
+
+  .landing-panel {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    width: min(54rem, 100%);
+  }
+
+  .landing-hero-copy {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .landing-kicker,
+  .landing-scroll-peek {
+    display: none;
+  }
+
+  .landing-wordmark span {
+    font-size: 2.7rem;
+    line-height: 0.9;
+  }
+
+  .landing-lede {
+    margin-top: 0.55rem;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .landing-panel .login-form {
+    width: min(20rem, 42vw);
+    flex: 0 0 auto;
+    margin-top: 0;
+    row-gap: 0.35rem;
+  }
+
+  .landing-panel .login-form.space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  .landing-panel .login-divider,
+  .landing-panel .login-footnote {
+    display: none;
+  }
+
+  .landing-panel .login-input,
+  .landing-panel .login-submit,
+  .landing-panel .login-microsoft {
+    height: 2.5rem;
+  }
+
+  .landing-panel .login-input {
+    margin-top: 0.15rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-scroll-peek-chevron {
     animation: none;
