@@ -397,6 +397,7 @@ describe("landing scrub layout", () => {
 describe("landing cell stage", () => {
   it("reuses the machine viewer floor grid in marketing OrbitStage", () => {
     const orbit = readFileSync("src/components/landing/OrbitStage.tsx", "utf8");
+    assert.match(orbit, /enableZoom=\{false\}/);
     assert.match(orbit, /StudioGround/);
     assert.doesNotMatch(orbit, /<Grid/);
     const ground = readFileSync("src/components/viewer/StudioGround.tsx", "utf8");
