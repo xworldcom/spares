@@ -247,7 +247,7 @@ export function OrbitStage({
         {interactive ? (
           <OrbitControls
             enablePan={false}
-            enableZoom
+            enableZoom={false}
             minDistance={2.8}
             maxDistance={7.2}
             autoRotate={false}
