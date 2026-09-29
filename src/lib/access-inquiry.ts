@@ -72,6 +72,73 @@ function normalizeCustomerType(raw: unknown): AccessInquiryCustomerType | null {
     : null;
 }
 
+export const ACCESS_INQUIRY_FIELDS = [
+  "fullName",
+  "workEmail",
+  "phone",
+  "companyName",
+  "roleTitle",
+  "customerType",
+  "message",
+] as const;
+
+export type AccessInquiryField = (typeof ACCESS_INQUIRY_FIELDS)[number];
+
+const ACCESS_INQUIRY_FIELD_MESSAGES: Record<AccessInquiryField, string> = {
+  fullName: "Full name is required",
+  workEmail: "A valid work email is required",
+  phone: "Phone number is required",
+  companyName: "Company name is required",
+  roleTitle: "Role or title is required",
+  customerType: "Select what best describes your organization",
+  message: "Tell us what you are looking for",
+};
+
+/** Every invalid required field, not only the first one the API would return. */
+export function accessInquiryFieldErrors(input: {
+  fullName: string;
+  workEmail: string;
+  phone: string;
+  companyName: string;
+  roleTitle: string;
+  customerType: string;
+  message: string;
+}): Partial<Record<AccessInquiryField, string>> {
+  const errors: Partial<Record<AccessInquiryField, string>> = {};
+  if (!input.fullName.trim()) {
+    errors.fullName = ACCESS_INQUIRY_FIELD_MESSAGES.fullName;
+  }
+  const email = input.workEmail.trim();
+  if (!email || !EMAIL_RE.test(email)) {
+    errors.workEmail = ACCESS_INQUIRY_FIELD_MESSAGES.workEmail;
+  }
+  if (!input.phone.trim()) {
+    errors.phone = ACCESS_INQUIRY_FIELD_MESSAGES.phone;
+  }
+  if (!input.companyName.trim()) {
+    errors.companyName = ACCESS_INQUIRY_FIELD_MESSAGES.companyName;
+  }
+  if (!input.roleTitle.trim()) {
+    errors.roleTitle = ACCESS_INQUIRY_FIELD_MESSAGES.roleTitle;
+  }
+  if (!normalizeCustomerType(input.customerType)) {
+    errors.customerType = ACCESS_INQUIRY_FIELD_MESSAGES.customerType;
+  }
+  if (!input.message.trim()) {
+    errors.message = ACCESS_INQUIRY_FIELD_MESSAGES.message;
+  }
+  return errors;
+}
+
+export function accessInquiryFieldForMessage(message: string): AccessInquiryField | null {
+  for (const field of ACCESS_INQUIRY_FIELDS) {
+    if (ACCESS_INQUIRY_FIELD_MESSAGES[field] === message) {
+      return field;
+    }
+  }
+  return null;
+}
+
 export function parseAccessInquiryBody(body: unknown): ParseResult {
   if (!body || typeof body !== "object") {
     return { ok: false, message: "Invalid request body", status: 400 };
@@ -107,26 +174,23 @@ export function parseAccessInquiryBody(body: unknown): ParseResult {
       : "";
   const customerType = normalizeCustomerType(record.customerType);
 
-  if (!fullName) {
-    return { ok: false, message: "Full name is required", status: 400 };
-  }
-  if (!workEmail || !EMAIL_RE.test(workEmail)) {
-    return { ok: false, message: "A valid work email is required", status: 400 };
-  }
-  if (!phone) {
-    return { ok: false, message: "Phone number is required", status: 400 };
-  }
-  if (!companyName) {
-    return { ok: false, message: "Company name is required", status: 400 };
-  }
-  if (!roleTitle) {
-    return { ok: false, message: "Role or title is required", status: 400 };
+  const fieldErrors = accessInquiryFieldErrors({
+    fullName,
+    workEmail,
+    phone,
+    companyName,
+    roleTitle,
+    customerType: customerType ?? "",
+    message,
+  });
+  for (const field of ACCESS_INQUIRY_FIELDS) {
+    const fieldMessage = fieldErrors[field];
+    if (fieldMessage) {
+      return { ok: false, message: fieldMessage, status: 400 };
+    }
   }
   if (!customerType) {
     return { ok: false, message: "Select what best describes your organization", status: 400 };
-  }
-  if (!message) {
-    return { ok: false, message: "Tell us what you are looking for", status: 400 };
   }
 
   return {
