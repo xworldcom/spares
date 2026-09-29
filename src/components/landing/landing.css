@@ -706,6 +706,10 @@
     pointer-events: none;
   }
 
+  .landing-demo-stage.landing-workflow .landing-workflow-tabs {
+    margin-left: auto;
+  }
+
   .landing-demo-stage.landing-workflow .landing-workflow-hub::before {
     pointer-events: none;
     position: absolute;
@@ -1364,9 +1368,13 @@
 
 .landing-workflow-add {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
   min-height: 2.25rem;
-  padding: 0 0.85rem;
+  padding: 0 0.15rem;
   font-size: 13px;
+  font-weight: 600;
+  color: #0a84ff;
   pointer-events: none;
 }
 
@@ -1493,17 +1501,15 @@
 
 .landing-workflow-request-quote {
   margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  min-height: 2.85rem;
-  border: 0;
-  border-radius: 999px;
+  min-height: 2.25rem;
   font-size: 15px;
   font-weight: 600;
+  color: #0a84ff;
   pointer-events: none;
-}
-
-.landing-workflow-quote-sheet.is-send .landing-workflow-request-quote {
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.35);
 }
 
 .landing-workflow-request {
