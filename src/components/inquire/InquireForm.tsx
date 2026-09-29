@@ -6,7 +6,11 @@ import { apiFetch } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/errors";
 import {
   ACCESS_INQUIRY_CUSTOMER_TYPES,
+  ACCESS_INQUIRY_FIELDS,
   accessInquiryCustomerTypeLabel,
+  accessInquiryFieldErrors,
+  accessInquiryFieldForMessage,
+  type AccessInquiryField,
 } from "@/lib/access-inquiry";
 
 type FormState = {
@@ -22,6 +26,17 @@ type FormState = {
   referralNotes: string;
   company_fax: string;
 };
+
+function FieldError({ name, message }: { name: AccessInquiryField; message?: string }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <span id={`inquire-${name}-error`} className="inquire-field-error">
+      {message}
+    </span>
+  );
+}
 
 const INITIAL: FormState = {
   fullName: "",
@@ -41,16 +56,47 @@ export function InquireForm() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<AccessInquiryField, string>>>({});
   const [success, setSuccess] = useState<string | null>(null);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    if (!ACCESS_INQUIRY_FIELDS.includes(key as AccessInquiryField)) {
+      return;
+    }
+    setFieldErrors((prev) => {
+      if (!prev[key as AccessInquiryField]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[key as AccessInquiryField];
+      return next;
+    });
+  }
+
+  function invalidProps(name: AccessInquiryField) {
+    const message = fieldErrors[name];
+    return {
+      id: `inquire-${name}`,
+      "aria-invalid": message ? (true as const) : undefined,
+      "aria-describedby": message ? `inquire-${name}-error` : undefined,
+    };
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    const invalid = accessInquiryFieldErrors(form);
+    const firstInvalid = ACCESS_INQUIRY_FIELDS.find((field) => invalid[field]);
+    if (firstInvalid) {
+      setFieldErrors(invalid);
+      setError("Check the highlighted fields.");
+      setBusy(false);
+      document.getElementById(`inquire-${firstInvalid}`)?.focus();
+      return;
+    }
+    setFieldErrors({});
     try {
       const response = await apiFetch<{ ok: boolean; message?: string }>("/api/inquiries", {
         method: "POST",
@@ -60,7 +106,10 @@ export function InquireForm() {
       setSuccess(response.message ?? "Inquiry received.");
       setForm(INITIAL);
     } catch (cause) {
-      setError(errorMessage(cause, "Could not send inquiry. Try again."));
+      const message = errorMessage(cause, "Could not send inquiry. Try again.");
+      setError(message);
+      const field = accessInquiryFieldForMessage(message);
+      setFieldErrors(field ? { [field]: message } : {});
     } finally {
       setBusy(false);
     }
@@ -94,9 +143,11 @@ export function InquireForm() {
             className="login-input"
             autoComplete="name"
             required
+            {...invalidProps("fullName")}
             value={form.fullName}
             onChange={(event) => update("fullName", event.target.value)}
           />
+          <FieldError name="fullName" message={fieldErrors.fullName} />
         </label>
         <label className="inquire-field">
           <span>Work email</span>
@@ -105,9 +156,11 @@ export function InquireForm() {
             type="email"
             autoComplete="email"
             required
+            {...invalidProps("workEmail")}
             value={form.workEmail}
             onChange={(event) => update("workEmail", event.target.value)}
           />
+          <FieldError name="workEmail" message={fieldErrors.workEmail} />
         </label>
         <label className="inquire-field">
           <span>Phone</span>
@@ -116,9 +169,11 @@ export function InquireForm() {
             type="tel"
             autoComplete="tel"
             required
+            {...invalidProps("phone")}
             value={form.phone}
             onChange={(event) => update("phone", event.target.value)}
           />
+          <FieldError name="phone" message={fieldErrors.phone} />
         </label>
         <label className="inquire-field">
           <span>Role</span>
@@ -126,9 +181,11 @@ export function InquireForm() {
             className="login-input"
             autoComplete="organization-title"
             required
+            {...invalidProps("roleTitle")}
             value={form.roleTitle}
             onChange={(event) => update("roleTitle", event.target.value)}
           />
+          <FieldError name="roleTitle" message={fieldErrors.roleTitle} />
         </label>
         <label className="inquire-field inquire-field--wide">
           <span>Company</span>
@@ -136,9 +193,11 @@ export function InquireForm() {
             className="login-input"
             autoComplete="organization"
             required
+            {...invalidProps("companyName")}
             value={form.companyName}
             onChange={(event) => update("companyName", event.target.value)}
           />
+          <FieldError name="companyName" message={fieldErrors.companyName} />
         </label>
         <label className="inquire-field">
           <span>Company website</span>
@@ -165,6 +224,7 @@ export function InquireForm() {
           <select
             className="login-input inquire-select"
             required
+            {...invalidProps("customerType")}
             value={form.customerType}
             onChange={(event) =>
               update(
@@ -182,6 +242,7 @@ export function InquireForm() {
               </option>
             ))}
           </select>
+          <FieldError name="customerType" message={fieldErrors.customerType} />
         </label>
         <label className="inquire-field inquire-field--wide">
           <span>What do you need?</span>
@@ -189,9 +250,11 @@ export function InquireForm() {
             className="login-input inquire-textarea"
             required
             rows={4}
+            {...invalidProps("message")}
             value={form.message}
             onChange={(event) => update("message", event.target.value)}
           />
+          <FieldError name="message" message={fieldErrors.message} />
         </label>
         <label className="inquire-field inquire-field--wide">
           <span>Referral (optional)</span>

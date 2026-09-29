@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  accessInquiryFieldErrors,
   parseAccessInquiryBody,
   parseAccessInquiryStatusUpdate,
 } from "./access-inquiry.ts";
@@ -13,6 +14,21 @@ describe("parseAccessInquiryBody", () => {
       return;
     }
     assert.equal(result.status, 400);
+    assert.equal(result.message, "Full name is required");
+    const fields = accessInquiryFieldErrors({
+      fullName: "",
+      workEmail: "not-an-email",
+      phone: "",
+      companyName: "",
+      roleTitle: "",
+      customerType: "",
+      message: "",
+    });
+    assert.equal(fields.fullName, "Full name is required");
+    assert.equal(fields.workEmail, "A valid work email is required");
+    assert.equal(fields.phone, "Phone number is required");
+    assert.equal(fields.customerType, "Select what best describes your organization");
+    assert.equal(fields.message, "Tell us what you are looking for");
   });
 
   it("rejects honeypot submissions", () => {
