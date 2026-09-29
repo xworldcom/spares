@@ -372,6 +372,14 @@ describe("landing scrub layout", () => {
     assert.match(critical, /\.spares-app-cinematic\{[^}]*overflow-y:visible/);
     assert.match(critical, /html:has\(\.spares-app-cinematic\)[^\{]*\{[^}]*scrollbar-width:none/);
   });
+
+  it("offsets landing anchors by the sticky header", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    assert.match(
+      css,
+      /\.landing-marketing > \.landing-section\[id\]\s*\{[^}]*scroll-margin-top:\s*var\(--spares-header\)/,
+    );
+  });
 });
 
 describe("landing cell stage", () => {
