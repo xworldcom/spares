@@ -44,21 +44,14 @@ export function LandingMarketing() {
       </section>
 
       <section id="machine-model" className="landing-section landing-section--cell">
-        <p className="landing-section-kicker">Machine model</p>
-        <h2 className="landing-section-title">Parts on the published schematic.</h2>
-        <p className="landing-section-lede">
-          The same GLB your OEM published — quotes, tickets, manuals, and service
-          history stay on this machine, not in a separate portal.
-        </p>
+        <h2 className="landing-section-title">Parts on the schematic.</h2>
         <LandingCell />
       </section>
 
       <section id="cad-ingest" className="landing-section landing-section--ingest">
-        <p className="landing-section-kicker">SolidWorks &amp; CAD</p>
         <h2 className="landing-section-title">Assembly packs beside your .sldasm.</h2>
         <p className="landing-section-lede">
-          The Spares macro writes a GLB and parts list next to the assembly. Staff
-          publish once; plants quote against that output on the floor.
+          The Spares macro writes a GLB and a parts list next to the assembly.
         </p>
         <ul className="landing-ingest-formats" aria-label="Supported upload formats">
           <li className="landing-ingest-pill">.sldasm</li>
@@ -66,23 +59,14 @@ export function LandingMarketing() {
           <li className="landing-ingest-pill">.glb</li>
           <li className="landing-ingest-pill">Spares macro pack</li>
         </ul>
-        <p className="landing-ingest-note">
-          Upload path matches staff publish — one schematic for parts and care.
-        </p>
       </section>
 
       <section className="landing-section landing-section--cta">
         <h2 className="landing-section-title">Request access</h2>
-        <p className="landing-section-lede">
-          Invite-only for plants and OEM partners on palletizers, case packers, and
-          similar cells. Share your machines; we review each inquiry. No public signup.
-        </p>
         <Link href="/inquire" className="landing-cta">
-          Inquire about OEE360
+          Request access
         </Link>
-        <p className="landing-section-foot">
-          Already have a login? Sign in above with password or Microsoft SSO.
-        </p>
+        <p className="landing-section-foot">Already have a login? Sign in above.</p>
       </section>
     </div>
   );

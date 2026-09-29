@@ -79,7 +79,6 @@ export function CreatePersonForm({
     >
       <div className="catalog-create-copy">
         <h2>New person</h2>
-        <p>Customer login — pick a customer, then site(s), then machine(s).</p>
       </div>
       <div className="catalog-create-grid">
         <div>
@@ -150,7 +149,7 @@ export function CreatePersonForm({
       ) : null}
       {createdEmail ? (
         <p className="text-sm text-[#8ee0a8]" role="status">
-          Created {createdEmail}. They can sign in on the same login screen.
+          Created {createdEmail}. They sign in on the same login screen.
         </p>
       ) : null}
       <div className="catalog-create-actions">

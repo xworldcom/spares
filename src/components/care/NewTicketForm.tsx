@@ -113,9 +113,6 @@ export function NewTicketForm({
           Cancel
         </button>
       </div>
-      <p className="spares-muted text-sm leading-relaxed">
-        Tell staff what is happening. They will update status and write back here.
-      </p>
       {showMachinePicker ? (
         <MachineTypeahead
           machines={machines}

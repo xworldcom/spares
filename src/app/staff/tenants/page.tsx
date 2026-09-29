@@ -125,7 +125,7 @@ function PlatformTenants() {
     return (
       <main className="page-shell">
         <h1 className="page-title">Host companies</h1>
-        <p className="text-muted">Platform owner access is required to manage host tenants.</p>
+        <p className="text-muted">Platform owner access is required.</p>
       </main>
     );
   }
@@ -142,8 +142,7 @@ function PlatformTenants() {
       </p>
       <h1 className="page-title">New host</h1>
       <p className="text-muted mb-6">
-        Create automation-company tenants on the shared OEE360 platform. Existing Soft Launch →{" "}
-        <code>{hostTenant}</code> (
+        Adds a host. Soft Launch is <code>{hostTenant}</code> (
         <code className="text-xs">{DEFAULT_TENANT_ID}</code>).
       </p>
 
@@ -168,8 +167,7 @@ function PlatformTenants() {
             autoComplete="off"
           />
           <p className="spares-muted text-sm">
-            Company work domain for this host. Comma-separate extras (shape.com,
-            shapetech.com).
+            Work domain. Separate extras with commas.
           </p>
         </label>
         <label className="stack gap-1">
@@ -183,8 +181,7 @@ function PlatformTenants() {
             spellCheck={false}
           />
           <p className="spares-muted text-sm">
-            From Microsoft Entra admin center, Overview, Tenant ID. Autoroute needs both a
-            domain and a tenant ID.
+            Entra admin center, Overview, Tenant ID. Autoroute needs a domain and a tenant ID.
           </p>
         </label>
         <SsoAutorouteSelector value={ssoAutoroute} onChange={setSsoAutoroute} />

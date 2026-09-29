@@ -207,7 +207,7 @@ function PlatformDirectory() {
     return (
       <main className="page-shell">
         <h1 className="page-title">Directory</h1>
-        <p className="text-muted">Platform owner access is required to browse the directory.</p>
+        <p className="text-muted">Platform owner access is required.</p>
       </main>
     );
   }
@@ -282,10 +282,6 @@ function PlatformDirectory() {
     <main className="page-shell">
       <div className="mb-6">
         <h1 className="page-title">Directory</h1>
-        <p className="text-muted mt-1 max-w-2xl">
-          Find anything across every host install — hosts, staff logins, customer companies, and
-          people. Open any row to view or edit that record.
-        </p>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -384,10 +380,6 @@ function PlatformDirectory() {
         <form onSubmit={(event) => void handleCreateCustomer(event)} className="catalog-create mb-6">
           <div className="catalog-create-copy">
             <h2 className="text-lg font-semibold">New customer company</h2>
-            <p className="text-sm text-muted">
-              Creates a corporate account on your active host session. Open it from the directory
-              to add sites and assign people.
-            </p>
           </div>
           <label className="block max-w-md">
             <span className="text-sm font-medium">Company name</span>

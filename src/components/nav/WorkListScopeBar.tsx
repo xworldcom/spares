@@ -26,7 +26,7 @@ export function WorkListScopeBar({
   machineId?: string;
   role?: Role;
   headingLevel?: "h1" | "h2";
-  lede: string;
+  lede?: string;
   action?: ReactNode;
 }) {
   const router = useRouter();
@@ -81,7 +81,7 @@ export function WorkListScopeBar({
       <div className="work-list-scope-row">
         <div className="work-list-scope-copy">
           <Heading>{title}</Heading>
-          <p className="work-list-scope-lede">{lede}</p>
+          {lede ? <p className="work-list-scope-lede">{lede}</p> : null}
           {!scoped ? (
             <label className="work-list-scope-filter">
               <select

@@ -55,7 +55,7 @@ export function ServiceVisitDetail({
         </div>
       ) : (
         <p className="spares-muted text-sm leading-relaxed">
-          Visit details were not stored for this entry. See the summary below.
+          No stored details for this visit. See the summary below.
         </p>
       )}
 

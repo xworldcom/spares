@@ -82,7 +82,7 @@ export function PlatformInquiriesList() {
     return (
       <EmptyState
         title="Platform owner only"
-        message="Access inquiries are reviewed by the platform owner."
+        message="Platform owner access is required."
       />
     );
   }
@@ -128,7 +128,7 @@ export function PlatformInquiriesList() {
       {filtered.length === 0 ? (
         <EmptyState
           title="No inquiries yet"
-          message="When someone submits the public Request access form, it will appear here for review."
+          message="Request-access forms show up here."
         />
       ) : (
         <div className="overflow-x-auto rounded-[20px] border border-white/8">

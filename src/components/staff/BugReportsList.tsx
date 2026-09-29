@@ -66,7 +66,7 @@ export function BugReportsList() {
     return (
       <EmptyState
         title="No bug reports"
-        message="When someone taps Report bug, the screenshot and note will show up here if GitHub delivery is unavailable."
+        message="Reports land here when GitHub delivery fails."
       />
     );
   }

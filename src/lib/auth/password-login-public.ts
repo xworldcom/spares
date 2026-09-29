@@ -6,9 +6,8 @@ export const PASSWORD_LOGIN_DISABLED_MESSAGE =
 export const PASSWORD_LOGIN_DISABLED_CODE = "password_login_disabled";
 
 export const PASSWORD_LOGIN_UNAVAILABLE_MESSAGE =
-  "Sign-in is unavailable right now. Contact your platform admin to enable Microsoft SSO or password sign-in.";
+  "Sign-in is unavailable. Ask your admin to turn on Microsoft or passwords.";
 
-/** Maps sign-in flags passed from the server into login UI state. */
 export function loginSurfaceFlags(options: {
   passwordLoginEnabled: boolean;
   microsoftSignInEnabled: boolean;

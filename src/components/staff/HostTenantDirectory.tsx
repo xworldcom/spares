@@ -122,10 +122,6 @@ export function HostTenantDirectory() {
     <main className="page-shell">
       <div className="mb-6">
         <h1 className="page-title">Directory</h1>
-        <p className="text-muted mt-1 max-w-2xl">
-          Customer companies, staff logins, and customer people for this install. Open any row to
-          view or edit that record.
-        </p>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-3">

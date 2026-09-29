@@ -162,8 +162,7 @@ export function PlatformInquiryDetail() {
           </select>
         </label>
         <p className="spares-muted mt-3 text-sm">
-          Updating status does not create logins or send email — it is a calm queue for platform
-          review.
+          Status does not create logins or send email.
         </p>
       </div>
     </div>

@@ -95,10 +95,10 @@ export function QuotesList({
         title={role === "staff" ? "No quotes yet" : "No quotes yet"}
         message={
           machineId
-            ? "Request parts for this machine, or add them from the model."
+            ? "Add parts from the model, or request them here."
             : role === "staff"
-            ? "Start a quote from here, or wait for a customer request."
-            : "Start a quote from here, or open a machine and add parts."
+            ? "New quote, or wait for a plant request."
+            : "New quote, or add parts from a machine."
         }
         action={
           user?.role === "customer" && !machineId ? (

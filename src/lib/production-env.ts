@@ -33,7 +33,7 @@ export function assertManagedRuntimeEnv() {
 
   if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
     throw new Error(
-      "BLOB_READ_WRITE_TOKEN is required on Vercel. Attach a Vercel Blob store to this project — quotes, users, and machine metadata must not use ephemeral /tmp.",
+      "BLOB_READ_WRITE_TOKEN is required on Vercel. Attach a Blob store. Quotes, users, and machine metadata cannot use /tmp.",
     );
   }
 

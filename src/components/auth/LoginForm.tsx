@@ -71,9 +71,7 @@ export function LoginForm({
       router.replace(nextPath);
     } catch (cause) {
       if (isApiError(cause) && cause.status === 0) {
-        setError(
-          "Could not reach the login API. T1.2 auth routes may not be on this preview yet.",
-        );
+        setError("Could not reach the server. Try again.");
       } else {
         setError(errorMessage(cause, "Sign-in failed."));
       }
@@ -181,9 +179,6 @@ export function LoginForm({
             <MicrosoftGlyph />
             Sign in with Microsoft
           </a>
-          <p className="text-center text-[13px] text-[rgba(236,234,228,0.55)]">
-            Company work accounts join their host when that domain is enrolled and autoroute is on.
-          </p>
         </>
       ) : null}
     </form>

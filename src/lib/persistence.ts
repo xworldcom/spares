@@ -147,7 +147,7 @@ function selectPersistence(): Persistence {
   }
   if (isManagedRuntime()) {
     throw new Error(
-      "BLOB_READ_WRITE_TOKEN is required on Vercel. Attach a Vercel Blob store to this project — quotes, users, and machine metadata must not use ephemeral /tmp.",
+      "BLOB_READ_WRITE_TOKEN is required on Vercel. Attach a Blob store. Quotes, users, and machine metadata cannot use /tmp.",
     );
   }
   return fsPersistence(getDataDir());

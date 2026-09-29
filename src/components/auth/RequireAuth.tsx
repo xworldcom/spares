@@ -22,11 +22,8 @@ export function RequireAuth({
   if (status === "unavailable") {
     return (
       <ErrorState
-        title="Could not reach the API"
-        message={
-          error ??
-          "Auth routes are not available on this preview yet. Sign-in will work once T1.2 is merged."
-        }
+        title="Could not reach the server"
+        message={error ?? "Try again in a minute."}
         onRetry={() => {
           void refresh();
         }}

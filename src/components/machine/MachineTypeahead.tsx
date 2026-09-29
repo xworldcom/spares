@@ -144,7 +144,7 @@ export function MachineTypeahead({
         <div className="machine-typeahead-create">
           <p className="machine-typeahead-create-title">Add {pendingName}</p>
           <p className="spares-muted text-sm leading-relaxed">
-            This machine is saved to a site. Care and quotes can use it without a 3D model.
+            No 3D model required.
           </p>
           {role === "staff" ? (
             <MachineSitePicker

@@ -354,9 +354,6 @@ export function MachinesList() {
       {adding ? (
         <div className="care-card care-form">
           <p className="text-[17px] font-semibold tracking-tight">Add a machine</p>
-          <p className="spares-muted text-sm leading-relaxed">
-            Type a name to save it at a site. A 3D pack can come later.
-          </p>
           <MachineTypeahead
             machines={machines}
             onMachines={setMachines}
@@ -422,8 +419,8 @@ export function MachinesList() {
             title="No machines yet"
             message={
               staff
-                ? "Add a machine by name, or upload a 3D pack when you have one."
-                : "Add a machine by name, or ask staff if you expected to see one here."
+                ? "Add one by name, or upload a pack."
+                : "Add one by name, or ask staff if you expected one here."
             }
             action={
               <div className="flex flex-wrap items-center gap-2">

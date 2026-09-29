@@ -193,7 +193,7 @@ function PlatformHosts() {
     return (
       <main className="page-shell">
         <h1 className="page-title">Hosts</h1>
-        <p className="text-muted">Platform owner access is required to manage hosts.</p>
+        <p className="text-muted">Platform owner access is required.</p>
       </main>
     );
   }
@@ -203,10 +203,6 @@ function PlatformHosts() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">Hosts</h1>
-          <p className="text-muted mt-1 max-w-2xl">
-            Every host company on the platform. The Soft Launch host is the shared OEE360
-            install; satellites are separate host companies you provision.
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link className="btn-secondary text-sm" href="/staff/platform/inquiries">
@@ -334,9 +330,8 @@ function PlatformHosts() {
       </div>
 
       <p className="text-xs text-muted mt-6 max-w-3xl">
-        Counts come from the live catalog. Activity is rows created or updated in the last 30
-        days. Open a company for its scoped console — rename, suspend, and staff logins. The
-        Soft Launch host cannot be suspended or deleted.
+        Counts are live. Activity is the last 30 days. The Soft Launch host cannot be
+        suspended or deleted.
       </p>
     </main>
   );

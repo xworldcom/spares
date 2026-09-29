@@ -132,11 +132,6 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           kind="tickets"
           machineId={scope === "machine" ? machineId : undefined}
           headingLevel="h2"
-          lede={
-            scope === "hub"
-              ? "Every open and closed ticket in your plant."
-              : "Only this machine."
-          }
           action={
             <button
               type="button"
@@ -174,8 +169,8 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           title="No tickets yet"
           message={
             scope === "hub"
-              ? "Open a ticket when a machine needs service."
-              : "Open a ticket when this machine needs service."
+              ? "Open one when a machine needs service."
+              : "Open one when this machine needs service."
           }
         />
       ) : (
@@ -185,7 +180,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           selectedId={ticketId}
           hrefFor={(ticket) => ticketHrefFor(scope, ticket)}
           emptyTitle="No tickets yet"
-          emptyMessage="Open a ticket when something needs service."
+          emptyMessage="Open one when something needs service."
         />
       )}
     </div>
@@ -205,7 +200,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
     <div className="tickets-workspace-empty">
       <EmptyState
         title="Select a ticket"
-        message="Pick a ticket from the list to read notes and update status."
+        message="Pick one from the list."
       />
     </div>
   );

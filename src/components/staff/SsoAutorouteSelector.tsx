@@ -43,8 +43,8 @@ export function SsoAutorouteSelector({
         ))}
       </div>
       <p className="spares-muted text-sm">
-        On: unknown Microsoft work accounts at the enrolled domain join this host as
-        staff. Off: keep the domain on file, but do not create logins.
+        On: new Microsoft accounts at this domain become staff here. Off: the domain stays
+        on file and no new logins are created.
       </p>
     </div>
   );

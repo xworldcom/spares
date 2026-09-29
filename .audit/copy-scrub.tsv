@@ -1,0 +1,7 @@
+ts	phase	decision	why	evidence	result
+2026-09-29T00:25:00Z	frame	Treat the scrub as one copy pass across landing and the signed-in app	The same heading-plus-paragraph pattern shows up on both sides, so one voice and one PR	src/components/landing/LandingMarketing.tsx	scoped
+2026-09-29T00:40:00Z	landing	Drop kickers, story lede, machine lede, CAD note, and the long request-access paragraph	The scrub and the format pills already show the product. Invite-only stays because it is the access rule	src/components/landing/LandingScreen.tsx	kept invite-only
+2026-09-29T00:55:00Z	app	Make work-list ledes optional and stop passing them	Titles already name the list, and the machine filter is the scope control	src/components/nav/WorkListScopeBar.tsx	lede omitted
+2026-09-29T01:05:00Z	auth	Replace T1.2 preview errors with a retry line and drop the Microsoft autoroute sentence	Milestone names are not for plant users. The button already says Sign in with Microsoft	src/components/auth/LoginForm.tsx	internal tokens banned in user-copy.test.ts
+2026-09-29T01:20:00Z	staff	Delete directory and host intros. Keep autoroute, Entra, and destructive warnings	Those settings do not say what On does. Delete confirmations still name the consequence	src/components/staff/SsoAutorouteSelector.tsx	kept
+2026-09-29T01:35:00Z	verify	Drove localhost:3010 landing, inquire, sign-in, machines, staff quotes, and Care	Playwright assertions failed closed on the old paragraphs	.cursor/skills/verify-oee360/evidence/1790641930/proof.json	VERIFIED local

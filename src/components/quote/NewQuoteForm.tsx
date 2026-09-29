@@ -170,11 +170,9 @@ export function NewQuoteForm({
           Cancel
         </button>
       </div>
-      <p className="spares-muted text-sm leading-relaxed">
-        {initialMachineId
-          ? "Add parts by number and description. This quote stays on this machine."
-          : "Type a machine name if it is not listed. Add parts by number and description."}
-      </p>
+      {initialMachineId ? (
+        <p className="spares-muted text-sm leading-relaxed">This quote stays on this machine.</p>
+      ) : null}
       {staff ? (
         <SearchableSelect
           id="quote-customer-person"

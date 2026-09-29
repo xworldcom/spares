@@ -40,13 +40,6 @@ export function QuotesWorkspace({
           machineId={machineId}
           role={role}
           headingLevel={scoped ? "h2" : "h1"}
-          lede={
-            scoped
-              ? "Only this machine."
-              : role === "staff"
-                ? "Every quote in your queue. Open one machine to see its model and tickets."
-                : "Every parts request across your plant. Open one machine to pick from the model."
-          }
           action={
             <button
               type="button"
