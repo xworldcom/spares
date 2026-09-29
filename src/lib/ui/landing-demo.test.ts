@@ -380,6 +380,19 @@ describe("landing scrub layout", () => {
       /\.landing-marketing > \.landing-section\[id\]\s*\{[^}]*scroll-margin-top:\s*var\(--spares-header\)/,
     );
   });
+
+  it("keeps a phone swipe scrolling over the model and a 44px story peek", () => {
+    const css = readFileSync("src/components/landing/landing.css", "utf8");
+    const mobile = css.split("@media (max-width: 899px)").slice(1).join("\n");
+    assert.match(
+      mobile,
+      /\.landing-cell \.landing-stage--interactive \*[\s\S]*?touch-action:\s*pan-y\s*!important/,
+    );
+    assert.match(
+      mobile,
+      /\.landing-scroll \.landing-scroll-peek\s*\{[^}]*min-height:\s*2\.75rem/,
+    );
+  });
 });
 
 describe("landing cell stage", () => {
