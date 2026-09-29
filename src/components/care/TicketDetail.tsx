@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
@@ -68,10 +68,19 @@ export function TicketDetail({
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
 
+  const lastTicketIdRef = useRef<string | null>(null);
+
+  // Paint list row when switching tickets — not when the list row patches read state.
   useEffect(() => {
-    if (seedTicket && ticketRefMatches(seedTicket, ticketId)) {
-      setTicket(seedTicket);
+    const switched = lastTicketIdRef.current !== ticketId;
+    lastTicketIdRef.current = ticketId;
+    if (!switched || !seedTicket || !ticketRefMatches(seedTicket, ticketId)) {
+      return;
     }
+    setTicket(seedTicket);
+  }, [ticketId, seedTicket]);
+
+  useEffect(() => {
     setError(null);
     let cancelled = false;
     getTicket(ticketId)
@@ -80,7 +89,6 @@ export function TicketDetail({
           return;
         }
         setTicket(next);
-        onTicketListPatch?.(next);
         setError(null);
         void refreshCareAlerts();
       })
@@ -93,7 +101,7 @@ export function TicketDetail({
     return () => {
       cancelled = true;
     };
-  }, [ticketId, reloadKey, refreshCareAlerts, seedTicket, onTicketListPatch]);
+  }, [ticketId, reloadKey, refreshCareAlerts]);
 
   const pollTicket = useCallback(async () => {
     const next = await getTicket(ticketId);

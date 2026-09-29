@@ -106,13 +106,20 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   }
 
   const patchTicketInList = useCallback((patch: ServiceTicket) => {
-    setTickets((rows) =>
-      rows.map((row) =>
-        ticketRefMatches(row, patch.id)
-          ? { ...row, unread: patch.unread, viewerReadAt: patch.viewerReadAt }
-          : row,
-      ),
-    );
+    setTickets((rows) => {
+      let changed = false;
+      const next = rows.map((row) => {
+        if (!ticketRefMatches(row, patch.id)) {
+          return row;
+        }
+        if (row.unread === patch.unread && row.viewerReadAt === patch.viewerReadAt) {
+          return row;
+        }
+        changed = true;
+        return { ...row, unread: patch.unread, viewerReadAt: patch.viewerReadAt };
+      });
+      return changed ? next : rows;
+    });
   }, []);
 
   function onCreated(id: string, createdMachineId: string) {

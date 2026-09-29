@@ -489,12 +489,15 @@
   display: block;
   flex: 1 1 auto;
   min-height: 0;
+  background: var(--spares-lift);
 }
 
 .conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-body {
   min-height: 0;
   flex: 1 1 auto;
   opacity: 1;
+  background: var(--spares-lift);
+  isolation: isolate;
 }
 
 .conversation-sheet-toolbar {

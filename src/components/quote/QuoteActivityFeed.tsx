@@ -143,8 +143,7 @@ export function QuoteActivityFeed({
       layout === "sheet" &&
       firstUnreadIndex !== null &&
       !unreadJumpedRef.current &&
-      sheetSnap &&
-      sheetSnap !== "out";
+      (sheetSnap === "reply" || sheetSnap === "full");
 
     if (shouldJumpUnread) {
       const jump = () => {
