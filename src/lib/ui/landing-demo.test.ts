@@ -384,8 +384,8 @@ describe("landing scrub layout", () => {
     const css = readFileSync("src/components/landing/landing.css", "utf8");
     const mobile = css.split("@media (max-width: 899px)").slice(1).join("\n");
     assert.match(
-      mobile,
-      /\.landing-cell \.landing-stage--interactive \*[\s\S]*?touch-action:\s*pan-y\s*!important/,
+      css,
+      /^\.landing-cell \.landing-stage--interactive,\n\.landing-cell \.landing-stage--interactive \* \{\n  touch-action: pan-y !important;/m,
     );
     assert.match(
       mobile,
@@ -658,6 +658,14 @@ describe("workflow demo", () => {
     assert.match(
       css,
       /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*0/,
+    );
+    assert.match(
+      css,
+      /^\.landing-workflow \.quote-progress-step \{\n  flex: 1 1 0;\n  min-width: 0;/m,
+    );
+    assert.match(
+      css,
+      /@media \(max-height: 860px\) and \(min-width: 900px\)[\s\S]*\.landing-scroll \.landing-scroll-peek\s*\{[^}]*min-height:\s*2\.75rem/,
     );
   });
 });

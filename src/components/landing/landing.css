@@ -650,11 +650,6 @@
     pointer-events: none;
   }
 
-  .landing-cell .landing-stage--interactive,
-  .landing-cell .landing-stage--interactive * {
-    touch-action: pan-y !important;
-  }
-
   .landing-scroll .landing-hero {
     max-height: calc(100dvh - var(--spares-header));
     overflow: hidden;
@@ -995,6 +990,11 @@
   border-radius: 1.35rem;
   border: 1px solid rgba(236, 234, 228, 0.1);
   background: #07080a;
+}
+
+.landing-cell .landing-stage--interactive,
+.landing-cell .landing-stage--interactive * {
+  touch-action: pan-y !important;
 }
 
 .landing-back-to-top {
@@ -1638,6 +1638,16 @@
   margin: 0;
 }
 
+.landing-workflow .quote-progress-step {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.landing-workflow .quote-progress-label-full,
+.landing-workflow .quote-progress-label-short {
+  max-width: 100%;
+}
+
 .landing-workflow .quote-progress-caption {
   color: rgba(236, 234, 228, 0.5);
 }
@@ -1668,6 +1678,27 @@
 
 .landing-hero-copy {
   display: contents;
+}
+
+@media (max-height: 860px) and (min-width: 900px) {
+  .landing-scroll .landing-hero {
+    max-height: calc(100dvh - var(--spares-header));
+    overflow: hidden;
+  }
+
+  .landing-scroll .landing-scroll-peek {
+    position: absolute;
+    left: 50%;
+    bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px));
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    margin: 0;
+    transform: translateX(-50%);
+  }
 }
 
 @media (max-height: 520px) and (min-width: 700px) {
