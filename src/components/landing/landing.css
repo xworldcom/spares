@@ -306,6 +306,10 @@
   padding-top: 0;
 }
 
+.landing-marketing > .landing-section[id] {
+  scroll-margin-top: var(--spares-header);
+}
+
 .landing-ingest-formats {
   display: flex;
   flex-wrap: wrap;
