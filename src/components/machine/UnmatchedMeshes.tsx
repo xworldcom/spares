@@ -12,11 +12,10 @@ export function UnmatchedMeshes({ unmatched }: { unmatched: UnmatchedPart[] }) {
       className="rounded-[22px] bg-[#2a2214] px-4 py-4"
     >
       <h2 id="unmatched-heading" className="text-sm font-semibold text-[#f0d9a8]">
-        Join notes
+        Unmatched
       </h2>
       <p className="mt-1 text-sm text-[#e8c27a]">
-        These rows or meshes did not line up on part number. They stay in
-        the model; they are not quote items.
+        These did not match a part number. They stay in the model and are not quote items.
       </p>
       <ul className="mt-3 space-y-2">
         {rows.map((row, index) => (

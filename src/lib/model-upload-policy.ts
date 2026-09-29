@@ -23,15 +23,15 @@ export function isVercelRuntime() {
 }
 
 export function vercelRequiresObjectStorageMessage() {
-  return "Large GLB models cannot upload on Vercel without object storage. Set S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY (Cloudflare R2 recommended) on this environment, then redeploy.";
+  return "Large models need object storage on Vercel. Set S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY, then redeploy.";
 }
 
 export function modelUploadTicketFailedMessage() {
-  return "Could not reach the model upload service. Sign in as staff and try again. If this keeps happening, check that R2/S3 credentials are set on this environment.";
+  return "Could not reach model upload. Sign in as staff and try again. If it keeps failing, check R2/S3 credentials.";
 }
 
 export function s3MultipartRefusedMessage() {
-  return "GLB files must upload directly to object storage on this environment. Do not send the model through the server — use the presigned upload path or fix R2/S3 credentials.";
+  return "Send the GLB straight to object storage. Use the presigned upload, or fix R2/S3 credentials.";
 }
 
 export function vercelLargeModelProxyMessage(bytes: number) {

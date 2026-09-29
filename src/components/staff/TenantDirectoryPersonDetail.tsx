@@ -206,7 +206,6 @@ export function TenantDirectoryPersonDetail({ userId }: { userId: string }) {
         <PersonGlyph email={user.email} />
         <div className="min-w-0 flex-1">
           <h1 className="page-title">{displayName}</h1>
-          <p className="text-muted mt-1">Customer person on this install</p>
         </div>
       </div>
 

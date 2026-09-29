@@ -18,7 +18,7 @@ function readErrorMessage(body: unknown, status: number) {
     return "Not found.";
   }
   if (status === 413) {
-    return "This model is too large to send through the server in one request.";
+    return "This model is too large for one request.";
   }
   return `Request failed (${status})`;
 }

@@ -125,7 +125,7 @@ function QuoteTrayForm({
             Quote sent
           </p>
           <p className="spares-muted mt-2 text-[15px] leading-relaxed">
-            Your request was submitted. We will follow up with pricing and updates.
+            Pricing comes back on the quote.
           </p>
           {sentHref ? (
             <Link
@@ -142,7 +142,7 @@ function QuoteTrayForm({
             {lines.length === 0 && !allowManual ? (
               <div className="quote-sheet-empty mt-4">
                 <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
-                  Nothing here yet. Select a named part, then add it.
+                  Select a part, then add it.
                 </p>
               </div>
             ) : null}

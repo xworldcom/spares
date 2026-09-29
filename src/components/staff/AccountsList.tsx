@@ -143,7 +143,6 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
         <form onSubmit={(event) => void handleCreate(event)} className="catalog-create">
           <div className="catalog-create-copy">
             <h2>New customer account</h2>
-            <p>Corporate account — add sites after saving.</p>
           </div>
           <div className="catalog-create-grid">
             <label className="block text-sm font-medium md:col-span-2">

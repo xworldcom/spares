@@ -86,7 +86,6 @@ export function CareHubOverview() {
           <span className="care-stat-label">
             {machines.length === 1 ? "Machine" : "Machines"}
           </span>
-          <span className="care-stat-meta">Model, quotes, and tickets together</span>
         </div>
       </section>
 
@@ -97,8 +96,7 @@ export function CareHubOverview() {
         </header>
         {openTickets.length === 0 ? (
           <p className="spares-muted text-sm leading-relaxed">
-            Nothing open. Start a ticket from a machine when something needs
-            service.
+            Nothing open.
           </p>
         ) : (
           <ul className="care-list">
@@ -133,8 +131,7 @@ export function CareHubOverview() {
         </header>
         {machines.length === 0 ? (
           <p className="spares-muted text-sm leading-relaxed">
-            No machines yet. Add one from Machines, or type a name when you
-            open a ticket.
+            No machines yet.
           </p>
         ) : (
           <ul className="care-machine-chips">

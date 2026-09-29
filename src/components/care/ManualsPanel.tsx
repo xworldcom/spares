@@ -163,8 +163,8 @@ export function ManualsPanel({ machineId }: { machineId: string }) {
           title="No manuals yet"
           message={
             staff
-              ? "Upload a PDF or Word document so the plant can open it from Care."
-              : "Staff have not added manuals for this machine yet."
+              ? "Upload a PDF or Word file."
+              : "None on this machine yet."
           }
         />
       ) : (

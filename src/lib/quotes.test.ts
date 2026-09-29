@@ -366,7 +366,7 @@ describe("status and visibility", () => {
     );
     assert.equal(
       quotePoNextStep("quoted", "staff"),
-      "Waiting for the customer PO. Invoice opens after PO is received.",
+      "Waiting on the PO. The invoice opens after it arrives.",
     );
     assert.equal(
       quotePoNextStep("quoted", "customer"),

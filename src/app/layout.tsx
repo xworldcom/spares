@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "OEE360",
   description:
-    "Overall equipment effectiveness, seen all the way around. Private industrial machines, parts, quotes, and care.",
+    "Private spare parts, quotes, and machine care.",
   robots: {
     index: false,
     follow: false,

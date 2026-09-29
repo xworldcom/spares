@@ -176,8 +176,7 @@ export function ServicePanel({
       >
         <h2>Service</h2>
         <p className="spares-muted text-sm leading-relaxed">
-          Log a service visit with the date and what the tech did on site. No live
-          meters required. Customers see visit notes here after you save.
+          Customers see these notes after you save.
         </p>
         <label className="care-field">
           <span>Last service</span>
@@ -200,7 +199,7 @@ export function ServicePanel({
         </label>
         <details className="care-optional-meters">
           <summary className="spares-muted text-sm font-semibold">
-            Optional meters (if known)
+            Meters (optional)
           </summary>
           <div className="care-form-grid care-optional-meters-fields">
             <label className="care-field">
@@ -247,9 +246,6 @@ export function ServicePanel({
         <section className="care-card care-stack">
           <header className="care-card-head">
             <h2>Service</h2>
-            <p className="spares-muted text-sm leading-relaxed">
-              Onsite service visits logged by your service team for this machine.
-            </p>
           </header>
           <div className="care-field">
             <span className="text-sm font-semibold">Last service</span>

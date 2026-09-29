@@ -202,7 +202,7 @@ function TenantDetail() {
   if (!user?.platformOwner || forbidden) {
     return (
       <main className="page-shell">
-        <h1 className="page-title">Company deployment</h1>
+        <h1 className="page-title">Host</h1>
         <p className="text-muted">Platform owner access is required.</p>
       </main>
     );
@@ -294,9 +294,8 @@ function TenantDetail() {
       <section className="card p-4 mt-6 max-w-lg">
         <h2 className="text-lg font-semibold mb-3">Microsoft SSO</h2>
         <p className="text-sm text-muted mb-3">
-          Enroll the company work domain and its Entra tenant ID, then turn autoroute on
-          when new Microsoft sign-ins should create staff. Existing logins keep the host they
-          already have.
+          Work domain and Entra tenant ID. Autoroute creates staff on new Microsoft sign-ins.
+          Existing logins stay on their host.
         </p>
         <label className="stack gap-1 mb-4">
           <span className="text-sm font-medium">Work domain</span>
@@ -321,8 +320,7 @@ function TenantDetail() {
             spellCheck={false}
           />
           <p className="text-sm text-muted">
-            From Microsoft Entra admin center, Overview, Tenant ID. Autoroute needs both a
-            domain and a tenant ID.
+            Entra admin center, Overview, Tenant ID. Autoroute needs a domain and a tenant ID.
           </p>
         </label>
         <SsoAutorouteSelector

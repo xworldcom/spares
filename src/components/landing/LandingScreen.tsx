@@ -45,13 +45,8 @@ export function LandingScreen({
         <div className="landing-veil" />
         <div className="landing-copy">
           <div className="landing-panel">
-            <p className="landing-kicker">Plants &amp; OEM support</p>
             <BrandMark size="hero" className="landing-wordmark" />
-            <p className="landing-lede">
-              Spare parts and machine care for automation cells — one hub per
-              machine with quotes, tickets, manuals, and service records.
-              Invite-only.
-            </p>
+            <p className="landing-lede">Spare parts and machine care. Invite-only.</p>
             <LoginForm
               nextPath={nextPath}
               microsoftSignInEnabled={microsoftSignInEnabled}

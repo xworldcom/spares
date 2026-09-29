@@ -212,9 +212,6 @@ export function StaffTeamPanel({
       <div className="catalog-page-intro catalog-page-intro-split">
         <div>
           <h2 className="text-lg font-semibold">Staff logins</h2>
-          <p className="text-sm text-muted">
-            Real email and password — not the demo <code>staff@spares.local</code> account.
-          </p>
         </div>
         <button
           type="button"
@@ -242,7 +239,7 @@ export function StaffTeamPanel({
       {staff.length === 0 ? (
         <EmptyState
           title="No staff logins yet"
-          message="Add a staff member with a work email. They use the same login screen as everyone else."
+          message="Add one with a work email."
         />
       ) : (
         <ul className="catalog-people-list">

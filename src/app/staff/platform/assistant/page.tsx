@@ -102,12 +102,6 @@ function PlatformAssistantSettings() {
           ← Hosts
         </Link>
         <h1 className="page-title mt-3">AI</h1>
-        <p className="text-muted mt-1">
-          When this is on, AI joins Care ticket and quote chats as its own participant — labeled
-          AI, not staff. It can read that machine&apos;s BOM, manuals, and drawings, and look at
-          photos or short video someone sends. It hands the thread to people if it cannot help
-          or the user asks to escalate.
-        </p>
       </div>
 
       {loading ? <p className="text-muted">Loading…</p> : null}
@@ -118,7 +112,7 @@ function PlatformAssistantSettings() {
       ) : null}
       {saved ? (
         <p className="text-sm text-emerald-400/90 mb-3" role="status">
-          Saved. New chat messages pick this up immediately.
+          Saved. New messages use this.
         </p>
       ) : null}
 
@@ -137,10 +131,8 @@ function PlatformAssistantSettings() {
           <span>
             <span className="font-medium">Enable AI in chat</span>
             <span className="block text-sm text-muted mt-1">
-              Off by default. Platform-wide — every host on this install. AI replies when a
-              customer is the latest speaker, or when staff mention AI. If a technician jumps in,
-              it stays quiet. Staff can also turn AI off for one conversation. After it escalates
-              a thread, it stays quiet there until staff turn it back on.
+              Replies in Care and quote chats for every host. Stays quiet after a person takes
+              the thread, or after it escalates.
             </span>
           </span>
         </label>
@@ -169,8 +161,8 @@ function PlatformAssistantSettings() {
         </div>
 
         <p className="text-sm text-muted">
-          Models run through Vercel AI Gateway. On Vercel that uses OIDC. Locally set{" "}
-          <code className="text-xs">AI_GATEWAY_API_KEY</code> if you want replies on your machine.
+          Runs through Vercel AI Gateway. Locally, set{" "}
+          <code className="text-xs">AI_GATEWAY_API_KEY</code>.
         </p>
 
         <button

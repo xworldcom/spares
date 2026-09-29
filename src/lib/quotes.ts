@@ -490,7 +490,7 @@ export function quotePoNextStep(status: QuoteStatus, role: Role): string | null 
   }
   if (!invoiceVisible(status)) {
     return role === "staff"
-      ? "Waiting for the customer PO. Invoice opens after PO is received."
+      ? "Waiting on the PO. The invoice opens after it arrives."
       : "Add your PO number and PDF to proceed.";
   }
   return null;

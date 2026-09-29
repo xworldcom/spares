@@ -91,7 +91,7 @@ function buildEmail(
       : "";
 
   if (input.context.kind === "care") {
-    const subject = `Care ticket #${input.context.ticketNumber} — new message on ${input.context.machineName}`;
+    const subject = `Care ticket #${input.context.ticketNumber} on ${input.context.machineName}`;
     const text = [
       `${who} posted on Care ticket #${input.context.ticketNumber} (${input.context.ticketTitle}) for ${input.context.machineName}.`,
       "",
@@ -103,7 +103,7 @@ function buildEmail(
     return { subject, text };
   }
 
-  const subject = `Quote #${input.context.quoteNumber} — new message on ${input.context.machineName}`;
+  const subject = `Quote #${input.context.quoteNumber} on ${input.context.machineName}`;
   const text = [
     `${who} posted on quote #${input.context.quoteNumber} for ${input.context.machineName}.`,
     "",

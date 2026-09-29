@@ -57,7 +57,7 @@ export function bugReportIssueBody(input: {
       "",
       "## Screenshot",
       "",
-      "Could not attach the image to GitHub. It is stored in the staff Bug reports list (`/staff/bugs`).",
+      "Screenshot is in Bug reports (`/staff/bugs`).",
     );
   }
 

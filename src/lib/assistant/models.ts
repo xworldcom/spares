@@ -9,7 +9,7 @@ export const ASSISTANT_MODEL_OPTIONS: readonly AssistantModelOption[] = [
   {
     id: "google/gemini-3.8-flash",
     label: "Gemini 3.8 Flash",
-    hint: "Fast. Best default for photos, video, and PDF drawings.",
+    hint: "Fast. Default for photos, video, and PDF drawings.",
   },
   {
     id: "google/gemini-3.1-pro-preview",
@@ -24,22 +24,22 @@ export const ASSISTANT_MODEL_OPTIONS: readonly AssistantModelOption[] = [
   {
     id: "anthropic/claude-sonnet-5",
     label: "Claude Sonnet 5",
-    hint: "Newer Sonnet. Use if you want the latest Claude quality.",
+    hint: "Newer Sonnet. Same job as 4.6.",
   },
   {
     id: "anthropic/claude-opus-4.6",
     label: "Claude Opus 4.6",
-    hint: "Slowest and most expensive. Hard electrical / mechanical questions.",
+    hint: "Slowest. Hard electrical and mechanical questions.",
   },
   {
     id: "openai/gpt-5.4",
     label: "GPT-5.4",
-    hint: "OpenAI default. Photos yes; long video is weaker than Gemini.",
+    hint: "Photos. Long video is weaker than Gemini.",
   },
   {
     id: "openai/gpt-5.5",
     label: "GPT-5.5",
-    hint: "Newer GPT. Same plant-chat role as 5.4.",
+    hint: "Newer GPT. Same role as 5.4.",
   },
 ] as const;
 

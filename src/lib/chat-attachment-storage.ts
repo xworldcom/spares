@@ -70,7 +70,7 @@ export function setTestChatS3Objects(map: Map<string, Buffer> | null) {
 }
 
 export function vercelRequiresChatObjectStorageMessage() {
-  return "Chat attachments cannot upload on Vercel without object storage. Set S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY (Cloudflare R2), then redeploy.";
+  return "Chat files need object storage on Vercel. Set S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY, then redeploy.";
 }
 
 export function assertChatAttachmentUploadAllowed() {

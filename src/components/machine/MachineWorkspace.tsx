@@ -366,7 +366,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               </p>
               <p className="chrome-quiet mt-2 max-w-sm text-[14px] leading-relaxed">
                 {machine.oem ? `${machine.oem}. ` : ""}
-                Quotes and tickets still work for this machine.
+                Quotes and tickets still work.
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <Link

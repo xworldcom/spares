@@ -92,9 +92,8 @@ export function chatAttachmentPreviewTooLargeMessage(bytes: number) {
   return `This attachment is ${mb} MB. Same-origin proxy uploads through the app are limited to ${limitMb} MB. Use the signed R2 upload instead.`;
 }
 
-/** Shown when a browser PUT to presigned R2 is blocked by bucket CORS. */
 export const CHAT_ATTACHMENT_STORAGE_CORS_MESSAGE =
-  "Upload blocked (storage CORS). Redeploy so the app can refresh R2 CORS, or run npm run configure:r2-cors.";
+  "Upload blocked by storage CORS. Redeploy, or run npm run configure:r2-cors.";
 
 export function guessChatContentType(filename: string) {
   const ext = chatAttachmentExtension(filename);

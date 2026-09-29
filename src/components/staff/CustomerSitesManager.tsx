@@ -246,19 +246,14 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
             <span>{account?.name}</span>
           </p>
           <h1>{account?.name}</h1>
-          <p>
-            Sites under this customer. Machines belong to exactly one site.
-            {platformScope && hostName && hostId ? (
-              <>
-                {" "}
-                Host{" "}
-                <Link href={`/staff/platform/${encodeURIComponent(hostId)}`} className="hover:underline">
-                  {hostName}
-                </Link>
-                .
-              </>
-            ) : null}
-          </p>
+          {platformScope && hostName && hostId ? (
+            <p>
+              Host{" "}
+              <Link href={`/staff/platform/${encodeURIComponent(hostId)}`} className="hover:underline">
+                {hostName}
+              </Link>
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="catalog-create">
@@ -284,7 +279,6 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
       <form onSubmit={(event) => void addSite(event)} className="catalog-create">
         <div className="catalog-create-copy">
           <h2>Add site</h2>
-          <p>Location name only — customer is already set.</p>
         </div>
         <div className="catalog-create-grid">
           <label className="block text-sm font-medium md:col-span-2">
@@ -316,7 +310,7 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
       {sites.length === 0 ? (
         <EmptyState
           title="No sites yet"
-          message="Add the first site for this customer, then assign machines and people."
+          message="Add a site, then assign machines and people."
         />
       ) : (
         <div className="catalog-table-wrap">
@@ -378,8 +372,8 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
       <section className="border-t border-white/10 pt-6 mt-8">
         <h2 className="text-lg font-semibold text-[#f0c4c0]">Delete customer</h2>
         <p className="text-muted mt-1 mb-4 text-sm">
-          Removes this customer company from the directory. Delete every site first. People and
-          machines are unchanged until you clean them up separately.
+          Removes this customer. Delete every site first. People and machines stay until you
+          remove them.
         </p>
         <button
           type="button"

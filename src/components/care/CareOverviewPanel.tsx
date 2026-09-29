@@ -144,8 +144,7 @@ export function CareOverviewPanel({ machineId }: { machineId: string }) {
         </header>
         {recent.length === 0 ? (
           <p className="spares-muted text-sm leading-relaxed">
-            No service tickets yet. Open one from Tickets if something needs
-            attention.
+            No tickets yet.
           </p>
         ) : (
           <ul className="care-list">

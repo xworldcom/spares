@@ -162,7 +162,7 @@ export function ActivityLog() {
       {visible.length === 0 ? (
         <EmptyState
           title="No activity yet"
-          message="Sign-ins, staff changes, quotes, tickets, and host updates will appear here and stay on the record."
+          message="Sign-ins and changes show up here."
         />
       ) : (
         <ol className="space-y-3">

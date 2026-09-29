@@ -29,15 +29,9 @@ function SolidWorksExportCard() {
           Publish to Spares macro
         </span>
         <ol className="spares-muted mt-2 list-decimal space-y-1 pl-4 text-sm leading-relaxed">
-          <li>
-            Download the macro and add it once in SolidWorks (
-            <span>Tools → Macro</span>).
-          </li>
-          <li>
-            Open your saved assembly and run it — you get a 3D model and a parts
-            list with mesh names matched to each part.
-          </li>
-          <li>Drop those two files in the zones below.</li>
+          <li>Download the macro. Add it in SolidWorks under Tools, Macro.</li>
+          <li>Run it on a saved assembly. It writes a model and a parts list.</li>
+          <li>Drop both files below.</li>
         </ol>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <a
@@ -309,8 +303,7 @@ export function UploadPackForm() {
               <span className="font-medium text-[var(--spares-ink)]">
                 {replaceName ?? "this machine"}
               </span>
-              . Upload a new model and parts list. Change the plant from the
-              machines list if needed.
+              . Upload a new model and parts list.
             </p>
           ) : null}
           <div>
@@ -346,7 +339,7 @@ export function UploadPackForm() {
           <FileDrop
             id="model-file"
             label="3D model file"
-            hint="From the Spares macro or a SolidWorks export. Up to 256 MB."
+            hint="GLB or glTF. Up to 256 MB."
             accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
             file={model}
             onFile={setModel}
@@ -356,10 +349,6 @@ export function UploadPackForm() {
         <section className="spares-surface space-y-3 rounded-[24px] p-5">
           <p className="spares-muted text-[11px] font-medium tracking-[0.16em] uppercase">
             3 · Parts list
-          </p>
-          <p className="spares-muted text-sm leading-relaxed">
-            CSV, TSV, or JSON from the macro or your BOM. Part numbers link to
-            the model when mesh names match.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -387,7 +376,7 @@ export function UploadPackForm() {
               <FileDrop
                 id="parts-file"
                 label="BOM or parts list"
-                hint="JSON or CSV from the macro, or any list with part number and name columns."
+                hint="CSV, TSV, or JSON. Part numbers link when mesh names match."
                 accept=".csv,.tsv,.txt,.json,text/csv,text/tab-separated-values,application/json"
                 file={partsListFile}
                 onFile={setPartsListFile}

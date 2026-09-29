@@ -57,7 +57,7 @@ export function InquireForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      setSuccess(response.message ?? "Thanks — we received your inquiry.");
+      setSuccess(response.message ?? "Inquiry received.");
       setForm(INITIAL);
     } catch (cause) {
       setError(errorMessage(cause, "Could not send inquiry. Try again."));
@@ -81,11 +81,9 @@ export function InquireForm() {
   return (
     <form className="inquire-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       <header className="inquire-header">
-        <p className="landing-kicker">Private access</p>
-        <h1 className="inquire-title">Request access to OEE360</h1>
+        <h1 className="inquire-title">Request access</h1>
         <p className="inquire-lede">
-          Share your company details. A platform owner reviews every inquiry — we do not create
-          logins automatically.
+          We review each request. This form does not create a login.
         </p>
       </header>
 
@@ -123,7 +121,7 @@ export function InquireForm() {
           />
         </label>
         <label className="inquire-field">
-          <span>Role / title</span>
+          <span>Role</span>
           <input
             className="login-input"
             autoComplete="organization-title"
@@ -133,7 +131,7 @@ export function InquireForm() {
           />
         </label>
         <label className="inquire-field inquire-field--wide">
-          <span>Company / legal name</span>
+          <span>Company</span>
           <input
             className="login-input"
             autoComplete="organization"
@@ -154,16 +152,16 @@ export function InquireForm() {
           />
         </label>
         <label className="inquire-field inquire-field--wide">
-          <span>Sites, machines, or scale (optional)</span>
+          <span>Plants and machines (optional)</span>
           <input
             className="login-input"
-            placeholder="e.g. 3 plants, ~40 CNC lines"
+            placeholder="3 plants, 40 lines"
             value={form.scaleNotes}
             onChange={(event) => update("scaleNotes", event.target.value)}
           />
         </label>
         <label className="inquire-field inquire-field--wide">
-          <span>What best describes you?</span>
+          <span>Company type</span>
           <select
             className="login-input inquire-select"
             required
@@ -186,7 +184,7 @@ export function InquireForm() {
           </select>
         </label>
         <label className="inquire-field inquire-field--wide">
-          <span>What do you need from OEE360?</span>
+          <span>What do you need?</span>
           <textarea
             className="login-input inquire-textarea"
             required
@@ -196,7 +194,7 @@ export function InquireForm() {
           />
         </label>
         <label className="inquire-field inquire-field--wide">
-          <span>How did you hear about us? (optional)</span>
+          <span>Referral (optional)</span>
           <input
             className="login-input"
             value={form.referralNotes}

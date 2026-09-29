@@ -104,8 +104,8 @@ function PlatformSignInSettings() {
         </Link>
         <h1 className="page-title mt-3">Sign-in</h1>
         <p className="text-muted mt-1">
-          Control how people reach OEE360. Microsoft SSO stays available when Azure is
-          configured, independent of this toggle.
+          This toggle controls email and password. Microsoft stays available when Azure is
+          configured.
         </p>
       </div>
 
@@ -134,23 +134,17 @@ function PlatformSignInSettings() {
             }}
           />
           <span>
-            <span className="font-medium">Allow email &amp; password sign-in</span>
-            <span className="block text-sm text-muted mt-1">
-              When off, the login page hides email and password and only shows Microsoft
-              sign-in (if SSO is configured). Turn this off for Microsoft-only access; leave
-              it on if you want both options.
-            </span>
+            <span className="font-medium">Allow email and password</span>
           </span>
         </label>
 
         {envLocked ? (
           <p className="text-sm text-amber-400/90" role="status">
-            Vercel env <code className="text-xs">PASSWORD_LOGIN</code> is overriding this
-            setting (
+            <code className="text-xs">PASSWORD_LOGIN</code> on Vercel overrides this (
             {settings?.passwordLoginEnvOverride === "force-off"
               ? "passwords forced off"
               : "passwords forced on"}
-            ). Remove or change that env var to control sign-in from here.
+            ). Change that env var to control it here.
           </p>
         ) : null}
 
@@ -160,7 +154,7 @@ function PlatformSignInSettings() {
             ? "email/password and Microsoft (if configured)"
             : settings?.microsoftSignInEnabled
               ? "Microsoft SSO only"
-              : "no sign-in method — configure Microsoft SSO or re-enable passwords"}
+              : "no sign-in method. Configure Microsoft SSO or turn passwords back on."}
         </p>
 
         <button

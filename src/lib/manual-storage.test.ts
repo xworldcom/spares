@@ -56,7 +56,7 @@ describe("manual storage selection", () => {
     process.env.VERCEL = "1";
     delete process.env.S3_ENDPOINT;
     assert.throws(() => assertManualUploadAllowed(), /object storage/);
-    assert.match(vercelRequiresManualObjectStorageMessage(), /not stored on Vercel Blob/);
+    assert.match(vercelRequiresManualObjectStorageMessage(), /not stored on Blob/);
   });
 
   it("writes manuals into the test R2 map under manuals/", async () => {

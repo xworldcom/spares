@@ -37,6 +37,6 @@ export const ESCALATE_USER_MESSAGE =
   "I've asked the service team to take this from here. A person will follow up in this thread.";
 
 export const ESCALATE_UNAVAILABLE_MESSAGE =
-  "I can't reach the language model right now, so I've asked the service team to take this.";
+  "I can't reach the model, so I asked the service team to take this.";
 
 export const ESCALATE_STATUS_TEXT = "AI asked the service team to step in";
