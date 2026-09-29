@@ -65,6 +65,12 @@
   grid-column: 1 / -1;
 }
 
+.inquire-field .login-input,
+.inquire-field .inquire-select,
+.inquire-field .inquire-textarea {
+  font-size: 16px;
+}
+
 .inquire-select {
   appearance: none;
 }
