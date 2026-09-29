@@ -6,13 +6,13 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DESKTOP_STAGE } from "@/components/machine/useDesktopStage";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
 import type { Part } from "@/lib/api/types";
-import { quoteHref } from "@/lib/quotes";
+import { navigateToQuoteDetail } from "@/lib/nav/quote-request-nav";
 import {
   afterNextPaint,
   bounceQuoteCount,
@@ -62,8 +62,6 @@ function QuoteTrayForm({
   onSubmit,
   submitting,
   error,
-  sent,
-  sentHref,
   onClose,
 }: {
   lines: TrayLine[];
@@ -76,8 +74,6 @@ function QuoteTrayForm({
   onSubmit: () => void;
   submitting: boolean;
   error: string | null;
-  sent: boolean;
-  sentHref?: string;
   onClose?: () => void;
 }) {
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
@@ -116,29 +112,7 @@ function QuoteTrayForm({
         ) : null}
       </div>
 
-      {sent ? (
-        <div
-          className="quote-sheet-success mt-6 min-h-0 flex-1 rounded-[20px] border border-[rgba(10,132,255,0.35)] bg-[rgba(10,132,255,0.12)] px-4 py-5"
-          role="status"
-        >
-          <p className="text-[20px] font-semibold tracking-tight text-[var(--spares-ink)]">
-            Quote sent
-          </p>
-          <p className="spares-muted mt-2 text-[15px] leading-relaxed">
-            Pricing comes back on the quote.
-          </p>
-          {sentHref ? (
-            <Link
-              href={sentHref}
-              className="btn-accent mt-4 inline-flex h-11 items-center rounded-full px-4 text-[15px] font-semibold"
-            >
-              View quote
-            </Link>
-          ) : null}
-        </div>
-      ) : (
-        <>
-          <div className="quote-sheet-body mt-4 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+      <div className="quote-sheet-body mt-4 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
             {lines.length === 0 && !allowManual ? (
               <div className="quote-sheet-empty mt-4">
                 <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
@@ -275,8 +249,6 @@ function QuoteTrayForm({
               </button>
             </div>
           ) : null}
-        </>
-      )}
     </div>
   );
 }
@@ -306,11 +278,10 @@ export function QuoteTray({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const router = useRouter();
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-  const [sentHref, setSentHref] = useState<string | undefined>();
   const { refresh: refreshQuoteAlerts } = useQuoteAlerts();
   const [sheet, setSheet] = useState<Sheet>(() =>
     initialQuoteSheetSnap(open, isDesktopStage()),
@@ -329,13 +300,6 @@ export function QuoteTray({
 
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
   const prevCount = useRef(count);
-
-  useEffect(() => {
-    if (sent && count > 0) {
-      setSent(false);
-      setSentHref(undefined);
-    }
-  }, [sent, count]);
 
   useEffect(() => {
     const increased = count > prevCount.current;
@@ -389,7 +353,6 @@ export function QuoteTray({
 
   async function handleSubmit() {
     setError(null);
-    setSent(false);
     if (lines.length === 0) {
       setError("Add a part to the quote first.");
       return;
@@ -405,13 +368,14 @@ export function QuoteTray({
         })),
         note: note.trim() || undefined,
       });
-      setSent(true);
-      setSentHref(quoteHref("customer", created));
       setNote("");
       onClear();
       setSheet("full");
       setOpen(true);
       void refreshQuoteAlerts();
+      afterNextPaint(() => {
+        navigateToQuoteDetail(router, "customer", created);
+      });
     } catch (cause) {
       setError(errorMessage(cause, "Could not request a quote."));
     } finally {
@@ -432,8 +396,6 @@ export function QuoteTray({
     },
     submitting,
     error,
-    sent,
-    sentHref,
   };
 
   function dismiss() {
@@ -618,7 +580,9 @@ export function QuoteTray({
     <aside
       ref={card}
       data-quote-tray=""
-      className={`quote-sheet${sheet === "full" ? " is-full" : ""}${
+      className={`quote-sheet${
+        sheet !== "out" ? " quote-timeline-handoff-source" : ""
+      }${sheet === "full" ? " is-full" : ""}${
         sheet === "peek" ? " is-peek" : ""
       }${sheet === "out" ? " is-out" : ""}${dragging ? " is-dragging" : ""}`}
       onPointerDown={onCardPointerDown}
