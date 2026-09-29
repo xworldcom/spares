@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/errors";
+import { inquireKeyboardInset, inquireRevealDelta } from "@/lib/ui/inquire-focus";
 import {
   ACCESS_INQUIRY_CUSTOMER_TYPES,
   ACCESS_INQUIRY_FIELDS,
@@ -53,6 +54,7 @@ const INITIAL: FormState = {
 };
 
 export function InquireForm() {
+  const formRef = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState<FormState>(INITIAL);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,52 @@ export function InquireForm() {
       return next;
     });
   }
+
+  useEffect(() => {
+    const formEl = formRef.current;
+    if (!formEl) {
+      return;
+    }
+    const root = document.documentElement;
+    const headerHeight = () =>
+      document.querySelector(".spares-header")?.getBoundingClientRect().height ?? 56;
+
+    function reveal() {
+      const active = document.activeElement;
+      if (!formEl || !(active instanceof HTMLElement) || active === formEl || !formEl.contains(active)) {
+        return;
+      }
+      const viewport = window.visualViewport;
+      const offsetTop = viewport?.offsetTop ?? 0;
+      const visibleTop = offsetTop + headerHeight() + 8;
+      const visibleBottom = (viewport ? offsetTop + viewport.height : window.innerHeight) - 12;
+      const delta = inquireRevealDelta(active.getBoundingClientRect(), visibleTop, visibleBottom);
+      if (delta !== 0) {
+        window.scrollBy({ top: delta });
+      }
+    }
+
+    function syncInset() {
+      const viewport = window.visualViewport;
+      const inset = viewport
+        ? inquireKeyboardInset(window.innerHeight, viewport.height, viewport.offsetTop)
+        : 0;
+      root.style.setProperty("--inquire-keyboard", `${inset}px`);
+      reveal();
+    }
+
+    syncInset();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", syncInset);
+    viewport?.addEventListener("scroll", syncInset);
+    formEl.addEventListener("focusin", reveal);
+    return () => {
+      viewport?.removeEventListener("resize", syncInset);
+      viewport?.removeEventListener("scroll", syncInset);
+      formEl.removeEventListener("focusin", reveal);
+      root.style.removeProperty("--inquire-keyboard");
+    };
+  }, []);
 
   function invalidProps(name: AccessInquiryField) {
     const message = fieldErrors[name];
@@ -128,7 +176,12 @@ export function InquireForm() {
   }
 
   return (
-    <form className="inquire-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
+    <form
+      ref={formRef}
+      className="inquire-form"
+      onSubmit={(event) => void handleSubmit(event)}
+      noValidate
+    >
       <header className="inquire-header">
         <h1 className="inquire-title">Request access</h1>
         <p className="inquire-lede">
