@@ -18,13 +18,15 @@ import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
 import { ticketIsOpen } from "@/lib/care";
 import { machineTabHref } from "@/lib/machine-context";
+import { seedMachineName } from "@/lib/machine-name-cache";
+import { warmMachineRoute } from "@/lib/nav/prefetch";
 import { quoteIsOpen } from "@/lib/quotes";
 import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 import { MachineSitePicker } from "@/components/staff/MachineSitePicker";
 import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
 import { useRouter } from "next/navigation";
 import { machineHasModel, sitesForMachineCreate } from "@/lib/machines";
-import { warmCareOverview, warmQuotesList } from "@/lib/nav/prefetch";
+import { warmQuotesList } from "@/lib/nav/prefetch";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -510,7 +512,14 @@ export function MachinesList() {
                       </div>
                     </>
                   ) : (
-                    <PrefetchLink href={`/machines/${machine.id}`} className="catalog-machine-hit">
+                    <PrefetchLink
+                      href={`/machines/${machine.id}`}
+                      className="catalog-machine-hit"
+                      warm={() => {
+                        seedMachineName(machine.id, machine.name);
+                        warmMachineRoute(machine.id);
+                      }}
+                    >
                       <MachineGlyph />
                       <div className="catalog-machine-copy">
                         <span className="catalog-machine-name">{machine.name}</span>
@@ -545,7 +554,11 @@ export function MachinesList() {
                 <div className="catalog-machine-work">
                   <PrefetchLink
                     href={machineTabHref(machine.id, "quotes")}
-                    warm={() => warmQuotesList()}
+                    warm={() => {
+                      seedMachineName(machine.id, machine.name);
+                      warmMachineRoute(machine.id);
+                      warmQuotesList();
+                    }}
                     className="catalog-machine-work-link"
                     data-active={work.quotesOpen > 0 ? "true" : undefined}
                   >
@@ -555,7 +568,10 @@ export function MachinesList() {
                   </PrefetchLink>
                   <PrefetchLink
                     href={machineTabHref(machine.id, "tickets")}
-                    warm={() => warmCareOverview(machine.id)}
+                    warm={() => {
+                      seedMachineName(machine.id, machine.name);
+                      warmMachineRoute(machine.id);
+                    }}
                     className="catalog-machine-work-link"
                     data-active={work.ticketsOpen > 0 ? "true" : undefined}
                   >
@@ -565,7 +581,10 @@ export function MachinesList() {
                   </PrefetchLink>
                   <PrefetchLink
                     href={machineTabHref(machine.id, "manuals")}
-                    warm={() => warmCareOverview(machine.id)}
+                    warm={() => {
+                      seedMachineName(machine.id, machine.name);
+                      warmMachineRoute(machine.id);
+                    }}
                     className="catalog-machine-work-link"
                   >
                     Manuals

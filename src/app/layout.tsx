@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AppShellFromRequest } from "@/components/nav/AppShellFromRequest";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -57,7 +58,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <style dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
       </head>
       <body className="min-h-screen antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShellFromRequest>{children}</AppShellFromRequest>
+        </Providers>
       </body>
     </html>
   );

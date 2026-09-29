@@ -13,7 +13,7 @@ import {
 } from "../model-upload-policy.ts";
 import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
-import { invalidateWarmRead, readIfWarm } from "./warm-read";
+import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 import type {
   MachineDetail,
   MachinesListResponse,
@@ -118,12 +118,22 @@ export async function listMachines(options?: {
   });
 }
 
+function machineWarmKey(id: string) {
+  return `machine:${id}`;
+}
+
 export async function getMachine(
   id: string,
   role?: Role,
 ): Promise<MachineDetail> {
-  const data = await apiFetch<MachineDetail>(`/api/machines/${id}`);
-  return normalizeMachine(data, role);
+  return readIfWarm(machineWarmKey(id), async () => {
+    const data = await apiFetch<MachineDetail>(`/api/machines/${id}`);
+    return normalizeMachine(data, role);
+  });
+}
+
+export function warmMachineName(machineId: string, role?: Role) {
+  warmRead(machineWarmKey(machineId), () => getMachine(machineId, role));
 }
 
 export async function updateMachineSite(machineId: string, siteId: string | null) {

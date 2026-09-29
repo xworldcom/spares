@@ -6,7 +6,7 @@ import {
   warmTicketDetailFetch,
   listAccessibleTickets,
 } from "@/lib/api/care";
-import { listMachines } from "@/lib/api/machines";
+import { listMachines, warmMachineName } from "@/lib/api/machines";
 import { listQuotes, warmQuoteDetailFetch } from "@/lib/api/quotes";
 import { warmRead } from "@/lib/api/warm-read";
 
@@ -47,6 +47,12 @@ export function warmQuotesList() {
 export function warmMachineCareTabs(machineId: string) {
   prefetchCareTabRoutes(machineId);
   warmCareOverview(machineId);
+  warmMachineName(machineId);
+}
+
+export function warmMachineRoute(machineId: string) {
+  warmMachineName(machineId);
+  warmMachineCareTabs(machineId);
 }
 
 export function prefetchCareTabRoutes(machineId: string) {
