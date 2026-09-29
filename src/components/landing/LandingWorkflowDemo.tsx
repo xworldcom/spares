@@ -9,7 +9,6 @@ import { LandingWorkflowGuide } from "@/components/landing/LandingWorkflowGuide"
 import {
   DEMO_MACHINE,
   DEMO_OTHER_LABEL,
-  DEMO_PLANT,
   DEMO_QUOTE_NUMBER,
   WORKFLOW_DEMO_PART,
   WORKFLOW_DEMO_PART_NAME,
@@ -113,10 +112,6 @@ export function LandingWorkflowDemo({
     >
       {showHubChrome ? (
         <header className="landing-workflow-hub">
-          <div className="landing-workflow-hub-title">
-            <p className="landing-demo-kicker">{DEMO_PLANT}</p>
-            <h3 className="landing-demo-title">{DEMO_MACHINE}</h3>
-          </div>
           <nav className="landing-workflow-tabs" aria-label="Machine">
             {HUB_TABS.map((tab) => (
               <span
@@ -185,14 +180,9 @@ export function LandingWorkflowDemo({
                   <p className="landing-workflow-part-id">{WORKFLOW_DEMO_PART}</p>
                   <p className="landing-workflow-part-meta">Infeed · BOM qty 2</p>
                 </div>
-                <button
-                  type="button"
-                  className="btn-accent landing-workflow-add"
-                  data-guide-target="add"
-                  tabIndex={-1}
-                >
+                <span className="landing-workflow-add" data-guide-target="add">
                   Add to quote
-                </button>
+                </span>
               </div>
             </div>
           ) : null}
@@ -200,14 +190,7 @@ export function LandingWorkflowDemo({
 
         <div className="landing-workflow-side" aria-hidden={showThreadView && handoff > 0.4}>
           {showQuoteSheet ? (
-            <div
-              className={[
-                "landing-workflow-quote-sheet",
-                step === "send" ? "is-send" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
+            <div className="landing-workflow-quote-sheet">
               <div className="landing-workflow-quote-sheet-handle" aria-hidden="true" />
               <div className="landing-workflow-quote-head">
                 <h4 className="landing-workflow-quote-title">Quote</h4>
@@ -231,14 +214,9 @@ export function LandingWorkflowDemo({
                   </div>
                 </li>
               </ul>
-              <button
-                type="button"
-                className="landing-workflow-request-quote btn-accent"
-                data-guide-target="request"
-                tabIndex={-1}
-              >
+              <span className="landing-workflow-request-quote" data-guide-target="request">
                 Request quote
-              </button>
+              </span>
             </div>
           ) : null}
         </div>
