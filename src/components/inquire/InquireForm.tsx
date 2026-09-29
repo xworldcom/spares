@@ -87,10 +87,7 @@ export function InquireForm() {
 
     function reveal() {
       const active = document.activeElement;
-      if (!(active instanceof HTMLElement) || !formEl.contains(active)) {
-        return;
-      }
-      if (active === formEl) {
+      if (!formEl || !(active instanceof HTMLElement) || active === formEl || !formEl.contains(active)) {
         return;
       }
       const viewport = window.visualViewport;
