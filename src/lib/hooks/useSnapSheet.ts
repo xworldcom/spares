@@ -362,13 +362,22 @@ export function useSnapSheet({
 
   function collapseToPeek() {
     steppedAtRef.current = performance.now();
-    setSheet("peek");
-    setOpen(true);
-    clearInlineHeight("peek");
-    setDragging(false);
-    setDraggingClass(false);
-    clearDragChrome();
     dockedRef.current = true;
+    if (sheet === "peek") {
+      setOpen(true);
+      clearInlineHeight("peek");
+      return;
+    }
+    if (sheet === "out") {
+      setSheet("peek");
+      setOpen(true);
+      clearInlineHeight("peek");
+      setDragging(false);
+      setDraggingClass(false);
+      clearDragChrome();
+      return;
+    }
+    settleTo("peek");
   }
 
   function hide() {
@@ -546,22 +555,35 @@ export function useSnapSheet({
       dockedRef.current = true;
     }
     steppedAtRef.current = performance.now();
+    const peekH = heightForSnap("peek");
+    const replyH = heightForSnap("reply");
+    const fullH = heightForSnap("full");
     const target = heightForSnap(next);
     const live = cardRef.current?.getBoundingClientRect().height ?? target;
     const peekLayout = next === "peek";
+    const collapsingToPeek =
+      next === "peek" && live > peekH + PEEK_LAYOUT_BAND_PX;
     setSheet(next);
-    clearDragChrome();
+    if (collapsingToPeek) {
+      setDragChrome(
+        chromeSnapForHeight(live, peekH, replyH, fullH, { collapsing: true }),
+      );
+    } else {
+      clearDragChrome();
+    }
     setDragging(false);
     setDraggingClass(false);
     paintHeight(live, peekLayout);
     setOpen(true);
     if (Math.abs(live - target) < 2) {
+      clearDragChrome();
       clearInlineHeight(next);
       return;
     }
     window.requestAnimationFrame(() => {
       paintHeight(target, peekLayout);
       window.setTimeout(() => {
+        clearDragChrome();
         clearInlineHeight(next);
       }, 440);
     });
@@ -645,7 +667,7 @@ export function useSnapSheet({
     if (sheet === "full") {
       setSheet("reply");
     } else if (sheet === "reply") {
-      setSheet("peek");
+      collapseToPeek();
     } else {
       steppedAtRef.current = performance.now();
       setSheet("reply");
