@@ -53,8 +53,8 @@ export function ConversationSheet({
   });
 
   const overlayMobile = layout === "overlay" && !desktop;
-  /** Resting snap is `sheet`; while dragging, painted chrome follows `displaySnap`. */
-  const stageSnap = dragging ? displaySnap : sheet;
+  /** Painted layout follows `displaySnap` (drag + animated collapse hold reply/full chrome). */
+  const stageSnap = displaySnap;
   const expanded =
     displaySnap === "full" ||
     displaySnap === "reply" ||
