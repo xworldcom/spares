@@ -24,6 +24,11 @@ export function initialConversationSheetSnap(
 export const CONVERSATION_SHEET_PEEK_H = "5.75rem";
 /** Handle + toolbar reserved inside the fixed peek band (see --peek-chrome-h). */
 export const CONVERSATION_SHEET_PEEK_CHROME_H = "2.85rem";
+/** Toolbar / handle typography — keep in sync with globals.css `--sheet-*` tokens. */
+export const CONVERSATION_SHEET_TITLE_FONT_PX = 15;
+export const CONVERSATION_SHEET_CLOSE_FONT_PX = 14;
+export const CONVERSATION_SHEET_DRAG_HANDLE_W_REM = 2.6;
+export const CONVERSATION_SHEET_DRAG_HANDLE_H_REM = 0.28;
 /** Latest context + composer; history opens on the way to full. */
 export const CONVERSATION_SHEET_REPLY_H = "10.25rem";
 export const CONVERSATION_SHEET_FULL_H =
