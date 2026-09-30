@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  CONVERSATION_SHEET_CLOSE_FONT_PX,
+  CONVERSATION_SHEET_DRAG_HANDLE_H_REM,
+  CONVERSATION_SHEET_DRAG_HANDLE_W_REM,
   CONVERSATION_SHEET_PEEK_CHROME_H,
   CONVERSATION_SHEET_PEEK_H,
+  CONVERSATION_SHEET_TITLE_FONT_PX,
   REPLY_DETENT_PX,
   chromeSnapForHeight,
   conversationSheetDragHeight,
@@ -14,6 +18,13 @@ describe("conversation sheet peek band", () => {
   it("uses a fixed peek height independent of message content", () => {
     assert.equal(CONVERSATION_SHEET_PEEK_H, "5.75rem");
     assert.equal(CONVERSATION_SHEET_PEEK_CHROME_H, "2.85rem");
+  });
+
+  it("locks chrome typography and handle geometry tokens", () => {
+    assert.equal(CONVERSATION_SHEET_TITLE_FONT_PX, 15);
+    assert.equal(CONVERSATION_SHEET_CLOSE_FONT_PX, 14);
+    assert.equal(CONVERSATION_SHEET_DRAG_HANDLE_W_REM, 2.6);
+    assert.equal(CONVERSATION_SHEET_DRAG_HANDLE_H_REM, 0.28);
   });
 });
 

@@ -345,6 +345,22 @@
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
   --sheet-h: var(--peek-h);
   --drag-h: 0px;
+  /* Chrome metrics stay fixed at every snap — only layout/content may change. */
+  --sheet-drag-handle-w: 2.6rem;
+  --sheet-drag-handle-h: 0.28rem;
+  --sheet-title-size: 15px;
+  --sheet-title-weight: 600;
+  --sheet-title-tracking: -0.02em;
+  --sheet-title-line-height: 1.2;
+  --sheet-close-size: 14px;
+  --sheet-close-weight: 600;
+}
+
+.conversation-sheet.snap-sheet > .quote-sheet-handle {
+  flex: 0 0 auto;
+  width: var(--sheet-drag-handle-w);
+  height: var(--sheet-drag-handle-h);
+  margin: 0.45rem auto 0.15rem;
 }
 
 .conversation-sheet.is-inline {
@@ -475,7 +491,6 @@
 }
 
 @media (max-width: 1023px) {
-  .conversation-sheet:not(.is-inline).is-reply.is-dragging .conversation-sheet-toolbar,
   .conversation-sheet:not(.is-inline).is-full.is-dragging .conversation-sheet-toolbar {
     position: relative;
     top: auto;
@@ -484,7 +499,6 @@
     backdrop-filter: none;
   }
 
-  .conversation-sheet:not(.is-inline).is-reply .conversation-sheet-toolbar,
   .conversation-sheet:not(.is-inline).is-full .conversation-sheet-toolbar {
     position: sticky;
     top: 0;
@@ -531,13 +545,9 @@
   min-height: calc(var(--peek-chrome-h) - 1rem);
 }
 
-.conversation-sheet-toolbar--peek {
-  padding-bottom: 0.15rem;
-}
-
-.conversation-sheet-toolbar--peek .conversation-sheet-toolbar-title {
-  font-size: 13px;
-  color: var(--spares-muted);
+.conversation-sheet:not(.is-inline)[data-layout-peek] .conversation-sheet-close {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .conversation-sheet-toolbar-title {
@@ -545,9 +555,10 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: var(--sheet-title-size, 15px);
+  font-weight: var(--sheet-title-weight, 600);
+  letter-spacing: var(--sheet-title-tracking, -0.02em);
+  line-height: var(--sheet-title-line-height, 1.2);
 }
 
 .conversation-sheet-unread-dot {
@@ -564,8 +575,21 @@
   padding: 0.35rem 0.85rem;
   background: rgba(255, 255, 255, 0.08);
   color: var(--spares-ink);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--sheet-close-size, 14px);
+  font-weight: var(--sheet-close-weight, 600);
+  line-height: var(--sheet-title-line-height, 1.2);
+}
+
+.conversation-sheet:not(.is-inline) .imsg-chip,
+.conversation-sheet:not(.is-inline) .imsg-chip-when {
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.conversation-sheet:not(.is-inline) .imsg-chip-when {
+  font-size: 11px;
 }
 
 .conversation-sheet:not(.is-inline).is-reply .conversation-sheet-body,

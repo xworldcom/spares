@@ -114,31 +114,23 @@ export function ConversationSheet({
         }}
       />
       {showChrome ? (
-        <div
-          className={
-            displaySnap === "peek"
-              ? "conversation-sheet-toolbar conversation-sheet-toolbar--peek"
-              : "conversation-sheet-toolbar"
-          }
-        >
+        <div className="conversation-sheet-toolbar">
           <p className="conversation-sheet-toolbar-title">
             {title}
             {unread ? (
               <span className="conversation-sheet-unread-dot" aria-label="Unread messages" />
             ) : null}
           </p>
-          {displaySnap === "peek" ? null : (
-            <button
-              type="button"
-              className="conversation-sheet-close"
-              onClick={(event) => {
-                event.stopPropagation();
-                collapseToPeek();
-              }}
-            >
-              Close
-            </button>
-          )}
+          <button
+            type="button"
+            className="conversation-sheet-close"
+            onClick={(event) => {
+              event.stopPropagation();
+              collapseToPeek();
+            }}
+          >
+            Close
+          </button>
         </div>
       ) : null}
       <ConversationSheetProvider
