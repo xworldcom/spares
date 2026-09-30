@@ -33,6 +33,8 @@ export function ConversationSheet({
   const card = useRef<HTMLElement>(null);
   const {
     sheet,
+    displaySnap,
+    dragComposerOpen,
     dragging,
     expand,
     toggleHandle,
@@ -51,23 +53,26 @@ export function ConversationSheet({
 
   const overlayMobile = layout === "overlay" && !desktop;
   const expanded =
-    sheet === "full" || sheet === "reply" || (layout === "inline" && desktop);
-  const showChrome = overlayMobile && sheet !== "out";
+    displaySnap === "full" ||
+    displaySnap === "reply" ||
+    (layout === "inline" && desktop);
+  const showChrome = overlayMobile && displaySnap !== "out";
 
   return (
     <aside
       ref={card}
       data-conversation-sheet=""
       data-layout={layout}
-      data-snap={sheet}
+      data-snap={displaySnap}
       className={[
         "conversation-sheet",
         "snap-sheet",
-        sheet === "full" ? "is-full" : "",
-        sheet === "reply" ? "is-reply" : "",
-        sheet === "peek" ? "is-peek" : "",
-        sheet === "out" ? "is-out" : "",
+        displaySnap === "full" ? "is-full" : "",
+        displaySnap === "reply" ? "is-reply" : "",
+        displaySnap === "peek" ? "is-peek" : "",
+        displaySnap === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
+        dragComposerOpen ? "is-drag-opening" : "",
         layout === "inline" ? "is-inline" : "",
         expanded ? "is-expanded" : "",
       ]
@@ -99,7 +104,7 @@ export function ConversationSheet({
       {showChrome ? (
         <div
           className={
-            sheet === "peek"
+            displaySnap === "peek"
               ? "conversation-sheet-toolbar conversation-sheet-toolbar--peek"
               : "conversation-sheet-toolbar"
           }
@@ -110,7 +115,7 @@ export function ConversationSheet({
               <span className="conversation-sheet-unread-dot" aria-label="Unread messages" />
             ) : null}
           </p>
-          {sheet === "peek" ? null : (
+          {displaySnap === "peek" ? null : (
             <button
               type="button"
               className="conversation-sheet-close"
@@ -126,7 +131,7 @@ export function ConversationSheet({
       ) : null}
       <ConversationSheetProvider
         value={{
-          snap: sheet,
+          snap: displaySnap,
           dragging,
           collapse: collapseToPeek,
         }}
