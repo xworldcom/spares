@@ -67,10 +67,10 @@ export function ConversationSheet({
       className={[
         "conversation-sheet",
         "snap-sheet",
-        displaySnap === "full" ? "is-full" : "",
-        displaySnap === "reply" ? "is-reply" : "",
-        displaySnap === "peek" ? "is-peek" : "",
-        displaySnap === "out" ? "is-out" : "",
+        sheet === "full" ? "is-full" : "",
+        sheet === "reply" ? "is-reply" : "",
+        sheet === "peek" ? "is-peek" : "",
+        sheet === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
         dragComposerOpen ? "is-drag-opening" : "",
         layout === "inline" ? "is-inline" : "",
@@ -131,7 +131,7 @@ export function ConversationSheet({
       ) : null}
       <ConversationSheetProvider
         value={{
-          snap: displaySnap,
+          snap: sheet,
           dragging,
           collapse: collapseToPeek,
         }}
