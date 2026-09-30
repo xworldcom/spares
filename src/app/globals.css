@@ -475,6 +475,15 @@
 }
 
 @media (max-width: 1023px) {
+  .conversation-sheet:not(.is-inline).is-reply.is-dragging .conversation-sheet-toolbar,
+  .conversation-sheet:not(.is-inline).is-full.is-dragging .conversation-sheet-toolbar {
+    position: relative;
+    top: auto;
+    padding-top: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
   .conversation-sheet:not(.is-inline).is-reply .conversation-sheet-toolbar,
   .conversation-sheet:not(.is-inline).is-full .conversation-sheet-toolbar {
     position: sticky;
@@ -485,13 +494,13 @@
   }
 }
 
-.conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-thread--fill,
-.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill {
+.conversation-sheet:not(.is-inline).is-peek.is-dragging:not([data-layout-peek]) .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging:not([data-layout-peek]) .imsg-thread--fill {
   justify-content: flex-end;
 }
 
-.conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill::before {
+.conversation-sheet:not(.is-inline).is-peek.is-dragging:not([data-layout-peek]) .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging:not([data-layout-peek]) .imsg-thread--fill::before {
   display: block;
   flex: 1 1 auto;
   min-height: 0;

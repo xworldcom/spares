@@ -37,15 +37,30 @@ export const REPLY_DETENT_PX = 32;
  * (composer seats) and only leftover travel grows toward full (rollout).
  * `dy` is pointer delta: negative is up (taller sheet).
  */
+/** Same band as `data-layout-peek` in useSnapSheet — keep chrome and layout in sync. */
+export const PEEK_LAYOUT_BAND_PX = 4;
+
 /** Visual snap from live sheet height (no velocity) — matches resting stage while dragging. */
 export function chromeSnapForHeight(
   height: number,
   peekH: number,
   replyH: number,
   fullH: number,
+  opts?: { collapsing?: boolean },
 ): ConversationSheetSnap {
+  const peekBand = peekH + PEEK_LAYOUT_BAND_PX;
   const midPeekReply = (peekH + replyH) / 2;
   const midReplyFull = (replyH + fullH) / 2;
+  if (height <= peekBand) {
+    return "peek";
+  }
+  // Collapsing: keep reply/full chrome until height enters the peek band (no mid-band toolbar flip).
+  if (opts?.collapsing) {
+    if (height < midReplyFull) {
+      return "reply";
+    }
+    return "full";
+  }
   if (height < midPeekReply) {
     return "peek";
   }
