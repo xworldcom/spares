@@ -93,6 +93,25 @@ describe("conversation sheet staged pull-up", () => {
     assert.equal(chromeSnapForHeight(500, heights.peekH, heights.replyH, heights.fullH), "full");
   });
 
+  it("keeps reply chrome until the peek band when collapsing", () => {
+    assert.equal(
+      chromeSnapForHeight(150, heights.peekH, heights.replyH, heights.fullH, {
+        collapsing: true,
+      }),
+      "reply",
+    );
+    assert.equal(
+      chromeSnapForHeight(94, heights.peekH, heights.replyH, heights.fullH, {
+        collapsing: true,
+      }),
+      "peek",
+    );
+  });
+
+  it("uses peek chrome below the midline while opening", () => {
+    assert.equal(chromeSnapForHeight(100, heights.peekH, heights.replyH, heights.fullH), "peek");
+  });
+
   it("lifts the composer only when opening or in reply/full chrome", () => {
     assert.equal(dragComposerLift("peek", "peek", -20), true);
     assert.equal(dragComposerLift("peek", "reply", 40), false);

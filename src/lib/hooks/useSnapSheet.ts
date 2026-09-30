@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   REPLY_DETENT_PX,
+  PEEK_LAYOUT_BAND_PX,
   chromeSnapForHeight,
   conversationSheetDragHeight,
   dragComposerLift,
@@ -174,20 +175,20 @@ export function useSnapSheet({
     onOpenChange?.(next);
   }
 
-  function syncLayoutPeek(heightPx: number) {
+  function syncLayoutPeek(heightPx: number, forcePeekLayout = false) {
     const peekH = heightForSnap("peek");
-    const inPeekBand = heightPx <= peekH + 4;
-    if (inPeekBand) {
+    const inPeekBand = heightPx <= peekH + PEEK_LAYOUT_BAND_PX;
+    if (inPeekBand || forcePeekLayout) {
       cardRef.current?.setAttribute("data-layout-peek", "");
     } else {
       cardRef.current?.removeAttribute("data-layout-peek");
     }
   }
 
-  function paintHeight(px: number) {
+  function paintHeight(px: number, forcePeekLayout = false) {
     cardRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`);
     cardRef.current?.style.setProperty("--drag-h", "0px");
-    syncLayoutPeek(px);
+    syncLayoutPeek(px, forcePeekLayout);
   }
 
   function paintDrag(dy: number) {
@@ -217,7 +218,9 @@ export function useSnapSheet({
     const peekH = heightForSnap("peek");
     const replyH = heightForSnap("reply");
     const fullH = heightForSnap("full");
-    const nextChrome = chromeSnapForHeight(height, peekH, replyH, fullH);
+    const nextChrome = chromeSnapForHeight(height, peekH, replyH, fullH, {
+      collapsing: dy > 0,
+    });
     setDragChrome(nextChrome);
     setDragComposerOpen(dragComposerLift(nextChrome, drag.current.from, dy));
   }
@@ -541,18 +544,19 @@ export function useSnapSheet({
     steppedAtRef.current = performance.now();
     const target = heightForSnap(next);
     const live = cardRef.current?.getBoundingClientRect().height ?? target;
+    const peekLayout = next === "peek";
     setSheet(next);
     clearDragChrome();
     setDragging(false);
     setDraggingClass(false);
-    paintHeight(live);
+    paintHeight(live, peekLayout);
     setOpen(true);
     if (Math.abs(live - target) < 2) {
       clearInlineHeight(next);
       return;
     }
     window.requestAnimationFrame(() => {
-      paintHeight(target);
+      paintHeight(target, peekLayout);
       window.setTimeout(() => {
         clearInlineHeight(next);
       }, 440);
