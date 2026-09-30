@@ -1,12 +1,21 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  CONVERSATION_SHEET_PEEK_CHROME_H,
+  CONVERSATION_SHEET_PEEK_H,
   REPLY_DETENT_PX,
   chromeSnapForHeight,
   conversationSheetDragHeight,
   dragComposerLift,
   initialConversationSheetSnap,
 } from "./conversation-sheet.ts";
+
+describe("conversation sheet peek band", () => {
+  it("uses a fixed peek height independent of message content", () => {
+    assert.equal(CONVERSATION_SHEET_PEEK_H, "5.75rem");
+    assert.equal(CONVERSATION_SHEET_PEEK_CHROME_H, "2.85rem");
+  });
+});
 
 describe("conversation sheet startup snap", () => {
   it("stays closed when the sheet is not open", () => {
