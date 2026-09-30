@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   REPLY_DETENT_PX,
+  chromeSnapForHeight,
   conversationSheetDragHeight,
+  dragComposerLift,
   initialConversationSheetSnap,
 } from "./conversation-sheet.ts";
 
@@ -74,6 +76,19 @@ describe("conversation sheet staged pull-up", () => {
       }),
       heights.replyH,
     );
+  });
+
+  it("maps live height to peek / reply / full chrome while dragging", () => {
+    assert.equal(chromeSnapForHeight(80, heights.peekH, heights.replyH, heights.fullH), "peek");
+    assert.equal(chromeSnapForHeight(150, heights.peekH, heights.replyH, heights.fullH), "reply");
+    assert.equal(chromeSnapForHeight(500, heights.peekH, heights.replyH, heights.fullH), "full");
+  });
+
+  it("lifts the composer only when opening or in reply/full chrome", () => {
+    assert.equal(dragComposerLift("peek", "peek", -20), true);
+    assert.equal(dragComposerLift("peek", "reply", 40), false);
+    assert.equal(dragComposerLift("reply", "full", -40), true);
+    assert.equal(dragComposerLift("reply", "reply", 40), true);
   });
 
   it("grows from reply toward full without a reply detent", () => {

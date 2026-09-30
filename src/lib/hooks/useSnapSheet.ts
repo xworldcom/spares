@@ -9,7 +9,9 @@ import {
 } from "react";
 import {
   REPLY_DETENT_PX,
+  chromeSnapForHeight,
   conversationSheetDragHeight,
+  dragComposerLift,
   initialConversationSheetSnap,
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
@@ -144,6 +146,9 @@ export function useSnapSheet({
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
     initialConversationSheetSnap(open, desktopStage, openForUnread),
   );
+  /** While dragging, overrides chrome classes so close→peek matches before release. */
+  const [dragChrome, setDragChrome] = useState<ConversationSheetSnap | null>(null);
+  const [dragComposerOpen, setDragComposerOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const drag = useRef({
     y: 0,
@@ -162,6 +167,8 @@ export function useSnapSheet({
   const controlledOpen = typeof onOpenChange === "function";
   const openForUnreadRef = useRef(openForUnread);
   openForUnreadRef.current = openForUnread;
+
+  const displaySnap = dragChrome ?? sheet;
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
@@ -189,6 +196,20 @@ export function useSnapSheet({
     cardRef.current?.style.removeProperty("--drag-h");
   }
 
+  function syncDragChromeFromHeight(height: number, dy: number) {
+    const peekH = heightForSnap("peek");
+    const replyH = heightForSnap("reply");
+    const fullH = heightForSnap("full");
+    const nextChrome = chromeSnapForHeight(height, peekH, replyH, fullH);
+    setDragChrome(nextChrome);
+    setDragComposerOpen(dragComposerLift(nextChrome, drag.current.from, dy));
+  }
+
+  function clearDragChrome() {
+    setDragChrome(null);
+    setDragComposerOpen(false);
+  }
+
   function setDraggingClass(on: boolean) {
     cardRef.current?.classList.toggle("is-dragging", on);
   }
@@ -210,6 +231,7 @@ export function useSnapSheet({
     setSheet(
       initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
     );
+    clearDragChrome();
     dockedRef.current = true;
     clearInlineHeight();
     setDragging(false);
@@ -229,6 +251,7 @@ export function useSnapSheet({
       clearInlineHeight();
       setDragging(false);
       setDraggingClass(false);
+      clearDragChrome();
       return;
     }
     if (!controlledOpen && !desktopStage) {
@@ -236,13 +259,15 @@ export function useSnapSheet({
       clearInlineHeight();
       setDragging(false);
       setDraggingClass(false);
+      clearDragChrome();
       return;
     }
     setSheet("out");
     clearInlineHeight();
     setDragging(false);
     setDraggingClass(false);
-  }, [open, desktopStage, cardRef, controlledOpen]);
+    clearDragChrome();
+  }, [open, desktopStage, cardRef, controlledOpen, openForUnread]);
 
   useEffect(() => {
     const body = cardRef.current?.querySelector(scrollBodySelector);
@@ -304,6 +329,7 @@ export function useSnapSheet({
     clearInlineHeight();
     setDragging(false);
     setDraggingClass(false);
+    clearDragChrome();
     setOpen(false);
   }
 
@@ -314,6 +340,7 @@ export function useSnapSheet({
     clearInlineHeight();
     setDragging(false);
     setDraggingClass(false);
+    clearDragChrome();
     dockedRef.current = true;
   }
 
@@ -357,6 +384,7 @@ export function useSnapSheet({
       setDragging(true);
       setDraggingClass(true);
       paintHeight(startH);
+      syncDragChromeFromHeight(startH, 0);
     }
   }
 
@@ -420,6 +448,7 @@ export function useSnapSheet({
     setDragging(true);
     setDraggingClass(true);
     paintHeight(drag.current.startH);
+    syncDragChromeFromHeight(drag.current.startH, 0);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -465,7 +494,16 @@ export function useSnapSheet({
       drag.current.startH = replyH;
       drag.current.y = event.clientY;
     }
-    paintDrag(event.clientY - drag.current.y);
+    paintDrag(dy);
+    const liveH = conversationSheetDragHeight({
+      from: drag.current.from,
+      startH: drag.current.startH,
+      dy,
+      peekH: heightForSnap("peek"),
+      replyH: heightForSnap("reply"),
+      fullH: heightForSnap("full"),
+    });
+    syncDragChromeFromHeight(liveH, dy);
     stickThreadToLatest();
   }
 
@@ -479,10 +517,11 @@ export function useSnapSheet({
     steppedAtRef.current = performance.now();
     const target = heightForSnap(next);
     const live = cardRef.current?.getBoundingClientRect().height ?? target;
+    setSheet(next);
+    clearDragChrome();
     setDragging(false);
     setDraggingClass(false);
     paintHeight(live);
-    setSheet(next);
     setOpen(true);
     if (Math.abs(live - target) < 2) {
       clearInlineHeight();
@@ -550,6 +589,7 @@ export function useSnapSheet({
       drag.current.on = false;
       setDragging(false);
       setDraggingClass(false);
+      clearDragChrome();
       clearInlineHeight();
       if (from === "peek" || from === "reply") {
         settleTo(stepToward(from, "up"));
@@ -594,6 +634,8 @@ export function useSnapSheet({
 
   return {
     sheet,
+    displaySnap,
+    dragComposerOpen,
     dragging,
     setSheet,
     dismiss,

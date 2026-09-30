@@ -35,6 +35,42 @@ export const REPLY_DETENT_PX = 32;
  * (composer seats) and only leftover travel grows toward full (rollout).
  * `dy` is pointer delta: negative is up (taller sheet).
  */
+/** Visual snap from live sheet height (no velocity) — matches resting stage while dragging. */
+export function chromeSnapForHeight(
+  height: number,
+  peekH: number,
+  replyH: number,
+  fullH: number,
+): ConversationSheetSnap {
+  const midPeekReply = (peekH + replyH) / 2;
+  const midReplyFull = (replyH + fullH) / 2;
+  if (height < midPeekReply) {
+    return "peek";
+  }
+  if (height < midReplyFull) {
+    return "reply";
+  }
+  return "full";
+}
+
+/**
+ * While dragging, expand the composer only when opening (peek→reply) or in reply/full
+ * chrome — not when collapsing toward peek.
+ */
+export function dragComposerLift(
+  chromeSnap: ConversationSheetSnap,
+  dragFrom: ConversationSheetSnap,
+  dy: number,
+): boolean {
+  if (dragFrom === "peek" && dy < 0) {
+    return true;
+  }
+  if (chromeSnap === "peek") {
+    return false;
+  }
+  return chromeSnap === "reply" || chromeSnap === "full";
+}
+
 export function conversationSheetDragHeight({
   from,
   startH,

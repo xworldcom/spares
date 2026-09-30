@@ -441,7 +441,7 @@
   transition: none;
 }
 
-.conversation-sheet:not(.is-inline).is-peek.is-dragging .imsg-composer {
+.conversation-sheet:not(.is-inline).is-peek.is-dragging.is-drag-opening .imsg-composer {
   max-height: 12rem;
   opacity: 1;
   padding-top: 0.7rem;
