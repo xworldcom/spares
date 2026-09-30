@@ -531,7 +531,11 @@ export function useSnapSheet({
       fullH: heightForSnap("full"),
     });
     syncDragChromeFromHeight(liveH, dy);
-    stickThreadToLatest();
+    const inPeekBand = liveH <= peekH + PEEK_LAYOUT_BAND_PX;
+    // Collapsing into the peek band: stop re-scrolling or the thread jumps.
+    if (dy <= 0 || !inPeekBand) {
+      stickThreadToLatest();
+    }
   }
 
   function settleTo(next: ConversationSheetSnap) {

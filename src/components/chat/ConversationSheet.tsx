@@ -5,6 +5,7 @@ import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import {
   ConversationSheetProvider,
 } from "@/components/chat/ConversationSheetContext";
+import { ConversationSheetDebugHud } from "@/components/chat/ConversationSheetDebugHud";
 import { useSnapSheet } from "@/lib/hooks/useSnapSheet";
 
 export function ConversationSheet({
@@ -52,6 +53,8 @@ export function ConversationSheet({
   });
 
   const overlayMobile = layout === "overlay" && !desktop;
+  /** Resting snap is `sheet`; while dragging, painted chrome follows `displaySnap`. */
+  const stageSnap = dragging ? displaySnap : sheet;
   const expanded =
     displaySnap === "full" ||
     displaySnap === "reply" ||
@@ -67,10 +70,10 @@ export function ConversationSheet({
       className={[
         "conversation-sheet",
         "snap-sheet",
-        sheet === "full" ? "is-full" : "",
-        sheet === "reply" ? "is-reply" : "",
-        sheet === "peek" ? "is-peek" : "",
-        sheet === "out" ? "is-out" : "",
+        stageSnap === "full" ? "is-full" : "",
+        stageSnap === "reply" ? "is-reply" : "",
+        stageSnap === "peek" ? "is-peek" : "",
+        stageSnap === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
         dragComposerOpen ? "is-drag-opening" : "",
         layout === "inline" ? "is-inline" : "",
@@ -80,6 +83,15 @@ export function ConversationSheet({
         .join(" ")}
       {...(overlayMobile ? pointerHandlers : {})}
     >
+      {overlayMobile ? (
+        <ConversationSheetDebugHud
+          cardRef={card}
+          sheet={sheet}
+          displaySnap={displaySnap}
+          dragging={dragging}
+          dragComposerOpen={dragComposerOpen}
+        />
+      ) : null}
       <button
         type="button"
         className="snap-sheet-handle quote-sheet-handle"
