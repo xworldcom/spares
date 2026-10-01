@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Slow full-to-peek drag on the quote conversation sheet.
- * Fails if the shell does not track the finger, the composer leaves the sheet,
- * or open starts docking the thread.
+ * Fails if the shell does not track the finger, the latest row leaves the
+ * composer during phase B, the composer leaves the sheet, or open docks the thread.
  *
  * node .cursor/skills/verify-oee360/scripts/sheet-close-probe.mjs http://127.0.0.1:3010
  */
@@ -55,8 +55,8 @@ async function readGeom() {
     const card = document.querySelector("[data-conversation-sheet]");
     const thread = card?.querySelector(".imsg-thread");
     const composer = card?.querySelector(".imsg-composer");
-    const bubbles = [...(thread?.querySelectorAll(".imsg-bubble, .imsg-chip, .imsg-row") ?? [])];
-    const last = bubbles.at(-1);
+    const rows = [...(thread?.querySelectorAll(":scope > li") ?? [])];
+    const last = rows.at(-1);
     const phaseB = Number(getComputedStyle(card).getPropertyValue("--phase-b")) || 0;
     const phaseA = Number(getComputedStyle(card).getPropertyValue("--phase-a")) || 0;
     const threadBox = thread?.getBoundingClientRect();
@@ -187,6 +187,12 @@ for (let i = 0; i < phaseB.length; i += 1) {
   }
   if (s.threadDock !== "composer") failures.push(`thread not docked at phaseB ${s.phaseB}`);
   if (s.bubbleVis < 16) failures.push(`latest bubble left the window at phaseB ${s.phaseB}: vis ${s.bubbleVis}`);
+  if (s.gap == null || s.gap > 40) {
+    failures.push(`latest row left the composer at phaseB ${s.phaseB}: gap ${s.gap}`);
+  }
+  if (s.threadBottom != null && Math.abs(s.threadBottom - s.composerTop) > 8) {
+    failures.push(`thread split from composer at phaseB ${s.phaseB}: ${s.threadBottom} vs ${s.composerTop}`);
+  }
   if (i === 0) continue;
   const prev = phaseB[i - 1];
   const dH = prev.sheetH - s.sheetH;
@@ -212,5 +218,5 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("PASS shell tracks the finger, composer stays in the sheet, open stays undocked");
+console.log("PASS shell tracks the finger, latest row stays on the composer, open stays undocked");
 await browser.close();
