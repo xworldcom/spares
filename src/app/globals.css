@@ -454,6 +454,14 @@
   margin-top: auto;
 }
 
+.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-card--sheet {
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-card--sheet .imsg-composer {
+  margin-top: 0;
+}
+
 .conversation-sheet:not(.is-inline) .imsg-composer {
   overflow: hidden;
   max-height: 12rem;

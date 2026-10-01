@@ -212,6 +212,11 @@ export function useSnapSheet({
     const threadCap = Math.max(peekThread, bodyBudget - composerPx);
     const threadExtra = phaseB * Math.max(0, threadCap - peekThread);
     card.style.setProperty("--thread-extra-h", `${Math.round(threadExtra)}px`);
+    if (motionGesture === "collapsing" && phaseB > 0) {
+      card.setAttribute("data-thread-dock", "composer");
+    } else {
+      card.removeAttribute("data-thread-dock");
+    }
     setMotionPhases({ phaseA, phaseB });
     setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
     drag.current.liveH = liveHeightPx;
@@ -227,6 +232,7 @@ export function useSnapSheet({
     card.style.removeProperty("--phase-a");
     card.style.removeProperty("--phase-b");
     card.style.removeProperty("--thread-extra-h");
+    card.removeAttribute("data-thread-dock");
     const snap = atSnap ?? sheet;
     if (snap === "peek") {
       card.setAttribute("data-layout-peek", "");
