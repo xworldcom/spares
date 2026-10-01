@@ -119,6 +119,27 @@ describe("conversation sheet staged pull-up", () => {
     );
   });
 
+  it("keeps peek chrome until the reply midline when expanding", () => {
+    assert.equal(
+      chromeSnapForHeight(100, heights.peekH, heights.replyH, heights.fullH, {
+        expanding: true,
+      }),
+      "peek",
+    );
+    assert.equal(
+      chromeSnapForHeight(150, heights.peekH, heights.replyH, heights.fullH, {
+        expanding: true,
+      }),
+      "reply",
+    );
+    assert.equal(
+      chromeSnapForHeight(500, heights.peekH, heights.replyH, heights.fullH, {
+        expanding: true,
+      }),
+      "full",
+    );
+  });
+
   it("uses peek chrome below the midline while opening", () => {
     assert.equal(chromeSnapForHeight(100, heights.peekH, heights.replyH, heights.fullH), "peek");
   });

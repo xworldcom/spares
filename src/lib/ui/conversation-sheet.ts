@@ -51,7 +51,7 @@ export function chromeSnapForHeight(
   peekH: number,
   replyH: number,
   fullH: number,
-  opts?: { collapsing?: boolean },
+  opts?: { collapsing?: boolean; expanding?: boolean },
 ): ConversationSheetSnap {
   const peekBand = peekH + PEEK_LAYOUT_BAND_PX;
   const midPeekReply = (peekH + replyH) / 2;
@@ -61,6 +61,16 @@ export function chromeSnapForHeight(
   }
   // Collapsing: keep reply/full chrome until height enters the peek band (no mid-band toolbar flip).
   if (opts?.collapsing) {
+    if (height < midReplyFull) {
+      return "reply";
+    }
+    return "full";
+  }
+  // Expanding: mirror collapse — keep peek chrome until the reply midline (no flip on release).
+  if (opts?.expanding) {
+    if (height < midPeekReply) {
+      return "peek";
+    }
     if (height < midReplyFull) {
       return "reply";
     }
