@@ -11,7 +11,6 @@ import {
   REPLY_DETENT_PX,
   conversationSheetDragHeight,
   conversationSheetMotionFromHeight,
-  conversationSheetPaintedHeight,
   conversationSheetSnapFromHeight,
   type ConversationSheetGesture,
   initialConversationSheetSnap,
@@ -188,25 +187,19 @@ export function useSnapSheet({
     }
     const { peekH, replyH, fullH } = snapHeights();
     const motionGesture = gesture ?? drag.current.gesture;
-    const paintedHeightPx = conversationSheetPaintedHeight(
-      liveHeightPx,
-      peekH,
-      replyH,
-      fullH,
-      motionGesture,
-    );
     const { phaseA, phaseB } = conversationSheetMotionFromHeight(
       liveHeightPx,
       peekH,
       replyH,
       fullH,
     );
-    card.style.setProperty("--sheet-h", `${Math.round(paintedHeightPx)}px`);
+    // Live finger height. The sheet is bottom-anchored, so the composer stays on screen.
+    card.style.setProperty("--sheet-h", `${Math.round(liveHeightPx)}px`);
     card.style.setProperty("--drag-h", "0px");
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     const peekThread = peekH - remPx(2.85);
-    const bodyBudget = Math.max(0, paintedHeightPx - remPx(2.85) - remPx(0.88));
+    const bodyBudget = Math.max(0, liveHeightPx - remPx(2.85) - remPx(0.88));
     const composerBudget = Math.max(0, replyH - peekH);
     const composerPx = phaseA * composerBudget;
     const threadCap = Math.max(peekThread, bodyBudget - composerPx);

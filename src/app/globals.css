@@ -511,6 +511,29 @@
   overflow-y: auto;
 }
 
+.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline).is-dragging[data-thread-dock="composer"] .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-settling[data-thread-dock="composer"] .imsg-thread--fill {
+  overflow: hidden;
+}
+
+.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill > li {
+  flex-shrink: 0;
+}
+
+.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill::before {
+  flex: 0 0 0px;
+  min-height: 0;
+}
+
 .conversation-sheet-peek {
   display: none;
 }
