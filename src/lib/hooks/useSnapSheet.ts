@@ -11,7 +11,9 @@ import {
   REPLY_DETENT_PX,
   conversationSheetDragHeight,
   conversationSheetMotionFromHeight,
+  conversationSheetPaintedHeight,
   conversationSheetSnapFromHeight,
+  type ConversationSheetGesture,
   initialConversationSheetSnap,
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
@@ -154,6 +156,8 @@ export function useSnapSheet({
     startH: 0,
     moved: false,
     samples: [] as { t: number; y: number }[],
+    gesture: null as ConversationSheetGesture | null,
+    liveH: 0,
   });
   const dockedRef = useRef(true);
   const steppedAtRef = useRef(0);
@@ -177,31 +181,40 @@ export function useSnapSheet({
     };
   }
 
-  function paintMotion(heightPx: number) {
+  function paintMotion(liveHeightPx: number, gesture?: ConversationSheetGesture | null) {
     const card = cardRef.current;
     if (!card) {
       return;
     }
     const { peekH, replyH, fullH } = snapHeights();
+    const motionGesture = gesture ?? drag.current.gesture;
+    const paintedHeightPx = conversationSheetPaintedHeight(
+      liveHeightPx,
+      peekH,
+      replyH,
+      fullH,
+      motionGesture,
+    );
     const { phaseA, phaseB } = conversationSheetMotionFromHeight(
-      heightPx,
+      liveHeightPx,
       peekH,
       replyH,
       fullH,
     );
-    card.style.setProperty("--sheet-h", `${Math.round(heightPx)}px`);
+    card.style.setProperty("--sheet-h", `${Math.round(paintedHeightPx)}px`);
     card.style.setProperty("--drag-h", "0px");
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     const peekThread = peekH - remPx(2.85);
-    const bodyBudget = Math.max(0, heightPx - remPx(2.85) - remPx(0.88));
+    const bodyBudget = Math.max(0, paintedHeightPx - remPx(2.85) - remPx(0.88));
     const composerBudget = Math.max(0, replyH - peekH);
     const composerPx = phaseA * composerBudget;
     const threadCap = Math.max(peekThread, bodyBudget - composerPx);
     const threadExtra = phaseB * Math.max(0, threadCap - peekThread);
     card.style.setProperty("--thread-extra-h", `${Math.round(threadExtra)}px`);
     setMotionPhases({ phaseA, phaseB });
-    setMotionSnap(conversationSheetSnapFromHeight(heightPx, peekH, replyH, fullH));
+    setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
+    drag.current.liveH = liveHeightPx;
   }
 
   function clearMotionPaint(atSnap?: ConversationSheetSnap) {
@@ -432,6 +445,8 @@ export function useSnapSheet({
       startH,
       moved: false,
       samples: [{ t: performance.now(), y: event.clientY }],
+      gesture: null,
+      liveH: startH,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
@@ -535,6 +550,11 @@ export function useSnapSheet({
       drag.current.moved = true;
     }
     recordSample(event.clientY);
+    if (dy > DRAG_SLOP) {
+      drag.current.gesture = "collapsing";
+    } else if (dy < -DRAG_SLOP) {
+      drag.current.gesture = "expanding";
+    }
     const { peekH, replyH, fullH } = snapHeights();
     if (
       drag.current.from === "peek" &&
@@ -574,14 +594,19 @@ export function useSnapSheet({
     }
     steppedAtRef.current = performance.now();
     const target = heightForSnap(next);
-    const live = cardRef.current?.getBoundingClientRect().height ?? target;
+    const live =
+      drag.current.liveH > 0
+        ? drag.current.liveH
+        : cardRef.current?.getBoundingClientRect().height ?? target;
+    const settleGesture: ConversationSheetGesture | null =
+      target < live - 2 ? "collapsing" : target > live + 2 ? "expanding" : null;
     setSheet(next);
     setDragging(false);
     setDraggingClass(false);
     setSettling(true);
     setSettlingClass(true);
     setOpen(true);
-    paintMotion(live);
+    paintMotion(live, settleGesture);
     if (Math.abs(live - target) < 2) {
       setSettling(false);
       setSettlingClass(false);
@@ -591,12 +616,15 @@ export function useSnapSheet({
     }
     const settleStarted = performance.now();
     const settleDurationMs = 440;
+    const startLive = live;
     window.requestAnimationFrame(() => {
-      paintMotion(target);
       const tick = () => {
-        const h = cardRef.current?.getBoundingClientRect().height ?? target;
-        paintMotion(h);
-        if (performance.now() - settleStarted < settleDurationMs) {
+        const elapsed = performance.now() - settleStarted;
+        const t = Math.min(1, elapsed / settleDurationMs);
+        const eased = 1 - (1 - t) ** 3;
+        const interpolatedLive = startLive + (target - startLive) * eased;
+        paintMotion(interpolatedLive, settleGesture);
+        if (elapsed < settleDurationMs) {
           settleFrameRef.current = window.requestAnimationFrame(tick);
           return;
         }
