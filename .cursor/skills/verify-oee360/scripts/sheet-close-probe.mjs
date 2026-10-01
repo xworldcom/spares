@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Slow full-to-peek drag on the quote conversation sheet.
- * Fails if the latest bubble leaves the composer during phase B, the shell
- * leaves full height, or phase A stops shrinking the sheet.
+ * Fails if the shell does not track the finger, the composer leaves the sheet,
+ * or open starts docking the thread.
  *
  * node .cursor/skills/verify-oee360/scripts/sheet-close-probe.mjs http://127.0.0.1:3010
  */
@@ -63,21 +63,29 @@ async function readGeom() {
     const composerBox = composer?.getBoundingClientRect();
     const lastBox = last?.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
+    const bubble = thread?.querySelector(".imsg-row:last-of-type .imsg-bubble");
+    const bubbleBox = bubble?.getBoundingClientRect();
+    const bubbleVis = bubbleBox && threadBox
+      ? Math.round(Math.min(bubbleBox.bottom, threadBox.bottom) - Math.max(bubbleBox.top, threadBox.top))
+      : 0;
     return {
       snap: card.getAttribute("data-snap"),
       classes: card.className,
       phaseA: Math.round(phaseA * 100) / 100,
       phaseB: Math.round(phaseB * 100) / 100,
       sheetTop: Math.round(cardBox.top),
+      sheetBottom: Math.round(cardBox.bottom),
       sheetH: Math.round(cardBox.height),
       threadTop: threadBox ? Math.round(threadBox.top) : null,
       threadH: threadBox ? Math.round(threadBox.height) : null,
       threadBottom: threadBox ? Math.round(threadBox.bottom) : null,
       composerTop: composerBox ? Math.round(composerBox.top) : null,
+      composerBottom: composerBox ? Math.round(composerBox.bottom) : null,
       composerH: composerBox ? Math.round(composerBox.height) : null,
       lastTop: lastBox ? Math.round(lastBox.top) : null,
       lastBottom: lastBox ? Math.round(lastBox.bottom) : null,
       gap: lastBox && composerBox ? Math.round(composerBox.top - lastBox.bottom) : null,
+      bubbleVis,
       threadDock: card.getAttribute("data-thread-dock"),
     };
   });
@@ -163,29 +171,29 @@ console.log(summary.join("\n"));
 writeFileSync(out, JSON.stringify({ samples }, null, 2));
 await page.screenshot({ path: "/tmp/sheet-close-mid.png" });
 
-const fullH = samples.find((s) => s.phaseB > 0.9)?.sheetH;
 const phaseB = samples.filter((s) => s.phaseB > 0.12 && s.phaseB < 0.95 && !s.released);
 const phaseA = samples.filter((s) => s.phaseB === 0 && s.phaseA < 1 && s.phaseA > 0);
 const failures = [];
 if (!openMid || openMid.threadDock != null || !(openMid.phaseB > 0.5) || !(openMid.sheetH > 400)) {
   failures.push(`open slide changed: ${JSON.stringify(openMid)}`);
 }
-if (!fullH || phaseB.length < 4) {
+if (phaseB.length < 4) {
   failures.push("close drag did not cross phase B");
 }
-const gap0 = phaseB[0]?.gap;
-const last0 = phaseB[0]?.lastTop;
-const composer0 = phaseB[0]?.composerTop;
 for (let i = 0; i < phaseB.length; i += 1) {
   const s = phaseB[i];
-  if (Math.abs(s.gap - gap0) > 8) failures.push(`gap drifted at phaseB ${s.phaseB}: ${s.gap} vs ${gap0}`);
-  if (Math.abs(s.lastTop - last0) > 8) failures.push(`latest bubble moved at phaseB ${s.phaseB}: ${s.lastTop} vs ${last0}`);
-  if (Math.abs(s.composerTop - composer0) > 4) failures.push(`composer moved during phase B ${s.phaseB}: ${s.composerTop}`);
-  if (Math.abs(s.sheetH - fullH) > 8) failures.push(`shell left full height at phaseB ${s.phaseB}: ${s.sheetH}`);
-  if (s.threadDock !== "composer") failures.push(`thread not docked at phaseB ${s.phaseB}`);
-  if (i > 0 && s.threadTop + 2 < phaseB[i - 1].threadTop) {
-    failures.push(`thread top moved up at phaseB ${s.phaseB}`);
+  if (s.composerBottom > s.sheetBottom + 2 || s.composerTop < s.sheetTop) {
+    failures.push(`composer left the sheet at phaseB ${s.phaseB}`);
   }
+  if (s.threadDock !== "composer") failures.push(`thread not docked at phaseB ${s.phaseB}`);
+  if (s.bubbleVis < 16) failures.push(`latest bubble left the window at phaseB ${s.phaseB}: vis ${s.bubbleVis}`);
+  if (i === 0) continue;
+  const prev = phaseB[i - 1];
+  const dH = prev.sheetH - s.sheetH;
+  const dTop = s.sheetTop - prev.sheetTop;
+  if (dH < 4) failures.push(`shell stalled at phaseB ${s.phaseB}: ${prev.sheetH} -> ${s.sheetH}`);
+  if (Math.abs(dTop - dH) > 3) failures.push(`shell top did not track height at phaseB ${s.phaseB}`);
+  if (dH > 48) failures.push(`shell jumped ${dH}px at phaseB ${s.phaseB}`);
 }
 if (phaseA.length < 2) failures.push("phase A samples missing");
 for (const s of phaseA) {
@@ -204,5 +212,5 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("PASS close thread stays on composer, shell stays full, phase A still shrinks");
+console.log("PASS shell tracks the finger, composer stays in the sheet, open stays undocked");
 await browser.close();
