@@ -35,7 +35,8 @@ export function ConversationSheet({
   const {
     sheet,
     displaySnap,
-    dragComposerOpen,
+    motionPhaseA,
+    motionPhaseB,
     dragging,
     expand,
     toggleHandle,
@@ -75,7 +76,6 @@ export function ConversationSheet({
         stageSnap === "peek" ? "is-peek" : "",
         stageSnap === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
-        dragComposerOpen ? "is-drag-opening" : "",
         layout === "inline" ? "is-inline" : "",
         expanded ? "is-expanded" : "",
       ]
@@ -89,7 +89,8 @@ export function ConversationSheet({
           sheet={sheet}
           displaySnap={displaySnap}
           dragging={dragging}
-          dragComposerOpen={dragComposerOpen}
+          motionPhaseA={motionPhaseA}
+          motionPhaseB={motionPhaseB}
         />
       ) : null}
       <button

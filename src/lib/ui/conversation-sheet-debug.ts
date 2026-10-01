@@ -18,7 +18,8 @@ export type ConversationSheetDebugSnapshot = {
   sheet: string;
   displaySnap: string;
   dragging: boolean;
-  dragComposerOpen: boolean;
+  motionPhaseA: number;
+  motionPhaseB: number;
   paintedH: number | null;
   boxH: number | null;
   sheetHVar: string;
@@ -34,7 +35,8 @@ export function readConversationSheetDebugSnapshot(
     sheet: string;
     displaySnap: string;
     dragging: boolean;
-    dragComposerOpen: boolean;
+    motionPhaseA: number;
+    motionPhaseB: number;
   },
 ): ConversationSheetDebugSnapshot {
   const style = card ? getComputedStyle(card) : null;

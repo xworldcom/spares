@@ -9,10 +9,9 @@ import {
 } from "react";
 import {
   REPLY_DETENT_PX,
-  PEEK_LAYOUT_BAND_PX,
-  chromeSnapForHeight,
   conversationSheetDragHeight,
-  dragComposerLift,
+  conversationSheetMotionFromHeight,
+  conversationSheetSnapFromHeight,
   initialConversationSheetSnap,
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
@@ -62,7 +61,6 @@ function heightForSnap(snap: ConversationSheetSnap) {
     return remPx(5.75);
   }
   if (snap === "reply") {
-    // Peek thread + composer — history waits for full.
     return remPx(10.25);
   }
   const inset = tabBarPx() + headerPx() + 8;
@@ -73,7 +71,6 @@ function nearestSnap(height: number, velocity: number): ConversationSheetSnap {
   const peek = heightForSnap("peek");
   const reply = heightForSnap("reply");
   const full = heightForSnap("full");
-  // Flick preference
   if (velocity < -0.45) {
     if (height < reply - 24) {
       return "reply";
@@ -137,19 +134,16 @@ export function useSnapSheet({
   open: boolean;
   onOpenChange?: (open: boolean) => void;
   desktopStage: boolean;
-  /** Scrollable thread; drag-to-collapse from full waits until scrollTop is 0. */
   scrollBodySelector: string;
-  /** Mobile overlay: start at reply when the thread has unread messages. */
   openForUnread?: boolean;
-  /** When this changes, snap resets for a new thread. */
   resetKey?: string;
 }) {
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
     initialConversationSheetSnap(open, desktopStage, openForUnread),
   );
-  /** While dragging, overrides chrome classes so close→peek matches before release. */
-  const [dragChrome, setDragChrome] = useState<ConversationSheetSnap | null>(null);
-  const [dragComposerOpen, setDragComposerOpen] = useState(false);
+  /** Height-driven snap while dragging or settling — matches painted motion phases. */
+  const [motionSnap, setMotionSnap] = useState<ConversationSheetSnap | null>(null);
+  const [motionPhases, setMotionPhases] = useState({ phaseA: 0, phaseB: 0 });
   const [dragging, setDragging] = useState(false);
   const drag = useRef({
     y: 0,
@@ -160,9 +154,7 @@ export function useSnapSheet({
     moved: false,
     samples: [] as { t: number; y: number }[],
   });
-  /** Keep the latest message docked while the sheet grows; undock only when the user scrolls history up at full. */
   const dockedRef = useRef(true);
-  /** Ignore the synthetic click that follows a pointer step so peek does not skip to full. */
   const steppedAtRef = useRef(0);
   const settleFrameRef = useRef(0);
 
@@ -170,94 +162,91 @@ export function useSnapSheet({
   const openForUnreadRef = useRef(openForUnread);
   openForUnreadRef.current = openForUnread;
 
-  const displaySnap = dragChrome ?? sheet;
+  const displaySnap = motionSnap ?? sheet;
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
   }
 
-  function syncLayoutPeek(heightPx: number, forcePeekLayout = false) {
-    const peekH = heightForSnap("peek");
-    const inPeekBand = heightPx <= peekH + PEEK_LAYOUT_BAND_PX;
-    if (inPeekBand || forcePeekLayout) {
-      cardRef.current?.setAttribute("data-layout-peek", "");
+  function snapHeights() {
+    return {
+      peekH: heightForSnap("peek"),
+      replyH: heightForSnap("reply"),
+      fullH: heightForSnap("full"),
+    };
+  }
+
+  function paintMotion(heightPx: number) {
+    const card = cardRef.current;
+    if (!card) {
+      return;
+    }
+    const { peekH, replyH, fullH } = snapHeights();
+    const { phaseA, phaseB } = conversationSheetMotionFromHeight(
+      heightPx,
+      peekH,
+      replyH,
+      fullH,
+    );
+    card.style.setProperty("--sheet-h", `${Math.round(heightPx)}px`);
+    card.style.setProperty("--drag-h", "0px");
+    card.style.setProperty("--phase-a", String(phaseA));
+    card.style.setProperty("--phase-b", String(phaseB));
+    const peekThread = peekH - remPx(2.85);
+    const bodyBudget = Math.max(0, heightPx - remPx(2.85) - remPx(0.88));
+    const composerBudget = Math.max(0, replyH - peekH);
+    const composerPx = phaseA * composerBudget;
+    const threadCap = Math.max(peekThread, bodyBudget - composerPx);
+    const threadExtra = phaseB * Math.max(0, threadCap - peekThread);
+    card.style.setProperty("--thread-extra-h", `${Math.round(threadExtra)}px`);
+    setMotionPhases({ phaseA, phaseB });
+    setMotionSnap(conversationSheetSnapFromHeight(heightPx, peekH, replyH, fullH));
+  }
+
+  function clearMotionPaint(atSnap?: ConversationSheetSnap) {
+    const card = cardRef.current;
+    if (!card) {
+      return;
+    }
+    card.style.removeProperty("--sheet-h");
+    card.style.removeProperty("--drag-h");
+    card.style.removeProperty("--phase-a");
+    card.style.removeProperty("--phase-b");
+    card.style.removeProperty("--thread-extra-h");
+    const snap = atSnap ?? sheet;
+    if (snap === "peek") {
+      card.setAttribute("data-layout-peek", "");
     } else {
-      cardRef.current?.removeAttribute("data-layout-peek");
+      card.removeAttribute("data-layout-peek");
     }
   }
 
-  function paintHeight(px: number, forcePeekLayout = false) {
-    cardRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`);
-    cardRef.current?.style.setProperty("--drag-h", "0px");
-    syncLayoutPeek(px, forcePeekLayout);
+  function clearMotionSnap(atSnap?: ConversationSheetSnap) {
+    setMotionSnap(null);
+    const snap = atSnap ?? sheet;
+    const { peekH, replyH, fullH } = snapHeights();
+    setMotionPhases(
+      conversationSheetMotionFromHeight(heightForSnap(snap), peekH, replyH, fullH),
+    );
   }
 
   function paintDrag(dy: number) {
+    const { peekH, replyH, fullH } = snapHeights();
     const live = conversationSheetDragHeight({
       from: drag.current.from,
       startH: drag.current.startH,
       dy,
-      peekH: heightForSnap("peek"),
-      replyH: heightForSnap("reply"),
-      fullH: heightForSnap("full"),
+      peekH,
+      replyH,
+      fullH,
     });
-    paintHeight(live);
-  }
-
-  function clearInlineHeight(atSnap?: ConversationSheetSnap) {
-    cardRef.current?.style.removeProperty("--sheet-h");
-    cardRef.current?.style.removeProperty("--drag-h");
-    const snap = atSnap ?? sheet;
-    if (snap === "peek") {
-      syncLayoutPeek(heightForSnap("peek"));
-    } else {
-      cardRef.current?.removeAttribute("data-layout-peek");
-    }
-  }
-
-  function syncDragChromeFromHeight(height: number, dy: number) {
-    const peekH = heightForSnap("peek");
-    const replyH = heightForSnap("reply");
-    const fullH = heightForSnap("full");
-    const motion =
-      dy > 0 ? { collapsing: true } : dy < 0 ? { expanding: true } : undefined;
-    const nextChrome = chromeSnapForHeight(height, peekH, replyH, fullH, motion);
-    setDragChrome(nextChrome);
-    setDragComposerOpen(dragComposerLift(nextChrome, drag.current.from, dy));
-  }
-
-  function clearDragChrome() {
-    setDragChrome(null);
-    setDragComposerOpen(false);
+    paintMotion(live);
   }
 
   function cancelSettleAnimation() {
     if (settleFrameRef.current) {
       window.cancelAnimationFrame(settleFrameRef.current);
       settleFrameRef.current = 0;
-    }
-  }
-
-  function syncChromeForMotionHeight(
-    height: number,
-    motion: "collapsing" | "expanding" | null,
-  ) {
-    const peekH = heightForSnap("peek");
-    const replyH = heightForSnap("reply");
-    const fullH = heightForSnap("full");
-    const opts =
-      motion === "collapsing"
-        ? { collapsing: true }
-        : motion === "expanding"
-          ? { expanding: true }
-          : undefined;
-    setDragChrome(chromeSnapForHeight(height, peekH, replyH, fullH, opts));
-    if (motion === "expanding") {
-      setDragComposerOpen(height > peekH + PEEK_LAYOUT_BAND_PX);
-    } else if (motion === "collapsing") {
-      setDragComposerOpen(
-        chromeSnapForHeight(height, peekH, replyH, fullH, opts) !== "peek",
-      );
     }
   }
 
@@ -282,12 +271,11 @@ export function useSnapSheet({
     setSheet(
       initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
     );
-    clearDragChrome();
+    clearMotionSnap();
     dockedRef.current = true;
-    clearInlineHeight();
+    clearMotionPaint();
     setDragging(false);
     setDraggingClass(false);
-    // Only when switching threads — not when unread clears after mark-read.
   }, [resetKey, open, desktopStage, cardRef]);
 
   useEffect(() => {
@@ -299,25 +287,25 @@ export function useSnapSheet({
         return initialConversationSheetSnap(true, desktopStage, openForUnread);
       });
       dockedRef.current = true;
-      clearInlineHeight();
+      clearMotionPaint();
       setDragging(false);
       setDraggingClass(false);
-      clearDragChrome();
+      clearMotionSnap();
       return;
     }
     if (!controlledOpen && !desktopStage) {
       setSheet("peek");
-      clearInlineHeight();
+      clearMotionPaint();
       setDragging(false);
       setDraggingClass(false);
-      clearDragChrome();
+      clearMotionSnap();
       return;
     }
     setSheet("out");
-    clearInlineHeight();
+    clearMotionPaint();
     setDragging(false);
     setDraggingClass(false);
-    clearDragChrome();
+    clearMotionSnap();
   }, [open, desktopStage, cardRef, controlledOpen, openForUnread]);
 
   useEffect(() => {
@@ -327,7 +315,6 @@ export function useSnapSheet({
     }
     const onScroll = () => {
       const gap = body.scrollHeight - body.scrollTop - body.clientHeight;
-      // Peek/reply always re-dock; full lets the user browse history.
       if (sheet !== "full") {
         dockedRef.current = true;
         return;
@@ -348,18 +335,16 @@ export function useSnapSheet({
     if (dragging || sheet !== "peek") {
       return;
     }
-    syncLayoutPeek(heightForSnap("peek"));
+    cardRef.current?.setAttribute("data-layout-peek", "");
   }, [sheet, dragging, cardRef]);
 
   useEffect(() => {
     if (dragging || sheet === "out" || sheet === "full") {
       return;
     }
-    // Peek/reply always show the latest context.
     if (sheet === "peek" || sheet === "reply") {
       dockedRef.current = true;
     }
-    // Stick through the height + composer open transition so the latest line stays put.
     let alive = true;
     const started = performance.now();
     function tick(now: number) {
@@ -384,10 +369,10 @@ export function useSnapSheet({
       return;
     }
     setSheet("out");
-    clearInlineHeight();
+    clearMotionPaint();
     setDragging(false);
     setDraggingClass(false);
-    clearDragChrome();
+    clearMotionSnap();
     setOpen(false);
   }
 
@@ -396,16 +381,16 @@ export function useSnapSheet({
     dockedRef.current = true;
     if (sheet === "peek") {
       setOpen(true);
-      clearInlineHeight("peek");
+      clearMotionPaint("peek");
       return;
     }
     if (sheet === "out") {
       setSheet("peek");
       setOpen(true);
-      clearInlineHeight("peek");
+      clearMotionPaint("peek");
       setDragging(false);
       setDraggingClass(false);
-      clearDragChrome();
+      clearMotionSnap();
       return;
     }
     settleTo("peek");
@@ -443,13 +428,12 @@ export function useSnapSheet({
       moved: false,
       samples: [{ t: performance.now(), y: event.clientY }],
     };
-    // Capture immediately so pointermove/up stay on the sheet (Firefox + handle button).
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
       setDragging(true);
       setDraggingClass(true);
-      paintHeight(startH);
-      syncDragChromeFromHeight(startH, 0);
+      cardRef.current?.removeAttribute("data-layout-peek");
+      paintMotion(startH);
     }
   }
 
@@ -471,7 +455,6 @@ export function useSnapSheet({
       return;
     }
     if (sheet === "reply" && !fromHandle) {
-      // Reply thread may scroll once it has a few lines; prefer handle/composer chrome for drag.
       const body = cardRef.current?.querySelector(scrollBodySelector);
       const atBottom =
         body instanceof HTMLElement
@@ -482,7 +465,6 @@ export function useSnapSheet({
         return;
       }
     }
-    // Peek / handle: pending until slop so a tap still steps open.
     beginDrag(event, sheet === "out" ? "peek" : sheet, sheet === "peek" || !fromHandle);
   }
 
@@ -512,8 +494,8 @@ export function useSnapSheet({
     drag.current.moved = true;
     setDragging(true);
     setDraggingClass(true);
-    paintHeight(drag.current.startH);
-    syncDragChromeFromHeight(drag.current.startH, 0);
+    cardRef.current?.removeAttribute("data-layout-peek");
+    paintMotion(drag.current.startH);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -547,10 +529,8 @@ export function useSnapSheet({
     if (Math.abs(dy) > DRAG_SLOP) {
       drag.current.moved = true;
     }
-    // Pull up (negative dy) grows the sheet; pull down shrinks it.
     recordSample(event.clientY);
-    const replyH = heightForSnap("reply");
-    const peekH = heightForSnap("peek");
+    const { peekH, replyH, fullH } = snapHeights();
     if (
       drag.current.from === "peek" &&
       -dy > replyH - peekH + REPLY_DETENT_PX
@@ -564,14 +544,17 @@ export function useSnapSheet({
       from: drag.current.from,
       startH: drag.current.startH,
       dy,
-      peekH: heightForSnap("peek"),
-      replyH: heightForSnap("reply"),
-      fullH: heightForSnap("full"),
+      peekH,
+      replyH,
+      fullH,
     });
-    syncDragChromeFromHeight(liveH, dy);
-    const inPeekBand = liveH <= peekH + PEEK_LAYOUT_BAND_PX;
-    // Collapsing into the peek band: stop re-scrolling or the thread jumps.
-    if (dy <= 0 || !inPeekBand) {
+    const { phaseB } = conversationSheetMotionFromHeight(
+      liveH,
+      peekH,
+      replyH,
+      fullH,
+    );
+    if (phaseB > 0.02) {
       stickThreadToLatest();
     }
   }
@@ -585,50 +568,32 @@ export function useSnapSheet({
       dockedRef.current = true;
     }
     steppedAtRef.current = performance.now();
-    const peekH = heightForSnap("peek");
-    const replyH = heightForSnap("reply");
-    const fullH = heightForSnap("full");
     const target = heightForSnap(next);
     const live = cardRef.current?.getBoundingClientRect().height ?? target;
-    const peekLayout = next === "peek";
-    const motion: "collapsing" | "expanding" | null =
-      target < live - 2
-        ? "collapsing"
-        : target > live + 2
-          ? "expanding"
-          : null;
     setSheet(next);
-    if (motion) {
-      syncChromeForMotionHeight(live, motion);
-    } else {
-      clearDragChrome();
-    }
     setDragging(false);
     setDraggingClass(false);
-    paintHeight(live, peekLayout);
     setOpen(true);
+    paintMotion(live);
     if (Math.abs(live - target) < 2) {
-      clearDragChrome();
-      clearInlineHeight(next);
+      clearMotionSnap(next);
+      clearMotionPaint(next);
       return;
     }
     const settleStarted = performance.now();
     const settleDurationMs = 440;
     window.requestAnimationFrame(() => {
-      paintHeight(target, peekLayout);
+      paintMotion(target);
       const tick = () => {
-        if (motion) {
-          const h =
-            cardRef.current?.getBoundingClientRect().height ?? target;
-          syncChromeForMotionHeight(h, motion);
-        }
+        const h = cardRef.current?.getBoundingClientRect().height ?? target;
+        paintMotion(h);
         if (performance.now() - settleStarted < settleDurationMs) {
           settleFrameRef.current = window.requestAnimationFrame(tick);
           return;
         }
         settleFrameRef.current = 0;
-        clearDragChrome();
-        clearInlineHeight(next);
+        clearMotionSnap(next);
+        clearMotionPaint(next);
       };
       settleFrameRef.current = window.requestAnimationFrame(tick);
     });
@@ -636,16 +601,16 @@ export function useSnapSheet({
 
   function settleSheet(dy: number, from: SnapSheetSnap) {
     const velocity = liveVelocity();
+    const { peekH, replyH, fullH } = snapHeights();
     const currentH = conversationSheetDragHeight({
       from,
       startH: drag.current.startH,
       dy,
-      peekH: heightForSnap("peek"),
-      replyH: heightForSnap("reply"),
-      fullH: heightForSnap("full"),
+      peekH,
+      replyH,
+      fullH,
     });
     if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
-      // Small nudge — step one stage in the gesture direction.
       if (dy < -12 || velocity < -0.2) {
         settleTo(stepToward(from === "out" ? "peek" : from, "up"));
         return;
@@ -672,7 +637,6 @@ export function useSnapSheet({
       const from = drag.current.from;
       drag.current.pending = false;
       drag.current.on = false;
-      // Tap: open one stage (peek → reply → full).
       if (from === "peek" || from === "reply") {
         settleTo(stepToward(from, "up"));
       }
@@ -688,8 +652,8 @@ export function useSnapSheet({
       drag.current.on = false;
       setDragging(false);
       setDraggingClass(false);
-      clearDragChrome();
-      clearInlineHeight();
+      clearMotionSnap();
+      clearMotionPaint();
       if (from === "peek" || from === "reply") {
         settleTo(stepToward(from, "up"));
       }
@@ -729,7 +693,8 @@ export function useSnapSheet({
   return {
     sheet,
     displaySnap,
-    dragComposerOpen,
+    motionPhaseA: motionPhases.phaseA,
+    motionPhaseB: motionPhases.phaseB,
     dragging,
     setSheet,
     dismiss,
@@ -739,7 +704,6 @@ export function useSnapSheet({
     toggleHandle,
     dragMoved: () => drag.current.moved,
     pointerHandlers: {
-      // Capture so drags from the handle <button> work in Firefox (no bubble to aside).
       onPointerDownCapture: onCardPointerDown,
       onPointerMove: onCardPointerMove,
       onPointerUp: onCardPointerUp,

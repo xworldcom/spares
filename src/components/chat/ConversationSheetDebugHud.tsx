@@ -21,13 +21,15 @@ export function ConversationSheetDebugHud({
   sheet,
   displaySnap,
   dragging,
-  dragComposerOpen,
+  motionPhaseA,
+  motionPhaseB,
 }: {
   cardRef: React.RefObject<HTMLElement | null>;
   sheet: string;
   displaySnap: string;
   dragging: boolean;
-  dragComposerOpen: boolean;
+  motionPhaseA: number;
+  motionPhaseB: number;
 }) {
   const [on, setOn] = useState(false);
   const [snap, setSnap] = useState<ConversationSheetDebugSnapshot | null>(null);
@@ -48,7 +50,8 @@ export function ConversationSheetDebugHud({
         sheet,
         displaySnap,
         dragging,
-        dragComposerOpen,
+        motionPhaseA,
+        motionPhaseB,
       });
       setSnap(next);
       const key = [
@@ -69,7 +72,7 @@ export function ConversationSheetDebugHud({
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [on, cardRef, sheet, displaySnap, dragging, dragComposerOpen]);
+  }, [on, cardRef, sheet, displaySnap, dragging, motionPhaseA, motionPhaseB]);
 
   if (!on || !snap) {
     return null;
@@ -88,7 +91,8 @@ export function ConversationSheetDebugHud({
       {row("data-snap", snap.dataSnap)}
       {row("classes", snap.classSnap || "—")}
       {row("dragging", snap.dragging)}
-      {row("dragComposer", snap.dragComposerOpen)}
+      {row("phaseA", snap.motionPhaseA.toFixed(2))}
+      {row("phaseB", snap.motionPhaseB.toFixed(2))}
       {row("layoutPeek", snap.layoutPeek)}
       {row("--sheet-h", snap.paintedH ?? "css")}
       {row("box h", snap.boxH)}

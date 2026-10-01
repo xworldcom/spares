@@ -345,6 +345,9 @@
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
   --sheet-h: var(--peek-h);
   --drag-h: 0px;
+  --phase-a: 0;
+  --phase-b: 0;
+  --thread-extra-h: 0px;
   /* Chrome metrics stay fixed at every snap — only layout/content may change. */
   --sheet-drag-handle-w: 2.6rem;
   --sheet-drag-handle-h: 0.28rem;
@@ -390,15 +393,21 @@
 
 .conversation-sheet:not(.is-inline).is-peek {
   --sheet-h: var(--peek-h);
+  --phase-a: 0;
+  --phase-b: 0;
 }
 
 .conversation-sheet:not(.is-inline).is-reply {
   --sheet-h: var(--reply-h);
+  --phase-a: 1;
+  --phase-b: 0;
   touch-action: manipulation;
 }
 
 .conversation-sheet:not(.is-inline).is-full {
   --sheet-h: var(--full-h);
+  --phase-a: 1;
+  --phase-b: 1;
   touch-action: manipulation;
 }
 
@@ -428,53 +437,55 @@
     transform var(--sheet-duration) var(--sheet-ease);
 }
 
-/* Peek keeps the live latest message; the typing zone opens on the way to reply
-   (collapse height instead of display:none so the context chip does not jump). */
+/* Phase A: composer slides on --phase-a; phase B: thread grows via --thread-extra-h. */
+.conversation-sheet:not(.is-inline) .imsg-card--sheet .imsg-composer {
+  margin-top: auto;
+}
+
 .conversation-sheet:not(.is-inline) .imsg-composer {
   overflow: hidden;
   max-height: 12rem;
-  opacity: 1;
+  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * 100%), 0);
+  opacity: var(--phase-a, 0);
   transition:
-    max-height var(--sheet-duration) var(--sheet-ease),
+    transform var(--sheet-duration) var(--sheet-ease),
     opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease),
     padding var(--sheet-duration) var(--sheet-ease),
     border-color var(--sheet-duration) var(--sheet-ease);
-}
-
-.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer {
-  max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  border-top-color: transparent;
   pointer-events: none;
 }
 
-.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer * {
-  pointer-events: none;
+.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging) .imsg-composer,
+.conversation-sheet:not(.is-inline).is-full .imsg-composer {
+  pointer-events: auto;
 }
 
-/* While dragging from peek, un-collapse chrome so the type bar slides in
-   with sheet height (clipped) instead of popping open after an overshoot. */
 .conversation-sheet:not(.is-inline).is-dragging .imsg-composer {
   transition: none;
 }
 
-.conversation-sheet:not(.is-inline).is-peek.is-dragging.is-drag-opening .imsg-composer {
-  max-height: 12rem;
-  opacity: 1;
-  padding-top: 0.7rem;
-  padding-bottom: 0.85rem;
-  border-top-color: var(--spares-line);
+.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer {
   pointer-events: none;
 }
 
-.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-thread--fill {
-  flex: 0 0 var(--peek-thread-h);
-  height: var(--peek-thread-h);
-  min-height: var(--peek-thread-h);
-  max-height: var(--peek-thread-h);
+.conversation-sheet:not(.is-inline) .imsg-thread--fill {
+  flex: 0 0 calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
+  height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
+  min-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
+  max-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
   overflow: hidden;
+}
+
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging) .imsg-thread--fill {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill {
+  overflow-y: auto;
 }
 
 .conversation-sheet-peek {
@@ -508,15 +519,12 @@
   }
 }
 
-.conversation-sheet:not(.is-inline).is-peek.is-dragging:not([data-layout-peek]) .imsg-thread--fill,
-.conversation-sheet:not(.is-inline).is-reply.is-dragging:not([data-layout-peek]) .imsg-thread--fill {
+.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill {
   justify-content: flex-end;
 }
 
-.conversation-sheet:not(.is-inline).is-peek.is-dragging:not([data-layout-peek]) .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-reply.is-dragging:not([data-layout-peek]) .imsg-thread--fill::before {
-  display: block;
-  flex: 1 1 auto;
+.conversation-sheet:not(.is-inline) .imsg-thread--fill::before {
+  flex: calc(var(--phase-b, 0) * 1000) 1 auto;
   min-height: 0;
   background: var(--spares-lift);
 }
@@ -545,9 +553,14 @@
   min-height: calc(var(--peek-chrome-h) - 1rem);
 }
 
-.conversation-sheet:not(.is-inline)[data-layout-peek] .conversation-sheet-close {
-  visibility: hidden;
+.conversation-sheet:not(.is-inline) .conversation-sheet-close {
+  opacity: var(--phase-a, 0);
   pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-reply .conversation-sheet-close,
+.conversation-sheet:not(.is-inline).is-full .conversation-sheet-close {
+  pointer-events: auto;
 }
 
 .conversation-sheet-toolbar-title {
@@ -1580,8 +1593,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   justify-content: flex-end;
 }
 
-.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-reply .imsg-thread--fill::before {
+.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-thread--fill::before {
   display: none;
 }
 
