@@ -37,6 +37,7 @@ export function ConversationSheet({
     displaySnap,
     motionPhaseA,
     motionPhaseB,
+    settling,
     dragging,
     expand,
     toggleHandle,
@@ -54,13 +55,15 @@ export function ConversationSheet({
   });
 
   const overlayMobile = layout === "overlay" && !desktop;
-  /** Painted layout follows `displaySnap` (drag + animated collapse hold reply/full chrome). */
-  const stageSnap = displaySnap;
+  /** Snap classes follow resting `sheet` — motion phases paint inline during drag/settle. */
+  const stageSnap = sheet;
   const expanded =
+    sheet === "full" ||
+    sheet === "reply" ||
     displaySnap === "full" ||
     displaySnap === "reply" ||
     (layout === "inline" && desktop);
-  const showChrome = overlayMobile && displaySnap !== "out";
+  const showChrome = overlayMobile && sheet !== "out";
 
   return (
     <aside
@@ -76,6 +79,7 @@ export function ConversationSheet({
         stageSnap === "peek" ? "is-peek" : "",
         stageSnap === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",
+        settling ? "is-settling" : "",
         layout === "inline" ? "is-inline" : "",
         expanded ? "is-expanded" : "",
       ]

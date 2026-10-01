@@ -145,6 +145,7 @@ export function useSnapSheet({
   const [motionSnap, setMotionSnap] = useState<ConversationSheetSnap | null>(null);
   const [motionPhases, setMotionPhases] = useState({ phaseA: 0, phaseB: 0 });
   const [dragging, setDragging] = useState(false);
+  const [settling, setSettling] = useState(false);
   const drag = useRef({
     y: 0,
     on: false,
@@ -252,6 +253,10 @@ export function useSnapSheet({
 
   function setDraggingClass(on: boolean) {
     cardRef.current?.classList.toggle("is-dragging", on);
+  }
+
+  function setSettlingClass(on: boolean) {
+    cardRef.current?.classList.toggle("is-settling", on);
   }
 
   function stickThreadToLatest() {
@@ -573,9 +578,13 @@ export function useSnapSheet({
     setSheet(next);
     setDragging(false);
     setDraggingClass(false);
+    setSettling(true);
+    setSettlingClass(true);
     setOpen(true);
     paintMotion(live);
     if (Math.abs(live - target) < 2) {
+      setSettling(false);
+      setSettlingClass(false);
       clearMotionSnap(next);
       clearMotionPaint(next);
       return;
@@ -592,6 +601,8 @@ export function useSnapSheet({
           return;
         }
         settleFrameRef.current = 0;
+        setSettling(false);
+        setSettlingClass(false);
         clearMotionSnap(next);
         clearMotionPaint(next);
       };
@@ -695,6 +706,7 @@ export function useSnapSheet({
     displaySnap,
     motionPhaseA: motionPhases.phaseA,
     motionPhaseB: motionPhases.phaseB,
+    settling,
     dragging,
     setSheet,
     dismiss,
