@@ -11,7 +11,6 @@ import {
   chromeSnapForHeight,
   conversationSheetDragHeight,
   conversationSheetMotionFromHeight,
-  conversationSheetPaintedHeight,
   conversationSheetSnapFromHeight,
   initialConversationSheetSnap,
 } from "./conversation-sheet.ts";
@@ -144,25 +143,6 @@ describe("conversation sheet staged pull-up", () => {
 
   it("uses peek chrome below the midline while opening", () => {
     assert.equal(chromeSnapForHeight(100, heights.peekH, heights.replyH, heights.fullH), "peek");
-  });
-
-  it("keeps the outer shell at full height while collapsing through phase B", () => {
-    assert.equal(
-      conversationSheetPaintedHeight(450, heights.peekH, heights.replyH, heights.fullH, "expanding"),
-      450,
-    );
-    assert.equal(
-      conversationSheetPaintedHeight(450, heights.peekH, heights.replyH, heights.fullH, "collapsing"),
-      heights.fullH,
-    );
-    assert.equal(
-      conversationSheetPaintedHeight(150, heights.peekH, heights.replyH, heights.fullH, "collapsing"),
-      150,
-    );
-    assert.equal(
-      conversationSheetPaintedHeight(450, heights.peekH, heights.replyH, heights.fullH, null),
-      450,
-    );
   });
 
   it("maps height to two-phase motion (composer then thread roll)", () => {

@@ -53,34 +53,6 @@ export type ConversationSheetMotion = {
 
 export type ConversationSheetGesture = "expanding" | "collapsing";
 
-/**
- * Outer shell height while dragging. On collapse, phase B rolls the thread inside a
- * full-height shell so the composer stays docked above the tab bar; only phase A
- * shrinks the painted height toward peek.
- */
-export function conversationSheetPaintedHeight(
-  liveHeightPx: number,
-  peekH: number,
-  replyH: number,
-  fullH: number,
-  gesture: ConversationSheetGesture | null,
-): number {
-  const { phaseB } = conversationSheetMotionFromHeight(
-    liveHeightPx,
-    peekH,
-    replyH,
-    fullH,
-  );
-  if (
-    gesture === "collapsing" &&
-    phaseB > 0 &&
-    liveHeightPx > replyH + PEEK_LAYOUT_BAND_PX
-  ) {
-    return fullH;
-  }
-  return liveHeightPx;
-}
-
 /** Map live sheet height to phase A/B progress (0–1 each). Height-only — mid-drag matches release. */
 export function conversationSheetMotionFromHeight(
   heightPx: number,
