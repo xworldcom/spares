@@ -164,6 +164,7 @@ export function useSnapSheet({
   const dockedRef = useRef(true);
   /** Ignore the synthetic click that follows a pointer step so peek does not skip to full. */
   const steppedAtRef = useRef(0);
+  const settleFrameRef = useRef(0);
 
   const controlledOpen = typeof onOpenChange === "function";
   const openForUnreadRef = useRef(openForUnread);
@@ -218,9 +219,9 @@ export function useSnapSheet({
     const peekH = heightForSnap("peek");
     const replyH = heightForSnap("reply");
     const fullH = heightForSnap("full");
-    const nextChrome = chromeSnapForHeight(height, peekH, replyH, fullH, {
-      collapsing: dy > 0,
-    });
+    const motion =
+      dy > 0 ? { collapsing: true } : dy < 0 ? { expanding: true } : undefined;
+    const nextChrome = chromeSnapForHeight(height, peekH, replyH, fullH, motion);
     setDragChrome(nextChrome);
     setDragComposerOpen(dragComposerLift(nextChrome, drag.current.from, dy));
   }
@@ -228,6 +229,36 @@ export function useSnapSheet({
   function clearDragChrome() {
     setDragChrome(null);
     setDragComposerOpen(false);
+  }
+
+  function cancelSettleAnimation() {
+    if (settleFrameRef.current) {
+      window.cancelAnimationFrame(settleFrameRef.current);
+      settleFrameRef.current = 0;
+    }
+  }
+
+  function syncChromeForMotionHeight(
+    height: number,
+    motion: "collapsing" | "expanding" | null,
+  ) {
+    const peekH = heightForSnap("peek");
+    const replyH = heightForSnap("reply");
+    const fullH = heightForSnap("full");
+    const opts =
+      motion === "collapsing"
+        ? { collapsing: true }
+        : motion === "expanding"
+          ? { expanding: true }
+          : undefined;
+    setDragChrome(chromeSnapForHeight(height, peekH, replyH, fullH, opts));
+    if (motion === "expanding") {
+      setDragComposerOpen(height > peekH + PEEK_LAYOUT_BAND_PX);
+    } else if (motion === "collapsing") {
+      setDragComposerOpen(
+        chromeSnapForHeight(height, peekH, replyH, fullH, opts) !== "peek",
+      );
+    }
   }
 
   function setDraggingClass(on: boolean) {
@@ -386,13 +417,11 @@ export function useSnapSheet({
       return;
     }
     if (sheet === "full") {
-      setSheet("reply");
-      setOpen(true);
+      settleTo("reply");
       return;
     }
     if (sheet === "reply") {
-      setSheet("peek");
-      setOpen(true);
+      collapseToPeek();
       return;
     }
     dismiss();
@@ -548,6 +577,7 @@ export function useSnapSheet({
   }
 
   function settleTo(next: ConversationSheetSnap) {
+    cancelSettleAnimation();
     drag.current.on = false;
     drag.current.pending = false;
     drag.current.moved = false;
@@ -561,13 +591,15 @@ export function useSnapSheet({
     const target = heightForSnap(next);
     const live = cardRef.current?.getBoundingClientRect().height ?? target;
     const peekLayout = next === "peek";
-    const collapsingToPeek =
-      next === "peek" && live > peekH + PEEK_LAYOUT_BAND_PX;
+    const motion: "collapsing" | "expanding" | null =
+      target < live - 2
+        ? "collapsing"
+        : target > live + 2
+          ? "expanding"
+          : null;
     setSheet(next);
-    if (collapsingToPeek) {
-      setDragChrome(
-        chromeSnapForHeight(live, peekH, replyH, fullH, { collapsing: true }),
-      );
+    if (motion) {
+      syncChromeForMotionHeight(live, motion);
     } else {
       clearDragChrome();
     }
@@ -580,12 +612,25 @@ export function useSnapSheet({
       clearInlineHeight(next);
       return;
     }
+    const settleStarted = performance.now();
+    const settleDurationMs = 440;
     window.requestAnimationFrame(() => {
       paintHeight(target, peekLayout);
-      window.setTimeout(() => {
+      const tick = () => {
+        if (motion) {
+          const h =
+            cardRef.current?.getBoundingClientRect().height ?? target;
+          syncChromeForMotionHeight(h, motion);
+        }
+        if (performance.now() - settleStarted < settleDurationMs) {
+          settleFrameRef.current = window.requestAnimationFrame(tick);
+          return;
+        }
+        settleFrameRef.current = 0;
         clearDragChrome();
         clearInlineHeight(next);
-      }, 440);
+      };
+      settleFrameRef.current = window.requestAnimationFrame(tick);
     });
   }
 
@@ -665,13 +710,11 @@ export function useSnapSheet({
       return;
     }
     if (sheet === "full") {
-      setSheet("reply");
+      settleTo("reply");
     } else if (sheet === "reply") {
       collapseToPeek();
     } else {
-      steppedAtRef.current = performance.now();
-      setSheet("reply");
-      setOpen(true);
+      settleTo("reply");
     }
   }
 
@@ -680,10 +723,7 @@ export function useSnapSheet({
       return;
     }
     steppedAtRef.current = performance.now();
-    setSheet((current) =>
-      stepToward(current === "out" ? "peek" : current, "up"),
-    );
-    setOpen(true);
+    settleTo(stepToward(sheet === "out" ? "peek" : sheet, "up"));
   }
 
   return {
