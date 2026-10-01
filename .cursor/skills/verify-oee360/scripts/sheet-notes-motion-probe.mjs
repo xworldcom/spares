@@ -1,10 +1,3 @@
-#!/usr/bin/env node
-/**
- * Care Notes sheet: touch-at-full must not reflow the thread, and open must
- * not let ticket chrome paint over the sheet.
- *
- * node .cursor/skills/verify-oee360/scripts/sheet-notes-motion-probe.mjs http://127.0.0.1:3010
- */
 import { chromium, devices } from "playwright";
 
 const baseUrl = process.argv[2] || "http://127.0.0.1:3010";

@@ -566,6 +566,8 @@
   min-height: 0;
 }
 
+.conversation-sheet:not(.is-inline).is-dragging,
+.conversation-sheet:not(.is-inline).is-settling,
 .conversation-sheet:not(.is-inline).is-reply,
 .conversation-sheet:not(.is-inline).is-full {
   z-index: 62;
@@ -591,6 +593,15 @@
 
 .conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill {
   justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline)[data-thread-layout="rest"] .imsg-thread--fill {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  justify-content: normal;
 }
 
 .conversation-sheet:not(.is-inline) .imsg-thread--fill::before {
