@@ -10,7 +10,8 @@ import {
   REPLY_DETENT_PX,
   chromeSnapForHeight,
   conversationSheetDragHeight,
-  dragComposerLift,
+  conversationSheetMotionFromHeight,
+  conversationSheetSnapFromHeight,
   initialConversationSheetSnap,
 } from "./conversation-sheet.ts";
 
@@ -144,11 +145,46 @@ describe("conversation sheet staged pull-up", () => {
     assert.equal(chromeSnapForHeight(100, heights.peekH, heights.replyH, heights.fullH), "peek");
   });
 
-  it("lifts the composer only when opening or in reply/full chrome", () => {
-    assert.equal(dragComposerLift("peek", "peek", -20), true);
-    assert.equal(dragComposerLift("peek", "reply", 40), false);
-    assert.equal(dragComposerLift("reply", "full", -40), true);
-    assert.equal(dragComposerLift("reply", "reply", 40), true);
+  it("maps height to two-phase motion (composer then thread roll)", () => {
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 0, phaseB: 0 },
+    );
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(146, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 0.5, phaseB: 0 },
+    );
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(200, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 1, phaseB: 0 },
+    );
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(450, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 1, phaseB: 0.5 },
+    );
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(700, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 1, phaseB: 1 },
+    );
+  });
+
+  it("derives snap labels from height without drag hysteresis", () => {
+    assert.equal(
+      conversationSheetSnapFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
+      "peek",
+    );
+    assert.equal(
+      conversationSheetSnapFromHeight(140, heights.peekH, heights.replyH, heights.fullH),
+      "reply",
+    );
+    assert.equal(
+      conversationSheetSnapFromHeight(500, heights.peekH, heights.replyH, heights.fullH),
+      "reply",
+    );
+    assert.equal(
+      conversationSheetSnapFromHeight(700, heights.peekH, heights.replyH, heights.fullH),
+      "full",
+    );
   });
 
   it("grows from reply toward full without a reply detent", () => {

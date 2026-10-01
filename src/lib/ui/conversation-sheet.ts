@@ -42,8 +42,59 @@ export const REPLY_DETENT_PX = 32;
  * (composer seats) and only leftover travel grows toward full (rollout).
  * `dy` is pointer delta: negative is up (taller sheet).
  */
-/** Same band as `data-layout-peek` in useSnapSheet — keep chrome and layout in sync. */
+/** Same band as resting peek snap — keep settle targets in sync. */
 export const PEEK_LAYOUT_BAND_PX = 4;
+
+/** Two-phase sheet motion: A = composer slide (peek→reply), B = thread roll (reply→full). */
+export type ConversationSheetMotion = {
+  phaseA: number;
+  phaseB: number;
+};
+
+/** Map live sheet height to phase A/B progress (0–1 each). Height-only — mid-drag matches release. */
+export function conversationSheetMotionFromHeight(
+  heightPx: number,
+  peekH: number,
+  replyH: number,
+  fullH: number,
+): ConversationSheetMotion {
+  if (heightPx <= peekH) {
+    return { phaseA: 0, phaseB: 0 };
+  }
+  if (heightPx >= fullH) {
+    return { phaseA: 1, phaseB: 1 };
+  }
+  if (heightPx <= replyH) {
+    const span = Math.max(replyH - peekH, 1);
+    const phaseA = (heightPx - peekH) / span;
+    return { phaseA: Math.min(1, Math.max(0, phaseA)), phaseB: 0 };
+  }
+  const span = Math.max(fullH - replyH, 1);
+  const phaseB = (heightPx - replyH) / span;
+  return { phaseA: 1, phaseB: Math.min(1, Math.max(0, phaseB)) };
+}
+
+/** Visual snap label from height (no expand/collapse hysteresis). */
+export function conversationSheetSnapFromHeight(
+  heightPx: number,
+  peekH: number,
+  replyH: number,
+  fullH: number,
+): ConversationSheetSnap {
+  const { phaseA, phaseB } = conversationSheetMotionFromHeight(
+    heightPx,
+    peekH,
+    replyH,
+    fullH,
+  );
+  if (phaseA < 1 && phaseB === 0) {
+    return phaseA < 0.35 ? "peek" : "reply";
+  }
+  if (phaseB < 1) {
+    return "reply";
+  }
+  return "full";
+}
 
 /** Visual snap from live sheet height (no velocity) — matches resting stage while dragging. */
 export function chromeSnapForHeight(
@@ -83,24 +134,6 @@ export function chromeSnapForHeight(
     return "reply";
   }
   return "full";
-}
-
-/**
- * While dragging, expand the composer only when opening (peek→reply) or in reply/full
- * chrome — not when collapsing toward peek.
- */
-export function dragComposerLift(
-  chromeSnap: ConversationSheetSnap,
-  dragFrom: ConversationSheetSnap,
-  dy: number,
-): boolean {
-  if (dragFrom === "peek" && dy < 0) {
-    return true;
-  }
-  if (chromeSnap === "peek") {
-    return false;
-  }
-  return chromeSnap === "reply" || chromeSnap === "full";
 }
 
 export function conversationSheetDragHeight({
