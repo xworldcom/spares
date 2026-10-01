@@ -446,6 +446,7 @@ export function useSnapSheet({
       moved: false,
       samples: [{ t: performance.now(), y: event.clientY }],
       gesture: null,
+      liveH: startH,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
