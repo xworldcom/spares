@@ -80,7 +80,7 @@ export function ConversationSheetDebugHud({
 
   return (
     <div
-      className="pointer-events-none fixed left-1 top-14 z-[9999] max-w-[min(100vw-0.5rem,22rem)] rounded-lg border border-white/15 bg-black/88 px-2 py-1.5 font-mono text-[10px] leading-snug text-white shadow-lg backdrop-blur-sm"
+      className="pointer-events-none fixed top-14 right-2 z-[9999] w-[10.5rem] max-h-[9.5rem] overflow-hidden rounded-lg border border-white/15 bg-black/88 px-2 py-1.5 font-mono text-[10px] leading-snug text-white shadow-lg backdrop-blur-sm"
       aria-hidden
     >
       <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">

@@ -511,11 +511,15 @@
   overflow-y: auto;
 }
 
+/* Phase B′: finger height owns the shell. The thread fills that shell and
+   pins to the composer, so older rows clip under the toolbar. The phase-b
+   spacer stays out — it would open a hole above the composer. */
 .conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
   max-height: none;
+  margin-top: 0;
   overflow: hidden;
   justify-content: flex-end;
 }
@@ -523,6 +527,9 @@
 .conversation-sheet:not(.is-inline).is-dragging[data-thread-dock="composer"] .imsg-thread--fill,
 .conversation-sheet:not(.is-inline).is-settling[data-thread-dock="composer"] .imsg-thread--fill {
   overflow: hidden;
+  /* unsafe: a long thread must keep the latest row on the composer.
+     Safe flex-end falls back to the top and opens the close gap. */
+  justify-content: unsafe flex-end;
 }
 
 .conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill > li {
@@ -530,8 +537,9 @@
 }
 
 .conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill::before {
+  content: none;
+  display: none;
   flex: 0 0 0px;
-  min-height: 0;
 }
 
 .conversation-sheet-peek {
