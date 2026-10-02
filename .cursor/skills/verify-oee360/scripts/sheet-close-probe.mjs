@@ -63,6 +63,11 @@ async function readGeom() {
     const composerBox = composer?.getBoundingClientRect();
     const lastBox = last?.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
+    const sheetYRaw = getComputedStyle(card).getPropertyValue("--sheet-y").trim();
+    const sheetY = sheetYRaw.endsWith("px")
+      ? Number.parseFloat(sheetYRaw)
+      : Number.parseFloat(sheetYRaw) || 0;
+    const visibleH = Math.round(cardBox.height - sheetY);
     const bubble = thread?.querySelector(".imsg-row:last-of-type .imsg-bubble");
     const bubbleBox = bubble?.getBoundingClientRect();
     const bubbleVis = bubbleBox && threadBox
@@ -75,7 +80,9 @@ async function readGeom() {
       phaseB: Math.round(phaseB * 100) / 100,
       sheetTop: Math.round(cardBox.top),
       sheetBottom: Math.round(cardBox.bottom),
-      sheetH: Math.round(cardBox.height),
+      sheetH: visibleH,
+      shellH: Math.round(cardBox.height),
+      sheetY: Math.round(sheetY),
       threadTop: threadBox ? Math.round(threadBox.top) : null,
       threadH: threadBox ? Math.round(threadBox.height) : null,
       threadBottom: threadBox ? Math.round(threadBox.bottom) : null,

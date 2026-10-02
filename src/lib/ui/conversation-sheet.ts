@@ -10,7 +10,6 @@ export function initialConversationSheetSnap(
   if (!open) {
     return "out";
   }
-  // Desktop overlay (rare) opens ready to type; mobile starts at the latest-context peek.
   if (desktopStage) {
     return "reply";
   }
@@ -22,30 +21,19 @@ export function initialConversationSheetSnap(
 
 /** Sheet heights as CSS lengths — keep in sync with globals.css. */
 export const CONVERSATION_SHEET_PEEK_H = "5.75rem";
-/** Handle + toolbar reserved inside the fixed peek band (see --peek-chrome-h). */
 export const CONVERSATION_SHEET_PEEK_CHROME_H = "2.85rem";
-/** Toolbar / handle typography — keep in sync with globals.css `--sheet-*` tokens. */
 export const CONVERSATION_SHEET_TITLE_FONT_PX = 15;
 export const CONVERSATION_SHEET_CLOSE_FONT_PX = 14;
 export const CONVERSATION_SHEET_DRAG_HANDLE_W_REM = 2.6;
 export const CONVERSATION_SHEET_DRAG_HANDLE_H_REM = 0.28;
-/** Latest context + composer; history opens on the way to full. */
+/** Kevin intermediate (H_peek): handle + header + latest + composer above tab bar. */
 export const CONVERSATION_SHEET_REPLY_H = "10.25rem";
 export const CONVERSATION_SHEET_FULL_H =
   "min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem))";
 
-/** Extra upward travel held at reply so the type bar sits before history rolls in. */
 export const REPLY_DETENT_PX = 32;
-
-/**
- * Live sheet height while dragging. From peek, the first pull stops at reply
- * (composer seats) and only leftover travel grows toward full (rollout).
- * `dy` is pointer delta: negative is up (taller sheet).
- */
-/** Same band as resting peek snap — keep settle targets in sync. */
 export const PEEK_LAYOUT_BAND_PX = 4;
 
-/** Two-phase sheet motion: A = composer slide (peek→reply), B = thread roll (reply→full). */
 export type ConversationSheetMotion = {
   phaseA: number;
   phaseB: number;
@@ -53,52 +41,112 @@ export type ConversationSheetMotion = {
 
 export type ConversationSheetGesture = "expanding" | "collapsing";
 
-/** Map live sheet height to phase A/B progress (0–1 each). Height-only — mid-drag matches release. */
+export type ConversationSheetMetrics = {
+  peekH: number;
+  replyH: number;
+  openH: number;
+  yClosed: number;
+  yIntermediate: number;
+  yOpen: number;
+};
+
+/** Approach A: fixed open height; detents are translateY offsets (px, positive = down). */
+export function conversationSheetMetrics(
+  peekH: number,
+  replyH: number,
+  openH: number,
+): ConversationSheetMetrics {
+  const yOpen = 0;
+  const yIntermediate = Math.max(0, openH - replyH);
+  const yClosed = Math.max(yIntermediate, openH - peekH);
+  return { peekH, replyH, openH, yClosed, yIntermediate, yOpen };
+}
+
+export function conversationSheetTranslateForSnap(
+  snap: ConversationSheetSnap,
+  metrics: ConversationSheetMetrics,
+): number {
+  if (snap === "full") {
+    return metrics.yOpen;
+  }
+  if (snap === "reply") {
+    return metrics.yIntermediate;
+  }
+  if (snap === "peek") {
+    return metrics.yClosed;
+  }
+  return metrics.yClosed;
+}
+
+/** Visible height above the tab-bar floor (for probes / debug). */
+export function conversationSheetVisibleHeight(
+  translateY: number,
+  metrics: ConversationSheetMetrics,
+): number {
+  return Math.max(metrics.peekH, metrics.openH - translateY);
+}
+
+export function conversationSheetMotionFromTranslate(
+  translateY: number,
+  metrics: ConversationSheetMetrics,
+): ConversationSheetMotion {
+  const { yClosed, yIntermediate, yOpen } = metrics;
+  if (translateY >= yClosed - 0.5) {
+    return { phaseA: 0, phaseB: 0 };
+  }
+  if (translateY <= yOpen + 0.5) {
+    return { phaseA: 1, phaseB: 1 };
+  }
+  if (translateY > yIntermediate) {
+    const span = Math.max(yClosed - yIntermediate, 1);
+    const phaseA = 1 - (translateY - yIntermediate) / span;
+    return { phaseA: Math.min(1, Math.max(0, phaseA)), phaseB: 0 };
+  }
+  const span = Math.max(yIntermediate - yOpen, 1);
+  const phaseB = 1 - translateY / span;
+  return { phaseA: 1, phaseB: Math.min(1, Math.max(0, phaseB)) };
+}
+
+export function conversationSheetSnapFromTranslate(
+  translateY: number,
+  metrics: ConversationSheetMetrics,
+): ConversationSheetSnap {
+  const { phaseA, phaseB } = conversationSheetMotionFromTranslate(translateY, metrics);
+  if (phaseB > 0.65) {
+    return "full";
+  }
+  if (phaseA < 0.35 && phaseB < 0.12) {
+    return "peek";
+  }
+  if (phaseB < 0.88) {
+    return "reply";
+  }
+  return "full";
+}
+
+/** @deprecated Height-based phases — use translate detents; kept for chrome hysteresis helpers. */
 export function conversationSheetMotionFromHeight(
   heightPx: number,
   peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetMotion {
-  if (heightPx <= peekH) {
-    return { phaseA: 0, phaseB: 0 };
-  }
-  if (heightPx >= fullH) {
-    return { phaseA: 1, phaseB: 1 };
-  }
-  if (heightPx <= replyH) {
-    const span = Math.max(replyH - peekH, 1);
-    const phaseA = (heightPx - peekH) / span;
-    return { phaseA: Math.min(1, Math.max(0, phaseA)), phaseB: 0 };
-  }
-  const span = Math.max(fullH - replyH, 1);
-  const phaseB = (heightPx - replyH) / span;
-  return { phaseA: 1, phaseB: Math.min(1, Math.max(0, phaseB)) };
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const y = Math.max(0, metrics.openH - heightPx);
+  return conversationSheetMotionFromTranslate(y, metrics);
 }
 
-/** Visual snap label from height (no expand/collapse hysteresis). */
 export function conversationSheetSnapFromHeight(
   heightPx: number,
   peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetSnap {
-  const { phaseA, phaseB } = conversationSheetMotionFromHeight(
-    heightPx,
-    peekH,
-    replyH,
-    fullH,
-  );
-  if (phaseA < 1 && phaseB === 0) {
-    return phaseA < 0.35 ? "peek" : "reply";
-  }
-  if (phaseB < 1) {
-    return "reply";
-  }
-  return "full";
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const y = Math.max(0, metrics.openH - heightPx);
+  return conversationSheetSnapFromTranslate(y, metrics);
 }
 
-/** Visual snap from live sheet height (no velocity) — matches resting stage while dragging. */
 export function chromeSnapForHeight(
   height: number,
   peekH: number,
@@ -106,38 +154,57 @@ export function chromeSnapForHeight(
   fullH: number,
   opts?: { collapsing?: boolean; expanding?: boolean },
 ): ConversationSheetSnap {
-  const peekBand = peekH + PEEK_LAYOUT_BAND_PX;
-  const midPeekReply = (peekH + replyH) / 2;
-  const midReplyFull = (replyH + fullH) / 2;
-  if (height <= peekBand) {
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const y = Math.max(0, metrics.openH - height);
+  const peekBand = metrics.yClosed - PEEK_LAYOUT_BAND_PX;
+  const midClosedIntermediate = (metrics.yClosed + metrics.yIntermediate) / 2;
+  const midIntermediateOpen = (metrics.yIntermediate + metrics.yOpen) / 2;
+  if (y >= peekBand) {
     return "peek";
   }
-  // Collapsing: keep reply/full chrome until height enters the peek band (no mid-band toolbar flip).
   if (opts?.collapsing) {
-    if (height < midReplyFull) {
+    if (y > midIntermediateOpen) {
       return "reply";
     }
     return "full";
   }
-  // Expanding: mirror collapse — keep peek chrome until the reply midline (no flip on release).
   if (opts?.expanding) {
-    if (height < midPeekReply) {
+    if (y > midClosedIntermediate) {
       return "peek";
     }
-    if (height < midReplyFull) {
+    if (y > midIntermediateOpen) {
       return "reply";
     }
     return "full";
   }
-  if (height < midPeekReply) {
+  if (y > midClosedIntermediate) {
     return "peek";
   }
-  if (height < midReplyFull) {
+  if (y > midIntermediateOpen) {
     return "reply";
   }
   return "full";
 }
 
+export function conversationSheetDragTranslate({
+  from,
+  startY,
+  dy,
+  metrics,
+}: {
+  from: ConversationSheetSnap;
+  startY: number;
+  dy: number;
+  metrics: ConversationSheetMetrics;
+}): number {
+  const raw = Math.max(metrics.yOpen, Math.min(metrics.yClosed, startY + dy));
+  if (from !== "peek") {
+    return raw;
+  }
+  return Math.max(metrics.yIntermediate, Math.min(metrics.yClosed, raw));
+}
+
+/** Map drag translate to legacy visible-height for tests. */
 export function conversationSheetDragHeight({
   from,
   startH,
@@ -153,11 +220,13 @@ export function conversationSheetDragHeight({
   replyH: number;
   fullH: number;
 }): number {
-  const raw = Math.max(peekH, Math.min(fullH, startH - dy));
-  if (from !== "peek") {
-    return raw;
-  }
-  // First pull never grows past reply — the type bar seats, then rollout
-  // starts only after the gesture promotes to reply (or a second pull).
-  return Math.max(peekH, Math.min(replyH, raw));
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const startY = Math.max(0, metrics.openH - startH);
+  const y = conversationSheetDragTranslate({
+    from,
+    startY,
+    dy,
+    metrics,
+  });
+  return conversationSheetVisibleHeight(y, metrics);
 }

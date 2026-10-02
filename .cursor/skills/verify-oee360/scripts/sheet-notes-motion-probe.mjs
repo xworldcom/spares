@@ -49,6 +49,11 @@ async function readGeom() {
     const bubble = thread?.querySelector(".imsg-row:last-of-type .imsg-bubble");
     const head = document.querySelector(".care-stack-head");
     const cardBox = card.getBoundingClientRect();
+    const sheetYRaw = getComputedStyle(card).getPropertyValue("--sheet-y").trim();
+    const sheetY = sheetYRaw.endsWith("px")
+      ? Number.parseFloat(sheetYRaw)
+      : Number.parseFloat(sheetYRaw) || 0;
+    const visibleH = Math.round(cardBox.height - sheetY);
     const bubbleBox = bubble?.getBoundingClientRect();
     const composerBox = composer?.getBoundingClientRect();
     const headBox = head?.getBoundingClientRect();
@@ -73,7 +78,7 @@ async function readGeom() {
     return {
       snap: card.getAttribute("data-snap"),
       motionSeat: getComputedStyle(card).getPropertyValue("--motion-seat-h").trim(),
-      sheetH: Math.round(cardBox.height),
+      sheetH: visibleH,
       bubbleTop: bubbleBox ? Math.round(bubbleBox.top) : null,
       gap: bubbleBox && composerBox ? Math.round(composerBox.top - bubbleBox.bottom) : null,
       zSheet: getComputedStyle(card).zIndex,
