@@ -277,6 +277,7 @@ export function useSnapSheet({
     setMotionPhases({ phaseA, phaseB });
     setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
     drag.current.liveH = liveHeightPx;
+    stickThreadToLatest();
   }
 
   function clearMotionPaint(atSnap?: ConversationSheetSnap) {
@@ -293,6 +294,7 @@ export function useSnapSheet({
     card.style.setProperty("--reply-h", `${Math.round(replyH)}px`);
     card.style.setProperty("--full-h", `${Math.round(fullH)}px`);
     card.removeAttribute("data-layout-peek");
+    stickThreadToLatest();
   }
 
   function clearMotionSnap(atSnap?: ConversationSheetSnap) {
@@ -629,16 +631,10 @@ export function useSnapSheet({
     if (next === "peek") {
       next = "reply";
     }
-    if (next === "reply") {
+    if (next === "reply" || next === "full") {
+      // Roll-up/down keeps the latest row glued above the composer unless the user
+      // scrolls history while already at full (scroll handler clears the dock).
       dockedRef.current = true;
-    } else if (next === "full") {
-      const body = cardRef.current?.querySelector(scrollBodySelector);
-      if (body instanceof HTMLElement) {
-        const gap = body.scrollHeight - body.scrollTop - body.clientHeight;
-        dockedRef.current = gap <= 4;
-      } else {
-        dockedRef.current = false;
-      }
     }
     steppedAtRef.current = performance.now();
     const target = heightForSnap(next, cardRef.current);
