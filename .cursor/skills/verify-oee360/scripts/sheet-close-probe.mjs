@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-/**
- * Slow full-to-peek drag on the quote conversation sheet.
- * Fails if the shell does not track the finger, the latest row leaves the
- * composer during close phase B or the open roll, or the composer leaves the sheet.
- *
- * node .cursor/skills/verify-oee360/scripts/sheet-close-probe.mjs http://127.0.0.1:3010
- */
 import { chromium, devices } from "playwright";
 import { writeFileSync } from "node:fs";
 

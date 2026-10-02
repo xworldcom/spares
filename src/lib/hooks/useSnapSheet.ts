@@ -214,9 +214,6 @@ export function useSnapSheet({
       replyH,
       fullH,
     );
-    // One finger-owned height. Phase B′ clips the thread onto the composer;
-    // phase A′ is the only thing that moves the composer. Bottom-anchored,
-    // so the shell tracks the finger without translating the composer off.
     card.style.setProperty("--sheet-h", `${Math.round(liveHeightPx)}px`);
     card.style.setProperty("--drag-h", "0px");
     card.style.setProperty("--phase-a", String(phaseA));
