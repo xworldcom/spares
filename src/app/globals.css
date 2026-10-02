@@ -330,25 +330,22 @@
   }
 }
 
-/* Conversation sheet — height grows from the bottom (peek → reply → full) */
+/* Conversation sheet — Approach A: fixed open height + translateY detents (see docs/care-notes-sheet-motion.md) */
 .conversation-sheet.snap-sheet {
-  z-index: 35;
+  z-index: 52;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   overflow: hidden;
-  /* Fixed peek band — not sized to the latest bubble; thread clips inside. */
   --peek-h: 5.75rem;
   --peek-chrome-h: 2.85rem;
   --peek-thread-h: calc(var(--peek-h) - var(--peek-chrome-h));
-  /* Peek thread stays put; composer opens into this delta; history waits for full. */
-  --reply-h: 10.25rem;
+  --reply-h: 17.5rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
-  --sheet-h: var(--peek-h);
-  --drag-h: 0px;
+  --sheet-clip-top: 0px;
+  --sheet-clip-bottom: 0px;
   --phase-a: 0;
   --phase-b: 0;
-  --motion-seat-h: var(--peek-thread-h);
   /* Chrome metrics stay fixed at every snap — only layout/content may change. */
   --sheet-drag-handle-w: 2.6rem;
   --sheet-drag-handle-h: 0.28rem;
@@ -362,9 +359,14 @@
 
 .conversation-sheet.snap-sheet > .quote-sheet-handle {
   flex: 0 0 auto;
+  z-index: 6;
   width: var(--sheet-drag-handle-w);
   height: var(--sheet-drag-handle-h);
   margin: 0.45rem auto 0.15rem;
+}
+
+.conversation-sheet.snap-sheet > .quote-sheet-handle::before {
+  inset: -1.35rem -3.25rem -1.5rem;
 }
 
 .conversation-sheet.is-inline {
@@ -380,46 +382,55 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
-  height: calc(var(--sheet-h) + var(--drag-h));
+  bottom: var(--spares-tabbar);
+  height: var(--full-h);
   max-height: var(--full-h);
   background: var(--spares-lift);
   color: var(--spares-on-paper);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
   transform: translate3d(0, 0, 0);
-  will-change: height;
+  clip-path: inset(var(--sheet-clip-top, 0) 0 var(--sheet-clip-bottom, 0) 0);
+  isolation: isolate;
+  will-change: clip-path;
   touch-action: none;
 }
 
-.conversation-sheet:not(.is-inline).is-peek {
-  --sheet-h: var(--peek-h);
+/* Opaque SheetSurface — ticket chrome must not bleed through during clip drag. */
+.conversation-sheet.snap-sheet:not(.is-inline)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--spares-lift);
+  z-index: 0;
+  pointer-events: none;
 }
 
-.conversation-sheet:not(.is-inline).is-reply {
-  --sheet-h: var(--reply-h);
-  touch-action: manipulation;
+.conversation-sheet.snap-sheet:not(.is-inline) > * {
+  position: relative;
+  z-index: 1;
 }
 
-.conversation-sheet:not(.is-inline).is-full {
-  --sheet-h: var(--full-h);
-  touch-action: manipulation;
-}
-
-/* Resting snap phases — overridden by inline paint while dragging/settling. */
 .conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) {
+  --sheet-clip-top: calc(var(--full-h) - var(--peek-h) - var(--composer-clip-h, 4.25rem));
+  --sheet-clip-bottom: var(--composer-clip-h, 4.25rem);
   --phase-a: 0;
   --phase-b: 0;
 }
 
 .conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) {
+  --sheet-clip-top: calc(var(--full-h) - var(--reply-h));
   --phase-a: 1;
   --phase-b: 0;
+  touch-action: manipulation;
 }
 
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) {
+  --sheet-clip-top: 0px;
   --phase-a: 1;
   --phase-b: 1;
+  touch-action: manipulation;
 }
 
 .conversation-sheet:not(.is-inline).is-reply:not(.is-dragging),
@@ -433,7 +444,6 @@
 }
 
 .conversation-sheet:not(.is-inline).is-out {
-  --sheet-h: var(--peek-h);
   transform: translate3d(0, 110%, 0);
   pointer-events: none;
 }
@@ -444,12 +454,10 @@
 }
 
 .conversation-sheet:not(.is-dragging):not(.is-inline) {
-  transition:
-    height var(--sheet-duration) var(--sheet-ease),
-    transform var(--sheet-duration) var(--sheet-ease);
+  transition: clip-path var(--sheet-duration) var(--sheet-ease);
 }
 
-/* Phase A: composer slides on --phase-a; live drag uses --motion-seat-h for the body. */
+/* SheetSurface = aside; composer is flex footer inside (never viewport-fixed). */
 .conversation-sheet:not(.is-inline) .imsg-card--sheet .imsg-composer {
   margin-top: auto;
 }
@@ -458,14 +466,7 @@
   overflow: hidden;
   max-height: 12rem;
   flex-shrink: 0;
-  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * 100%), 0);
-  transform-origin: bottom center;
-  opacity: var(--phase-a, 0);
-  transition:
-    transform var(--sheet-duration) var(--sheet-ease),
-    opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease),
-    padding var(--sheet-duration) var(--sheet-ease),
-    border-color var(--sheet-duration) var(--sheet-ease);
+  opacity: 1;
   pointer-events: none;
 }
 
@@ -476,19 +477,24 @@
 
 .conversation-sheet:not(.is-inline).is-dragging .imsg-composer,
 .conversation-sheet:not(.is-inline).is-settling .imsg-composer {
-  transition: none;
-  transform: none;
-  opacity: var(--phase-a, 0);
-  max-height: calc(var(--phase-a, 0) * 12rem);
-  overflow: hidden;
   pointer-events: none;
+  max-height: 12rem;
+  opacity: 1;
+}
+
+.conversation-sheet:not(.is-inline).is-dragging[data-snap="reply"] .imsg-composer,
+.conversation-sheet:not(.is-inline).is-settling[data-snap="reply"] .imsg-composer,
+.conversation-sheet:not(.is-inline).is-dragging[data-snap="full"] .imsg-composer,
+.conversation-sheet:not(.is-inline).is-settling[data-snap="full"] .imsg-composer {
+  pointer-events: auto;
 }
 
 .conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer {
   pointer-events: none;
 }
 
-.conversation-sheet:not(.is-inline):not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+.conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) .imsg-thread--fill,
+.conversation-sheet:not(.is-inline)[data-layout-peek]:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
   flex: 0 0 var(--peek-thread-h);
   height: var(--peek-thread-h);
   min-height: var(--peek-thread-h);
@@ -496,89 +502,46 @@
   overflow: hidden;
 }
 
-.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
   max-height: none;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill {
   overflow-y: hidden;
 }
 
-/* Live motion: chrome at top, content rig pinned to sheet bottom. */
-.conversation-sheet:not(.is-inline)[data-motion-live],
-.conversation-sheet:not(.is-inline).is-dragging,
-.conversation-sheet:not(.is-inline).is-settling {
-  justify-content: flex-start;
-  position: fixed;
+.conversation-sheet:not(.is-inline)[data-motion-live] .conversation-sheet-toolbar,
+.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-toolbar,
+.conversation-sheet:not(.is-inline).is-settling .conversation-sheet-toolbar {
+  background: var(--spares-lift);
+  backdrop-filter: none;
 }
 
-.conversation-sheet:not(.is-inline)[data-motion-live] > .quote-sheet-handle,
-.conversation-sheet:not(.is-inline)[data-motion-live] > .snap-sheet-handle,
-.conversation-sheet:not(.is-inline)[data-motion-live] > .conversation-sheet-toolbar,
-.conversation-sheet:not(.is-inline).is-dragging > .quote-sheet-handle,
-.conversation-sheet:not(.is-inline).is-dragging > .snap-sheet-handle,
-.conversation-sheet:not(.is-inline).is-dragging > .conversation-sheet-toolbar,
-.conversation-sheet:not(.is-inline).is-settling > .quote-sheet-handle,
-.conversation-sheet:not(.is-inline).is-settling > .snap-sheet-handle,
-.conversation-sheet:not(.is-inline).is-settling > .conversation-sheet-toolbar {
-  position: relative;
-  z-index: 2;
-  flex-shrink: 0;
-}
 .conversation-sheet:not(.is-inline)[data-motion-live] .conversation-sheet-body,
 .conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-body,
 .conversation-sheet:not(.is-inline).is-settling .conversation-sheet-body {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin-top: 0;
-  flex: none;
-  width: 100%;
-  height: var(--motion-seat-h);
-  max-height: var(--motion-seat-h);
-  min-height: 0;
-  z-index: 1;
-}
-
-.conversation-sheet:not(.is-inline)[data-motion-live] .imsg-card--sheet,
-.conversation-sheet:not(.is-inline).is-dragging .imsg-card--sheet,
-.conversation-sheet:not(.is-inline).is-settling .imsg-card--sheet {
-  flex: 1 1 auto;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
-  justify-content: flex-end;
+  background: var(--spares-lift);
 }
 
 .conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread.imsg-thread--fill,
 .conversation-sheet:not(.is-inline).is-dragging .imsg-thread.imsg-thread--fill,
 .conversation-sheet:not(.is-inline).is-settling .imsg-thread.imsg-thread--fill {
   min-height: 0;
-  max-height: none;
   flex: 1 1 auto;
   height: auto;
   overflow: hidden;
   overflow-y: hidden;
   justify-content: flex-end;
+  overscroll-behavior-y: contain;
 }
 
-.conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread--fill > li,
-.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill > li,
-.conversation-sheet:not(.is-inline).is-settling .imsg-thread--fill > li {
-  flex-shrink: 0;
-}
-
-.conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-settling .imsg-thread--fill::before {
-  content: none;
-  display: none;
-  flex: 0 0 0px;
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 .conversation-sheet-peek {
@@ -593,8 +556,8 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  justify-content: flex-end;
   min-height: 0;
+  overflow: hidden;
 }
 
 .conversation-sheet:not(.is-inline) .imsg-card--sheet {
@@ -605,11 +568,9 @@
   min-height: 0;
 }
 
-.conversation-sheet:not(.is-inline).is-dragging,
-.conversation-sheet:not(.is-inline).is-settling,
-.conversation-sheet:not(.is-inline).is-reply,
+/* Stay below MobileTabBar (z-56); above sticky care ticket chrome (z-50) for handle hits. */
 .conversation-sheet:not(.is-inline).is-full {
-  z-index: 62;
+  z-index: 52;
 }
 
 @media (max-width: 1023px) {
