@@ -171,12 +171,12 @@ export function QuoteActivityFeed({
         if (sheetChrome?.threadDocked === false && !nearBottom) {
           return;
         }
-        pinThreadScrollerToComposer(root);
+        pinThreadScrollerToComposer(root, sheetChrome?.threadDocked !== false);
       }
       return;
     }
     if (nearBottom) {
-      pinThreadScrollerToComposer(root);
+      pinThreadScrollerToComposer(root, true);
     }
   }, [
     activities,

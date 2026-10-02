@@ -16,6 +16,7 @@ import {
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
 import {
+  applyThreadScrollerLayout,
   flushPinThreadScrollerToComposer,
   pinThreadScrollerToComposer,
 } from "@/lib/ui/conversation-sheet-thread-pin";
@@ -324,18 +325,15 @@ export function useSnapSheet({
     card.style.setProperty("--full-h", `${Math.round(fullH)}px`);
     card.removeAttribute("data-layout-peek");
     clearMotionHeights();
-    if (dockedRef.current) {
-      const body = card.querySelector(scrollBodySelector);
-      if (body instanceof HTMLElement) {
-        // Settled full CSS (flex spacer / underflow flex-end) must apply before scroll restore.
-        flushPinThreadScrollerToComposer(body);
+    const body = card.querySelector(scrollBodySelector);
+    if (body instanceof HTMLElement) {
+      applyThreadScrollerLayout(body);
+      if (dockedRef.current) {
+        flushPinThreadScrollerToComposer(body, true);
       }
     }
     requestAnimationFrame(() => {
-      stickThreadToLatest();
-      requestAnimationFrame(() => {
-        stickThreadToLatest();
-      });
+      syncThreadLayoutFromDom();
     });
   }
 
@@ -376,10 +374,7 @@ export function useSnapSheet({
     cardRef.current?.classList.toggle("is-settling", on);
   }
 
-  function stickThreadToLatest() {
-    if (!dockedRef.current) {
-      return;
-    }
+  function syncThreadLayoutFromDom() {
     const card = cardRef.current;
     if (!card) {
       return;
@@ -393,10 +388,15 @@ export function useSnapSheet({
       card.classList.contains("is-settling") ||
       card.hasAttribute("data-motion-live");
     if (inMotion) {
-      body.scrollTop = 0;
+      if (dockedRef.current) {
+        body.scrollTop = 0;
+      }
       return;
     }
-    pinThreadScrollerToComposer(body);
+    applyThreadScrollerLayout(body);
+    if (dockedRef.current) {
+      pinThreadScrollerToComposer(body, true);
+    }
   }
 
   useEffect(() => {
@@ -467,10 +467,10 @@ export function useSnapSheet({
       ) {
         return;
       }
-      stickThreadToLatest();
+      syncThreadLayoutFromDom();
     });
     resize.observe(body);
-    stickThreadToLatest();
+    syncThreadLayoutFromDom();
     return () => {
       body.removeEventListener("scroll", onScroll);
       resize.disconnect();
@@ -501,7 +501,7 @@ export function useSnapSheet({
       if (!alive) {
         return;
       }
-      stickThreadToLatest();
+      syncThreadLayoutFromDom();
       if (now - started < 520) {
         window.requestAnimationFrame(tick);
       }
