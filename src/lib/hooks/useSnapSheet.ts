@@ -327,11 +327,15 @@ export function useSnapSheet({
     if (dockedRef.current) {
       const body = card.querySelector(scrollBodySelector);
       if (body instanceof HTMLElement) {
+        // Settled full CSS (flex spacer / underflow flex-end) must apply before scroll restore.
         flushPinThreadScrollerToComposer(body);
       }
     }
     requestAnimationFrame(() => {
       stickThreadToLatest();
+      requestAnimationFrame(() => {
+        stickThreadToLatest();
+      });
     });
   }
 

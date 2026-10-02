@@ -526,7 +526,27 @@
   }
 }
 
-.conversation-sheet:not(.is-inline) .imsg-thread--fill::before {
+/* Full settled uses .imsg-thread--fill::before flex spacer for short-thread bottom pin.
+   Reply/peek/motion use flex-end without the spacer (see rules below). */
+.conversation-sheet:not(.is-inline).is-reply .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-peek .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-full.is-settling .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-reply.is-settling .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread--fill::before {
+  content: none;
+  display: none;
+}
+
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling):not([data-motion-live])
+  .imsg-thread--fill[data-thread-underflow] {
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling):not([data-motion-live])
+  .imsg-thread--fill[data-thread-underflow]::before {
   content: none;
   display: none;
 }
