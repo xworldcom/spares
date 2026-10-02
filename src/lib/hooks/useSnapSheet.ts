@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   REPLY_DETENT_PX,
+  PEEK_LAYOUT_BAND_PX,
   conversationSheetMetrics,
   conversationSheetMotionFromTranslate,
   conversationSheetSnapFromTranslate,
@@ -70,6 +71,17 @@ function measureThreadContextBandPx(card: HTMLElement, maxRows = 2): number {
     rowsH += rowGap * (take - 1);
   }
   return pt + rowsH + pb + remPx(0.35);
+}
+
+function restingClipBottomPx(
+  snap: ConversationSheetSnap,
+  clipTop: number,
+  metrics: ReturnType<typeof conversationSheetMetrics>,
+): number {
+  if (snap === "peek") {
+    return metrics.clipBottomClosed;
+  }
+  return conversationSheetClipBottomForTop(clipTop, metrics);
 }
 
 function paintDetentCssVars(
@@ -143,9 +155,6 @@ function measureDetentHeights(card: HTMLElement | null) {
       composerH: composerFallback,
     };
   }
-  const handle = card.querySelector(
-    ":scope > .snap-sheet-handle, :scope > .quote-sheet-handle",
-  );
   let chrome = 0;
   for (const selector of [
     ":scope > .snap-sheet-handle",
@@ -166,20 +175,14 @@ function measureDetentHeights(card: HTMLElement | null) {
   const threadBand = measureThreadContextBandPx(card, 1);
   const stackGap = remPx(0.35);
   const stackPeek = Math.ceil(chrome + threadBand + stackGap);
-  const handleToComposer =
-    handle instanceof HTMLElement &&
-    composer instanceof HTMLElement &&
-    composer.getBoundingClientRect().top > handle.getBoundingClientRect().top
-      ? Math.ceil(
-          composer.getBoundingClientRect().top - handle.getBoundingClientRect().top,
-        )
-      : 0;
-  const peekVisibleH = Math.max(peekVisibleFallback, stackPeek, handleToComposer);
   const replyFromHandle = measureReplyVisiblePx(card);
   const stackReply = Math.ceil(
     chrome + measureThreadContextBandPx(card, 2) + composerH + stackGap,
   );
   const replyH = Math.max(replyFallback, replyFromHandle, stackReply);
+  const peekReplyGap = composerH + PEEK_LAYOUT_BAND_PX + REPLY_DETENT_PX;
+  const peekCap = Math.max(peekVisibleFallback, replyH - peekReplyGap);
+  const peekVisibleH = Math.min(Math.max(peekVisibleFallback, stackPeek), peekCap);
   return { peekVisibleH, replyH, composerH };
 }
 
@@ -367,7 +370,7 @@ export function useSnapSheet({
       card.style.setProperty("--sheet-clip-top", `${Math.round(top)}px`);
       card.style.setProperty(
         "--sheet-clip-bottom",
-        `${Math.round(conversationSheetClipBottomForTop(top, metrics))}px`,
+        `${Math.round(restingClipBottomPx(snap, top, metrics))}px`,
       );
     }
     if (snap === "peek") {
@@ -509,7 +512,7 @@ export function useSnapSheet({
     card.style.setProperty("--sheet-clip-top", `${Math.round(top)}px`);
     card.style.setProperty(
       "--sheet-clip-bottom",
-      `${Math.round(conversationSheetClipBottomForTop(top, metrics))}px`,
+      `${Math.round(restingClipBottomPx(sheet, top, metrics))}px`,
     );
   }, [sheet, dragging, settling, desktopStage, cardRef]);
 
