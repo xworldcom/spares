@@ -348,7 +348,7 @@
   --drag-h: 0px;
   --phase-a: 0;
   --phase-b: 0;
-  --thread-extra-h: 0px;
+  --motion-seat-h: var(--peek-thread-h);
   /* Chrome metrics stay fixed at every snap — only layout/content may change. */
   --sheet-drag-handle-w: 2.6rem;
   --sheet-drag-handle-h: 0.28rem;
@@ -449,17 +449,9 @@
     transform var(--sheet-duration) var(--sheet-ease);
 }
 
-/* Phase A: composer slides on --phase-a; phase B: thread grows via --thread-extra-h. */
+/* Phase A: composer slides on --phase-a; live drag uses --motion-seat-h for the body. */
 .conversation-sheet:not(.is-inline) .imsg-card--sheet .imsg-composer {
   margin-top: auto;
-}
-
-.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-card--sheet {
-  justify-content: flex-end;
-}
-
-.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-card--sheet .imsg-composer {
-  margin-top: 0;
 }
 
 .conversation-sheet:not(.is-inline) .imsg-composer {
@@ -485,21 +477,26 @@
 .conversation-sheet:not(.is-inline).is-dragging .imsg-composer,
 .conversation-sheet:not(.is-inline).is-settling .imsg-composer {
   transition: none;
+  transform: none;
+  opacity: var(--phase-a, 0);
+  max-height: calc(var(--phase-a, 0) * 12rem);
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer {
   pointer-events: none;
 }
 
-.conversation-sheet:not(.is-inline) .imsg-thread--fill {
-  flex: 0 0 calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
-  height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
-  min-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
-  max-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
+.conversation-sheet:not(.is-inline):not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+  flex: 0 0 var(--peek-thread-h);
+  height: var(--peek-thread-h);
+  min-height: var(--peek-thread-h);
+  max-height: var(--peek-thread-h);
   overflow: hidden;
 }
 
-.conversation-sheet:not(.is-inline).is-full:not(.is-dragging) .imsg-thread--fill {
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
@@ -511,32 +508,32 @@
   overflow-y: auto;
 }
 
-/* Phase B′: finger height owns the shell. The thread fills that shell and
-   pins to the composer, so older rows clip under the toolbar. The phase-b
-   spacer stays out — it would open a hole above the composer. */
-.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill {
+/* Live motion: one finger-owned seat; latest row pins to the composer. */
+.conversation-sheet:not(.is-inline).is-dragging .imsg-card--sheet,
+.conversation-sheet:not(.is-inline).is-settling .imsg-card--sheet {
+  flex: 0 0 auto;
+  height: var(--motion-seat-h);
+  min-height: 0;
+  max-height: var(--motion-seat-h);
+}
+
+.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-settling .imsg-thread--fill {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
   max-height: none;
-  margin-top: 0;
   overflow: hidden;
-  justify-content: flex-end;
-}
-
-.conversation-sheet:not(.is-inline).is-dragging[data-thread-dock="composer"] .imsg-thread--fill,
-.conversation-sheet:not(.is-inline).is-settling[data-thread-dock="composer"] .imsg-thread--fill {
-  overflow: hidden;
-  /* unsafe: a long thread must keep the latest row on the composer.
-     Safe flex-end falls back to the top and opens the close gap. */
   justify-content: unsafe flex-end;
 }
 
-.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill > li {
+.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill > li,
+.conversation-sheet:not(.is-inline).is-settling .imsg-thread--fill > li {
   flex-shrink: 0;
 }
 
-.conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill::before {
+.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill::before,
+.conversation-sheet:not(.is-inline).is-settling .imsg-thread--fill::before {
   content: none;
   display: none;
   flex: 0 0 0px;
@@ -589,19 +586,6 @@
     background: color-mix(in srgb, var(--spares-lift) 92%, transparent);
     backdrop-filter: blur(10px);
   }
-}
-
-.conversation-sheet:not(.is-inline).is-dragging .imsg-thread--fill {
-  justify-content: flex-end;
-}
-
-.conversation-sheet:not(.is-inline)[data-thread-layout="rest"] .imsg-thread--fill {
-  flex: 1 1 auto;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  overflow-y: auto;
-  justify-content: normal;
 }
 
 .conversation-sheet:not(.is-inline) .imsg-thread--fill::before {

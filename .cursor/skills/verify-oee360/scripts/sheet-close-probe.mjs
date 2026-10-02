@@ -86,7 +86,6 @@ async function readGeom() {
       lastBottom: lastBox ? Math.round(lastBox.bottom) : null,
       gap: lastBox && composerBox ? Math.round(composerBox.top - lastBox.bottom) : null,
       bubbleVis,
-      threadDock: card.getAttribute("data-thread-dock"),
     };
   });
 }
@@ -174,7 +173,7 @@ await page.screenshot({ path: "/tmp/sheet-close-mid.png" });
 const phaseB = samples.filter((s) => s.phaseB > 0.12 && s.phaseB < 0.95 && !s.released);
 const phaseA = samples.filter((s) => s.phaseB === 0 && s.phaseA < 1 && s.phaseA > 0);
 const failures = [];
-if (!openMid || openMid.threadDock != null || !(openMid.phaseB > 0.5) || !(openMid.sheetH > 400)) {
+if (!openMid || !(openMid.phaseB > 0.5) || !(openMid.sheetH > 400)) {
   failures.push(`open slide changed: ${JSON.stringify(openMid)}`);
 }
 if (phaseB.length < 4) {
@@ -185,7 +184,6 @@ for (let i = 0; i < phaseB.length; i += 1) {
   if (s.composerBottom > s.sheetBottom + 2 || s.composerTop < s.sheetTop) {
     failures.push(`composer left the sheet at phaseB ${s.phaseB}`);
   }
-  if (s.threadDock !== "composer") failures.push(`thread not docked at phaseB ${s.phaseB}`);
   if (s.bubbleVis < 16) failures.push(`latest bubble left the window at phaseB ${s.phaseB}: vis ${s.bubbleVis}`);
   if (s.gap == null || s.gap > 40) {
     failures.push(`latest row left the composer at phaseB ${s.phaseB}: gap ${s.gap}`);
@@ -203,7 +201,9 @@ for (let i = 0; i < phaseB.length; i += 1) {
 }
 if (phaseA.length < 2) failures.push("phase A samples missing");
 for (const s of phaseA) {
-  if (s.threadDock != null) failures.push(`phase A kept thread dock at phaseA ${s.phaseA}`);
+  if (s.gap != null && s.gap > 48) {
+    failures.push(`phase A opened composer gap at phaseA ${s.phaseA}: ${s.gap}`);
+  }
 }
 for (let i = 1; i < phaseA.length; i += 1) {
   if (phaseA[i].sheetH > phaseA[i - 1].sheetH + 2) {
@@ -218,5 +218,5 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("PASS shell tracks the finger, latest row stays on the composer, open stays undocked");
+console.log("PASS shell tracks the finger, latest row stays on the composer");
 await browser.close();
