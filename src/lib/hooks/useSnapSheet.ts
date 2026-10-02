@@ -272,8 +272,8 @@ export function useSnapSheet({
   }
 
   function prepareThreadForSheetMotion(from: SnapSheetSnap) {
-    resetThreadScrollForMotion(from);
     cardRef.current?.classList.add("is-dragging");
+    resetThreadScrollForMotion(from);
   }
 
   function paintMotion(liveHeightPx: number, _gesture?: ConversationSheetGesture | null) {
@@ -313,8 +313,10 @@ export function useSnapSheet({
     card.style.setProperty("--reply-h", `${Math.round(replyH)}px`);
     card.style.setProperty("--full-h", `${Math.round(fullH)}px`);
     card.removeAttribute("data-layout-peek");
-    stickThreadToLatest();
     clearMotionHeights();
+    requestAnimationFrame(() => {
+      stickThreadToLatest();
+    });
   }
 
   function clearMotionSnap(atSnap?: ConversationSheetSnap) {
@@ -359,19 +361,25 @@ export function useSnapSheet({
       return;
     }
     const card = cardRef.current;
-    const body = card?.querySelector(scrollBodySelector);
+    if (!card) {
+      return;
+    }
+    const body = card.querySelector(scrollBodySelector);
     if (!(body instanceof HTMLElement)) {
       return;
     }
-    if (
+    const overflowY = getComputedStyle(body).overflowY;
+    const inMotion =
       card.classList.contains("is-dragging") ||
       card.classList.contains("is-settling") ||
-      card.hasAttribute("data-motion-live")
-    ) {
+      card.hasAttribute("data-motion-live");
+    if (inMotion || overflowY === "hidden" || overflowY === "clip") {
       body.scrollTop = 0;
       return;
     }
-    body.scrollTop = body.scrollHeight;
+    if (overflowY === "auto" || overflowY === "scroll") {
+      body.scrollTop = body.scrollHeight;
+    }
   }
 
   useEffect(() => {
@@ -432,7 +440,18 @@ export function useSnapSheet({
       dockedRef.current = gap <= 4;
     };
     body.addEventListener("scroll", onScroll, { passive: true });
-    const resize = new ResizeObserver(() => stickThreadToLatest());
+    const resize = new ResizeObserver(() => {
+      const card = cardRef.current;
+      if (
+        !card ||
+        card.classList.contains("is-dragging") ||
+        card.classList.contains("is-settling") ||
+        card.hasAttribute("data-motion-live")
+      ) {
+        return;
+      }
+      stickThreadToLatest();
+    });
     resize.observe(body);
     stickThreadToLatest();
     return () => {
@@ -455,7 +474,7 @@ export function useSnapSheet({
   }, [sheet, dragging, settling, desktopStage, cardRef]);
 
   useEffect(() => {
-    if (dragging || sheet === "out" || sheet === "full") {
+    if (dragging || settling || sheet === "out" || sheet === "full") {
       return;
     }
     dockedRef.current = true;
@@ -475,7 +494,7 @@ export function useSnapSheet({
       alive = false;
       window.cancelAnimationFrame(id);
     };
-  }, [sheet, dragging]);
+  }, [sheet, dragging, settling]);
 
   function dismiss() {
     if (!controlledOpen && !desktopStage) {
@@ -683,16 +702,16 @@ export function useSnapSheet({
     const settleGesture: ConversationSheetGesture | null =
       target < live - 2 ? "collapsing" : target > live + 2 ? "expanding" : null;
     lockMotionHeights();
-    if (settleGesture === "collapsing") {
-      resetThreadScrollForMotion(sheet === "full" ? "full" : drag.current.from);
-    } else if (settleGesture === "expanding") {
-      resetThreadScrollForMotion("reply");
-    }
     setDragging(false);
     setDraggingClass(false);
     cardRef.current?.classList.remove("is-dragging");
     setSettling(true);
     setSettlingClass(true);
+    if (settleGesture === "collapsing") {
+      resetThreadScrollForMotion(sheet === "full" ? "full" : drag.current.from);
+    } else if (settleGesture === "expanding") {
+      resetThreadScrollForMotion("reply");
+    }
     setOpen(true);
     paintMotion(live, settleGesture);
     setSheet(next);
