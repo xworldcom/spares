@@ -27,7 +27,7 @@ export const CONVERSATION_SHEET_CLOSE_FONT_PX = 14;
 export const CONVERSATION_SHEET_DRAG_HANDLE_W_REM = 2.6;
 export const CONVERSATION_SHEET_DRAG_HANDLE_H_REM = 0.28;
 /** Kevin intermediate (H_peek): handle + header + latest + composer above tab bar. */
-export const CONVERSATION_SHEET_REPLY_H = "14rem";
+export const CONVERSATION_SHEET_REPLY_H = "17.5rem";
 export const CONVERSATION_SHEET_FULL_H =
   "min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem))";
 

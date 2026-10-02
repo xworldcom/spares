@@ -340,7 +340,7 @@
   --peek-h: 5.75rem;
   --peek-chrome-h: 2.85rem;
   --peek-thread-h: calc(var(--peek-h) - var(--peek-chrome-h));
-  --reply-h: 14rem;
+  --reply-h: 17.5rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
   --sheet-clip-top: 0px;
   --sheet-clip-bottom: 0px;

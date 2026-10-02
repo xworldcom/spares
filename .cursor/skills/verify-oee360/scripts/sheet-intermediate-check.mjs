@@ -39,13 +39,23 @@ async function geom() {
     const toolbar = card.querySelector(".conversation-sheet-toolbar");
     const handleBox = handle?.getBoundingClientRect();
     const toolbarBox = toolbar?.getBoundingClientRect();
+    const visTop = cardBox.top + y;
+    const visBottom = cardBox.bottom - clipBottom;
     return {
       snap: card.getAttribute("data-snap"),
       sheetY: Math.round(y),
       clipBottom: Math.round(clipBottom),
       visibleH: Math.round(cardBox.height - y - clipBottom),
-      handleVisible: !!(handleBox && tabBox && handleBox.top < tabBox.top - 4),
-      notesHeaderVisible: !!(toolbarBox && tabBox && toolbarBox.top < tabBox.top - 4),
+      handleVisible: !!(
+        handleBox &&
+        handleBox.top >= visTop - 2 &&
+        handleBox.bottom <= visBottom + 2
+      ),
+      notesHeaderVisible: !!(
+        toolbarBox &&
+        toolbarBox.top >= visTop - 2 &&
+        toolbarBox.bottom <= visBottom + 2
+      ),
       tabTop: tabBox ? Math.round(tabBox.top) : null,
       composerTop: compBox ? Math.round(compBox.top) : null,
       composerBottom: compBox ? Math.round(compBox.bottom) : null,
@@ -58,12 +68,7 @@ async function geom() {
 }
 
 console.log("peek", await geom());
-const handle = page.locator(".snap-sheet-handle").first();
-const box = await handle.boundingBox();
-await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-await page.mouse.down();
-await page.mouse.move(box.x + box.width / 2, box.y - 140);
-await page.mouse.up();
+await page.locator(".snap-sheet-handle").first().click({ force: true });
 await page.waitForTimeout(700);
 const reply = await geom();
 console.log("reply", reply);

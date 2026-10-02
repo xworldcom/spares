@@ -36,6 +36,55 @@ function remPx(rem: number) {
   return rem * (Number.isFinite(root) && root > 0 ? root : 16);
 }
 
+/** offsetHeight + vertical margins (clip stack uses margin on the drag handle). */
+function blockExtentPx(node: HTMLElement): number {
+  const style = getComputedStyle(node);
+  const mt = Number.parseFloat(style.marginTop) || 0;
+  const mb = Number.parseFloat(style.marginBottom) || 0;
+  return node.offsetHeight + mt + mb;
+}
+
+/** Latest context above the composer — padding, gap, and up to two trailing rows (status chips). */
+function measureThreadContextBandPx(card: HTMLElement, maxRows = 2): number {
+  const thread = card.querySelector(".imsg-thread");
+  if (!(thread instanceof HTMLElement)) {
+    return remPx(4.25);
+  }
+  const style = getComputedStyle(thread);
+  const pt = Number.parseFloat(style.paddingTop) || 0;
+  const pb = Number.parseFloat(style.paddingBottom) || 0;
+  const rowGap = Number.parseFloat(style.gap) || Number.parseFloat(style.rowGap) || 0;
+  const rows = thread.querySelectorAll(":scope > .imsg-row");
+  if (rows.length === 0) {
+    return pt + pb + remPx(3.5);
+  }
+  const take = Math.min(maxRows, rows.length);
+  let rowsH = 0;
+  for (let i = rows.length - take; i < rows.length; i++) {
+    const row = rows[i];
+    if (row instanceof HTMLElement) {
+      rowsH += blockExtentPx(row);
+    }
+  }
+  if (take > 1) {
+    rowsH += rowGap * (take - 1);
+  }
+  return pt + rowsH + pb + remPx(0.35);
+}
+
+function paintDetentCssVars(
+  card: HTMLElement,
+  peekVisibleH: number,
+  replyH: number,
+  openH: number,
+  composerH: number,
+) {
+  card.style.setProperty("--peek-h", `${Math.round(peekVisibleH)}px`);
+  card.style.setProperty("--reply-h", `${Math.round(replyH)}px`);
+  card.style.setProperty("--full-h", `${Math.round(openH)}px`);
+  card.style.setProperty("--composer-clip-h", `${Math.round(composerH)}px`);
+}
+
 function tabBarPx() {
   if (typeof window === "undefined") {
     return 56;
@@ -69,10 +118,23 @@ function openHeightPx(card?: Element | null) {
   return Math.min(window.innerHeight * 0.92, window.innerHeight - inset);
 }
 
-/** Closed = chrome + latest row; intermediate = + composer (measured when possible). */
+/** Bottom-anchored clip: intermediate must include handle → card floor. */
+function measureReplyVisiblePx(card: HTMLElement): number {
+  const handle = card.querySelector(
+    ":scope > .snap-sheet-handle, :scope > .quote-sheet-handle",
+  );
+  if (!(handle instanceof HTMLElement)) {
+    return 0;
+  }
+  const cardRect = card.getBoundingClientRect();
+  const handleTop = handle.getBoundingClientRect().top;
+  return Math.ceil(cardRect.bottom - handleTop);
+}
+
+/** Closed = chrome + latest row; intermediate = handle through composer to card floor. */
 function measureDetentHeights(card: HTMLElement | null) {
   const peekVisibleFallback = remPx(4.5);
-  const replyFallback = remPx(14);
+  const replyFallback = remPx(17.5);
   const composerFallback = remPx(4);
   if (!card) {
     return {
@@ -81,6 +143,9 @@ function measureDetentHeights(card: HTMLElement | null) {
       composerH: composerFallback,
     };
   }
+  const handle = card.querySelector(
+    ":scope > .snap-sheet-handle, :scope > .quote-sheet-handle",
+  );
   let chrome = 0;
   for (const selector of [
     ":scope > .snap-sheet-handle",
@@ -89,28 +154,32 @@ function measureDetentHeights(card: HTMLElement | null) {
   ]) {
     const node = card.querySelector(selector);
     if (node instanceof HTMLElement) {
-      chrome += node.offsetHeight;
+      chrome += blockExtentPx(node);
     }
   }
   const composer = card.querySelector(".imsg-composer");
+  // Composer uses margin-top:auto in the flex column — never count that margin in detents.
   const composerH =
     composer instanceof HTMLElement && composer.offsetHeight > 0
       ? composer.offsetHeight
       : composerFallback;
-  const lastRow = card.querySelector(".imsg-thread .imsg-row:last-of-type");
-  const threadBand =
-    lastRow instanceof HTMLElement && lastRow.offsetHeight > 0
-      ? lastRow.offsetHeight + remPx(0.35)
-      : remPx(4.25);
+  const threadBand = measureThreadContextBandPx(card, 1);
   const stackGap = remPx(0.35);
-  const peekVisibleH = Math.max(
-    peekVisibleFallback,
-    Math.ceil(chrome + threadBand + stackGap),
+  const stackPeek = Math.ceil(chrome + threadBand + stackGap);
+  const handleToComposer =
+    handle instanceof HTMLElement &&
+    composer instanceof HTMLElement &&
+    composer.getBoundingClientRect().top > handle.getBoundingClientRect().top
+      ? Math.ceil(
+          composer.getBoundingClientRect().top - handle.getBoundingClientRect().top,
+        )
+      : 0;
+  const peekVisibleH = Math.max(peekVisibleFallback, stackPeek, handleToComposer);
+  const replyFromHandle = measureReplyVisiblePx(card);
+  const stackReply = Math.ceil(
+    chrome + measureThreadContextBandPx(card, 2) + composerH + stackGap,
   );
-  const replyH = Math.max(
-    replyFallback,
-    Math.ceil(chrome + threadBand + composerH + stackGap * 2),
-  );
+  const replyH = Math.max(replyFallback, replyFromHandle, stackReply);
   return { peekVisibleH, replyH, composerH };
 }
 
@@ -265,13 +334,13 @@ export function useSnapSheet({
     if (!card) {
       return;
     }
-    const { metrics } = snapHeights();
+    const { metrics, peekH, replyH, openH, composerH } = snapHeights();
     const clipBottom = conversationSheetClipBottomForTop(liveY, metrics);
     const { phaseA, phaseB } = conversationSheetMotionFromTranslate(liveY, metrics);
     card.setAttribute("data-motion-live", "");
+    paintDetentCssVars(card, peekH, replyH, openH, composerH);
     card.style.setProperty("--sheet-clip-top", `${Math.round(liveY)}px`);
     card.style.setProperty("--sheet-clip-bottom", `${Math.round(clipBottom)}px`);
-    card.style.setProperty("--composer-clip-h", `${Math.round(metrics.composerH)}px`);
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     setMotionPhases({ phaseA, phaseB });
@@ -292,14 +361,14 @@ export function useSnapSheet({
       card.style.removeProperty("--sheet-clip-top");
       card.style.removeProperty("--sheet-clip-bottom");
     } else {
-      const { metrics } = snapHeights();
+      const { metrics, peekH, replyH, openH, composerH } = snapHeights();
       const top = conversationSheetTranslateForSnap(snap, metrics);
+      paintDetentCssVars(card, peekH, replyH, openH, composerH);
       card.style.setProperty("--sheet-clip-top", `${Math.round(top)}px`);
       card.style.setProperty(
         "--sheet-clip-bottom",
         `${Math.round(conversationSheetClipBottomForTop(top, metrics))}px`,
       );
-      card.style.setProperty("--composer-clip-h", `${Math.round(metrics.composerH)}px`);
     }
     if (snap === "peek") {
       card.setAttribute("data-layout-peek", "");
@@ -434,14 +503,14 @@ export function useSnapSheet({
     if (!card) {
       return;
     }
-    const { metrics } = snapHeights();
+    const { metrics, peekH, replyH, openH, composerH } = snapHeights();
     const top = conversationSheetTranslateForSnap(sheet, metrics);
+    paintDetentCssVars(card, peekH, replyH, openH, composerH);
     card.style.setProperty("--sheet-clip-top", `${Math.round(top)}px`);
     card.style.setProperty(
       "--sheet-clip-bottom",
       `${Math.round(conversationSheetClipBottomForTop(top, metrics))}px`,
     );
-    card.style.setProperty("--composer-clip-h", `${Math.round(metrics.composerH)}px`);
   }, [sheet, dragging, settling, desktopStage, cardRef]);
 
   useEffect(() => {
