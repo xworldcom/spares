@@ -63,7 +63,8 @@ export function ConversationSheet({
     displaySnap === "full" ||
     displaySnap === "reply" ||
     (layout === "inline" && desktop);
-  const showChrome = overlayMobile && sheet !== "out";
+  const showChrome =
+    overlayMobile && sheet !== "out" && (sheet === "reply" || sheet === "full" || sheet === "peek");
 
   return (
     <aside
