@@ -191,6 +191,15 @@ export function useSnapSheet({
     };
   }
 
+  function syncComposerHeight() {
+    const card = cardRef.current;
+    const composer = card?.querySelector(".imsg-composer");
+    if (!card || !(composer instanceof HTMLElement) || composer.offsetHeight <= 0) {
+      return;
+    }
+    card.style.setProperty("--composer-h", `${composer.offsetHeight}px`);
+  }
+
   function paintMotion(liveHeightPx: number, gesture?: ConversationSheetGesture | null) {
     const card = cardRef.current;
     if (!card) {
@@ -205,9 +214,6 @@ export function useSnapSheet({
       replyH,
       fullH,
     );
-    // One finger-owned height. Phase B′ clips the thread onto the composer;
-    // phase A′ is the only thing that moves the composer. Bottom-anchored,
-    // so the shell tracks the finger without translating the composer off.
     card.style.setProperty("--sheet-h", `${Math.round(liveHeightPx)}px`);
     card.style.setProperty("--drag-h", "0px");
     card.style.setProperty("--phase-a", String(phaseA));
@@ -219,15 +225,19 @@ export function useSnapSheet({
     const threadCap = Math.max(peekThread, bodyBudget - composerPx);
     const threadExtra = phaseB * Math.max(0, threadCap - peekThread);
     card.style.setProperty("--thread-extra-h", `${Math.round(threadExtra)}px`);
+    syncComposerHeight();
     const holdingRest =
       (drag.current.from === "full" && Math.abs(liveHeightPx - drag.current.startH) <= 1) ||
       (card.classList.contains("is-full") &&
         !card.classList.contains("is-dragging") &&
         Math.abs(liveHeightPx - paintedH) <= 1);
+    const pinLatest =
+      (motionGesture === "expanding" || motionGesture === "collapsing") &&
+      (phaseA > 0 || phaseB > 0);
     if (holdingRest) {
       card.setAttribute("data-thread-layout", "rest");
       card.removeAttribute("data-thread-dock");
-    } else if (motionGesture === "collapsing" && phaseB > 0) {
+    } else if (pinLatest) {
       card.removeAttribute("data-thread-layout");
       card.setAttribute("data-thread-dock", "composer");
     } else {
@@ -249,6 +259,7 @@ export function useSnapSheet({
     card.style.removeProperty("--phase-a");
     card.style.removeProperty("--phase-b");
     card.style.removeProperty("--thread-extra-h");
+    syncComposerHeight();
     card.removeAttribute("data-thread-dock");
     card.removeAttribute("data-thread-layout");
     const snap = atSnap ?? sheet;
@@ -364,8 +375,12 @@ export function useSnapSheet({
       dockedRef.current = gap <= 4;
     };
     body.addEventListener("scroll", onScroll, { passive: true });
-    const resize = new ResizeObserver(() => stickThreadToLatest());
+    const resize = new ResizeObserver(() => {
+      syncComposerHeight();
+      stickThreadToLatest();
+    });
     resize.observe(body);
+    syncComposerHeight();
     stickThreadToLatest();
     return () => {
       body.removeEventListener("scroll", onScroll);

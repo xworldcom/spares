@@ -497,6 +497,7 @@
   min-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
   max-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
   overflow: hidden;
+  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * var(--composer-h, 0px)), 0);
 }
 
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging) .imsg-thread--fill {
@@ -511,13 +512,10 @@
   overflow-y: auto;
 }
 
-/* Phase B′: finger height owns the shell. The thread fills that shell and
-   pins to the composer, so older rows clip under the toolbar. The phase-b
-   spacer stays out — it would open a hole above the composer. */
 .conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill {
   flex: 1 1 auto;
   height: auto;
-  min-height: 0;
+  min-height: var(--peek-thread-h);
   max-height: none;
   margin-top: 0;
   overflow: hidden;
