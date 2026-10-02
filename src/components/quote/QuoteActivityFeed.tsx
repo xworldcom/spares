@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useConversationSheetChrome } from "@/components/chat/ConversationSheetContext";
 import { ChatAttachmentView } from "@/components/chat/ChatAttachmentView";
 import { formatWhen } from "@/components/quote/quote-format";
@@ -16,6 +16,7 @@ import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
 import { assistantActorLabel, isAssistantActivity } from "@/lib/assistant/actor";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import { firstUnreadActivityIndex } from "@/lib/ui/conversation-unread";
+import { pinThreadScrollerToComposer } from "@/lib/ui/conversation-sheet-thread-pin";
 import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
 
 export type ActivitySendInput = {
@@ -133,7 +134,7 @@ export function QuoteActivityFeed({
     unreadJumpedRef.current = false;
   }, [threadId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = scrollerRef.current;
     if (!root) {
       return;
@@ -141,38 +142,50 @@ export function QuoteActivityFeed({
     const sheetSnap = sheetChrome?.snap;
     const shouldJumpUnread =
       layout === "sheet" &&
+      sheetSnap === "full" &&
       firstUnreadIndex !== null &&
-      !unreadJumpedRef.current &&
-      (sheetSnap === "reply" || sheetSnap === "full");
+      !unreadJumpedRef.current;
 
     if (shouldJumpUnread) {
-      const jump = () => {
-        const marker = root.querySelector<HTMLElement>(`[data-unread-anchor="true"]`);
-        if (!marker) {
-          return;
-        }
-        marker.scrollIntoView({ block: "center" });
+      const marker = root.querySelector<HTMLElement>(`[data-unread-anchor="true"]`);
+      if (marker) {
+        marker.scrollIntoView({ block: "end" });
         unreadJumpedRef.current = true;
-      };
-      const id = window.setTimeout(jump, 460);
-      return () => {
-        window.clearTimeout(id);
-      };
+      }
+      return;
     }
 
     const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
-    // Sheet layout docks to latest unless we are browsing unread history at full.
     if (layout === "sheet") {
-      if (sheetSnap === "full" && unreadJumpedRef.current) {
+      if (sheetSnap === "reply" || sheetSnap === "peek") {
+        // Flex-end layout pins latest — never set a non-zero scrollTop (poisons full open).
+        if (root.scrollTop !== 0) {
+          root.scrollTop = 0;
+        }
         return;
       }
-      root.scrollTop = root.scrollHeight;
+      if (sheetSnap === "full") {
+        if (sheetChrome?.threadDocked === false && unreadJumpedRef.current) {
+          return;
+        }
+        if (sheetChrome?.threadDocked === false && !nearBottom) {
+          return;
+        }
+        pinThreadScrollerToComposer(root);
+      }
       return;
     }
     if (nearBottom) {
-      root.scrollTop = root.scrollHeight;
+      pinThreadScrollerToComposer(root);
     }
-  }, [activities, layout, firstUnreadIndex, sheetChrome?.snap, threadId]);
+  }, [
+    activities,
+    layout,
+    firstUnreadIndex,
+    sheetChrome?.snap,
+    sheetChrome?.threadDocked,
+    threadId,
+  ]);
 
   useEffect(() => {
     const node = inputRef.current;

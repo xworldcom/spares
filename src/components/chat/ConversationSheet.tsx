@@ -44,6 +44,7 @@ export function ConversationSheet({
     dragMoved,
     collapseToPeek,
     pointerHandlers,
+    threadDocked,
   } = useSnapSheet({
     cardRef: card,
     open,
@@ -143,6 +144,7 @@ export function ConversationSheet({
         value={{
           snap: sheet,
           dragging,
+          threadDocked,
           collapse: collapseToPeek,
         }}
       >

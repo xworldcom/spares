@@ -15,6 +15,10 @@ import {
   initialConversationSheetSnap,
   type ConversationSheetSnap,
 } from "@/lib/ui/conversation-sheet";
+import {
+  flushPinThreadScrollerToComposer,
+  pinThreadScrollerToComposer,
+} from "@/lib/ui/conversation-sheet-thread-pin";
 
 const DRAG_SLOP = 8;
 const SAMPLE_WINDOW_MS = 90;
@@ -211,6 +215,7 @@ export function useSnapSheet({
   const [motionPhases, setMotionPhases] = useState({ phaseA: 0, phaseB: 0 });
   const [dragging, setDragging] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [threadDocked, setThreadDocked] = useState(true);
   const drag = useRef({
     y: 0,
     on: false,
@@ -223,6 +228,11 @@ export function useSnapSheet({
     liveH: 0,
   });
   const dockedRef = useRef(true);
+
+  function setThreadDockedState(docked: boolean) {
+    dockedRef.current = docked;
+    setThreadDocked(docked);
+  }
   const steppedAtRef = useRef(0);
   const settleFrameRef = useRef(0);
   const motionHeightsRef = useRef<{ replyH: number; fullH: number } | null>(null);
@@ -262,8 +272,8 @@ export function useSnapSheet({
     return snapHeights();
   }
 
-  function resetThreadScrollForMotion(from: SnapSheetSnap) {
-    dockedRef.current = true;
+  function resetThreadScrollForMotion(_from: SnapSheetSnap) {
+    setThreadDockedState(true);
     const body = cardRef.current?.querySelector(scrollBodySelector);
     if (body instanceof HTMLElement) {
       // Flex-end motion layout pins the latest row; clear scroll so close does not jump.
@@ -314,6 +324,12 @@ export function useSnapSheet({
     card.style.setProperty("--full-h", `${Math.round(fullH)}px`);
     card.removeAttribute("data-layout-peek");
     clearMotionHeights();
+    if (dockedRef.current) {
+      const body = card.querySelector(scrollBodySelector);
+      if (body instanceof HTMLElement) {
+        flushPinThreadScrollerToComposer(body);
+      }
+    }
     requestAnimationFrame(() => {
       stickThreadToLatest();
     });
@@ -368,18 +384,15 @@ export function useSnapSheet({
     if (!(body instanceof HTMLElement)) {
       return;
     }
-    const overflowY = getComputedStyle(body).overflowY;
     const inMotion =
       card.classList.contains("is-dragging") ||
       card.classList.contains("is-settling") ||
       card.hasAttribute("data-motion-live");
-    if (inMotion || overflowY === "hidden" || overflowY === "clip") {
+    if (inMotion) {
       body.scrollTop = 0;
       return;
     }
-    if (overflowY === "auto" || overflowY === "scroll") {
-      body.scrollTop = body.scrollHeight;
-    }
+    pinThreadScrollerToComposer(body);
   }
 
   useEffect(() => {
@@ -390,7 +403,7 @@ export function useSnapSheet({
       initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
     );
     clearMotionSnap();
-    dockedRef.current = true;
+    setThreadDockedState(true);
     clearMotionPaint();
     setDragging(false);
     setDraggingClass(false);
@@ -404,7 +417,7 @@ export function useSnapSheet({
         }
         return initialConversationSheetSnap(true, desktopStage, openForUnread);
       });
-      dockedRef.current = true;
+      setThreadDockedState(true);
       clearMotionPaint();
       setDragging(false);
       setDraggingClass(false);
@@ -434,10 +447,10 @@ export function useSnapSheet({
     const onScroll = () => {
       const gap = body.scrollHeight - body.scrollTop - body.clientHeight;
       if (sheet !== "full") {
-        dockedRef.current = true;
+        setThreadDockedState(true);
         return;
       }
-      dockedRef.current = gap <= 4;
+      setThreadDockedState(gap <= 4);
     };
     body.addEventListener("scroll", onScroll, { passive: true });
     const resize = new ResizeObserver(() => {
@@ -477,7 +490,7 @@ export function useSnapSheet({
     if (dragging || settling || sheet === "out" || sheet === "full") {
       return;
     }
-    dockedRef.current = true;
+    setThreadDockedState(true);
     let alive = true;
     const started = performance.now();
     function tick(now: number) {
@@ -511,7 +524,7 @@ export function useSnapSheet({
 
   function collapseToPeek() {
     steppedAtRef.current = performance.now();
-    dockedRef.current = true;
+    setThreadDockedState(true);
     if (sheet === "reply" || sheet === "peek") {
       setOpen(true);
       clearMotionPaint("reply");
@@ -691,7 +704,7 @@ export function useSnapSheet({
     if (next === "reply" || next === "full") {
       // Roll-up/down keeps the latest row glued above the composer unless the user
       // scrolls history while already at full (scroll handler clears the dock).
-      dockedRef.current = true;
+      setThreadDockedState(true);
     }
     steppedAtRef.current = performance.now();
     const target = heightForSnap(next, cardRef.current);
@@ -854,6 +867,7 @@ export function useSnapSheet({
     collapseToPeek,
     toggleHandle,
     dragMoved: () => drag.current.moved,
+    threadDocked,
     pointerHandlers: {
       onPointerDownCapture: onCardPointerDown,
       onPointerMove: onCardPointerMove,
