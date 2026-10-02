@@ -463,19 +463,11 @@
   min-height: 0;
   max-height: none;
   overflow-y: auto;
-  justify-content: flex-end;
-}
-
-.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-thread--fill::before {
-  content: "";
-  display: block;
-  flex: 1 1 auto;
-  min-height: 0;
-  pointer-events: none;
 }
 
 .conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill,
 .conversation-sheet:not(.is-inline).is-full.is-settling .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill,
 .conversation-sheet:not(.is-inline).is-reply.is-settling .imsg-thread--fill,
 .conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread--fill {
   flex: 1 1 auto;
@@ -534,9 +526,7 @@
   }
 }
 
-.conversation-sheet:not(.is-inline):not(.is-full) .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill::before,
-.conversation-sheet:not(.is-inline).is-full.is-settling .imsg-thread--fill::before {
+.conversation-sheet:not(.is-inline) .imsg-thread--fill::before {
   content: none;
   display: none;
 }
