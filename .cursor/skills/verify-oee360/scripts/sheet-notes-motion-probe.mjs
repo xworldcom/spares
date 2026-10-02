@@ -74,6 +74,8 @@ async function readGeom() {
       snap: card.getAttribute("data-snap"),
       dock: card.getAttribute("data-thread-dock"),
       layout: card.getAttribute("data-thread-layout"),
+      phaseA: Number(getComputedStyle(card).getPropertyValue("--phase-a")) || 0,
+      phaseB: Number(getComputedStyle(card).getPropertyValue("--phase-b")) || 0,
       sheetH: Math.round(cardBox.height),
       bubbleTop: bubbleBox ? Math.round(bubbleBox.top) : null,
       gap: bubbleBox && composerBox ? Math.round(composerBox.top - bubbleBox.bottom) : null,
@@ -163,10 +165,11 @@ await page.mouse.move(x2, y2);
 await page.mouse.down();
 let bleedFrames = 0;
 let openFrames = 0;
-for (let i = 1; i <= 36; i += 1) {
-  await page.mouse.move(x2, y2 - i * 16);
-  await page.waitForTimeout(24);
-  if (i % 3 !== 0) continue;
+const openGaps = [];
+for (let i = 1; i <= 40; i += 1) {
+  await page.mouse.move(x2, y2 - i * 14);
+  await page.waitForTimeout(28);
+  if (i % 2 !== 0) continue;
   const g = await readGeom();
   openFrames += 1;
   const bleed = g.overlap > 8 && g.hits.some((hit) => hit.inHead || !hit.inSheet);
@@ -174,12 +177,37 @@ for (let i = 1; i <= 36; i += 1) {
     bleedFrames += 1;
     console.log("bleed", JSON.stringify(g));
   }
+  const pinning = g.phaseA > 0.2 || g.phaseB > 0;
+  if (!pinning) continue;
+  openGaps.push(g);
+  console.log(
+    `open a=${g.phaseA.toFixed(2)} b=${g.phaseB.toFixed(2)} gap=${g.gap} dock=${g.dock} bubble=${g.bubbleTop}`,
+  );
 }
 await page.mouse.up();
 await waitSettled();
-console.log("openFrames", openFrames, "bleedFrames", bleedFrames);
+console.log("openFrames", openFrames, "bleedFrames", bleedFrames, "pinned", openGaps.length);
 if (bleedFrames > 0) {
   failures.push(`ticket chrome painted through the sheet on ${bleedFrames} open frames`);
+}
+if (openGaps.length < 6) {
+  failures.push(`open did not sample the roll (${openGaps.length})`);
+}
+const gaps = openGaps.map((g) => g.gap).filter((gap) => gap != null);
+const spread = gaps.length ? Math.max(...gaps) - Math.min(...gaps) : 999;
+console.log("open gap spread", spread, "min", Math.min(...gaps), "max", Math.max(...gaps));
+if (spread > 16) {
+  failures.push(`latest row drifted from the composer during open (gap spread ${spread}px)`);
+}
+for (const g of openGaps) {
+  if (g.dock !== "composer") {
+    failures.push(`open left the thread undocked at a=${g.phaseA.toFixed(2)} b=${g.phaseB.toFixed(2)}`);
+    break;
+  }
+  if (g.gap == null || g.gap > 52) {
+    failures.push(`open gap ${g.gap}px at a=${g.phaseA.toFixed(2)} b=${g.phaseB.toFixed(2)}`);
+    break;
+  }
 }
 
 await browser.close();

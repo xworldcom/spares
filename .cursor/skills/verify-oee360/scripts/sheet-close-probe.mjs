@@ -2,7 +2,7 @@
 /**
  * Slow full-to-peek drag on the quote conversation sheet.
  * Fails if the shell does not track the finger, the latest row leaves the
- * composer during phase B, the composer leaves the sheet, or open docks the thread.
+ * composer during close phase B or the open roll, or the composer leaves the sheet.
  *
  * node .cursor/skills/verify-oee360/scripts/sheet-close-probe.mjs http://127.0.0.1:3010
  */
@@ -174,8 +174,15 @@ await page.screenshot({ path: "/tmp/sheet-close-mid.png" });
 const phaseB = samples.filter((s) => s.phaseB > 0.12 && s.phaseB < 0.95 && !s.released);
 const phaseA = samples.filter((s) => s.phaseB === 0 && s.phaseA < 1 && s.phaseA > 0);
 const failures = [];
-if (!openMid || openMid.threadDock != null || !(openMid.phaseB > 0.5) || !(openMid.sheetH > 400)) {
-  failures.push(`open slide changed: ${JSON.stringify(openMid)}`);
+if (
+  !openMid ||
+  openMid.threadDock !== "composer" ||
+  openMid.gap == null ||
+  openMid.gap > 40 ||
+  !(openMid.phaseB > 0.5) ||
+  !(openMid.sheetH > 400)
+) {
+  failures.push(`open slide left the latest row: ${JSON.stringify(openMid)}`);
 }
 if (phaseB.length < 4) {
   failures.push("close drag did not cross phase B");
@@ -218,5 +225,5 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("PASS shell tracks the finger, latest row stays on the composer, open stays undocked");
+console.log("PASS shell tracks the finger, latest row stays on the composer through close and open");
 await browser.close();
