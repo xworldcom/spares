@@ -77,6 +77,7 @@ async function readGeom() {
       phaseA: Number(getComputedStyle(card).getPropertyValue("--phase-a")) || 0,
       phaseB: Number(getComputedStyle(card).getPropertyValue("--phase-b")) || 0,
       sheetH: Math.round(cardBox.height),
+      sheetTop: Math.round(cardBox.top),
       bubbleTop: bubbleBox ? Math.round(bubbleBox.top) : null,
       gap: bubbleBox && composerBox ? Math.round(composerBox.top - bubbleBox.bottom) : null,
       zSheet: getComputedStyle(card).zIndex,
@@ -198,6 +199,16 @@ const spread = gaps.length ? Math.max(...gaps) - Math.min(...gaps) : 999;
 console.log("open gap spread", spread, "min", Math.min(...gaps), "max", Math.max(...gaps));
 if (spread > 16) {
   failures.push(`latest row drifted from the composer during open (gap spread ${spread}px)`);
+}
+const roll = openGaps.filter((g) => g.phaseA > 0.95 && g.phaseB > 0.15 && g.bubbleTop != null);
+if (roll.length >= 4) {
+  const tops = roll.map((g) => g.bubbleTop);
+  const bubbleSpread = Math.max(...tops) - Math.min(...tops);
+  const sheetSpread = Math.max(...roll.map((g) => g.sheetTop)) - Math.min(...roll.map((g) => g.sheetTop));
+  console.log("roll bubbleSpread", bubbleSpread, "sheetSpread", sheetSpread);
+  if (bubbleSpread > 8 && sheetSpread > 40) {
+    failures.push(`thread followed the handle during the roll (${bubbleSpread}px while the sheet moved ${sheetSpread}px)`);
+  }
 }
 for (const g of openGaps) {
   if (g.dock !== "composer") {

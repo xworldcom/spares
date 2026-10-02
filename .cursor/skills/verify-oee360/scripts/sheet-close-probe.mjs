@@ -210,7 +210,12 @@ for (let i = 0; i < phaseB.length; i += 1) {
 }
 if (phaseA.length < 2) failures.push("phase A samples missing");
 for (const s of phaseA) {
-  if (s.threadDock != null) failures.push(`phase A kept thread dock at phaseA ${s.phaseA}`);
+  if (s.threadDock !== "composer") {
+    failures.push(`phase A left the thread at phaseA ${s.phaseA}`);
+  }
+  if (s.gap == null || s.gap > 40) {
+    failures.push(`phase A peeled the latest row off the composer at phaseA ${s.phaseA}: gap ${s.gap}`);
+  }
 }
 for (let i = 1; i < phaseA.length; i += 1) {
   if (phaseA[i].sheetH > phaseA[i - 1].sheetH + 2) {

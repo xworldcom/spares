@@ -497,6 +497,7 @@
   min-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
   max-height: calc(var(--peek-thread-h) + var(--thread-extra-h, 0px));
   overflow: hidden;
+  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * var(--composer-h, 0px)), 0);
 }
 
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging) .imsg-thread--fill {
@@ -517,7 +518,7 @@
 .conversation-sheet:not(.is-inline)[data-thread-dock="composer"] .imsg-thread--fill {
   flex: 1 1 auto;
   height: auto;
-  min-height: 0;
+  min-height: var(--peek-thread-h);
   max-height: none;
   margin-top: 0;
   overflow: hidden;
