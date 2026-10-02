@@ -6,6 +6,8 @@ import type { ConversationSheetSnap } from "@/lib/ui/conversation-sheet";
 export type ConversationSheetChrome = {
   snap: ConversationSheetSnap;
   dragging: boolean;
+  /** Latest row pinned above composer; false when user scrolled history at full. */
+  threadDocked: boolean;
   collapse: () => void;
 };
 
