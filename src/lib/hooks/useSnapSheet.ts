@@ -191,49 +191,40 @@ export function useSnapSheet({
     };
   }
 
-  function paintMotion(liveHeightPx: number, gesture?: ConversationSheetGesture | null) {
+  function sheetChromePx(card: HTMLElement) {
+    let chrome = 0;
+    for (const selector of [
+      ":scope > .quote-sheet-handle",
+      ":scope > .snap-sheet-handle",
+      ":scope > .conversation-sheet-toolbar",
+    ]) {
+      const node = card.querySelector(selector);
+      if (node instanceof HTMLElement) {
+        chrome += node.offsetHeight;
+      }
+    }
+    return chrome;
+  }
+
+  function paintMotion(liveHeightPx: number, _gesture?: ConversationSheetGesture | null) {
     const card = cardRef.current;
     if (!card) {
       return;
     }
-    const paintedH = card.getBoundingClientRect().height;
     const { peekH, replyH, fullH } = snapHeights();
-    const motionGesture = gesture ?? drag.current.gesture;
     const { phaseA, phaseB } = conversationSheetMotionFromHeight(
       liveHeightPx,
       peekH,
       replyH,
       fullH,
     );
-    // One finger-owned height. Phase B′ clips the thread onto the composer;
-    // phase A′ is the only thing that moves the composer. Bottom-anchored,
-    // so the shell tracks the finger without translating the composer off.
+    card.setAttribute("data-motion-live", "");
     card.style.setProperty("--sheet-h", `${Math.round(liveHeightPx)}px`);
     card.style.setProperty("--drag-h", "0px");
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
-    const peekThread = peekH - remPx(2.85);
-    const bodyBudget = Math.max(0, liveHeightPx - remPx(2.85) - remPx(0.88));
-    const composerBudget = Math.max(0, replyH - peekH);
-    const composerPx = phaseA * composerBudget;
-    const threadCap = Math.max(peekThread, bodyBudget - composerPx);
-    const threadExtra = phaseB * Math.max(0, threadCap - peekThread);
-    card.style.setProperty("--thread-extra-h", `${Math.round(threadExtra)}px`);
-    const holdingRest =
-      (drag.current.from === "full" && Math.abs(liveHeightPx - drag.current.startH) <= 1) ||
-      (card.classList.contains("is-full") &&
-        !card.classList.contains("is-dragging") &&
-        Math.abs(liveHeightPx - paintedH) <= 1);
-    if (holdingRest) {
-      card.setAttribute("data-thread-layout", "rest");
-      card.removeAttribute("data-thread-dock");
-    } else if (motionGesture === "collapsing" && phaseB > 0) {
-      card.removeAttribute("data-thread-layout");
-      card.setAttribute("data-thread-dock", "composer");
-    } else {
-      card.removeAttribute("data-thread-layout");
-      card.removeAttribute("data-thread-dock");
-    }
+    const bodySeatH = Math.max(0, liveHeightPx - sheetChromePx(card));
+    card.style.setProperty("--motion-seat-h", `${Math.round(bodySeatH)}px`);
     setMotionPhases({ phaseA, phaseB });
     setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
     drag.current.liveH = liveHeightPx;
@@ -248,9 +239,8 @@ export function useSnapSheet({
     card.style.removeProperty("--drag-h");
     card.style.removeProperty("--phase-a");
     card.style.removeProperty("--phase-b");
-    card.style.removeProperty("--thread-extra-h");
-    card.removeAttribute("data-thread-dock");
-    card.removeAttribute("data-thread-layout");
+    card.style.removeProperty("--motion-seat-h");
+    card.removeAttribute("data-motion-live");
     const snap = atSnap ?? sheet;
     if (snap === "peek") {
       card.setAttribute("data-layout-peek", "");
@@ -473,10 +463,6 @@ export function useSnapSheet({
       liveH: startH,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-    if (!pending && (from === "full" || cardRef.current?.classList.contains("is-full"))) {
-      cardRef.current?.setAttribute("data-thread-layout", "rest");
-      cardRef.current?.removeAttribute("data-thread-dock");
-    }
     if (!pending) {
       setDragging(true);
       setDraggingClass(true);
@@ -593,23 +579,6 @@ export function useSnapSheet({
       drag.current.y = event.clientY;
     }
     paintDrag(dy);
-    const liveH = conversationSheetDragHeight({
-      from: drag.current.from,
-      startH: drag.current.startH,
-      dy,
-      peekH,
-      replyH,
-      fullH,
-    });
-    const { phaseB } = conversationSheetMotionFromHeight(
-      liveH,
-      peekH,
-      replyH,
-      fullH,
-    );
-    if (phaseB > 0.02) {
-      stickThreadToLatest();
-    }
   }
 
   function settleTo(next: ConversationSheetSnap) {

@@ -72,8 +72,7 @@ async function readGeom() {
       : 0;
     return {
       snap: card.getAttribute("data-snap"),
-      dock: card.getAttribute("data-thread-dock"),
-      layout: card.getAttribute("data-thread-layout"),
+      motionSeat: getComputedStyle(card).getPropertyValue("--motion-seat-h").trim(),
       sheetH: Math.round(cardBox.height),
       bubbleTop: bubbleBox ? Math.round(bubbleBox.top) : null,
       gap: bubbleBox && composerBox ? Math.round(composerBox.top - bubbleBox.bottom) : null,
@@ -143,9 +142,6 @@ if (Math.abs(bubbleJump) > 2) {
 }
 if (Math.abs(gapJump) > 4) {
   failures.push(`touch opened the composer gap by ${gapJump}px (${rest.gap} -> ${touch.gap})`);
-}
-if (touch.dock != null) {
-  failures.push(`touch set thread dock ${touch.dock} before the sheet moved`);
 }
 
 guard = 0;
