@@ -335,7 +335,7 @@
   z-index: 52;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   overflow: hidden;
   --peek-chrome-h: 2.85rem;
   --reply-h: 17.5rem;
@@ -431,9 +431,8 @@
 }
 
 .conversation-sheet:not(.is-dragging):not(.is-inline) {
-  transition:
-    height var(--sheet-duration) var(--sheet-ease),
-    transform var(--sheet-duration) var(--sheet-ease);
+  /* Height is driven by drag/settle (--sheet-h); only slide-out uses transform transition. */
+  transition: transform var(--sheet-duration) var(--sheet-ease);
 }
 
 /* Composer is a flex footer inside SheetSurface — never viewport-docked. */
@@ -467,6 +466,9 @@
 }
 
 .conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-full.is-settling .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-reply.is-dragging .imsg-thread--fill,
+.conversation-sheet:not(.is-inline).is-reply.is-settling .imsg-thread--fill,
 .conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread--fill {
   flex: 1 1 auto;
   min-height: 0;
