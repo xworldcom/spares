@@ -340,9 +340,10 @@
   --peek-h: 5.75rem;
   --peek-chrome-h: 2.85rem;
   --peek-thread-h: calc(var(--peek-h) - var(--peek-chrome-h));
-  --reply-h: 11.5rem;
+  --reply-h: 14rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
   --sheet-clip-top: 0px;
+  --sheet-clip-bottom: 0px;
   --phase-a: 0;
   --phase-b: 0;
   /* Chrome metrics stay fixed at every snap — only layout/content may change. */
@@ -384,13 +385,31 @@
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
   transform: translate3d(0, 0, 0);
-  clip-path: inset(var(--sheet-clip-top, 0) 0 0 0);
+  clip-path: inset(var(--sheet-clip-top, 0) 0 var(--sheet-clip-bottom, 0) 0);
+  isolation: isolate;
   will-change: clip-path;
   touch-action: none;
 }
 
+/* Opaque SheetSurface — ticket chrome must not bleed through during clip drag. */
+.conversation-sheet.snap-sheet:not(.is-inline)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--spares-lift);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.conversation-sheet.snap-sheet:not(.is-inline) > * {
+  position: relative;
+  z-index: 1;
+}
+
 .conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) {
-  --sheet-clip-top: calc(var(--full-h) - var(--peek-h));
+  --sheet-clip-top: calc(var(--full-h) - var(--peek-h) - var(--composer-clip-h, 4.25rem));
+  --sheet-clip-bottom: var(--composer-clip-h, 4.25rem);
   --phase-a: 0;
   --phase-b: 0;
 }
@@ -488,6 +507,19 @@
 
 .conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill {
   overflow-y: hidden;
+}
+
+.conversation-sheet:not(.is-inline)[data-motion-live] .conversation-sheet-toolbar,
+.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-toolbar,
+.conversation-sheet:not(.is-inline).is-settling .conversation-sheet-toolbar {
+  background: var(--spares-lift);
+  backdrop-filter: none;
+}
+
+.conversation-sheet:not(.is-inline)[data-motion-live] .conversation-sheet-body,
+.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-body,
+.conversation-sheet:not(.is-inline).is-settling .conversation-sheet-body {
+  background: var(--spares-lift);
 }
 
 .conversation-sheet:not(.is-inline)[data-motion-live] .imsg-thread.imsg-thread--fill,

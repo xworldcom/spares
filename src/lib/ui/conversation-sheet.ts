@@ -27,7 +27,7 @@ export const CONVERSATION_SHEET_CLOSE_FONT_PX = 14;
 export const CONVERSATION_SHEET_DRAG_HANDLE_W_REM = 2.6;
 export const CONVERSATION_SHEET_DRAG_HANDLE_H_REM = 0.28;
 /** Kevin intermediate (H_peek): handle + header + latest + composer above tab bar. */
-export const CONVERSATION_SHEET_REPLY_H = "11.5rem";
+export const CONVERSATION_SHEET_REPLY_H = "14rem";
 export const CONVERSATION_SHEET_FULL_H =
   "min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem))";
 
@@ -42,24 +42,53 @@ export type ConversationSheetMotion = {
 export type ConversationSheetGesture = "expanding" | "collapsing";
 
 export type ConversationSheetMetrics = {
-  peekH: number;
+  /** Closed visible band (chrome + latest row, no composer). */
+  peekVisibleH: number;
   replyH: number;
   openH: number;
+  composerH: number;
   yClosed: number;
+  clipBottomClosed: number;
   yIntermediate: number;
   yOpen: number;
 };
 
-/** Approach A: fixed open height; detents are translateY offsets (px, positive = down). */
+/** Approach A: fixed H_open; top/bottom clip insets (bottom tucks composer under tabs at closed). */
 export function conversationSheetMetrics(
-  peekH: number,
+  peekVisibleH: number,
   replyH: number,
   openH: number,
+  composerH: number,
 ): ConversationSheetMetrics {
   const yOpen = 0;
+  const clipBottomClosed = Math.max(0, composerH);
   const yIntermediate = Math.max(0, openH - replyH);
-  const yClosed = Math.max(yIntermediate, openH - peekH);
-  return { peekH, replyH, openH, yClosed, yIntermediate, yOpen };
+  const yClosed = Math.max(0, openH - peekVisibleH - clipBottomClosed);
+  return {
+    peekVisibleH,
+    replyH,
+    openH,
+    composerH,
+    yClosed,
+    clipBottomClosed,
+    yIntermediate,
+    yOpen,
+  };
+}
+
+export function conversationSheetClipBottomForTop(
+  clipTop: number,
+  metrics: ConversationSheetMetrics,
+): number {
+  if (clipTop <= metrics.yIntermediate + 0.5) {
+    return 0;
+  }
+  if (clipTop >= metrics.yClosed - 0.5) {
+    return metrics.clipBottomClosed;
+  }
+  const span = Math.max(metrics.yClosed - metrics.yIntermediate, 1);
+  const t = (clipTop - metrics.yIntermediate) / span;
+  return metrics.clipBottomClosed * Math.min(1, Math.max(0, t));
 }
 
 export function conversationSheetTranslateForSnap(
@@ -80,10 +109,14 @@ export function conversationSheetTranslateForSnap(
 
 /** Visible height above the tab-bar floor (for probes / debug). */
 export function conversationSheetVisibleHeight(
-  translateY: number,
+  clipTop: number,
   metrics: ConversationSheetMetrics,
+  clipBottom = 0,
 ): number {
-  return Math.max(metrics.peekH, metrics.openH - translateY);
+  return Math.max(
+    metrics.peekVisibleH,
+    metrics.openH - clipTop - clipBottom,
+  );
 }
 
 export function conversationSheetMotionFromTranslate(
@@ -131,7 +164,8 @@ export function conversationSheetMotionFromHeight(
   replyH: number,
   fullH: number,
 ): ConversationSheetMotion {
-  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const composerH = Math.max(48, replyH - peekH);
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH, composerH);
   const y = Math.max(0, metrics.openH - heightPx);
   return conversationSheetMotionFromTranslate(y, metrics);
 }
@@ -142,7 +176,8 @@ export function conversationSheetSnapFromHeight(
   replyH: number,
   fullH: number,
 ): ConversationSheetSnap {
-  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const composerH = Math.max(48, replyH - peekH);
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH, composerH);
   const y = Math.max(0, metrics.openH - heightPx);
   return conversationSheetSnapFromTranslate(y, metrics);
 }
@@ -154,7 +189,8 @@ export function chromeSnapForHeight(
   fullH: number,
   opts?: { collapsing?: boolean; expanding?: boolean },
 ): ConversationSheetSnap {
-  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const composerH = Math.max(48, replyH - peekH);
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH, composerH);
   const y = Math.max(0, metrics.openH - height);
   const peekBand = metrics.yClosed - PEEK_LAYOUT_BAND_PX;
   const midClosedIntermediate = (metrics.yClosed + metrics.yIntermediate) / 2;
@@ -220,7 +256,8 @@ export function conversationSheetDragHeight({
   replyH: number;
   fullH: number;
 }): number {
-  const metrics = conversationSheetMetrics(peekH, replyH, fullH);
+  const composerH = Math.max(48, replyH - peekH);
+  const metrics = conversationSheetMetrics(peekH, replyH, fullH, composerH);
   const startY = Math.max(0, metrics.openH - startH);
   const y = conversationSheetDragTranslate({
     from,
@@ -228,5 +265,6 @@ export function conversationSheetDragHeight({
     dy,
     metrics,
   });
-  return conversationSheetVisibleHeight(y, metrics);
+  const bottom = conversationSheetClipBottomForTop(y, metrics);
+  return conversationSheetVisibleHeight(y, metrics, bottom);
 }

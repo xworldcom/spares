@@ -34,10 +34,18 @@ async function geom() {
     const compBox = composer?.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
     const y = parseFloat(getComputedStyle(card).getPropertyValue("--sheet-clip-top")) || 0;
+    const clipBottom = parseFloat(getComputedStyle(card).getPropertyValue("--sheet-clip-bottom")) || 0;
+    const handle = card.querySelector(".snap-sheet-handle");
+    const toolbar = card.querySelector(".conversation-sheet-toolbar");
+    const handleBox = handle?.getBoundingClientRect();
+    const toolbarBox = toolbar?.getBoundingClientRect();
     return {
       snap: card.getAttribute("data-snap"),
       sheetY: Math.round(y),
-      visibleH: Math.round(cardBox.height - y),
+      clipBottom: Math.round(clipBottom),
+      visibleH: Math.round(cardBox.height - y - clipBottom),
+      handleVisible: !!(handleBox && tabBox && handleBox.top < tabBox.top - 4),
+      notesHeaderVisible: !!(toolbarBox && tabBox && toolbarBox.top < tabBox.top - 4),
       tabTop: tabBox ? Math.round(tabBox.top) : null,
       composerTop: compBox ? Math.round(compBox.top) : null,
       composerBottom: compBox ? Math.round(compBox.bottom) : null,
@@ -64,7 +72,13 @@ if (reply.snap !== "reply" && reply.snap !== "full") {
   console.error("FAIL did not reach reply snap", reply.snap);
   process.exit(1);
 }
-if (reply.visibleH < 150 || !reply.composerAboveTabs || !reply.tabVisible) {
+if (
+  reply.visibleH < 200 ||
+  !reply.composerAboveTabs ||
+  !reply.tabVisible ||
+  !reply.handleVisible ||
+  !reply.notesHeaderVisible
+) {
   console.error("FAIL intermediate seating", reply);
   process.exit(1);
 }

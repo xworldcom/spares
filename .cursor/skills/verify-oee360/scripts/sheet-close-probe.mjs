@@ -67,7 +67,8 @@ async function readGeom() {
     const sheetY = sheetYRaw.endsWith("px")
       ? Number.parseFloat(sheetYRaw)
       : Number.parseFloat(sheetYRaw) || 0;
-    const visibleH = Math.round(cardBox.height - sheetY);
+    const clipBottom = parseFloat(getComputedStyle(card).getPropertyValue("--sheet-clip-bottom")) || 0;
+    const visibleH = Math.round(cardBox.height - sheetY - clipBottom);
     const bubble = thread?.querySelector(".imsg-row:last-of-type .imsg-bubble");
     const bubbleBox = bubble?.getBoundingClientRect();
     const bubbleVis = bubbleBox && threadBox

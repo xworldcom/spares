@@ -13,6 +13,7 @@ import {
   conversationSheetMotionFromTranslate,
   conversationSheetSnapFromTranslate,
   conversationSheetTranslateForSnap,
+  conversationSheetClipBottomForTop,
   conversationSheetDragTranslate,
   conversationSheetVisibleHeight,
   type ConversationSheetGesture,
@@ -68,12 +69,17 @@ function openHeightPx(card?: Element | null) {
   return Math.min(window.innerHeight * 0.92, window.innerHeight - inset);
 }
 
-/** Kevin intermediate band: chrome + latest row + composer (measured when possible). */
+/** Closed = chrome + latest row; intermediate = + composer (measured when possible). */
 function measureDetentHeights(card: HTMLElement | null) {
-  const peekFallback = remPx(5.75);
-  const replyFallback = remPx(10.25);
+  const peekVisibleFallback = remPx(4.5);
+  const replyFallback = remPx(14);
+  const composerFallback = remPx(4);
   if (!card) {
-    return { peekH: peekFallback, replyH: replyFallback };
+    return {
+      peekVisibleH: peekVisibleFallback,
+      replyH: replyFallback,
+      composerH: composerFallback,
+    };
   }
   let chrome = 0;
   for (const selector of [
@@ -90,22 +96,33 @@ function measureDetentHeights(card: HTMLElement | null) {
   const composerH =
     composer instanceof HTMLElement && composer.offsetHeight > 0
       ? composer.offsetHeight
-      : remPx(3.75);
-  const threadBand = remPx(3.25);
-  const replyH = Math.max(replyFallback, Math.ceil(chrome + threadBand + composerH));
-  const peekH = Math.max(peekFallback, Math.ceil(chrome + threadBand));
-  return { peekH, replyH };
+      : composerFallback;
+  const lastRow = card.querySelector(".imsg-thread .imsg-row:last-of-type");
+  const threadBand =
+    lastRow instanceof HTMLElement && lastRow.offsetHeight > 0
+      ? lastRow.offsetHeight + remPx(0.35)
+      : remPx(4.25);
+  const stackGap = remPx(0.35);
+  const peekVisibleH = Math.max(
+    peekVisibleFallback,
+    Math.ceil(chrome + threadBand + stackGap),
+  );
+  const replyH = Math.max(
+    replyFallback,
+    Math.ceil(chrome + threadBand + composerH + stackGap * 2),
+  );
+  return { peekVisibleH, replyH, composerH };
 }
 
 function heightForSnap(snap: ConversationSheetSnap, card?: Element | null) {
   if (snap === "out") {
     return 0;
   }
-  const { peekH, replyH } = measureDetentHeights(
+  const { peekVisibleH, replyH } = measureDetentHeights(
     card instanceof HTMLElement ? card : null,
   );
   if (snap === "peek") {
-    return peekH;
+    return peekVisibleH;
   }
   if (snap === "reply") {
     return replyH;
@@ -121,7 +138,8 @@ function nearestSnap(
   const peekH = heightForSnap("peek", card);
   const replyH = heightForSnap("reply", card);
   const openH = heightForSnap("full", card);
-  const metrics = conversationSheetMetrics(peekH, replyH, openH);
+  const { composerH } = measureDetentHeights(card instanceof HTMLElement ? card : null);
+  const metrics = conversationSheetMetrics(peekH, replyH, openH, composerH);
   if (velocity < -0.45) {
     if (translateY > metrics.yIntermediate + 24) {
       return "reply";
@@ -224,10 +242,22 @@ export function useSnapSheet({
 
   function snapHeights() {
     const card = cardRef.current;
-    const peekH = heightForSnap("peek", card);
-    const replyH = heightForSnap("reply", card);
-    const openH = heightForSnap("full", card);
-    return { peekH, replyH, openH, metrics: conversationSheetMetrics(peekH, replyH, openH) };
+    const measured = measureDetentHeights(card instanceof HTMLElement ? card : null);
+    const openH = openHeightPx(card instanceof HTMLElement ? card : null);
+    const metrics = conversationSheetMetrics(
+      measured.peekVisibleH,
+      measured.replyH,
+      openH,
+      measured.composerH,
+    );
+    return {
+      peekVisibleH: measured.peekVisibleH,
+      peekH: measured.peekVisibleH,
+      replyH: measured.replyH,
+      composerH: measured.composerH,
+      openH,
+      metrics,
+    };
   }
 
   function paintMotion(liveY: number, _gesture?: ConversationSheetGesture | null) {
@@ -236,9 +266,12 @@ export function useSnapSheet({
       return;
     }
     const { metrics } = snapHeights();
+    const clipBottom = conversationSheetClipBottomForTop(liveY, metrics);
     const { phaseA, phaseB } = conversationSheetMotionFromTranslate(liveY, metrics);
     card.setAttribute("data-motion-live", "");
     card.style.setProperty("--sheet-clip-top", `${Math.round(liveY)}px`);
+    card.style.setProperty("--sheet-clip-bottom", `${Math.round(clipBottom)}px`);
+    card.style.setProperty("--composer-clip-h", `${Math.round(metrics.composerH)}px`);
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     setMotionPhases({ phaseA, phaseB });
@@ -257,12 +290,16 @@ export function useSnapSheet({
     const snap = atSnap ?? sheet;
     if (snap === "out") {
       card.style.removeProperty("--sheet-clip-top");
+      card.style.removeProperty("--sheet-clip-bottom");
     } else {
       const { metrics } = snapHeights();
+      const top = conversationSheetTranslateForSnap(snap, metrics);
+      card.style.setProperty("--sheet-clip-top", `${Math.round(top)}px`);
       card.style.setProperty(
-        "--sheet-clip-top",
-        `${Math.round(conversationSheetTranslateForSnap(snap, metrics))}px`,
+        "--sheet-clip-bottom",
+        `${Math.round(conversationSheetClipBottomForTop(top, metrics))}px`,
       );
+      card.style.setProperty("--composer-clip-h", `${Math.round(metrics.composerH)}px`);
     }
     if (snap === "peek") {
       card.setAttribute("data-layout-peek", "");
@@ -398,10 +435,13 @@ export function useSnapSheet({
       return;
     }
     const { metrics } = snapHeights();
+    const top = conversationSheetTranslateForSnap(sheet, metrics);
+    card.style.setProperty("--sheet-clip-top", `${Math.round(top)}px`);
     card.style.setProperty(
-      "--sheet-clip-top",
-      `${Math.round(conversationSheetTranslateForSnap(sheet, metrics))}px`,
+      "--sheet-clip-bottom",
+      `${Math.round(conversationSheetClipBottomForTop(top, metrics))}px`,
     );
+    card.style.setProperty("--composer-clip-h", `${Math.round(metrics.composerH)}px`);
   }, [sheet, dragging, settling, desktopStage, cardRef]);
 
   useEffect(() => {
