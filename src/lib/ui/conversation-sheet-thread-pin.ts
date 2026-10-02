@@ -12,46 +12,52 @@ export function threadScrollerOverflows(body: HTMLElement): boolean {
   return overflowY === "auto" || overflowY === "scroll";
 }
 
-function syncThreadScrollerUnderflow(body: HTMLElement): void {
-  const underflow =
-    threadScrollerOverflows(body) && threadScrollerFitsViewport(body);
-  if (underflow) {
+/** Underfilled list: flex-end bottom glue. Overflow: bounded scroller with normal scroll. */
+export type ThreadScrollerLayout = "underflow" | "scrollable";
+
+export function resolveThreadScrollerLayout(body: HTMLElement): ThreadScrollerLayout {
+  if (!threadScrollerOverflows(body)) {
+    return "underflow";
+  }
+  return threadScrollerFitsViewport(body) ? "underflow" : "scrollable";
+}
+
+/** Sync DOM mode only — does not change scrollTop. */
+export function applyThreadScrollerLayout(body: HTMLElement): ThreadScrollerLayout {
+  const layout = resolveThreadScrollerLayout(body);
+  if (layout === "underflow") {
     body.setAttribute("data-thread-underflow", "");
   } else {
     body.removeAttribute("data-thread-underflow");
   }
+  return layout;
 }
 
 /**
- * Flex-end / hidden overflow: scrollTop 0. Underfilled auto scroller: scrollTop 0 + underflow
- * marker (flex-end after motion settles). Scrollable full height: max scroll.
- * Safe to call during layout; idempotent.
+ * When `docked`, pin the latest row above the composer.
+ * When undocked (user scrolled history), never touch scrollTop.
  */
-export function pinThreadScrollerToComposer(body: HTMLElement): void {
-  syncThreadScrollerUnderflow(body);
-  if (threadScrollerOverflows(body)) {
-    if (threadScrollerFitsViewport(body)) {
-      if (body.scrollTop !== 0) {
-        body.scrollTop = 0;
-      }
-      return;
-    }
-    const top = threadScrollerMaxScroll(body);
-    if (Math.abs(body.scrollTop - top) > 0.5) {
-      body.scrollTop = top;
+export function pinThreadScrollerToComposer(body: HTMLElement, docked = true): void {
+  const layout = applyThreadScrollerLayout(body);
+  if (!docked) {
+    return;
+  }
+  if (layout === "underflow") {
+    if (body.scrollTop !== 0) {
+      body.scrollTop = 0;
     }
     return;
   }
-  body.removeAttribute("data-thread-underflow");
-  if (body.scrollTop !== 0) {
-    body.scrollTop = 0;
+  const top = threadScrollerMaxScroll(body);
+  if (Math.abs(body.scrollTop - top) > 0.5) {
+    body.scrollTop = top;
   }
 }
 
-export function flushPinThreadScrollerToComposer(body: HTMLElement): void {
-  pinThreadScrollerToComposer(body);
+export function flushPinThreadScrollerToComposer(body: HTMLElement, docked = true): void {
+  pinThreadScrollerToComposer(body, docked);
   void body.offsetHeight;
-  pinThreadScrollerToComposer(body);
+  pinThreadScrollerToComposer(body, docked);
   void body.offsetHeight;
-  pinThreadScrollerToComposer(body);
+  pinThreadScrollerToComposer(body, docked);
 }

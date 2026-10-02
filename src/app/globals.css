@@ -457,12 +457,21 @@
   justify-content: flex-end;
 }
 
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-card--sheet {
+  overflow: hidden;
+}
+
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
-  flex: 1 1 auto;
-  height: auto;
+  flex: 1 1 0;
   min-height: 0;
-  max-height: none;
+  height: 0;
   overflow-y: auto;
+  align-content: flex-start;
+}
+
+.conversation-sheet:not(.is-inline) .imsg-thread--fill > li,
+.conversation-sheet:not(.is-inline) .imsg-thread--fill > .imsg-empty {
+  flex-shrink: 0;
 }
 
 .conversation-sheet:not(.is-inline).is-full.is-dragging .imsg-thread--fill,
@@ -541,14 +550,8 @@
 }
 
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling):not([data-motion-live])
-  .imsg-thread--fill[data-thread-underflow] {
-  justify-content: flex-end;
-}
-
-.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling):not([data-motion-live])
   .imsg-thread--fill[data-thread-underflow]::before {
-  content: none;
-  display: none;
+  flex: 1 1 auto;
 }
 
 .conversation-sheet-toolbar {
