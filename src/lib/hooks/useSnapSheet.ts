@@ -611,10 +611,12 @@ export function useSnapSheet({
         return;
       }
     }
+    // Handle owns sheet motion immediately (incl. close from maxScroll pin). Body keeps
+    // pending slop so thread scroll wins until edges / handle.
     beginDrag(
       event,
       sheet === "out" ? "reply" : sheet,
-      sheet === "reply" || sheet === "full",
+      !fromHandle && (sheet === "reply" || sheet === "full"),
     );
   }
 
