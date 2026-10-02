@@ -33,6 +33,7 @@ if (!reply.ok()) {
   console.error("reply", reply.status(), await reply.text());
   process.exit(1);
 }
+await page.request.post(`${baseUrl}/api/tickets/${ticket.id}/read`);
 
 await page.goto(`${baseUrl}/machines/palletizer/care/tickets/${ticket.id}`, {
   waitUntil: "domcontentloaded",
@@ -80,6 +81,13 @@ async function readGeom() {
       zHead: head ? getComputedStyle(head).zIndex : null,
       overlap: Math.round(overlap),
       hits,
+      composerAboveTabs: (() => {
+        const tab = document.querySelector(".spares-tabbar");
+        const composer = card?.querySelector(".imsg-composer");
+        const tabBox = tab?.getBoundingClientRect();
+        const compBox = composer?.getBoundingClientRect();
+        return !!(tabBox && compBox && compBox.bottom <= tabBox.top + 2);
+      })(),
     };
   });
 }
@@ -109,13 +117,20 @@ async function dragHandle(dy, steps) {
 }
 
 const failures = [];
+const rest = await readGeom();
+if (rest.snap !== "reply") {
+  failures.push(`resting snap should be reply (Kevin intermediate): ${JSON.stringify(rest)}`);
+}
+if (!rest.composerAboveTabs) {
+  failures.push(`composer not above tab bar at rest`);
+}
 let guard = 0;
 while ((await readGeom()).snap !== "full" && guard < 6) {
   await dragHandle(-520, 28);
   guard += 1;
 }
-const rest = await readGeom();
-if (rest.snap !== "full") failures.push(`never reached full: ${JSON.stringify(rest)}`);
+const open = await readGeom();
+if (open.snap !== "full") failures.push(`never reached full: ${JSON.stringify(open)}`);
 
 const handle = page.locator(".snap-sheet-handle").first();
 const box = await handle.boundingBox();
@@ -128,29 +143,31 @@ const touch = await readGeom();
 await page.mouse.up();
 await waitSettled();
 
-const bubbleJump = (touch.bubbleTop ?? 0) - (rest.bubbleTop ?? 0);
-const gapJump = (touch.gap ?? 0) - (rest.gap ?? 0);
-const heightJump = touch.sheetH - rest.sheetH;
+const bubbleJump = (touch.bubbleTop ?? 0) - (open.bubbleTop ?? 0);
+const gapJump = (touch.gap ?? 0) - (open.gap ?? 0);
+const heightJump = touch.sheetH - open.sheetH;
 console.log("rest", JSON.stringify(rest));
+console.log("open", JSON.stringify(open));
 console.log("touch", JSON.stringify(touch));
 console.log("delta", JSON.stringify({ bubbleJump, gapJump, heightJump }));
 if (Math.abs(heightJump) > 2) {
-  failures.push(`touch changed sheet height ${rest.sheetH} -> ${touch.sheetH}`);
+  failures.push(`touch changed sheet height ${open.sheetH} -> ${touch.sheetH}`);
 }
 if (Math.abs(bubbleJump) > 2) {
   failures.push(`touch jumped the latest bubble by ${bubbleJump}px`);
 }
 if (Math.abs(gapJump) > 4) {
-  failures.push(`touch opened the composer gap by ${gapJump}px (${rest.gap} -> ${touch.gap})`);
+  failures.push(`touch opened the composer gap by ${gapJump}px (${open.gap} -> ${touch.gap})`);
 }
 
 guard = 0;
-while ((await readGeom()).snap !== "peek" && guard < 4) {
+while ((await readGeom()).snap !== "reply" && guard < 4) {
   await dragHandle(700, 36);
   guard += 1;
 }
-const peek = await readGeom();
-if (peek.snap !== "peek") failures.push(`did not return to peek: ${peek.snap}`);
+const closed = await readGeom();
+if (closed.snap !== "reply") failures.push(`did not return to reply: ${closed.snap}`);
+if (!closed.composerAboveTabs) failures.push(`composer not above tabs after close`);
 
 const h2 = await handle.boundingBox();
 const x2 = h2.x + h2.width / 2;
