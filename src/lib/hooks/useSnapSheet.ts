@@ -57,24 +57,60 @@ function headerPx() {
   return Number.isFinite(parsed) ? parsed : 56;
 }
 
-function heightForSnap(snap: ConversationSheetSnap, card?: Element | null) {
-  if (snap === "out") {
-    return 0;
-  }
-  if (snap === "peek") {
-    return remPx(5.75);
-  }
-  if (snap === "reply") {
-    return remPx(10.25);
-  }
-  if (card) {
-    const maxH = Number.parseFloat(getComputedStyle(card).maxHeight);
-    if (Number.isFinite(maxH) && maxH > 0) {
-      return maxH;
+function openHeightPx(card?: Element | null) {
+  if (card instanceof HTMLElement) {
+    const boxH = card.getBoundingClientRect().height;
+    if (Number.isFinite(boxH) && boxH > 120) {
+      return boxH;
     }
   }
   const inset = tabBarPx() + headerPx() + 8;
   return Math.min(window.innerHeight * 0.92, window.innerHeight - inset);
+}
+
+/** Kevin intermediate band: chrome + latest row + composer (measured when possible). */
+function measureDetentHeights(card: HTMLElement | null) {
+  const peekFallback = remPx(5.75);
+  const replyFallback = remPx(10.25);
+  if (!card) {
+    return { peekH: peekFallback, replyH: replyFallback };
+  }
+  let chrome = 0;
+  for (const selector of [
+    ":scope > .snap-sheet-handle",
+    ":scope > .quote-sheet-handle",
+    ":scope > .conversation-sheet-toolbar",
+  ]) {
+    const node = card.querySelector(selector);
+    if (node instanceof HTMLElement) {
+      chrome += node.offsetHeight;
+    }
+  }
+  const composer = card.querySelector(".imsg-composer");
+  const composerH =
+    composer instanceof HTMLElement && composer.offsetHeight > 0
+      ? composer.offsetHeight
+      : remPx(3.75);
+  const threadBand = remPx(3.25);
+  const replyH = Math.max(replyFallback, Math.ceil(chrome + threadBand + composerH));
+  const peekH = Math.max(peekFallback, Math.ceil(chrome + threadBand));
+  return { peekH, replyH };
+}
+
+function heightForSnap(snap: ConversationSheetSnap, card?: Element | null) {
+  if (snap === "out") {
+    return 0;
+  }
+  const { peekH, replyH } = measureDetentHeights(
+    card instanceof HTMLElement ? card : null,
+  );
+  if (snap === "peek") {
+    return peekH;
+  }
+  if (snap === "reply") {
+    return replyH;
+  }
+  return openHeightPx(card);
 }
 
 function nearestSnap(
@@ -202,7 +238,7 @@ export function useSnapSheet({
     const { metrics } = snapHeights();
     const { phaseA, phaseB } = conversationSheetMotionFromTranslate(liveY, metrics);
     card.setAttribute("data-motion-live", "");
-    card.style.setProperty("--sheet-y", `${Math.round(liveY)}px`);
+    card.style.setProperty("--sheet-clip-top", `${Math.round(liveY)}px`);
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     setMotionPhases({ phaseA, phaseB });
@@ -220,11 +256,11 @@ export function useSnapSheet({
     card.removeAttribute("data-motion-live");
     const snap = atSnap ?? sheet;
     if (snap === "out") {
-      card.style.removeProperty("--sheet-y");
+      card.style.removeProperty("--sheet-clip-top");
     } else {
       const { metrics } = snapHeights();
       card.style.setProperty(
-        "--sheet-y",
+        "--sheet-clip-top",
         `${Math.round(conversationSheetTranslateForSnap(snap, metrics))}px`,
       );
     }
@@ -363,7 +399,7 @@ export function useSnapSheet({
     }
     const { metrics } = snapHeights();
     card.style.setProperty(
-      "--sheet-y",
+      "--sheet-clip-top",
       `${Math.round(conversationSheetTranslateForSnap(sheet, metrics))}px`,
     );
   }, [sheet, dragging, settling, desktopStage, cardRef]);

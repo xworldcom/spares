@@ -14,7 +14,7 @@ Authoritative product check: narrow desktop (phone-like width). Project research
 
 ## Approach A (implemented)
 
-One animated **SheetSurface** = the overlay `aside.conversation-sheet` (handle + toolbar + body). Fixed height `H_open`; motion is **`translateY`** only (`--sheet-y`). Tab bar stays outside; sheet floor = top of tab bar.
+One animated **SheetSurface** = the overlay `aside.conversation-sheet` (handle + toolbar + body). Fixed height `H_open`; detents use **`clip-path: inset(--sheet-clip-top 0 0 0)`** so the bottom stays on the tab-bar floor (composer stays above tabs at intermediate). Tab bar z-index stays above the sheet.
 
 - Composer: `flex-shrink: 0` footer inside `.imsg-card--sheet` — never `position: fixed` to the viewport.
 - Message list: `flex: 1; min-height: 0; overflow-y: auto` at open; pinned to latest at intermediate.

@@ -49,7 +49,7 @@ async function readGeom() {
     const bubble = thread?.querySelector(".imsg-row:last-of-type .imsg-bubble");
     const head = document.querySelector(".care-stack-head");
     const cardBox = card.getBoundingClientRect();
-    const sheetYRaw = getComputedStyle(card).getPropertyValue("--sheet-y").trim();
+    const sheetYRaw = getComputedStyle(card).getPropertyValue("--sheet-clip-top").trim();
     const sheetY = sheetYRaw.endsWith("px")
       ? Number.parseFloat(sheetYRaw)
       : Number.parseFloat(sheetYRaw) || 0;

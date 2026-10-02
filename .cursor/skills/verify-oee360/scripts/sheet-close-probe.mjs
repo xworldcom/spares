@@ -63,7 +63,7 @@ async function readGeom() {
     const composerBox = composer?.getBoundingClientRect();
     const lastBox = last?.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
-    const sheetYRaw = getComputedStyle(card).getPropertyValue("--sheet-y").trim();
+    const sheetYRaw = getComputedStyle(card).getPropertyValue("--sheet-clip-top").trim();
     const sheetY = sheetYRaw.endsWith("px")
       ? Number.parseFloat(sheetYRaw)
       : Number.parseFloat(sheetYRaw) || 0;

@@ -335,14 +335,14 @@
   z-index: 35;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: flex-end;
   overflow: hidden;
   --peek-h: 5.75rem;
   --peek-chrome-h: 2.85rem;
   --peek-thread-h: calc(var(--peek-h) - var(--peek-chrome-h));
-  --reply-h: 10.25rem;
+  --reply-h: 11.5rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
-  --sheet-y: 0px;
+  --sheet-clip-top: 0px;
   --phase-a: 0;
   --phase-b: 0;
   /* Chrome metrics stay fixed at every snap — only layout/content may change. */
@@ -376,33 +376,34 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+  bottom: var(--spares-tabbar);
   height: var(--full-h);
   max-height: var(--full-h);
   background: var(--spares-lift);
   color: var(--spares-on-paper);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
-  transform: translate3d(0, var(--sheet-y), 0);
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  clip-path: inset(var(--sheet-clip-top, 0) 0 0 0);
+  will-change: clip-path;
   touch-action: none;
 }
 
 .conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) {
-  --sheet-y: calc(var(--full-h) - var(--peek-h));
+  --sheet-clip-top: calc(var(--full-h) - var(--peek-h));
   --phase-a: 0;
   --phase-b: 0;
 }
 
 .conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) {
-  --sheet-y: calc(var(--full-h) - var(--reply-h));
+  --sheet-clip-top: calc(var(--full-h) - var(--reply-h));
   --phase-a: 1;
   --phase-b: 0;
   touch-action: manipulation;
 }
 
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) {
-  --sheet-y: 0px;
+  --sheet-clip-top: 0px;
   --phase-a: 1;
   --phase-b: 1;
   touch-action: manipulation;
@@ -429,7 +430,7 @@
 }
 
 .conversation-sheet:not(.is-dragging):not(.is-inline) {
-  transition: transform var(--sheet-duration) var(--sheet-ease);
+  transition: clip-path var(--sheet-duration) var(--sheet-ease);
 }
 
 /* SheetSurface = aside; composer is flex footer inside (never viewport-fixed). */
@@ -453,6 +454,15 @@
 .conversation-sheet:not(.is-inline).is-dragging .imsg-composer,
 .conversation-sheet:not(.is-inline).is-settling .imsg-composer {
   pointer-events: none;
+  max-height: 12rem;
+  opacity: 1;
+}
+
+.conversation-sheet:not(.is-inline).is-dragging[data-snap="reply"] .imsg-composer,
+.conversation-sheet:not(.is-inline).is-settling[data-snap="reply"] .imsg-composer,
+.conversation-sheet:not(.is-inline).is-dragging[data-snap="full"] .imsg-composer,
+.conversation-sheet:not(.is-inline).is-settling[data-snap="full"] .imsg-composer {
+  pointer-events: auto;
 }
 
 .conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer {
@@ -521,11 +531,9 @@
   min-height: 0;
 }
 
-.conversation-sheet:not(.is-inline).is-dragging,
-.conversation-sheet:not(.is-inline).is-settling,
-.conversation-sheet:not(.is-inline).is-reply,
+/* Stay below MobileTabBar (z-56) so tabs stay visible/tappable at intermediate. */
 .conversation-sheet:not(.is-inline).is-full {
-  z-index: 62;
+  z-index: 40;
 }
 
 @media (max-width: 1023px) {
