@@ -39,19 +39,40 @@ export function allowRateLimit(
   return true;
 }
 
-export const LOGIN_RATE_LIMIT = 8;
+function rateLimitCount(key: string, windowMs: number, now = Date.now()) {
+  return (hits.get(key) ?? []).filter((stamp) => now - stamp < windowMs).length;
+}
+
+/** Per-email failed sign-in attempts allowed in the window. */
+export const LOGIN_EMAIL_RATE_LIMIT = 25;
+/** Loose per-IP cap on failed sign-ins only (abuse backstop, not shared with successes). */
+export const LOGIN_IP_FAILURE_RATE_LIMIT = 120;
 export const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
 
-export function allowLoginAttempt(request: Request, email: string) {
+export function isLoginAttemptAllowed(request: Request, email: string, now = Date.now()) {
   const ip = clientIp(request);
   const normalized = email.trim().toLowerCase() || "missing";
-  const ipOk = allowRateLimit(`login:ip:${ip}`, LOGIN_RATE_LIMIT, LOGIN_RATE_WINDOW_MS);
-  const emailOk = allowRateLimit(
-    `login:email:${normalized}`,
-    LOGIN_RATE_LIMIT,
+  const emailFailures = rateLimitCount(
+    `login:email-fail:${normalized}`,
     LOGIN_RATE_WINDOW_MS,
+    now,
   );
-  return ipOk && emailOk;
+  const ipFailures = rateLimitCount(`login:ip-fail:${ip}`, LOGIN_RATE_WINDOW_MS, now);
+  return (
+    emailFailures < LOGIN_EMAIL_RATE_LIMIT && ipFailures < LOGIN_IP_FAILURE_RATE_LIMIT
+  );
+}
+
+export function recordFailedLoginAttempt(request: Request, email: string, now = Date.now()) {
+  const ip = clientIp(request);
+  const normalized = email.trim().toLowerCase() || "missing";
+  allowRateLimit(
+    `login:email-fail:${normalized}`,
+    LOGIN_EMAIL_RATE_LIMIT,
+    LOGIN_RATE_WINDOW_MS,
+    now,
+  );
+  allowRateLimit(`login:ip-fail:${ip}`, LOGIN_IP_FAILURE_RATE_LIMIT, LOGIN_RATE_WINDOW_MS, now);
 }
 
 export function resetRateLimit() {

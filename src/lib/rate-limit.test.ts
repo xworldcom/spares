@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  LOGIN_RATE_LIMIT,
-  allowLoginAttempt,
+  LOGIN_EMAIL_RATE_LIMIT,
   allowRateLimit,
   clientIp,
+  isLoginAttemptAllowed,
+  recordFailedLoginAttempt,
   resetRateLimit,
 } from "./rate-limit.ts";
 
@@ -23,20 +24,39 @@ describe("allowRateLimit", () => {
   });
 });
 
-describe("allowLoginAttempt", () => {
-  it("blocks a repeated email after the login limit", () => {
+describe("login rate limits", () => {
+  const requestSameIp = new Request("http://localhost/api/auth/login", {
+    headers: { "x-forwarded-for": "203.0.113.20" },
+  });
+  const requestOtherIp = new Request("http://localhost/api/auth/login", {
+    headers: { "x-forwarded-for": "203.0.113.21" },
+  });
+
+  it("blocks a repeated email after enough failed attempts", () => {
     resetRateLimit();
-    const requestA = new Request("http://localhost/api/auth/login", {
-      headers: { "x-forwarded-for": "203.0.113.20" },
-    });
-    const requestB = new Request("http://localhost/api/auth/login", {
-      headers: { "x-forwarded-for": "203.0.113.21" },
-    });
-    for (let i = 0; i < LOGIN_RATE_LIMIT; i += 1) {
-      assert.equal(allowLoginAttempt(requestA, "staff@spares.local"), true);
+    for (let i = 0; i < LOGIN_EMAIL_RATE_LIMIT; i += 1) {
+      assert.equal(isLoginAttemptAllowed(requestSameIp, "staff@spares.local"), true);
+      recordFailedLoginAttempt(requestSameIp, "staff@spares.local");
     }
-    assert.equal(allowLoginAttempt(requestA, "staff@spares.local"), false);
-    assert.equal(allowLoginAttempt(requestB, "customer@spares.local"), true);
+    assert.equal(isLoginAttemptAllowed(requestSameIp, "staff@spares.local"), false);
+    assert.equal(isLoginAttemptAllowed(requestOtherIp, "customer@spares.local"), true);
+  });
+
+  it("does not block another email on the same IP after many failures on the first", () => {
+    resetRateLimit();
+    for (let i = 0; i < LOGIN_EMAIL_RATE_LIMIT; i += 1) {
+      recordFailedLoginAttempt(requestSameIp, "staff@spares.local");
+    }
+    assert.equal(isLoginAttemptAllowed(requestSameIp, "staff@spares.local"), false);
+    assert.equal(isLoginAttemptAllowed(requestSameIp, "user@demo.com"), true);
+  });
+
+  it("allows many allowance checks without recording failures (successful sign-in path)", () => {
+    resetRateLimit();
+    for (let i = 0; i < LOGIN_EMAIL_RATE_LIMIT + 5; i += 1) {
+      assert.equal(isLoginAttemptAllowed(requestSameIp, "user@demo.com"), true);
+    }
+    assert.equal(isLoginAttemptAllowed(requestSameIp, "user@demo.com"), true);
   });
 });
 
