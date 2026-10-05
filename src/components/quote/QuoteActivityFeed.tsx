@@ -13,7 +13,8 @@ import {
 import { errorMessage } from "@/lib/api/errors";
 import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
-import { assistantActorLabel, isAssistantActivity } from "@/lib/assistant/actor";
+import { isAssistantActivity } from "@/lib/assistant/actor";
+import { messageActorLabel } from "@/lib/ui/message-actor-label";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import { firstUnreadActivityIndex } from "@/lib/ui/conversation-unread";
 import { pinThreadScrollerToComposer } from "@/lib/ui/conversation-sheet-thread-pin";
@@ -23,19 +24,6 @@ export type ActivitySendInput = {
   text: string;
   attachments?: ChatAttachment[];
 };
-
-function actorLabel(activity: QuoteActivity, role: Role, selfEmail: string) {
-  if (isAssistantActivity(activity)) {
-    return assistantActorLabel();
-  }
-  if (activity.actorEmail === selfEmail && activity.actorRole === role) {
-    return "You";
-  }
-  if (role === "customer") {
-    return "Spares";
-  }
-  return displayNameFromEmail(activity.actorEmail);
-}
 
 function OtherAvatar({ email, assistant }: { email: string; assistant?: boolean }) {
   return (
@@ -303,7 +291,7 @@ export function QuoteActivityFeed({
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
             const assistant = isAssistantActivity(activity);
-            const label = actorLabel(activity, role, selfEmail);
+            const label = messageActorLabel(activity, self);
             const attachments = activity.attachments ?? [];
 
             const rowClass = [
