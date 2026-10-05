@@ -5,7 +5,7 @@ import { isSameOriginRequest } from "@/lib/cors";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
-import { allowLoginAttempt } from "@/lib/rate-limit";
+import { isLoginAttemptAllowed, recordFailedLoginAttempt } from "@/lib/rate-limit";
 import { effectiveStaffTenantId, isPlatformOwnerEmail } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { findUserByEmail, getOrgContext } from "@/lib/store";
@@ -77,13 +77,14 @@ export async function POST(request: Request) {
       : error(passwordGate.message, passwordGate.status);
   }
 
-  if (!allowLoginAttempt(request, email)) {
+  if (!isLoginAttemptAllowed(request, email)) {
     return error("Too many sign-in attempts. Try again in a few minutes.", 429, {
       "Retry-After": "900",
     });
   }
 
   if (isDemoSeedLoginBlocked(email)) {
+    recordFailedLoginAttempt(request, email);
     return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
     if (!user) {
       await hashPassword(password);
     }
+    recordFailedLoginAttempt(request, email);
     return html ? redirectNoQuery("/login") : error("Invalid email or password", 401);
   }
 
