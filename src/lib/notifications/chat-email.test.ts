@@ -13,6 +13,7 @@ import {
   createSite,
   createTenantStaffUser,
   resetStoreMemoryForTests,
+  updateTenantPlatformMeta,
 } from "../store.ts";
 import {
   chatEmailNotifyEnabled,
@@ -24,7 +25,7 @@ import {
   isDeliverableEmail,
   loadMachineChatNotifyRecipients,
 } from "./recipients.ts";
-import type { OutboundEmail } from "./mailer.ts";
+import { createChatEmailMailer, type OutboundEmail } from "./mailer.ts";
 
 async function isolated() {
   const dir = await mkdtemp(path.join(tmpdir(), "spares-chat-email-"));
@@ -207,6 +208,11 @@ describe("notifyMachineChatUpdate", () => {
     await isolated();
     process.env.CHAT_EMAIL_NOTIFY = "1";
     process.env.SPARES_PUBLIC_ORIGIN = "https://oee360.com";
+    delete process.env.CARE_INBOUND_DOMAIN;
+    const display = await updateTenantPlatformMeta(DEFAULT_TENANT_ID, {
+      ticketEmailDisplay: "cases@shape.com",
+    });
+    assert.ok("tenant" in display);
     const accountRow = await createCustomerAccount("Notify Co", DEFAULT_TENANT_ID);
     assert.ok("account" in accountRow);
     const siteRow = await createSite(DEFAULT_TENANT_ID, accountRow.account.id, "Main");
@@ -254,6 +260,36 @@ describe("notifyMachineChatUpdate", () => {
     assert.equal(sent.length, 1);
     assert.match(sent[0].text, /https:\/\/oee360\.com\/staff\/quotes\/42/);
     assert.match(sent[0].subject, /Quote #42/);
+    assert.equal(sent[0].replyTo, undefined);
     assert.equal(publicAppOrigin(), "https://oee360.com");
+  });
+});
+
+describe("default chat mailer", () => {
+  it("logs replyTo when the message includes one", async () => {
+    const lines: string[] = [];
+    const original = console.info;
+    console.info = ((line?: unknown) => {
+      lines.push(String(line));
+    }) as typeof console.info;
+    try {
+      await createChatEmailMailer().send({
+        to: "tech@shape.com",
+        subject: "Care ticket #7 on Palletizer",
+        text: "Seal failed",
+        replyTo: "cases@shape.com",
+      });
+    } finally {
+      console.info = original;
+    }
+    assert.equal(
+      lines[0],
+      JSON.stringify({
+        tag: "chat-email-notify",
+        to: "tech@shape.com",
+        subject: "Care ticket #7 on Palletizer",
+        replyTo: "cases@shape.com",
+      }),
+    );
   });
 });

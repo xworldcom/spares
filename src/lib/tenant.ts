@@ -1,4 +1,5 @@
 import type { Tenant } from "../types/index.ts";
+import { ensureHostTicketMailbox } from "./care-ticket-email.ts";
 
 /** Canonical id for migrated Soft Launch / Kevin host data (tenant #1). */
 export const DEFAULT_TENANT_ID = "tenant-oee360-host";
@@ -9,12 +10,15 @@ export const DEFAULT_TENANT_SLUG = "oee360-host";
 export const TENANT_SCHEMA_VERSION = 3;
 
 export function defaultTenantRecord(now = new Date().toISOString()): Tenant {
-  return {
-    id: DEFAULT_TENANT_ID,
-    name: DEFAULT_TENANT_NAME,
-    slug: DEFAULT_TENANT_SLUG,
-    createdAt: now,
-  };
+  return ensureHostTicketMailbox(
+    {
+      id: DEFAULT_TENANT_ID,
+      name: DEFAULT_TENANT_NAME,
+      slug: DEFAULT_TENANT_SLUG,
+      createdAt: now,
+    },
+    new Set(),
+  ).tenant;
 }
 
 export function slugifyTenant(name: string) {

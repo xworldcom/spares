@@ -183,6 +183,7 @@ describe("platform host tenant create + persist", () => {
     assert.equal(mapCreateTenantStoreError("taken").status, 409);
     assert.equal(mapCreateTenantStoreError("email-taken").status, 409);
     assert.equal(mapCreateTenantStoreError("domain-taken").status, 409);
+    assert.equal(mapCreateTenantStoreError("local-part-taken").status, 409);
     assert.deepEqual(mapCreateTenantStoreError("autoroute-needs-enrollment"), {
       message: "Turn on autoroute after enrolling at least one work domain and one Entra tenant ID",
       status: 400,

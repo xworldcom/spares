@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { CustomerAccount, Site, Tenant } from "../types/index.ts";
 import {
+  assignMissingHostTicketMailboxes,
+  ensureHostTicketMailbox,
+} from "./care-ticket-email.ts";
+import {
   DEFAULT_TENANT_ID,
   TENANT_SCHEMA_VERSION,
   defaultTenantRecord,
@@ -193,6 +197,10 @@ export function migrateTenants<T extends TenantSlice>(
   const machineUsage = stampRows(db.machineUsage);
   const bugReports = stampRows(db.bugReports);
   const machineViews = stampRows(db.machineViews);
+  const mailboxes = assignMissingHostTicketMailboxes(tenants);
+  if (mailboxes.changed) {
+    changed = true;
+  }
 
   if (initial) {
     changed = true;
@@ -206,7 +214,7 @@ export function migrateTenants<T extends TenantSlice>(
     db: {
       ...db,
       schemaVersion: TENANT_SCHEMA_VERSION,
-      tenants,
+      tenants: mailboxes.tenants,
       users: usersFinal,
       customers,
       sites,
@@ -226,13 +234,20 @@ export function newTenantId() {
   return `tenant-${randomUUID()}`;
 }
 
-export function newTenantFromName(name: string, now = new Date().toISOString()): Tenant {
+export function newTenantFromName(
+  name: string,
+  now = new Date().toISOString(),
+  takenInbound: ReadonlySet<string> = new Set(),
+): Tenant {
   const trimmed = name.trim();
-  const base = slugifyTenant(trimmed);
-  return {
-    id: newTenantId(),
-    name: trimmed,
-    slug: base,
-    createdAt: now,
-  };
+  const slug = slugifyTenant(trimmed);
+  return ensureHostTicketMailbox(
+    {
+      id: newTenantId(),
+      name: trimmed,
+      slug,
+      createdAt: now,
+    },
+    takenInbound,
+  ).tenant;
 }

@@ -106,7 +106,13 @@ export function parseCreatePlatformTenantBody(
 }
 
 export function mapCreateTenantStoreError(
-  code: "invalid" | "taken" | "email-taken" | "domain-taken" | "autoroute-needs-enrollment",
+  code:
+    | "invalid"
+    | "taken"
+    | "email-taken"
+    | "domain-taken"
+    | "local-part-taken"
+    | "autoroute-needs-enrollment",
 ): { message: string; status: number } {
   if (code === "taken") {
     return { message: "A tenant with that name already exists", status: 409 };
@@ -116,6 +122,9 @@ export function mapCreateTenantStoreError(
   }
   if (code === "domain-taken") {
     return { message: "That SSO domain is already assigned to another host", status: 409 };
+  }
+  if (code === "local-part-taken") {
+    return { message: "That inbound address is already assigned to another host", status: 409 };
   }
   if (code === "autoroute-needs-enrollment") {
     return { message: AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE, status: 400 };

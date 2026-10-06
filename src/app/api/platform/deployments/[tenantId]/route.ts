@@ -1,4 +1,5 @@
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
+import { hostTicketMailbox } from "@/lib/care-ticket-email";
 import { error, json } from "@/lib/http";
 import { getPlatformDeployment } from "@/lib/store";
 
@@ -16,5 +17,8 @@ export async function GET(_request: Request, context: Params) {
   if ("error" in result) {
     return error("Tenant not found", 404);
   }
-  return json(result);
+  return json({
+    ...result,
+    ticketMailbox: hostTicketMailbox(result.deployment.tenant),
+  });
 }

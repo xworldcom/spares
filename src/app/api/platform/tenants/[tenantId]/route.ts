@@ -7,6 +7,7 @@ import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson } from "@/lib/http";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE } from "@/lib/platform-tenant-create";
+import { parseDisplayTicketEmail } from "@/lib/care-ticket-email";
 import { updateTenantPlatformMeta, removePlatformTenant } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ type PatchBody = {
   ssoDomains?: unknown;
   ssoTenantIds?: unknown;
   ssoAutoroute?: unknown;
+  ticketEmailDisplay?: unknown;
 };
 
 export async function PATCH(request: Request, context: Params) {
@@ -52,13 +54,22 @@ export async function PATCH(request: Request, context: Params) {
     ssoTenantIds = parsed.tenantIds;
   }
   const ssoAutoroute = parseSsoAutoroute(body.ssoAutoroute);
+  let ticketEmailDisplay: string | null | undefined;
+  if (body.ticketEmailDisplay !== undefined) {
+    const parsed = parseDisplayTicketEmail(body.ticketEmailDisplay);
+    if (!parsed.ok) {
+      return error(parsed.message, 400);
+    }
+    ticketEmailDisplay = parsed.address;
+  }
 
   if (
     name === undefined &&
     inactive === undefined &&
     ssoDomains === undefined &&
     ssoTenantIds === undefined &&
-    ssoAutoroute === undefined
+    ssoAutoroute === undefined &&
+    ticketEmailDisplay === undefined
   ) {
     return error("No changes requested", 400);
   }
@@ -69,6 +80,7 @@ export async function PATCH(request: Request, context: Params) {
     ssoDomains,
     ssoTenantIds,
     ssoAutoroute,
+    ticketEmailDisplay,
   });
   if ("error" in updated) {
     if (updated.error === "not-found") {
@@ -86,6 +98,9 @@ export async function PATCH(request: Request, context: Params) {
     if (updated.error === "host-immutable") {
       return error("The Soft Launch host cannot be suspended", 400);
     }
+    if (updated.error === "local-part-taken") {
+      return error("That inbound address is already assigned to another host", 409);
+    }
     return error("Invalid tenant name", 400);
   }
 
@@ -101,6 +116,7 @@ export async function PATCH(request: Request, context: Params) {
       ssoDomains: ssoDomains?.join(", ") ?? null,
       ssoTenantIds: ssoTenantIds?.join(", ") ?? null,
       ssoAutoroute: ssoAutoroute ?? null,
+      ticketEmailDisplay: ticketEmailDisplay ?? null,
     },
   });
   return json({ tenant: updated.tenant });

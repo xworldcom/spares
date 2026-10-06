@@ -75,6 +75,12 @@ import {
 } from "./tenant.ts";
 import { migrateTenants, newTenantFromName } from "./tenant-migration.ts";
 import {
+  assignMissingHostTicketMailboxes,
+  ensureHostTicketMailbox,
+  inboundLocalPartsChanged,
+  takenInboundLocalParts,
+} from "./care-ticket-email.ts";
+import {
   buildPlatformDeploymentRow,
   computeTenantSizeMetrics,
   type PlatformCatalogSlice,
@@ -1086,7 +1092,8 @@ function catalogChanged(before: Database, after: Database) {
     (after.customers?.length ?? 0) !== (before.customers?.length ?? 0) ||
     after.users.some((user, index) => user.id !== before.users[index]?.id) ||
     staffTenantAssignmentsChanged(before.users, after.users) ||
-    hostSeedMachineTenantsChanged(before, after)
+    hostSeedMachineTenantsChanged(before, after) ||
+    inboundLocalPartsChanged(before.tenants, after.tenants)
   );
 }
 
@@ -1317,7 +1324,8 @@ async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
     (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
     (next.customers?.length ?? 0) !== (loaded.db.customers?.length ?? 0) ||
-    (next.schemaVersion ?? 1) !== (loaded.db.schemaVersion ?? 1)
+    (next.schemaVersion ?? 1) !== (loaded.db.schemaVersion ?? 1) ||
+    inboundLocalPartsChanged(loaded.db.tenants, next.tenants)
   ) {
     await writeCatalogHeal(next);
     return next;
@@ -1579,9 +1587,19 @@ export function resolveMicrosoftCatalogUser(
   });
 }
 
+async function persistMissingHostTicketMailboxes(db: Database): Promise<Database> {
+  const assigned = assignMissingHostTicketMailboxes(db.tenants ?? []);
+  if (!assigned.changed) {
+    return db;
+  }
+  const next = { ...db, tenants: assigned.tenants };
+  await writeDatabase(next);
+  return memory ?? next;
+}
+
 export function listTenants() {
   return withLock(async () => {
-    const db = await ensureCatalog();
+    const db = await persistMissingHostTicketMailboxes(await ensureCatalog());
     return [...(db.tenants ?? [])]
       .filter((row) => !row.deletedAt)
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -1603,7 +1621,7 @@ function platformCatalogSlice(db: Database) {
 
 export function listPlatformDeployments() {
   return withLock(async () => {
-    const db = await ensureCatalog();
+    const db = await persistMissingHostTicketMailboxes(await ensureCatalog());
     const catalog = platformCatalogSlice(db);
     const tenants = [...(db.tenants ?? [])].sort((a, b) => a.name.localeCompare(b.name));
     return tenants
@@ -1627,7 +1645,7 @@ export type { DirectoryEntry };
 
 export function getPlatformDeployment(tenantId: string) {
   return withLock(async () => {
-    const db = await ensureCatalog();
+    const db = await persistMissingHostTicketMailboxes(await ensureCatalog());
     const tenant = (db.tenants ?? []).find((row) => row.id === tenantId && !row.deletedAt);
     if (!tenant) {
       return { error: "not-found" as const };
@@ -1788,6 +1806,7 @@ export function updateTenantPlatformMeta(
   patch: {
     name?: string;
     inactive?: boolean;
+    ticketEmailDisplay?: string | null;
   } & SsoEnrollment,
 ) {
   return withLock(async () => {
@@ -1832,6 +1851,22 @@ export function updateTenantPlatformMeta(
       const { inactiveAt: _, ...rest } = next;
       next = rest as Tenant;
     }
+
+    if (patch.ticketEmailDisplay !== undefined) {
+      if (patch.ticketEmailDisplay) {
+        next = { ...next, ticketEmailDisplay: patch.ticketEmailDisplay };
+      } else {
+        const { ticketEmailDisplay: _removed, ...rest } = next;
+        next = rest;
+      }
+    }
+
+    const takenInbound = takenInboundLocalParts(tenants, tenantId);
+    const currentLocal = next.ticketInboundLocalPart?.trim().toLowerCase();
+    if (currentLocal && takenInbound.has(currentLocal)) {
+      return { error: "local-part-taken" as const };
+    }
+    next = ensureHostTicketMailbox(next, takenInbound).tenant;
 
     tenants[index] = next;
     await writeDatabase({ ...db, tenants });
@@ -1990,7 +2025,19 @@ function tenantNameTaken(db: Database, trimmed: string) {
   return slugTaken || nameTaken;
 }
 
-type CreateTenantError = "taken" | "email-taken" | SsoEnrollmentError;
+type CreateTenantError = "taken" | "email-taken" | "local-part-taken" | SsoEnrollmentError;
+
+function tenantWithUniqueMailbox(
+  tenant: Tenant,
+  tenants: readonly Tenant[],
+): { tenant: Tenant } | { error: "local-part-taken" } {
+  const taken = takenInboundLocalParts(tenants, tenant.id);
+  const local = tenant.ticketInboundLocalPart?.trim().toLowerCase();
+  if (local && taken.has(local)) {
+    return { error: "local-part-taken" };
+  }
+  return { tenant: ensureHostTicketMailbox(tenant, taken).tenant };
+}
 
 export function createTenant(
   name: string,
@@ -2005,11 +2052,20 @@ export function createTenant(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const enrolled = applySsoEnrollment(newTenantFromName(trimmed), db.tenants ?? [], options ?? {});
+    const taken = takenInboundLocalParts(db.tenants ?? []);
+    const enrolled = applySsoEnrollment(
+      newTenantFromName(trimmed, new Date().toISOString(), taken),
+      db.tenants ?? [],
+      options ?? {},
+    );
     if (!enrolled.ok) {
       return { error: enrolled.error };
     }
-    const tenant = enrolled.tenant;
+    const mailbox = tenantWithUniqueMailbox(enrolled.tenant, db.tenants ?? []);
+    if ("error" in mailbox) {
+      return mailbox;
+    }
+    const tenant = mailbox.tenant;
     await writeDatabase({
       ...db,
       schemaVersion: Math.max(db.schemaVersion ?? 1, TENANT_SCHEMA_VERSION),
@@ -2036,11 +2092,20 @@ export function createTenantWithOptionalStaff(
     if (tenantNameTaken(db, trimmed)) {
       return { error: "taken" as const };
     }
-    const enrolled = applySsoEnrollment(newTenantFromName(trimmed), db.tenants ?? [], options ?? {});
+    const taken = takenInboundLocalParts(db.tenants ?? []);
+    const enrolled = applySsoEnrollment(
+      newTenantFromName(trimmed, new Date().toISOString(), taken),
+      db.tenants ?? [],
+      options ?? {},
+    );
     if (!enrolled.ok) {
       return { error: enrolled.error };
     }
-    let tenant: Tenant = enrolled.tenant;
+    const mailbox = tenantWithUniqueMailbox(enrolled.tenant, db.tenants ?? []);
+    if ("error" in mailbox) {
+      return mailbox;
+    }
+    let tenant: Tenant = mailbox.tenant;
     let users = db.users;
     let staffUser: StoredUser | undefined;
     if (staff) {

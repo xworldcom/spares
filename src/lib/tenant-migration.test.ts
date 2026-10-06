@@ -277,6 +277,7 @@ describe("tenant migration", () => {
           name: DEFAULT_TENANT_NAME,
           slug: "oee360-host",
           createdAt: "2020-01-01T00:00:00.000Z",
+          ticketInboundLocalPart: "oee360-host",
         },
         {
           id: "tenant-sat",
@@ -284,6 +285,7 @@ describe("tenant migration", () => {
           slug: "satellite-co",
           createdAt: "2025-01-01T00:00:00.000Z",
           bootstrapStaffEmail: "satellite-only@test",
+          ticketInboundLocalPart: "satellite-co",
         },
       ],
       users: [
@@ -314,6 +316,7 @@ describe("tenant migration", () => {
           name: DEFAULT_TENANT_NAME,
           slug: "oee360-host",
           createdAt: "2020-01-01T00:00:00.000Z",
+          ticketInboundLocalPart: "oee360-host",
         },
       ],
       users: [
