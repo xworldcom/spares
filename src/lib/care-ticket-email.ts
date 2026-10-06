@@ -4,7 +4,6 @@ export type HostTicketMailbox = {
   displayAddress: string | null;
   inboundLocalPart: string;
   inboundAddress: string;
-  live: false;
 };
 
 export type InboundCareMessage = {
@@ -96,8 +95,6 @@ function mailboxFrom(tenant: Tenant, inboundLocalPart: string): HostTicketMailbo
     displayAddress: display,
     inboundLocalPart,
     inboundAddress: `${inboundLocalPart}@${inboundMailDomain()}`,
-    // Framed until inbound and From are wired. The env flag only changes the unwired decision.
-    live: false,
   };
 }
 

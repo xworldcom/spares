@@ -242,7 +242,6 @@ describe("care ticket email mailbox", () => {
       assert.equal(first.mailbox.inboundLocalPart, "shape");
       assert.equal(first.mailbox.inboundAddress, "shape@tickets.oee360.com");
       assert.equal(first.mailbox.displayAddress, null);
-      assert.equal(first.mailbox.live, false);
       assert.equal(second.mailbox.inboundLocalPart, "shape");
       assert.equal(second.tenant.ticketInboundLocalPart, "shape");
       assert.deepEqual(second.tenant.ssoDomains, ["shape.com"]);

@@ -347,7 +347,7 @@ function TenantDetail() {
       <section className="card p-4 mt-6 max-w-lg">
         <h2 className="text-lg font-semibold mb-1">Care ticket email</h2>
         <p className="text-sm font-medium mb-3">
-          {ticketMailbox?.live ? "Live" : "Framed, not live"}
+          Framed, not live
         </p>
         <p className="text-sm text-muted mb-4">
           Customers write to the display address. Forward that mailbox to the inbound address.
