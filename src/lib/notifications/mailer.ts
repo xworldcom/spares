@@ -2,6 +2,7 @@ export type OutboundEmail = {
   to: string;
   subject: string;
   text: string;
+  replyTo?: string;
 };
 
 export type ChatEmailMailer = {
@@ -16,6 +17,7 @@ export function createChatEmailMailer(): ChatEmailMailer {
           tag: "chat-email-notify",
           to: message.to,
           subject: message.subject,
+          ...(message.replyTo ? { replyTo: message.replyTo } : {}),
         }),
       );
     },

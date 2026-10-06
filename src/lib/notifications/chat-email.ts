@@ -1,4 +1,6 @@
 import type { Role } from "../../types/index.ts";
+import { hostTicketMailbox, outboundCareHeaders } from "../care-ticket-email.ts";
+import { listTenants } from "../store.ts";
 import { createChatEmailMailer, type ChatEmailMailer } from "./mailer.ts";
 import { loadMachineChatNotifyRecipients } from "./recipients.ts";
 
@@ -76,10 +78,23 @@ function conversationPath(role: Role, context: MachineChatNotifyContext) {
   return quotePath(role, context.quoteNumber);
 }
 
-function buildEmail(
+async function resolveCareReplyTo(tenantId: string): Promise<string | undefined> {
+  const tenants = await listTenants();
+  const tenant = tenants.find((row) => row.id === tenantId);
+  if (!tenant) {
+    return undefined;
+  }
+  const mailbox = hostTicketMailbox(tenant);
+  if (!mailbox) {
+    return undefined;
+  }
+  return outboundCareHeaders(mailbox).replyTo;
+}
+
+async function buildEmail(
   recipientRole: Role,
   input: MachineChatNotifyInput,
-): { subject: string; text: string } {
+): Promise<{ subject: string; text: string; replyTo?: string }> {
   const origin = publicAppOrigin();
   const path = conversationPath(recipientRole, input.context);
   const url = `${origin}${path}`;
@@ -100,7 +115,7 @@ function buildEmail(
       "",
       `Open the conversation: ${url}`,
     ].join("\n");
-    return { subject, text };
+    return { subject, text, replyTo: await resolveCareReplyTo(input.tenantId) };
   }
 
   const subject = `Quote #${input.context.quoteNumber} on ${input.context.machineName}`;
@@ -133,10 +148,20 @@ export async function notifyMachineChatUpdate(
   }
 
   const mailer = options?.mailer ?? createChatEmailMailer();
+  const builtByRole = new Map<Role, { subject: string; text: string; replyTo?: string }>();
   let sentCount = 0;
   for (const recipient of recipients) {
-    const { subject, text } = buildEmail(recipient.role, input);
-    await mailer.send({ to: recipient.email, subject, text });
+    let built = builtByRole.get(recipient.role);
+    if (!built) {
+      built = await buildEmail(recipient.role, input);
+      builtByRole.set(recipient.role, built);
+    }
+    await mailer.send({
+      to: recipient.email,
+      subject: built.subject,
+      text: built.text,
+      ...(built.replyTo ? { replyTo: built.replyTo } : {}),
+    });
     sentCount += 1;
   }
   return { recipientCount: recipients.length, sentCount };
