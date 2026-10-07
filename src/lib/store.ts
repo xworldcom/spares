@@ -32,6 +32,16 @@ import {
   writeModelFile,
 } from "./model-storage.ts";
 import {
+  applyLifecycleUpsert,
+  buildTenantPartCatalog,
+  filterCatalogRows,
+  healDemoPartLifecycle,
+  parsePartLifecycleBulk,
+  parsePartLifecyclePatch,
+  type PartLifecycleStatus,
+  type StoredPartLifecycle,
+} from "./part-lifecycle.ts";
+import {
   applyStaffPartEdit,
   knownMeshNames,
   type StaffPartEdit,
@@ -349,6 +359,8 @@ type Database = {
   manuals?: StoredManual[];
   tickets?: StoredTicket[];
   machineUsage?: StoredUsage[];
+  /** Per-tenant part number lifecycle (staff-maintained; hook for future manufacturer feeds). */
+  partLifecycle?: StoredPartLifecycle[];
   orgTombstones?: OrgTombstones;
   /** Legacy; sign-in policy lives in platform-settings.json. */
   platformSettings?: PlatformSignInSettings;
@@ -1208,9 +1220,14 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
       persistFile,
     );
   }
-  const kept = await overlayPersistedCare(next);
+  const kept = await overlayPersistedCare(healDemoPartLifecycle(next));
   if (catalogChanged(db, kept)) {
     await writeCatalogHeal(kept);
+    return kept;
+  }
+  if ((kept.partLifecycle?.length ?? 0) !== (db.partLifecycle?.length ?? 0)) {
+    await writeDatabase(kept);
+    memory = kept;
     return kept;
   }
   memory = kept;
@@ -1256,6 +1273,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         manuals: parsed.manuals ?? [],
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
+        partLifecycle: parsed.partLifecycle ?? [],
         orgTombstones: parsed.orgTombstones,
         platformSettings: parsed.platformSettings,
       },
@@ -1379,6 +1397,7 @@ async function mergeIdentityWithLatest(next: Database): Promise<Database> {
     customers: mergeRowsForWrite(latest.customers ?? [], next.customers ?? []),
     sites: mergeRowsForWrite(latest.sites ?? [], next.sites ?? []),
     orgTombstones: mergeOrgTombstones(latest.orgTombstones, next.orgTombstones),
+    partLifecycle: mergeRowsForWrite(latest.partLifecycle ?? [], next.partLifecycle ?? []),
     platformSettings: next.platformSettings ?? latest.platformSettings,
   };
 }
@@ -3008,6 +3027,57 @@ export function getMachine(id: string, tenantId: string) {
       return null;
     }
     return machine;
+  });
+}
+
+export function listPartLifecycleRows() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return db.partLifecycle ?? [];
+  });
+}
+
+export function listTenantPartLifecycleCatalog(
+  tenantId: string,
+  filters: {
+    status?: PartLifecycleStatus | "all";
+    machineId?: string;
+    query?: string;
+  } = {},
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const machines = machinesForTenantListing(db, tenantId);
+    const catalog = buildTenantPartCatalog(
+      machines,
+      db.partLifecycle ?? [],
+      tenantId,
+    );
+    return filterCatalogRows(catalog, filters);
+  });
+}
+
+export function upsertTenantPartLifecycle(
+  tenantId: string,
+  updates: Array<{ partNumber: string; patch: Partial<import("./part-lifecycle.ts").PartLifecycleFields> }>,
+  actorEmail: string,
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const at = new Date().toISOString();
+    let rows = db.partLifecycle ?? [];
+    for (const update of updates) {
+      rows = applyLifecycleUpsert({
+        rows,
+        tenantId,
+        partNumber: update.partNumber,
+        patch: update.patch,
+        actorEmail,
+        at,
+      });
+    }
+    await writeDatabase({ ...db, partLifecycle: rows });
+    return { ok: true as const };
   });
 }
 

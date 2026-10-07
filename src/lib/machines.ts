@@ -1,4 +1,9 @@
 import type { CustomerAccount, MachineDetail, MachineSummary, Role, Site } from "../types/index.ts";
+import {
+  enrichPartsWithLifecycle,
+  lifecycleMapForTenant,
+  type StoredPartLifecycle,
+} from "./part-lifecycle.ts";
 import { siteCompanyName } from "./org.ts";
 import type { StoredMachine } from "./store.ts";
 
@@ -118,17 +123,23 @@ export function toMachineDetail(
   role: Role,
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
+  lifecycleRows: readonly StoredPartLifecycle[] = [],
 ): MachineDetail {
   const located = siteFields(machine, sites, accounts);
   const hasModel = machineHasModel(machine);
   const resolvedUrl = hasModel ? fileUrl : "";
   const extra = optionalMachineCopy(machine);
+  const tenantId = machine.tenantId;
+  const lifecycleMap = tenantId
+    ? lifecycleMapForTenant(lifecycleRows, tenantId)
+    : new Map<string, StoredPartLifecycle>();
+  const parts = enrichPartsWithLifecycle(machine.parts, lifecycleMap, role);
   if (role === "staff") {
     return {
       id: machine.id,
       name: machine.name,
       fileUrl: resolvedUrl,
-      parts: machine.parts,
+      parts,
       unmatched: machine.unmatched,
       version: machine.version ?? 1,
       revisedAt: machine.revisedAt,
@@ -142,7 +153,7 @@ export function toMachineDetail(
     id: machine.id,
     name: machine.name,
     fileUrl: resolvedUrl,
-    parts: machine.parts,
+    parts,
     version: machine.version ?? 1,
     revisedAt: machine.revisedAt,
     hasModel,

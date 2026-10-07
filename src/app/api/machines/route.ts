@@ -16,6 +16,7 @@ import {
   findOrCreateModelLessMachine,
   getOrgContext,
   listMachines,
+  listPartLifecycleRows,
   ModelPackError,
   saveMachineFile,
 } from "@/lib/store";
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
         target: { type: "machine", id: result.machine.id, label: result.machine.name },
       });
     }
+    const lifecycleRows = await listPartLifecycleRows();
     return json(
       toMachineDetail(
         result.machine,
@@ -104,6 +106,7 @@ export async function POST(request: Request) {
         auth.user.role,
         org.sites,
         org.customers,
+        lifecycleRows,
       ),
       result.created ? 201 : 200,
     );
@@ -177,6 +180,7 @@ export async function POST(request: Request) {
     target: { type: "machine", id: machine.id, label: machine.name },
   });
 
+  const lifecycleRows = await listPartLifecycleRows();
   return json(
     toMachineDetail(
       machine,
@@ -184,6 +188,7 @@ export async function POST(request: Request) {
       auth.user.role,
       org.sites,
       org.customers,
+      lifecycleRows,
     ),
     201,
   );

@@ -22,6 +22,7 @@ import {
   type QuoteSheetSnap,
 } from "@/lib/ui/quote-sheet";
 import { ManualQuoteLines } from "@/components/quote/ManualQuoteLines";
+import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 
 export type TrayLine = {
   part: Part;
@@ -154,6 +155,7 @@ function QuoteTrayForm({
                           {line.part.meshName}
                           {line.part.qty > 1 ? ` · BOM qty ${line.part.qty}` : ""}
                         </p>
+                        <PartLifecycleNotice lifecycle={line.part.lifecycle} compact />
                       </div>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">

@@ -27,6 +27,7 @@ const STAFF_NAV_HREFS = [
   "/machines/new",
   "/care",
   "/staff/directory",
+  "/staff/parts",
   "/staff/activity",
   "/staff/quotes",
   "/staff/bugs",
@@ -231,6 +232,9 @@ export function AppShell({
                 <>
                   <NavLink href="/staff/directory" hrefs={navHrefs}>
                     Directory
+                  </NavLink>
+                  <NavLink href="/staff/parts" hrefs={navHrefs}>
+                    Part lifecycle
                   </NavLink>
                   {ACTIVITY_LOG_ENABLED ? (
                     <NavLink href="/staff/activity" hrefs={navHrefs}>

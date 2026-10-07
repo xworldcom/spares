@@ -113,6 +113,7 @@ export function MobileTabBar() {
     "/machines/new",
     "/care",
     "/staff/directory",
+    "/staff/parts",
     "/staff/activity",
     "/staff/quotes",
     "/staff/bugs",
@@ -122,6 +123,7 @@ export function MobileTabBar() {
   const moreActive =
     user?.role === "staff" &&
     (isNavActive(pathname, "/staff/directory", staffHrefs) ||
+      isNavActive(pathname, "/staff/parts", staffHrefs) ||
       isNavActive(pathname, "/staff/activity", staffHrefs) ||
       isNavActive(pathname, "/staff/bugs", staffHrefs) ||
       isNavActive(pathname, "/staff/platform", staffHrefs) ||
@@ -174,6 +176,12 @@ export function MobileTabBar() {
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
               Directory
+            </Link>
+            <Link
+              href="/staff/parts"
+              className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
+            >
+              Part lifecycle
             </Link>
             {ACTIVITY_LOG_ENABLED ? (
               <Link

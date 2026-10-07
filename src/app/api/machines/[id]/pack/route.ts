@@ -10,6 +10,7 @@ import {
 import {
   getMachine,
   getOrgContext,
+  listPartLifecycleRows,
   ModelPackError,
   replaceMachinePack,
   saveMachineFile,
@@ -80,7 +81,10 @@ export async function POST(
     }
     return error("Machine not found", 404);
   }
-  const org = await getOrgContext(auth.tenantId);
+  const [org, lifecycleRows] = await Promise.all([
+    getOrgContext(auth.tenantId),
+    listPartLifecycleRows(),
+  ]);
   return json(
     toMachineDetail(
       updated.machine,
@@ -88,6 +92,7 @@ export async function POST(
       auth.user.role,
       org.sites,
       org.customers,
+      lifecycleRows,
     ),
   );
 }

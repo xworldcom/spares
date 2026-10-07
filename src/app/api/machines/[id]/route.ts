@@ -9,6 +9,7 @@ import {
   deleteMachine,
   getMachine,
   getOrgContext,
+  listPartLifecycleRows,
   recordMachineView,
   updateMachine,
 } from "@/lib/store";
@@ -23,9 +24,10 @@ export async function GET(
   }
 
   const { id } = await params;
-  const [machine, org] = await Promise.all([
+  const [machine, org, lifecycleRows] = await Promise.all([
     getMachine(id, auth.tenantId),
     getOrgContext(auth.tenantId),
+    listPartLifecycleRows(),
   ]);
   if (!machine || !canAccessMachine(auth.user, machine, org.sites, org.customers)) {
     return error("Machine not found", 404);
@@ -47,6 +49,7 @@ export async function GET(
       auth.user.role,
       org.sites,
       org.customers,
+      lifecycleRows,
     ),
   );
 }
@@ -127,7 +130,10 @@ export async function PATCH(
     target: { type: "machine", id: updated.machine.id, label: updated.machine.name },
   });
 
-  const org = await getOrgContext(auth.tenantId);
+  const [org, lifecycleRows] = await Promise.all([
+    getOrgContext(auth.tenantId),
+    listPartLifecycleRows(),
+  ]);
   return json(
     toMachineDetail(
       updated.machine,
@@ -135,6 +141,7 @@ export async function PATCH(
       auth.user.role,
       org.sites,
       org.customers,
+      lifecycleRows,
     ),
   );
 }
