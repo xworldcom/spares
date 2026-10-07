@@ -64,6 +64,17 @@ export type PublicUser = {
   deletedAt?: string;
 };
 
+export type PartLifecycleStatus = "active" | "announced" | "obsolete" | "unknown";
+
+export type PartLifecycleInfo = {
+  status: PartLifecycleStatus;
+  discontinuationDate?: string;
+  lastTimeBuyDate?: string;
+  successorPartNumber?: string;
+  /** Staff-only in API responses. */
+  sourceNotes?: string;
+};
+
 export type Part = {
   id: string;
   name: string;
@@ -75,6 +86,7 @@ export type Part = {
   category?: string;
   replaces?: string;
   stock?: string;
+  lifecycle?: PartLifecycleInfo;
 };
 
 export type UnmatchedPart = {

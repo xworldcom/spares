@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Part } from "@/lib/api/types";
+import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -95,6 +96,7 @@ export function SelectedPartSheet({
             <p className="chrome-quiet truncate font-mono text-[11px]">
               {part.id}
             </p>
+            <PartLifecycleNotice lifecycle={part.lifecycle} compact />
             {part.vendor || part.stock ? (
               <p className="chrome-quiet truncate text-[11px]">
                 {[part.vendor, part.stock ? `stock ${part.stock}` : ""]

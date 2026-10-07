@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/api/types";
+import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { createTapGesture, tapActivateHandlers } from "@/lib/ui/tap-gesture";
 
 function PartRowSelectButton({
@@ -35,6 +36,7 @@ function PartRowSelectButton({
           {part.id}
           {part.replaces ? ` · replaces ${part.replaces}` : ""}
         </span>
+        <PartLifecycleNotice lifecycle={part.lifecycle} compact />
       </span>
       <span
         className={`tabular-nums text-sm ${selected ? "row-on-ink-muted" : "spares-muted"}`}
