@@ -10,14 +10,7 @@ import {
   listPlatformInquiries,
   type PlatformInquiryRow,
 } from "@/lib/api/platform-inquiries";
-
-function formatWhen(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
-}
+import { formatWhen } from "@/components/quote/quote-format";
 
 export function PlatformInquiriesList() {
   const [rows, setRows] = useState<PlatformInquiryRow[]>([]);
