@@ -1,16 +1,5 @@
+import { formatCalendarDay } from "@/lib/format-calendar-day";
 import type { PartLifecycleInfo } from "@/types";
-
-function formatLifecycleDay(value: string) {
-  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function partLifecycleStatusHeadline(status: PartLifecycleInfo["status"]) {
   if (status === "obsolete") {
@@ -25,10 +14,10 @@ export function partLifecycleStatusHeadline(status: PartLifecycleInfo["status"])
 export function partLifecycleDetailParts(lifecycle: PartLifecycleInfo): string[] {
   const details: string[] = [];
   if (lifecycle.discontinuationDate) {
-    details.push(`Ends ${formatLifecycleDay(lifecycle.discontinuationDate)}`);
+    details.push(`Ends ${formatCalendarDay(lifecycle.discontinuationDate)}`);
   }
   if (lifecycle.lastTimeBuyDate) {
-    details.push(`Last time buy ${formatLifecycleDay(lifecycle.lastTimeBuyDate)}`);
+    details.push(`Last time buy ${formatCalendarDay(lifecycle.lastTimeBuyDate)}`);
   }
   if (lifecycle.successorPartNumber) {
     details.push(`Use ${lifecycle.successorPartNumber}`);

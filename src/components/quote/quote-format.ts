@@ -1,3 +1,5 @@
+import { formatCalendarDay } from "@/lib/format-calendar-day";
+
 export function formatWhen(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -12,16 +14,5 @@ export function formatWhen(value: string) {
 }
 
 export function formatDay(value?: string) {
-  if (!value) {
-    return "—";
-  }
-  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatCalendarDay(value);
 }
