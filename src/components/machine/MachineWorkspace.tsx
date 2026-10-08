@@ -175,12 +175,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!trayStorageKey) {
       return;
     }
-    if (trayNoteStorageKey) {
-      setTrayNote(readPersistedTrayNote(trayNoteStorageKey));
-    }
     const persisted = readPersistedTrayLines(trayStorageKey);
     setLines((current) => mergeHydratedTrayLines(persisted, current));
     setLinesKey(trayStorageKey);
+    if (trayNoteStorageKey) {
+      if (persisted.length === 0) {
+        setTrayNote("");
+        writePersistedTrayNote(trayNoteStorageKey, "");
+      } else {
+        setTrayNote(readPersistedTrayNote(trayNoteStorageKey));
+      }
+    }
   }, [trayStorageKey, trayNoteStorageKey]);
 
   useEffect(() => {

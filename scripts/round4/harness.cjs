@@ -32,13 +32,16 @@ async function launch({ viewport = { width: 1440, height: 900 }, name, mobile = 
     args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--no-sandbox"],
   });
   const videoDir = path.join(OUT, "_video-" + name);
-  const context = await browser.newContext({
+  const contextOptions = {
     viewport,
     hasTouch: mobile,
     isMobile: mobile,
     deviceScaleFactor: mobile ? 2 : 1,
-    recordVideo: { dir: videoDir, size: viewport },
-  });
+  };
+  if (!process.env.R4_NO_VIDEO) {
+    contextOptions.recordVideo = { dir: videoDir, size: viewport };
+  }
+  const context = await browser.newContext(contextOptions);
   await context.tracing.start({ screenshots: true, snapshots: true });
   const page = await context.newPage();
   return { browser, context, page, videoDir, name };
@@ -68,7 +71,11 @@ async function uiLogin(page, creds = CUSTOMER, next = "/machines") {
 
 async function finish(run) {
   const { browser, context, page, videoDir, name } = run;
-  await context.tracing.stop({ path: path.join(OUT, `${TAG}-${name}-trace.zip`) });
+  try {
+    await context.tracing.stop({ path: path.join(OUT, `${TAG}-${name}-trace.zip`) });
+  } catch (error) {
+    console.warn("tracing stop:", error?.message ?? error);
+  }
   const video = page.video();
   await context.close();
   if (video) {

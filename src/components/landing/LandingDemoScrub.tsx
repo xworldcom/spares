@@ -28,22 +28,13 @@ import {
   workflowHandoffBeatStatusAtIndex,
   workflowHandoffLinearStart,
   demoHandoffLinearProgressAtBeatRest,
-  workflowScrubPreHandoffSnapLinearPositions,
-  workflowScrubSnapBeatLabel,
+  demoBeatTrackSnapAlignmentDelta,
+  demoInBeatSnapChapter,
+  workflowScrubPreHandoffSnapRenderDeltas,
 } from "@/lib/ui/landing-demo";
 
-const SCRUB_SNAP_LINEAR = workflowScrubPreHandoffSnapLinearPositions();
 const HANDOFF_BEAT_STATUSES = workflowHandoffBeatStatuses();
-
-const SCRUB_SNAP_MARKERS = SCRUB_SNAP_LINEAR.map((linear, index) => {
-  const start = SCRUB_SNAP_LINEAR[index - 1] ?? 0;
-  return {
-    linear,
-    heightDelta: linear - start,
-    label: workflowScrubSnapBeatLabel(linear),
-  };
-});
-const SCRUB_SNAP_DELTAS = SCRUB_SNAP_MARKERS.slice(1);
+const SCRUB_SNAP_DELTAS = workflowScrubPreHandoffSnapRenderDeltas();
 
 export type LandingDemoScrubSnapshot = {
   progress: number;
@@ -323,12 +314,91 @@ export function LandingDemoScrub({
       frame = window.requestAnimationFrame(tick);
     };
 
+    let snapFrame = 0;
+    let snapInFlight = false;
+
+    const alignBeatSnap = () => {
+      if (snapInFlight || document.hidden) {
+        return;
+      }
+      measureLayout();
+      const root = findPageScrollRoot(section);
+      const windowY = readWindowScrollY();
+      const rootY = root?.scrollTop ?? 0;
+      const visualPageTop = readVisualPageTop();
+      const parkedRoot = Boolean(root) && demoParkedNestedRoot(windowY, rootY, visualPageTop);
+      const scrollY = parkedRoot || !root
+        ? demoPickScrollY(windowY, 0, visualPageTop)
+        : Math.max(0, rootY);
+      const preSnaps = section.querySelectorAll<HTMLElement>(".landing-demo-scrub-snap");
+      let preHandoffHeight = 0;
+      for (const el of preSnaps) {
+        preHandoffHeight += el.offsetHeight;
+      }
+      const beatTracks = [...section.querySelectorAll<HTMLElement>(".landing-demo-beat-track")];
+      const beatTrackHeight = beatTracks[0]?.offsetHeight ?? 0;
+      const sectionViewportTop = section.getBoundingClientRect().top;
+      const scrolled = layout.stickyTop - sectionViewportTop;
+      if (!demoInBeatSnapChapter(scrolled, preHandoffHeight, beatTrackHeight)) {
+        return;
+      }
+      const beatTrackIndex = demoBeatTrackIndexFromScroll(
+        scrolled,
+        preHandoffHeight,
+        beatTrackHeight,
+        beatTracks.length,
+      );
+      const track = beatTracks[beatTrackIndex];
+      if (!track) {
+        return;
+      }
+      const delta = demoBeatTrackSnapAlignmentDelta(track.getBoundingClientRect().top, layout.stickyTop, 20);
+      if (delta === null) {
+        return;
+      }
+      snapInFlight = true;
+      const targetY = scrollY + delta;
+      window.scrollTo({ top: Math.max(0, targetY), left: 0, behavior: "auto" });
+      if (root && !parkedRoot) {
+        root.scrollTop = Math.max(0, root.scrollTop + delta);
+      }
+      window.requestAnimationFrame(() => {
+        snapInFlight = false;
+        lastY = Number.NaN;
+        apply();
+      });
+    };
+
+    const scheduleBeatSnap = () => {
+      if (snapFrame) {
+        window.cancelAnimationFrame(snapFrame);
+      }
+      snapFrame = window.requestAnimationFrame(() => {
+        snapFrame = 0;
+        alignBeatSnap();
+      });
+    };
+
+    const onScrollEnd = () => {
+      scheduleBeatSnap();
+    };
+
     measureStickyTop();
     apply();
     frame = window.requestAnimationFrame(tick);
 
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("scrollend", onScrollEnd, { passive: true });
+    let scrollEndFallback = 0;
+    const onScrollForSnap = () => {
+      window.clearTimeout(scrollEndFallback);
+      scrollEndFallback = window.setTimeout(onScrollEnd, 180);
+    };
+    const scrollEndNative = "onscrollend" in window;
+    if (!scrollEndNative) {
+      window.addEventListener("scroll", onScrollForSnap, { passive: true });
+    }
     window.visualViewport?.addEventListener("resize", onResize, { passive: true });
     window.visualViewport?.addEventListener("scroll", onResize, { passive: true });
 
@@ -336,8 +406,16 @@ export function LandingDemoScrub({
       running = false;
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("scrollend", onScrollEnd);
+      if (!scrollEndNative) {
+        window.removeEventListener("scroll", onScrollForSnap);
+      }
+      window.clearTimeout(scrollEndFallback);
       window.visualViewport?.removeEventListener("resize", onResize);
       window.visualViewport?.removeEventListener("scroll", onResize);
+      if (snapFrame) {
+        window.cancelAnimationFrame(snapFrame);
+      }
       if (frame) {
         window.cancelAnimationFrame(frame);
       }
@@ -358,7 +436,11 @@ export function LandingDemoScrub({
         : SCRUB_SNAP_DELTAS.map((marker, index) => (
             <div
               key={index}
-              className="landing-demo-scrub-snap"
+              className={
+                marker.handoffEntry
+                  ? "landing-demo-scrub-snap landing-demo-scrub-snap--handoff-entry"
+                  : "landing-demo-scrub-snap"
+              }
               style={{
                 height: `calc(${marker.heightDelta} * var(--landing-demo-scrub-extra, 1000svh))`,
               }}

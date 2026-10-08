@@ -421,8 +421,12 @@
 .landing-demo-scrub-snap {
   flex: 0 0 auto;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
   pointer-events: none;
+}
+
+.landing-demo-scrub-snap--handoff-entry {
+  scroll-snap-stop: always;
 }
 
 .landing-demo-beat-track {
@@ -1628,6 +1632,7 @@ html:has(.spares-app-cinematic) {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  min-width: 0;
   min-height: 0;
   overflow: clip;
   padding: 1rem 1.05rem 1.15rem;
@@ -1761,6 +1766,13 @@ html:has(.spares-app-cinematic) {
 
 .landing-workflow .quote-progress {
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.landing-workflow .quote-progress-track {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .landing-workflow .quote-progress-step {
@@ -1785,6 +1797,31 @@ html:has(.spares-app-cinematic) {
 
 .landing-workflow .quote-progress-caption {
   color: rgba(236, 234, 228, 0.5);
+}
+
+@media (max-width: 420px) {
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-step,
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-step[data-state="current"] {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: calc((100% - 0.35rem) / 6);
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-label-full {
+    display: none !important;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-step[data-state="current"] .quote-progress-label-short {
+    display: block;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-label-short {
+    display: block;
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .landing-section--cta {
