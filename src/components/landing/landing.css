@@ -651,8 +651,9 @@
   }
 
   .landing-scroll .landing-hero {
-    max-height: calc(100dvh - var(--spares-header));
-    overflow: hidden;
+    min-height: calc(100dvh - var(--spares-header));
+    max-height: none;
+    overflow: visible;
   }
 
   .landing-scroll .landing-copy {

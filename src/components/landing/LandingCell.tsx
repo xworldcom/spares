@@ -4,6 +4,7 @@ import { useEffect, useState, type ComponentType } from "react";
 
 export function LandingCell() {
   const [Stage, setStage] = useState<ComponentType<{ interactive?: boolean }> | null>(null);
+  const [interactive, setInteractive] = useState(false);
 
   useEffect(() => {
     const canvas = document.createElement("canvas");
@@ -18,6 +19,14 @@ export function LandingCell() {
       });
   }, []);
 
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 900px) and (pointer: fine)");
+    const sync = () => setInteractive(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
   return (
     <div className="landing-cell">
       <div className="landing-cell-fallback" aria-hidden="true">
@@ -26,7 +35,7 @@ export function LandingCell() {
         <span className="landing-cell-block landing-cell-block--arm" />
         <span className="landing-cell-block landing-cell-block--load" />
       </div>
-      {Stage ? <Stage interactive /> : null}
+      {Stage ? <Stage interactive={interactive} /> : null}
     </div>
   );
 }
