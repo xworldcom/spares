@@ -31,7 +31,6 @@ import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { useQuoteReadWatermark } from "@/lib/hooks/useQuoteReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
-  canEditTracking,
   invoiceVisible,
   pricesVisibleToCustomer,
   quotePricingComplete,
@@ -485,32 +484,27 @@ export function QuoteWorkspace({
         <p className="spares-muted text-sm">Invoice opens after PO is received.</p>
       )}
 
-      {role === "customer" ||
-      role === "staff" ||
-      quote.shipments.length > 0 ||
-      canEditTracking(quote.status) ? (
-        <QuoteTrackingPanel
-          quote={quote}
-          role={role}
-          drafts={shipments}
-          onDrafts={setShipments}
-          busy={busy}
-          onSave={() => {
-            if (readyShipments.length === 0) {
-              setError("Add a tracking number.");
-              return;
-            }
-            const patch =
-              quote.status === "ordered" || quote.status === "confirmed"
-                ? { status: "shipped" as const, shipments: readyShipments }
-                : { shipments: readyShipments };
-            void run(
-              () => updateQuote(String(quote.number), patch),
-              "Tracking saved.",
-            );
-          }}
-        />
-      ) : null}
+      <QuoteTrackingPanel
+        quote={quote}
+        role={role}
+        drafts={shipments}
+        onDrafts={setShipments}
+        busy={busy}
+        onSave={() => {
+          if (readyShipments.length === 0) {
+            setError("Add a tracking number.");
+            return;
+          }
+          const patch =
+            quote.status === "ordered" || quote.status === "confirmed"
+              ? { status: "shipped" as const, shipments: readyShipments }
+              : { shipments: readyShipments };
+          void run(
+            () => updateQuote(String(quote.number), patch),
+            "Tracking saved.",
+          );
+        }}
+      />
 
       <div className="conversation-sheet-spacer" aria-hidden="true" />
 

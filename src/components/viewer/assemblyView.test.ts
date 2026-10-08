@@ -7,7 +7,7 @@ import {
   ISOLATE_OPACITY,
   isGhosted,
   meshIsolateState,
-  viewerNeedsReset,
+  viewerNeedsShowAll,
 } from "./assemblyView.ts";
 
 describe("explodeTranslation", () => {
@@ -70,9 +70,7 @@ describe("assembly helpers", () => {
       ghosted: false,
       pickable: false,
     });
-    assert.equal(viewerNeedsReset(0, [], null), false);
-    assert.equal(viewerNeedsReset(0.2, [], null), true);
-    assert.equal(viewerNeedsReset(0, ["A"], null), true);
-    assert.equal(viewerNeedsReset(0, [], "A"), true);
+    assert.equal(viewerNeedsShowAll([]), false);
+    assert.equal(viewerNeedsShowAll(["A"]), true);
   });
 });

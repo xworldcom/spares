@@ -1,5 +1,6 @@
 "use client";
 
+import { PENDING_SEND_LEAVE_PROMPT, leavesCurrentPage } from "@/lib/ui/pending-send-guard";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useConversationSheetChrome } from "@/components/chat/ConversationSheetContext";
 import { ChatAttachmentView } from "@/components/chat/ChatAttachmentView";
@@ -101,8 +102,27 @@ export function QuoteActivityFeed({
       event.preventDefault();
       event.returnValue = "";
     };
+    // Next client navigation never fires beforeunload; catch in-app links before the router does.
+    const onLinkClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) {
+        return;
+      }
+      const anchor =
+        event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!anchor || !leavesCurrentPage(anchor, window.location)) {
+        return;
+      }
+      if (!window.confirm(PENDING_SEND_LEAVE_PROMPT)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("click", onLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onLinkClick, true);
+    };
   }, [hasPendingSend]);
   const firstUnreadIndex = firstUnreadActivityIndex(activities, self, viewerReadAt);
   const lastOwnIndex = activities.reduce(

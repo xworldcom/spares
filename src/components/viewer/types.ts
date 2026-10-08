@@ -21,6 +21,5 @@ export type PartPickerProps = {
   onSelect?: (part: ViewerPart | null) => void;
   onUnmatchedSelect?: (mesh: UnmatchedMesh | null) => void;
   onLongPress?: (part: ViewerPart) => void;
-  onCaptureReady?: (capture: (partId: string) => string | null) => void;
   className?: string;
 };

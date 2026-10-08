@@ -1,6 +1,6 @@
 "use client";
 
-import { TRACKING_CARRIERS, canEditTracking, trackingVisible } from "@/lib/quotes";
+import { TRACKING_CARRIERS, canEditTracking } from "@/lib/quotes";
 import type { Quote, QuoteShipment, Role, TrackingCarrier } from "@/types";
 
 const inputClass =
@@ -25,18 +25,13 @@ export function QuoteTrackingPanel({
   busy: boolean;
   onSave: () => void;
 }) {
-  const visible = role === "staff" || trackingVisible(quote.status);
   const editable = role === "staff" && canEditTracking(quote.status);
   const rows = editable ? drafts : quote.shipments;
-
-  if (!visible && role === "customer") {
-    return null;
-  }
 
   return (
     <section className="spares-surface rounded-[24px] p-5">
       <h2 className="text-[19px] font-semibold tracking-tight">Tracking</h2>
-      {quote.status === "shipped" || quote.shipments.length > 0 ? (
+      {role === "staff" && (quote.status === "shipped" || quote.shipments.length > 0) ? (
         <p className="spares-muted mt-1 text-sm">
           Shown to the customer once the quote is marked shipped.
         </p>
@@ -44,11 +39,11 @@ export function QuoteTrackingPanel({
         <p className="spares-muted mt-1 text-sm">
           Add tracking to mark this shipped. Carrier is optional.
         </p>
-      ) : (
+      ) : rows.length === 0 ? (
         <p className="spares-muted mt-1 text-sm">
           Tracking numbers appear here once your order ships.
         </p>
-      )}
+      ) : null}
 
       <ul className="mt-4 space-y-3">
         {rows.map((row, index) => (

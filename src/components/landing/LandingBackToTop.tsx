@@ -47,6 +47,20 @@ function scrollPageToTop(reduceMotion: boolean) {
 export function LandingBackToTop() {
   const [visible, setVisible] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [footerInView, setFooterInView] = useState(false);
+
+  useEffect(() => {
+    const footer = document.querySelector(".landing-site-footer");
+    if (!footer || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setFooterInView(entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -76,14 +90,16 @@ export function LandingBackToTop() {
     scrollPageToTop(reduceMotion);
   }, [reduceMotion]);
 
+  const shown = visible && !footerInView;
+
   return (
     <button
       type="button"
-      className={visible ? "landing-back-to-top is-visible" : "landing-back-to-top"}
+      className={shown ? "landing-back-to-top is-visible" : "landing-back-to-top"}
       onClick={handleClick}
       aria-label="Back to top — sign in"
-      tabIndex={visible ? 0 : -1}
-      aria-hidden={visible ? undefined : true}
+      tabIndex={shown ? 0 : -1}
+      aria-hidden={shown ? undefined : true}
     >
       <span className="landing-back-to-top-icon" aria-hidden="true">
         ↑

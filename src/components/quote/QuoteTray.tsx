@@ -28,7 +28,6 @@ import { trayCountLabel } from "@/lib/ui/tray-count-label";
 export type TrayLine = {
   part: Part;
   qty: number;
-  thumb?: string;
 };
 
 type Sheet = QuoteSheetSnap;
@@ -60,7 +59,6 @@ function QuoteTrayForm({
   onQty,
   onRemove,
   onAdd,
-  allowManual,
   onSubmit,
   submitting,
   error,
@@ -72,7 +70,6 @@ function QuoteTrayForm({
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
   onAdd?: (part: Part, qty: number) => void;
-  allowManual?: boolean;
   onSubmit: () => void;
   submitting: boolean;
   error: string | null;
@@ -90,7 +87,7 @@ function QuoteTrayForm({
           <p className="spares-muted mt-0.5 truncate text-sm">
             <span data-quote-target="count" className="quote-count">
               {lines.length === 0 ? (
-                allowManual ? "Add a part number to quote." : "Tap a part on the machine."
+                "Add a part number to quote."
               ) : (
                 <span key={countLabel} className="quote-count-num">
                   {countLabel}
@@ -113,92 +110,13 @@ function QuoteTrayForm({
       </div>
 
       <div className="quote-sheet-body mt-4 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
-            {lines.length === 0 && !allowManual ? (
-              <div className="quote-sheet-empty mt-4">
-                <p className="max-w-[16rem] text-[15px] leading-relaxed text-[var(--spares-muted)]">
-                  Select a part, then add it.
-                </p>
-              </div>
-            ) : null}
-
-            {!allowManual && lines.length > 0 ? (
-              <ul className="space-y-2">
-                {lines.map((line) => (
-                  <li
-                    key={line.part.id}
-                    className="tray-line spares-field rounded-[18px] px-3 py-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--spares-stage)]">
-                        {line.thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={line.thumb}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium tracking-wide text-white/45">
-                            3D
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 text-[15px] font-medium leading-snug">
-                          {line.part.name}
-                        </p>
-                        <p className="spares-muted truncate font-mono text-xs">
-                          {line.part.id}
-                        </p>
-                        <p className="spares-muted mt-0.5 truncate text-[12px]">
-                          {line.part.meshName}
-                          {line.part.qty > 1 ? ` · BOM qty ${line.part.qty}` : ""}
-                        </p>
-                        <PartLifecycleNotice lifecycle={line.part.lifecycle} compact />
-                      </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        aria-label={`Decrease ${line.part.name}`}
-                        disabled={line.qty <= 1}
-                        onClick={() =>
-                          onQty(line.part.id, Math.max(1, line.qty - 1))
-                        }
-                        className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium disabled:opacity-30"
-                      >
-                        −
-                      </button>
-                      <span className="min-w-8 text-center text-[17px] tabular-nums">
-                        {line.qty}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Increase ${line.part.name}`}
-                        onClick={() => onQty(line.part.id, line.qty + 1)}
-                        className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium"
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemove(line.part.id)}
-                        className="spares-muted ml-auto inline-flex h-11 items-center rounded-full px-3 text-sm font-medium"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
-            {allowManual && onAdd ? (
+            {onAdd ? (
               <ManualQuoteLines
                 lines={lines.map((line) => ({
                   id: line.part.id,
                   name: line.part.name,
                   qty: line.qty,
+                  lifecycle: line.part.lifecycle,
                 }))}
                 onAdd={(line) =>
                   onAdd(
@@ -262,7 +180,6 @@ export function QuoteTray({
   onQty,
   onRemove,
   onAdd,
-  allowManual = false,
   onClear,
   fullscreen,
   onExitToTray,
@@ -276,7 +193,6 @@ export function QuoteTray({
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
   onAdd?: (part: Part, qty: number) => void;
-  allowManual?: boolean;
   onClear: () => void;
   fullscreen?: boolean;
   onExitToTray?: () => void;
@@ -393,8 +309,7 @@ export function QuoteTray({
     onQty,
     onRemove,
     onAdd,
-    allowManual,
-    onSubmit: () => {
+      onSubmit: () => {
       void handleSubmit();
     },
     submitting,

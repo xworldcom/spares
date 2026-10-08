@@ -6,6 +6,7 @@ import {
   DEMO_OTHER_LABEL,
   DEMO_QUOTE_SCRIPT,
   DEMO_SCRUB_EXTRA_SVH,
+  DEMO_SCRUB_EXTRA_SVH_PHONE,
   DEMO_TICKET_SCRIPT,
   DEMO_SCRUB_END_HOLD,
   clampDemoScrollProgress,
@@ -320,6 +321,11 @@ describe("landing scrub layout", () => {
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
     assert.match(css, /var\(--landing-demo-scrub-extra,\s*1000svh\)|--landing-demo-scrub-extra:\s*1000svh/);
     assert.equal(DEMO_SCRUB_EXTRA_SVH, 1000);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH_PHONE, 400);
+    assert.match(
+      css,
+      new RegExp(`\\.landing-demo-scrub\\s*\\{[^}]*--landing-demo-scrub-extra:\\s*${DEMO_SCRUB_EXTRA_SVH_PHONE}svh`),
+    );
     assert.doesNotMatch(css, /\.landing-workflow-model-panel\s*\{[^}]*transition:/);
     assert.doesNotMatch(css, /\.landing-workflow-side\s*\{[^}]*transition:/);
     assert.doesNotMatch(css, /\.landing-workflow-request\.is-visible\s*\{[^}]*transition:/);

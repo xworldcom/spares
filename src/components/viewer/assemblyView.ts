@@ -71,10 +71,7 @@ export function meshIsolateState(
   return { hidden, ghosted, pickable: !hidden && !ghosted };
 }
 
-export function viewerNeedsReset(
-  explode: number,
-  hiddenIds: readonly string[],
-  isolatedId: string | null,
-): boolean {
-  return explode > 0 || hiddenIds.length > 0 || isolatedId != null;
+/** "Show all" restores hidden parts; it appears only when a part is actually hidden. */
+export function viewerNeedsShowAll(hiddenIds: readonly string[]): boolean {
+  return hiddenIds.length > 0;
 }

@@ -1,4 +1,5 @@
 import type { Part } from "@/lib/api/types";
+import type { PartLifecycleInfo } from "@/types";
 
 export type PersistedTrayLine = {
   id: string;
@@ -113,4 +114,23 @@ export function mergeHydratedTrayLines<T extends { part: Part; qty: number }>(
   const saved = persisted.map((row) => ({ part: persistedToPart(row), qty: row.qty }) as T);
   const ids = new Set(persisted.map((row) => row.id));
   return [...saved, ...current.filter((line) => !ids.has(line.part.id))];
+}
+
+/**
+ * Tray lines are persisted as {id, name, qty}; lifecycle is never stored. Resolve it at render from
+ * the machine's BOM (already tenant-enriched by the machine API) and the part-number lookup, so a
+ * line restored from localStorage shows the same lifecycle as one added this session.
+ */
+export function resolveTrayLines<T extends { part: Part; qty: number }>(
+  lines: readonly T[],
+  machineParts: readonly Part[] | undefined,
+  lookup: Readonly<Record<string, PartLifecycleInfo>>,
+): T[] {
+  const byId = new Map((machineParts ?? []).map((part) => [part.id, part]));
+  return lines.map((line) => {
+    const full = byId.get(line.part.id);
+    const base = full ?? line.part;
+    const lifecycle = lookup[line.part.id] ?? full?.lifecycle ?? line.part.lifecycle;
+    return { ...line, part: lifecycle ? { ...base, lifecycle } : base };
+  });
 }

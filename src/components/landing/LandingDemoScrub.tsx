@@ -5,11 +5,9 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
-  DEMO_SCRUB_EXTRA_SVH,
   createDemoScrubStore,
   demoApplyAtVisibility,
   demoDocumentScrollProgress,
@@ -301,11 +299,6 @@ export function LandingDemoScrub({
       className="landing-demo-scrub"
       data-reduce-motion={snapshot.reduceMotion || undefined}
       data-progress={snapshot.progress.toFixed(3)}
-      style={
-        snapshot.reduceMotion
-          ? undefined
-          : ({ "--landing-demo-scrub-extra": `${DEMO_SCRUB_EXTRA_SVH}svh` } as CSSProperties)
-      }
       aria-label={ariaLabel}
     >
       <div ref={pinRef} className="landing-demo-scrub-pin">

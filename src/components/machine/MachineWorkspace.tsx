@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { MachineWorkspaceSkeleton } from "./MachineWorkspaceSkeleton";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
-import { viewerNeedsReset } from "@/components/viewer/assemblyView";
+import { viewerNeedsShowAll } from "@/components/viewer/assemblyView";
 import Link from "next/link";
 import { getMachine, updateMachinePart } from "@/lib/api/machines";
 import { machineHasModel } from "@/lib/machines";
@@ -24,6 +24,7 @@ import { machineTabHref } from "@/lib/machine-context";
 import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
+import type { PartLifecycleInfo } from "@/types";
 import { lookupPartLifecycle } from "@/lib/api/part-lifecycle";
 import { playQuoteAddMotion } from "@/lib/ui/quote-feedback";
 import {
@@ -32,10 +33,17 @@ import {
   quoteTrayStorageKey,
   readPersistedTrayLines,
   readPersistedTrayNote,
+  resolveTrayLines,
   trayLineToPersisted,
   writePersistedTrayLines,
   writePersistedTrayNote,
 } from "@/lib/ui/quote-tray-persist";
+import {
+  hiddenPartsStorageKey,
+  pruneHiddenParts,
+  readPersistedHiddenParts,
+  writePersistedHiddenParts,
+} from "@/lib/ui/hidden-parts-persist";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#12161c";
@@ -79,7 +87,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
-  const captureThumb = useRef<(partId: string) => string | null>(() => null);
+  const [lifecycleById, setLifecycleById] = useState<Record<string, PartLifecycleInfo>>({});
+  const lifecycleAsked = useRef(new Set<string>());
+  const [hiddenKey, setHiddenKey] = useState<string | null>(null);
   const [linesKey, setLinesKey] = useState<string | null>(null);
   const trayStorageKey =
     isCustomer && user?.tenantId
@@ -119,7 +129,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         }
         setMachine(next);
         setSelectedPart(null);
-        setHiddenIds([]);
         setIsolatedId(null);
         setExplode(0);
         setSuggestedMesh(null);
@@ -155,6 +164,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   useEffect(() => {
     setLines([]);
     setLinesKey(null);
+    setHiddenIds([]);
+    setHiddenKey(null);
   }, [machineId]);
 
   // Read storage as soon as the key exists (not after the machine loads), and only let the
@@ -170,28 +181,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     const persisted = readPersistedTrayLines(trayStorageKey);
     setLines((current) => mergeHydratedTrayLines(persisted, current));
     setLinesKey(trayStorageKey);
-    if (persisted.length === 0) {
-      return;
-    }
-    let cancelled = false;
-    void lookupPartLifecycle(persisted.map((row) => row.id))
-      .then((map) => {
-        if (cancelled || Object.keys(map).length === 0) {
-          return;
-        }
-        setLines((current) =>
-          current.map((line) => {
-            const lifecycle = map[line.part.id];
-            return lifecycle
-              ? { ...line, part: { ...line.part, lifecycle } }
-              : line;
-          }),
-        );
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
   }, [trayStorageKey, trayNoteStorageKey]);
 
   useEffect(() => {
@@ -201,18 +190,34 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     writePersistedTrayNote(trayNoteStorageKey, trayNote);
   }, [trayNote, trayNoteStorageKey, linesKey, trayStorageKey]);
 
-  const trayLines = useMemo(() => {
-    if (!machine) {
-      return lines;
+  const lineIdsKey = lines.map((line) => line.part.id).join("\n");
+
+  useEffect(() => {
+    const ids = lineIdsKey ? lineIdsKey.split("\n") : [];
+    const missing = ids.filter((id) => !lifecycleAsked.current.has(id));
+    if (missing.length === 0) {
+      return;
     }
-    const partsById = new Map(machine.parts.map((part) => [part.id, part]));
-    return lines.map((line) => {
-      const full = partsById.get(line.part.id);
-      return full
-        ? { ...line, part: { ...full, lifecycle: line.part.lifecycle ?? full.lifecycle } }
-        : line;
-    });
-  }, [lines, machine]);
+    for (const id of missing) {
+      lifecycleAsked.current.add(id);
+    }
+    void lookupPartLifecycle(missing)
+      .then((map) => {
+        if (Object.keys(map).length > 0) {
+          setLifecycleById((current) => ({ ...current, ...map }));
+        }
+      })
+      .catch(() => {
+        for (const id of missing) {
+          lifecycleAsked.current.delete(id);
+        }
+      });
+  }, [lineIdsKey]);
+
+  const trayLines = useMemo(
+    () => resolveTrayLines(lines, machine?.parts, lifecycleById),
+    [lines, machine, lifecycleById],
+  );
 
   useEffect(() => {
     if (!trayStorageKey || linesKey !== trayStorageKey) {
@@ -223,6 +228,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       lines.map((line) => trayLineToPersisted(line.part, line.qty)),
     );
   }, [lines, linesKey, trayStorageKey]);
+
+  const hiddenStorageKey = user?.tenantId ? hiddenPartsStorageKey(user.tenantId, machineId) : null;
+
+  useEffect(() => {
+    if (!hiddenStorageKey || !machine || machine.id !== machineId || hiddenKey === hiddenStorageKey) {
+      return;
+    }
+    setHiddenIds(pruneHiddenParts(readPersistedHiddenParts(hiddenStorageKey), machine.parts));
+    setHiddenKey(hiddenStorageKey);
+  }, [hiddenStorageKey, hiddenKey, machine, machineId]);
+
+  useEffect(() => {
+    if (!hiddenStorageKey || hiddenKey !== hiddenStorageKey) {
+      return;
+    }
+    writePersistedHiddenParts(hiddenStorageKey, hiddenIds);
+  }, [hiddenIds, hiddenKey, hiddenStorageKey]);
 
   useEffect(() => {
     if (!selectedPart) {
@@ -266,7 +288,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [selectedPart]);
 
-  const needsReset = viewerNeedsReset(explode, hiddenIds, isolatedId);
+  const needsReset = viewerNeedsShowAll(hiddenIds);
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
@@ -324,48 +346,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }, 2400);
   }, []);
 
-  const commitTrayLine = useCallback((part: Part, addQty: number, thumb?: string) => {
-    const qty = Math.max(1, addQty);
-    setLines((current) => {
-      const existing = current.find((line) => line.part.id === part.id);
-      if (existing) {
-        return current.map((line) =>
-          line.part.id === part.id ? { ...line, qty: line.qty + qty } : line,
-        );
-      }
-      return [...current, { part, qty, ...(thumb ? { thumb } : {}) }];
-    });
-    playQuoteAddMotion();
-    flashAddToast(part.name);
-    if (!thumb) {
-      window.requestAnimationFrame(() => {
-        const captured = captureThumb.current(part.id) ?? undefined;
-        if (!captured) {
-          return;
+  const commitTrayLine = useCallback(
+    (part: Part, addQty: number) => {
+      const qty = Math.max(1, addQty);
+      setLines((current) => {
+        const existing = current.find((line) => line.part.id === part.id);
+        if (existing) {
+          return current.map((line) =>
+            line.part.id === part.id ? { ...line, qty: line.qty + qty } : line,
+          );
         }
-        setLines((current) =>
-          current.map((line) =>
-            line.part.id === part.id && !line.thumb ? { ...line, thumb: captured } : line,
-          ),
-        );
+        return [...current, { part, qty }];
       });
-    }
-    void lookupPartLifecycle([part.id])
-      .then((map) => {
-        const lifecycle = map[part.id];
-        if (!lifecycle) {
-          return;
-        }
-        setLines((current) =>
-          current.map((line) =>
-            line.part.id === part.id
-              ? { ...line, part: { ...line.part, lifecycle } }
-              : line,
-          ),
-        );
-      })
-      .catch(() => undefined);
-  }, [flashAddToast]);
+      playQuoteAddMotion();
+      flashAddToast(part.name);
+    },
+    [flashAddToast],
+  );
 
   const tray = useMemo(() => {
     if (!isCustomer) {
@@ -377,7 +374,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         lines={trayLines}
         note={trayNote}
         onNote={setTrayNote}
-        allowManual
         onAdd={(part, qty) => {
           commitTrayLine(part, qty);
         }}
@@ -438,10 +434,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }
 
   function showAll() {
-    setExplode(0);
-    fitExploded();
     setHiddenIds([]);
     setIsolatedId(null);
+    if (explode > 0) {
+      fitExploded();
+    }
   }
 
   function hideSelected() {
@@ -463,8 +460,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!selectedPart) {
       return;
     }
-    setIsolatedId(selectedPart.id);
-    setHiddenIds((current) => current.filter((id) => id !== selectedPart.id));
+    if (isolatedId === selectedPart.id) {
+      setIsolatedId(null);
+    } else {
+      setIsolatedId(selectedPart.id);
+      setHiddenIds((current) => current.filter((id) => id !== selectedPart.id));
+    }
     if (shouldAutoDismissPartSheet("isolate")) {
       setSelectedPart(null);
     }
@@ -552,9 +553,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               setSelectedPart(part);
               setHeld(true);
               window.setTimeout(() => setHeld(false), 240);
-            }}
-            onCaptureReady={(capture) => {
-              captureThumb.current = capture;
             }}
             className={`absolute inset-0 ${view === "list" ? "invisible pointer-events-none" : ""}`}
           />

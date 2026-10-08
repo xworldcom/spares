@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { MAX_QUOTE_ITEM_ID } from "@/lib/quotes";
+import type { PartLifecycleInfo } from "@/types";
 
 export type ManualQuoteLine = {
   id: string;
   name: string;
   qty: number;
+  lifecycle?: PartLifecycleInfo;
 };
 
 function lineId(partNumber: string, description: string) {
@@ -62,9 +65,20 @@ export function ManualQuoteLines({
         <ul className="manual-quote-list">
           {lines.map((line) => (
             <li key={line.id} className="manual-quote-row">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium">{line.name}</p>
-                <p className="spares-muted truncate font-mono text-xs">{line.id}</p>
+              <div className="min-w-0 flex-[1_1_11rem]">
+                <p
+                  className="line-clamp-2 text-[15px] leading-snug font-medium"
+                  title={line.name}
+                  data-tray-line-name=""
+                >
+                  {line.name}
+                </p>
+                {line.name !== line.id ? (
+                  <p className="spares-muted truncate font-mono text-xs" title={line.id}>
+                    {line.id}
+                  </p>
+                ) : null}
+                <PartLifecycleNotice lifecycle={line.lifecycle} compact />
               </div>
               <div className="flex items-center gap-2">
                 <button
