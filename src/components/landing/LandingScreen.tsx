@@ -16,6 +16,7 @@ export function LandingScreen({
   authErrorCode = null,
   deniedTenantId = null,
   showMarketing = false,
+  signedOut = false,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
@@ -23,6 +24,7 @@ export function LandingScreen({
   authErrorCode?: string | null;
   deniedTenantId?: string | null;
   showMarketing?: boolean;
+  signedOut?: boolean;
 }) {
   const [entered, setEntered] = useState(false);
 
@@ -55,6 +57,7 @@ export function LandingScreen({
               passwordLoginEnabled={passwordLoginEnabled}
               authErrorCode={authErrorCode}
               deniedTenantId={deniedTenantId}
+              signedOut={signedOut}
             />
           </div>
         </div>

@@ -1,16 +1,25 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { getMe, login as loginRequest, logout as logoutRequest } from "@/lib/api/auth";
 import { ApiError, errorMessage } from "@/lib/api/errors";
 import type { PublicUser } from "@/lib/api/types";
+import {
+  loginHrefForSignedOut,
+  onUnauthorized,
+  PUBLIC_SIGNED_OUT_PATHS,
+} from "@/lib/api/unauthorized";
+
+const REVALIDATE_MIN_MS = 3000;
 
 type AuthStatus = "loading" | "signed-in" | "signed-out" | "unavailable";
 
@@ -25,10 +34,33 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>("loading");
-  const [user, setUser] = useState<PublicUser | null>(null);
+function initialStatus(initialUser: PublicUser | null | undefined): AuthStatus {
+  if (initialUser === undefined) {
+    return "loading";
+  }
+  return initialUser ? "signed-in" : "signed-out";
+}
+
+/**
+ * `initialUser`: the server already resolved the session cookie for this document request
+ * (`null` = confirmed signed out, `undefined` = unknown, ask `/api/auth/me`).
+ */
+export function AuthProvider({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser?: PublicUser | null;
+}) {
+  const router = useRouter();
+  const [status, setStatus] = useState<AuthStatus>(() => initialStatus(initialUser));
+  const [user, setUser] = useState<PublicUser | null>(initialUser ?? null);
   const [error, setError] = useState<string | null>(null);
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+  const lastCheckRef = useRef(0);
 
   const applyUser = useCallback((next: PublicUser | null) => {
     setUser(next);
@@ -59,6 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applyUnavailable, applyUser, status]);
 
   useEffect(() => {
+    if (initialUser !== undefined) {
+      return;
+    }
     let cancelled = false;
     getMe()
       .then((next) => {
@@ -74,7 +109,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [applyUnavailable, applyUser]);
+  }, [applyUnavailable, applyUser, initialUser]);
+
+  const sessionLost = useCallback(() => {
+    setUser(null);
+    setError(null);
+    setStatus("signed-out");
+    const { pathname, search } = window.location;
+    if (PUBLIC_SIGNED_OUT_PATHS.has(pathname)) {
+      return;
+    }
+    router.replace(loginHrefForSignedOut(`${pathname}${search}`));
+  }, [router]);
+
+  const verifySession = useCallback(
+    async (force = false) => {
+      if (statusRef.current !== "signed-in") {
+        return;
+      }
+      const now = Date.now();
+      if (!force && now - lastCheckRef.current < REVALIDATE_MIN_MS) {
+        return;
+      }
+      lastCheckRef.current = now;
+      try {
+        const next = await getMe();
+        if (!next) {
+          sessionLost();
+        }
+      } catch {
+        // Offline or server blip: keep the current screen.
+      }
+    },
+    [sessionLost],
+  );
+
+  useEffect(() => {
+    // Any API 401 means the cookie is gone or revoked (e.g. signed out on another device).
+    // Confirm with /me so a stale in-flight request cannot sign out a fresh login.
+    const stop = onUnauthorized(() => {
+      void verifySession(true);
+    });
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void verifySession();
+      }
+    }
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        void verifySession(true);
+      }
+    }
+    function onFocus() {
+      void verifySession();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [verifySession]);
 
   const login = useCallback(async (email: string, password: string) => {
     const next = await loginRequest(email, password);

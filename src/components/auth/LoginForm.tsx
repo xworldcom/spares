@@ -24,6 +24,7 @@ export function LoginForm({
   passwordLoginEnabled = true,
   authErrorCode = null,
   deniedTenantId = null,
+  signedOut = false,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
@@ -31,6 +32,8 @@ export function LoginForm({
   authErrorCode?: string | null;
   /** Entra tenant id from a denied Microsoft sign-in, for the person to hand to the host admin. */
   deniedTenantId?: string | null;
+  /** Landed here after a 401 — say so instead of a bare form. */
+  signedOut?: boolean;
 }) {
   const { login, status, user } = useAuth();
   const router = useRouter();
@@ -99,6 +102,11 @@ export function LoginForm({
         void handleSubmit();
       }}
     >
+      {signedOut ? (
+        <p className="login-signed-out-notice text-sm text-[#e8c27a]" role="status">
+          You were signed out. Sign in to continue.
+        </p>
+      ) : null}
       {!passwordLoginEnabled && !microsoftSignInEnabled ? (
         <p className="text-sm text-[#f0b4b0]" role="alert">
           {PASSWORD_LOGIN_UNAVAILABLE_MESSAGE}

@@ -34,7 +34,11 @@ export async function clearSessionCookie() {
   store.set(SESSION_COOKIE, "", sessionCookieOptions(0));
 }
 
-export async function getCurrentUser(): Promise<PublicUser | null> {
+async function resolveSessionUser({
+  refreshCookie,
+}: {
+  refreshCookie: boolean;
+}): Promise<PublicUser | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) {
@@ -59,10 +63,11 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
   const tenantId = effectiveStaffTenantId(user) ?? undefined;
   const stamp = user.sessionStamp ?? 0;
   if (
-    !session.email ||
-    session.email !== user.email ||
-    session.userId !== user.id ||
-    session.tenantId !== tenantId
+    refreshCookie &&
+    (!session.email ||
+      session.email !== user.email ||
+      session.userId !== user.id ||
+      session.tenantId !== tenantId)
   ) {
     await setSessionCookie(user.id, user.email, tenantId, stamp);
   }
@@ -76,6 +81,15 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     return toPublicUser(user, sites, customers, { platformOwner, tenantId });
   }
   return toPublicUser(user, [], [], { platformOwner, tenantId });
+}
+
+export function getCurrentUser(): Promise<PublicUser | null> {
+  return resolveSessionUser({ refreshCookie: true });
+}
+
+/** Server Components cannot set cookies — same lookup, no cookie refresh. */
+export function getCurrentUserReadOnly(): Promise<PublicUser | null> {
+  return resolveSessionUser({ refreshCookie: false });
 }
 
 export async function requireUser() {
