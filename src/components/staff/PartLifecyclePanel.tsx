@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import type { PartLifecycleStatus } from "@/types";
 import {
   bulkSaveStaffPartLifecycle,
@@ -36,6 +37,7 @@ export function PartLifecyclePanel() {
   const [status, setStatus] = useState<PartLifecycleStatus | "all">("all");
   const [machineId, setMachineId] = useState("");
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const [parts, setParts] = useState<StaffPartCatalogRow[]>([]);
   const [machines, setMachines] = useState<
     Array<{ id: string; name: string; siteId?: string }>
@@ -55,7 +57,7 @@ export function PartLifecyclePanel() {
       const data = await fetchStaffPartLifecycle({
         status,
         machineId: machineId || undefined,
-        q: query.trim() || undefined,
+        q: debouncedQuery || undefined,
       });
       setParts(data.parts);
       setMachines(data.machines);
@@ -65,7 +67,7 @@ export function PartLifecyclePanel() {
     } finally {
       setLoading(false);
     }
-  }, [status, machineId, query]);
+  }, [status, machineId, debouncedQuery]);
 
   useEffect(() => {
     void load();
@@ -204,6 +206,7 @@ export function PartLifecyclePanel() {
             key={option.value}
             type="button"
             onClick={() => setStatus(option.value)}
+            aria-pressed={status === option.value}
             className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
               status === option.value ? "btn-primary" : "btn-soft"
             }`}
