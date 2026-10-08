@@ -9,6 +9,7 @@ import {
   type RecordAccountActivityInput,
 } from "./activity-log-types.ts";
 import { isActivityLogEnabled } from "./activity-log-public.ts";
+import { updateJsonDocument } from "./json-document.ts";
 import { getPersistence, PersistenceReadError } from "./persistence.ts";
 
 export const ACTIVITY_LOG_SCHEMA_VERSION = 1;
@@ -297,9 +298,18 @@ export async function recordAccountActivity(
 
   try {
     await withLock(async () => {
-      const document = await readDocument();
-      document.events.push(event);
-      await getPersistence().writeActivityJson(JSON.stringify(document, null, 2));
+      await updateJsonDocument("activity", (raw) => {
+        let document = emptyDocument();
+        if (raw !== null) {
+          const parsed = parseActivityDocument(raw);
+          if (!parsed) {
+            throw new PersistenceReadError("activity.json");
+          }
+          document = parsed;
+        }
+        document.events.push(event);
+        return { json: JSON.stringify(document, null, 2), result: undefined };
+      });
     });
     return event;
   } catch (cause) {

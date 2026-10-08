@@ -1,8 +1,8 @@
 import { requireTicketAccess } from "@/lib/care-http";
 import { handleChatAttachmentCompletePost } from "@/lib/chat-attachment-http";
-import { isErrorResponse, readJson } from "@/lib/http";
+import { isErrorResponse, readJson, withCatalogConflict } from "@/lib/http";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -22,3 +22,5 @@ export async function POST(
   }
   return handleChatAttachmentCompletePost(request, body);
 }
+
+export const POST = withCatalogConflict(handlePOST);

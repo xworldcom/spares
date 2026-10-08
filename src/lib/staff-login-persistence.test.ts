@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, it } from "node:test";
 import { hashPassword, verifyPassword } from "./auth/password.ts";
 import {
+  contentVersion,
   createMemoryPersistence,
   PersistenceReadError,
   setPersistenceForTests,
@@ -49,16 +50,23 @@ function harness(): Harness {
     // Pretend to be the remote backend so process memory is never trusted.
     kind: "blob",
     async readDatabaseJson() {
-      if (failReads > 0) {
-        failReads -= 1;
-        throw new PersistenceReadError("spares/db.json");
+      return (await this.readVersioned("database")).json;
+    },
+    async readVersioned(doc) {
+      if (doc === "database") {
+        if (failReads > 0) {
+          failReads -= 1;
+          throw new PersistenceReadError("spares/db.json");
+        }
+        if (staleJson !== null) {
+          const stale = staleJson;
+          staleJson = null;
+          // A stale read carries the version of what it shows, so a write built from it
+          // is rejected by the conditional write instead of silently replacing newer data.
+          return { json: stale, version: contentVersion(stale) };
+        }
       }
-      if (staleJson !== null) {
-        const stale = staleJson;
-        staleJson = null;
-        return stale;
-      }
-      return inner.readDatabaseJson();
+      return inner.readVersioned(doc);
     },
   };
   return {

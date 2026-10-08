@@ -1,6 +1,6 @@
 import { isTicketStatus } from "@/lib/care";
 import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";
@@ -38,7 +38,7 @@ export async function GET(
   });
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -81,3 +81,5 @@ export async function PATCH(
     ticket: await publicTicketForUser(next, access.user, access.machine.name),
   });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

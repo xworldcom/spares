@@ -1,5 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   createCustomerAccount,
@@ -27,7 +27,7 @@ type CreateBody = {
   name?: unknown;
 };
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -56,3 +56,5 @@ export async function POST(request: Request) {
   });
   return json({ account: { ...created.account, siteCount: 0 } }, 201);
 }
+
+export const POST = withCatalogConflict(handlePOST);

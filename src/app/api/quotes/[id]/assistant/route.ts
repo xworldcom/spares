@@ -1,5 +1,5 @@
 import { machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { setQuoteAssistantPaused } from "@/lib/store";
 
@@ -7,7 +7,7 @@ type PatchBody = {
   paused?: unknown;
 };
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -37,3 +37,5 @@ export async function PATCH(
     quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)),
   });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

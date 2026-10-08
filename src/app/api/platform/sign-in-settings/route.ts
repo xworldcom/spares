@@ -1,6 +1,6 @@
 import { getSignInOptions } from "@/lib/auth/password-login.server";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { updatePlatformSignInSettings } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function GET() {
   });
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
@@ -46,3 +46,5 @@ export async function PATCH(request: Request) {
     microsoftSignInEnabled: options.microsoftSignInEnabled,
   });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

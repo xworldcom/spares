@@ -51,7 +51,10 @@ import {
   filesDir,
   getPersistence,
   safeStoredFileName,
+  type ReadMode,
 } from "./persistence.ts";
+import { CatalogWriteConflictError } from "./catalog-conflict.ts";
+import { rebaseCatalog } from "./catalog-rebase.ts";
 import {
   bumpChatWatch,
   chatWatchChannel,
@@ -149,6 +152,7 @@ import { normalizeAssistantSettings } from "./assistant/settings.ts";
 import { resolveAssistantModel } from "./assistant/models.ts";
 
 export { filesDir, getDataDir } from "./persistence.ts";
+export { CatalogWriteConflictError } from "./catalog-conflict.ts";
 export type { PlatformSignInSettings, PlatformSettingsDocument };
 
 export const SEED_STAFF = {
@@ -850,7 +854,12 @@ function isHostStaffEmail(email: string) {
   return normalized === "staff@spares.local";
 }
 
-/** Never let a stale heal drop satellite tenants or re-bind staff to the host tenant. */
+/**
+ * Fallback merge for a catalog object whose provenance is unknown (see
+ * `applyMutationOnLatest`): the stored row wins field by field, and satellite staff are
+ * never re-bound to the host tenant. Real heals do not use this — they are recomputed on
+ * the freshest blob, so there is no stale heal result to reconcile.
+ */
 function mergeStaffUserOnHeal(healed: StoredUser, latest: StoredUser): StoredUser {
   if (latest.deletedAt) {
     return latest;
@@ -1220,38 +1229,71 @@ async function stabilizeCatalogUsers(db: Database): Promise<Database> {
   );
 }
 
-async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Database> {
-  const db = await readDatabase();
-  const next = ensureOrg(
-    await withFixtureMachines(await stabilizeCatalogUsers(db)),
-  );
-  if (options?.restoreFiles && isSeedAllowed()) {
+async function healCatalogStep(db: Database, restoreFiles: boolean): Promise<Database> {
+  const next = ensureOrg(await withFixtureMachines(await stabilizeCatalogUsers(db)));
+  if (restoreFiles && isSeedAllowed()) {
     await restoreMissingFixtureFiles(
       next.machines,
       async (name) => Boolean((await readModelFile(name))?.length),
       persistFile,
     );
   }
-  const kept = await overlayPersistedCare(healDemoPartLifecycle(next));
-  const latestForHeal = (await loadPersistedSnapshot())?.db ?? db;
-  if (
-    catalogChanged(db, kept) &&
-    (catalogHealWouldPersistChange(latestForHeal, kept) ||
-      catalogHealWouldPersistChange(db, kept))
-  ) {
-    await writeCatalogHeal(kept);
-    return kept;
-  }
-  if ((kept.partLifecycle?.length ?? 0) !== (db.partLifecycle?.length ?? 0)) {
-    await writeDatabase(kept);
-    memory = kept;
-    return kept;
-  }
-  memory = kept;
-  return kept;
+  return await overlayPersistedCare(healDemoPartLifecycle(next));
 }
 
-type LoadedDatabase = { db: Database; numbersAssigned: boolean };
+function catalogNeedsWrite(before: Database, after: Database) {
+  return (
+    catalogChanged(before, after) ||
+    (after.partLifecycle?.length ?? 0) !== (before.partLifecycle?.length ?? 0)
+  );
+}
+
+async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Database> {
+  const db = await readDatabase();
+  const kept = await healCatalogStep(db, Boolean(options?.restoreFiles));
+  if (!catalogNeedsWrite(db, kept)) {
+    memory = stampSnapshot(kept, snapshotOf(db));
+    return memory;
+  }
+  // Recompute on the freshest blob instead of writing (or merging) this stale result.
+  return await commitCatalog(async (latest) => {
+    if (!latest.db) {
+      return { db: kept, write: true };
+    }
+    const again = await healCatalogStep(latest.db, false);
+    return { db: again, write: catalogNeedsWrite(latest.db, again) };
+  });
+}
+
+/** The exact stored text a catalog object was read from. Spread copies keep it. */
+type SnapshotBase = { dbJson: string | null; careJson: string | null };
+
+type LoadedDatabase = { db: Database; numbersAssigned: boolean; base?: SnapshotBase };
+
+const SNAPSHOT_BASE = Symbol("catalogSnapshotBase");
+
+/**
+ * Remember which stored document a catalog object was derived from. The symbol key is
+ * enumerable, so `{ ...db, users }` carries it into the object a mutation hands back to
+ * a write helper — that is what lets the write re-apply only the mutation's own changes
+ * on top of whatever is stored by then. JSON.stringify ignores it.
+ */
+function stampSnapshot(db: Database, base: SnapshotBase | undefined): Database {
+  if (!base) {
+    return db;
+  }
+  return Object.defineProperty({ ...db }, SNAPSHOT_BASE, {
+    value: base,
+    enumerable: true,
+    configurable: true,
+  });
+}
+
+function snapshotOf(db: Database): SnapshotBase | undefined {
+  return (db as { [SNAPSHOT_BASE]?: SnapshotBase })[SNAPSHOT_BASE];
+}
+
+const CATALOG_WRITE_ATTEMPTS = 8;
 
 /**
  * The stored catalog could not be understood. Never reseed on this — an unreadable or
@@ -1304,17 +1346,104 @@ function parseDatabase(raw: string): LoadedDatabase | null {
   }
 }
 
+/** The freshest stored catalog plus the versions a conditional write must present. */
+type LatestCatalog = {
+  loaded: LoadedDatabase | null;
+  /** Care collections merged in, exactly as a request's own read sees them. */
+  db: Database | null;
+  dbVersion: string | null;
+  careVersion: string | null;
+  base: SnapshotBase;
+};
+
+function overlayStoredCare(db: Database, careRaw: string | null): Database {
+  const stored = parseCareJson(careRaw) ?? emptyCare();
+  return applyCare(db, unionCare(careCollections(db), stored));
+}
+
 /** Throws {@link CatalogUnreadableError} rather than treating bad JSON as an empty store. */
-async function loadPersistedSnapshot(): Promise<LoadedDatabase | null> {
-  const raw = await getPersistence().readDatabaseJson();
-  if (raw === null) {
-    return null;
+async function readLatestCatalog(mode: ReadMode = "commit"): Promise<LatestCatalog> {
+  const persistence = getPersistence();
+  const [dbRead, careRead] = await Promise.all([
+    persistence.readVersioned("database", mode),
+    persistence.readVersioned("care", mode),
+  ]);
+  const base: SnapshotBase = { dbJson: dbRead.json, careJson: careRead.json };
+  const common = { dbVersion: dbRead.version, careVersion: careRead.version, base };
+  if (dbRead.json === null) {
+    return { loaded: null, db: null, ...common };
   }
-  const loaded = parseDatabase(raw);
-  if (!loaded) {
+  const parsed = parseDatabase(dbRead.json);
+  if (!parsed) {
     throw new CatalogUnreadableError();
   }
-  return loaded;
+  const loaded: LoadedDatabase = { ...parsed, base };
+  return { loaded, db: overlayStoredCare(parsed.db, careRead.json), ...common };
+}
+
+async function loadPersistedSnapshot(): Promise<LoadedDatabase | null> {
+  return (await readLatestCatalog("snapshot")).loaded;
+}
+
+function materializeBase(base: SnapshotBase): Database | null {
+  if (base.dbJson === null) {
+    return null;
+  }
+  const parsed = parseDatabase(base.dbJson);
+  return parsed ? overlayStoredCare(parsed.db, base.careJson) : null;
+}
+
+/**
+ * Atomic read-modify-write of db.json + care.json.
+ *
+ * `build` receives the freshest stored catalog and returns what to persist, so the change
+ * is always computed on top of the latest blob rather than merged onto it afterwards. The
+ * write is conditional on the versions that were read; if another instance wrote first the
+ * whole step re-runs on the new blob (bounded), so neither write is lost. Care is written
+ * before the catalog and both are idempotent under re-application, so a retry after a
+ * half-applied attempt converges.
+ */
+async function commitCatalog(
+  build: (latest: LatestCatalog) => Promise<{ db: Database; write: boolean }>,
+): Promise<Database> {
+  const persistence = getPersistence();
+  for (let attempt = 1; attempt <= CATALOG_WRITE_ATTEMPTS; attempt++) {
+    const latest = await readLatestCatalog();
+    const built = await build(latest);
+    const normalized = applyCare(
+      clampSatelliteStaffTenants(built.db),
+      careCollections(built.db),
+    );
+    const dbJson = JSON.stringify(normalized, null, 2);
+    const careJson = JSON.stringify(careCollections(normalized), null, 2);
+    if (!built.write || (dbJson === latest.base.dbJson && careJson === latest.base.careJson)) {
+      memory = stampSnapshot(built.db, latest.base);
+      return memory;
+    }
+    if (careJson !== latest.base.careJson) {
+      const careWrite = await persistence.writeIfVersion("care", careJson, latest.careVersion);
+      if (!careWrite.ok) {
+        await conflictBackoff(attempt);
+        continue;
+      }
+    }
+    if (dbJson !== latest.base.dbJson) {
+      const dbWrite = await persistence.writeIfVersion("database", dbJson, latest.dbVersion);
+      if (!dbWrite.ok) {
+        await conflictBackoff(attempt);
+        continue;
+      }
+    }
+    const result = stampSnapshot(normalized, { dbJson, careJson });
+    memory = result;
+    return result;
+  }
+  throw new CatalogWriteConflictError();
+}
+
+function conflictBackoff(attempt: number) {
+  const ms = Math.min(250, 8 * 2 ** attempt) * (0.5 + Math.random());
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function readDatabase(): Promise<Database> {
@@ -1338,8 +1467,10 @@ async function readDatabase(): Promise<Database> {
     if (appeared) {
       return await healLoadedDatabase(appeared);
     }
-    await writeDatabase(seeded);
-    return seeded;
+    // Create-only: if an instance wins the race to the first write, theirs stands.
+    return await commitCatalog(async (latest) =>
+      latest.db ? { db: latest.db, write: false } : { db: seeded, write: true },
+    );
   }
   return await healLoadedDatabase(loaded);
 }
@@ -1355,7 +1486,10 @@ async function runDemoTenantMigration(
   return migrated.changed ? { db: migrated.db, changed: true } : { db, changed: false };
 }
 
-async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
+/** One heal pass over a snapshot. Pure with respect to storage: callers decide whether to write. */
+async function healSnapshot(
+  loaded: LoadedDatabase,
+): Promise<{ db: Database; changed: boolean }> {
   const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
   const stabilized = await overlayPersistedCare(
     ensureOrg(
@@ -1372,40 +1506,45 @@ async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
     (next.partLifecycle?.length ?? 0) !== (loaded.db.partLifecycle?.length ?? 0);
   const migrationsChanged =
     next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1;
-  const latestBeforeWrite = (await loadPersistedSnapshot())?.db ?? loaded.db;
-  if (
-    catalogHealWouldPersistChange(latestBeforeWrite, next) ||
+  const changed =
+    next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
     usersRemapped ||
     lifecycleChanged ||
     migrationsChanged ||
     demoStateRestored ||
-    staffTenantAssignmentsChanged(latestBeforeWrite.users, next.users) ||
-    (next.tenants?.length ?? 0) !== (latestBeforeWrite.tenants?.length ?? 0) ||
-    (next.sites?.length ?? 0) !== (latestBeforeWrite.sites?.length ?? 0) ||
-    (next.customers?.length ?? 0) !== (latestBeforeWrite.customers?.length ?? 0) ||
-    (next.schemaVersion ?? 1) !== (latestBeforeWrite.schemaVersion ?? 1) ||
-    inboundLocalPartsChanged(latestBeforeWrite.tenants, next.tenants)
-  ) {
-    await writeCatalogHeal(next);
-    return next;
+    staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
+    (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
+    (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
+    (next.customers?.length ?? 0) !== (loaded.db.customers?.length ?? 0) ||
+    (next.schemaVersion ?? 1) !== (loaded.db.schemaVersion ?? 1) ||
+    inboundLocalPartsChanged(loaded.db.tenants, next.tenants);
+  return { db: next, changed };
+}
+
+/**
+ * Heals run as a read-modify-write on the freshest blob: when the first pass finds work,
+ * the heal is recomputed from whatever is stored at write time and written conditionally.
+ * A heal result is therefore never merged onto a newer copy, so a field it sets (the demo
+ * buyer's grant) cannot be overwritten by the snapshot it was computed from.
+ */
+async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
+  const first = await healSnapshot(loaded);
+  if (!first.changed) {
+    memory = stampSnapshot(first.db, loaded.base);
+    return memory;
   }
-  memory = next;
-  return next;
+  return await commitCatalog(async (latest) => {
+    if (!latest.loaded || !latest.db) {
+      return { db: first.db, write: true };
+    }
+    const again = await healSnapshot({ ...latest.loaded, db: latest.db });
+    return { db: again.db, write: again.changed };
+  });
 }
 
-async function writeCareStore(care: CareStore) {
-  await getPersistence().writeCareJson(JSON.stringify(care, null, 2));
-}
-
-async function persistDatabase(next: Database) {
-  const normalized = applyCare(clampSatelliteStaffTenants(next), careCollections(next));
-  memory = normalized;
-  await Promise.all([
-    getPersistence().writeDatabaseJson(JSON.stringify(normalized, null, 2)),
-    writeCareStore(careCollections(normalized)),
-  ]);
-}
+/** Staff-login create/rename lost to a login another writer already holds. */
+class LoginConflict extends Error {}
 
 function mergeOrgTombstones(
   latest: OrgTombstones | undefined,
@@ -1423,15 +1562,12 @@ function mergeOrgTombstones(
 }
 
 /**
- * Keep people, hosts, and the org tree that landed in the store after this request read
- * it. Without this, an unrelated write (a machine view, a quote, a Preview smoke renaming
- * a host) silently dropped every login created since its own snapshot.
+ * Fallback for a catalog object with no known provenance (a fresh seed, a hand-built
+ * test fixture): rows another writer added are kept, the writer's rows win. Writes that
+ * come from a normal read never take this path — they are re-applied with
+ * {@link rebaseCatalog} against the base they were read from.
  */
-async function mergeIdentityWithLatest(next: Database): Promise<Database> {
-  const latest = (await loadPersistedSnapshot())?.db;
-  if (!latest) {
-    return next;
-  }
+function mergeIdentityWithLatest(next: Database, latest: Database): Database {
   return {
     ...next,
     tenants: mergeRowsForWrite(latest.tenants ?? [], next.tenants ?? []),
@@ -1444,164 +1580,130 @@ async function mergeIdentityWithLatest(next: Database): Promise<Database> {
   };
 }
 
-async function writeDatabase(next: Database) {
-  await persistDatabase(await mergeIdentityWithLatest(next));
+/**
+ * Re-apply a mutation on the freshest stored catalog. When `next` descends from a read
+ * (the normal case) only what the mutation changed relative to that read is applied, so a
+ * field another instance or a heal wrote since then is kept.
+ */
+function applyMutationOnLatest(
+  next: Database,
+  latest: LatestCatalog,
+  fallback: "identity" | "org",
+): Database {
+  if (!latest.db) {
+    return next;
+  }
+  const base = snapshotOf(next);
+  if (!base) {
+    return fallback === "org"
+      ? clampSatelliteStaffTenants(mergeOrgCrudFromLatest(next, latest.db))
+      : mergeIdentityWithLatest(next, latest.db);
+  }
+  if (base.dbJson === latest.base.dbJson && base.careJson === latest.base.careJson) {
+    return next;
+  }
+  const baseDb = materializeBase(base);
+  return baseDb ? renumberAddedRows(baseDb, next, rebaseCatalog(baseDb, next, latest.db)) : next;
+}
+
+/**
+ * Display numbers are `max + 1` of the snapshot a request read. When another instance
+ * created a quote or ticket meanwhile, a row this request added can now share its number;
+ * give the added row the next free number on the freshest list (ids were always unique).
+ */
+function renumberAddedRows(baseDb: Database, next: Database, merged: Database): Database {
+  const renumber = <T extends { id: string; number?: number }>(
+    baseRows: T[],
+    nextRows: T[],
+    mergedRows: T[],
+    nextNumber: (rows: T[]) => number,
+  ) => {
+    const baseIds = new Set(baseRows.map((row) => row.id));
+    const mineIds = new Set(nextRows.filter((row) => !baseIds.has(row.id)).map((row) => row.id));
+    const others = mergedRows.filter((row) => !mineIds.has(row.id));
+    const taken = new Set(others.map((row) => row.number));
+    const mine = mergedRows.filter((row) => mineIds.has(row.id));
+    if (!mine.some((row) => taken.has(row.number))) {
+      return mergedRows;
+    }
+    const placed = new Map<string, T>();
+    const settled = [...others];
+    for (const row of mine) {
+      const fresh = taken.has(row.number)
+        ? { ...row, number: nextNumber(settled) }
+        : row;
+      settled.push(fresh);
+      taken.add(fresh.number);
+      placed.set(row.id, fresh);
+    }
+    return mergedRows.map((row) => placed.get(row.id) ?? row);
+  };
+  const quotes = renumber(baseDb.quotes, next.quotes, merged.quotes, nextQuoteNumber);
+  const tickets = renumber(
+    baseDb.tickets ?? [],
+    next.tickets ?? [],
+    merged.tickets ?? [],
+    nextTicketNumber,
+  );
+  return quotes === merged.quotes && tickets === merged.tickets
+    ? merged
+    : { ...merged, quotes, tickets };
+}
+
+async function writeDatabase(next: Database): Promise<Database> {
+  return commitCatalog(async (latest) => ({
+    db: applyMutationOnLatest(next, latest, "identity"),
+    write: true,
+  }));
 }
 
 type LoginWriteResult = { ok: true } | { error: "email-taken" };
+
+async function writeWithLoginGuard(
+  next: Database,
+  login: { id: string; email: string } | undefined,
+  fallback: "identity" | "org",
+): Promise<LoginWriteResult> {
+  try {
+    await commitCatalog(async (latest) => {
+      const merged = applyMutationOnLatest(next, latest, fallback);
+      if (login && loginRenameConflicts(latest.db?.users, merged.users, login)) {
+        throw new LoginConflict();
+      }
+      return { db: merged, write: true };
+    });
+    return { ok: true };
+  } catch (cause) {
+    if (cause instanceof LoginConflict) {
+      return { error: "email-taken" };
+    }
+    throw cause;
+  }
+}
 
 /**
  * Creating or renaming a login has to lose to a concurrent writer that already used the
  * address: two live rows with one email make `findUserByEmail` ambiguous and sign-in
  * fails closed for both people.
  */
-async function writeDatabaseWithLogin(
+function writeDatabaseWithLogin(
   next: Database,
   login: { id: string; email: string },
 ): Promise<LoginWriteResult> {
-  const merged = await mergeIdentityWithLatest(next);
-  const latest = (await loadPersistedSnapshot())?.db;
-  if (loginRenameConflicts(latest?.users, merged.users, login)) {
-    return { error: "email-taken" };
-  }
-  await persistDatabase(merged);
-  return { ok: true };
+  return writeWithLoginGuard(next, login, "identity");
 }
 
-/** Org creates race catalog heals — merge with latest blob before persisting. */
-async function writeDatabaseWithOrgMerge(
+/** Org creates race catalog heals — re-apply on the latest blob before persisting. */
+function writeDatabaseWithOrgMerge(
   next: Database,
   login?: { id: string; email: string },
 ): Promise<LoginWriteResult> {
-  let merged = clampSatelliteStaffTenants(next);
-  for (let pass = 0; pass < 2; pass++) {
-    const latest = (await loadPersistedSnapshot())?.db;
-    if (!latest) {
-      break;
-    }
-    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, latest));
-  }
-  const latest = (await loadPersistedSnapshot())?.db;
-  if (login && loginRenameConflicts(latest?.users, merged.users, login)) {
-    return { error: "email-taken" };
-  }
-  await persistDatabase(merged);
-  return { ok: true };
+  return writeWithLoginGuard(clampSatelliteStaffTenants(next), login, "org");
 }
 
-/** Org deletes race catalog heals on Preview — re-merge with the blob like creates do. */
+/** Org deletes race catalog heals on Preview — re-apply on the latest blob like creates do. */
 async function writeDatabaseWithOrgDelete(next: Database) {
-  let merged = clampSatelliteStaffTenants(next);
-  for (let pass = 0; pass < 2; pass++) {
-    const latest = (await loadPersistedSnapshot())?.db;
-    if (!latest) {
-      break;
-    }
-    merged = clampSatelliteStaffTenants(mergeOrgCrudFromLatest(merged, latest));
-  }
-  await persistDatabase(merged);
-}
-
-function quoteIdsFromList(quotes: StoredQuote[]): Set<string> {
-  return new Set(quotes.map((quote) => quote.id));
-}
-
-/** True when a heal write would add machines, lifecycle, migrations, or org rows not on the blob. */
-function catalogHealWouldPersistChange(baseline: Database, healed: Database): boolean {
-  if (baseline.machines.length !== healed.machines.length) {
-    return true;
-  }
-  const baselineMachineIds = new Set(baseline.machines.map((machine) => machine.id));
-  if (healed.machines.some((machine) => !baselineMachineIds.has(machine.id))) {
-    return true;
-  }
-  if ((healed.partLifecycle?.length ?? 0) !== (baseline.partLifecycle?.length ?? 0)) {
-    return true;
-  }
-  if (healed.dataMigrations?.demoTenantV1 !== baseline.dataMigrations?.demoTenantV1) {
-    return true;
-  }
-  if ((healed.schemaVersion ?? 1) !== (baseline.schemaVersion ?? 1)) {
-    return true;
-  }
-  if ((healed.tenants?.length ?? 0) !== (baseline.tenants?.length ?? 0)) {
-    return true;
-  }
-  if ((healed.sites?.length ?? 0) !== (baseline.sites?.length ?? 0)) {
-    return true;
-  }
-  if ((healed.customers?.length ?? 0) !== (baseline.customers?.length ?? 0)) {
-    return true;
-  }
-  if (staffTenantAssignmentsChanged(baseline.users, healed.users)) {
-    return true;
-  }
-  if (inboundLocalPartsChanged(baseline.tenants, healed.tenants)) {
-    return true;
-  }
-  for (const user of healed.users) {
-    const before = baseline.users.find((row) => row.id === user.id);
-    if (!before) {
-      return true;
-    }
-    const beforeMachines = new Set(before.machineIds ?? []);
-    const afterMachines = new Set(user.machineIds ?? []);
-    if (afterMachines.size > beforeMachines.size) {
-      return true;
-    }
-    for (const id of afterMachines) {
-      if (!beforeMachines.has(id)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function latestQuotesPreserved(latest: StoredQuote[], kept: StoredQuote[]): boolean {
-  const keptIds = quoteIdsFromList(kept);
-  return latest.every((quote) => keptIds.has(quote.id));
-}
-
-async function rebaseCatalogHealIntent(intent: Database): Promise<Database> {
-  const snap = await loadPersistedSnapshot();
-  const latest = snap?.db ?? intent;
-  let merged = mergeOrgCrudFromLatest(intent, latest);
-  merged = (await runDemoTenantMigration(merged)).db;
-  return await overlayPersistedCare(clampSatelliteStaffTenants(merged));
-}
-
-/** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
-async function writeCatalogHeal(healIntent: Database) {
-  const MAX_ATTEMPTS = 6;
-  let intent = healIntent;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const latestSnap = await loadPersistedSnapshot();
-    const latest = latestSnap?.db ?? intent;
-    const kept = await rebaseCatalogHealIntent(intent);
-
-    if (!latestQuotesPreserved(latest.quotes, kept.quotes)) {
-      intent = kept;
-      continue;
-    }
-
-    if (!catalogHealWouldPersistChange(latest, kept)) {
-      memory = kept;
-      return;
-    }
-
-    memory = kept;
-    await Promise.all([
-      getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2)),
-      writeCareStore(careCollections(kept)),
-    ]);
-
-    const after = await loadPersistedSnapshot();
-    if (after && latestQuotesPreserved(after.db.quotes, kept.quotes)) {
-      return;
-    }
-    intent = kept;
-  }
+  await writeWithLoginGuard(clampSatelliteStaffTenants(next), undefined, "org");
 }
 
 function normalizeEmail(email: string) {
@@ -3287,8 +3389,11 @@ export function resetStoreMemoryForTests() {
 }
 
 /** Test helper: simulate a stale catalog heal racing a persisted org delete. */
-export function writeCatalogHealForTests(staleHeal: Database) {
-  return writeCatalogHeal(staleHeal);
+export async function writeCatalogHealForTests(staleHeal: Database) {
+  await commitCatalog(async (latest) => ({
+    db: applyMutationOnLatest(staleHeal, latest, "org"),
+    write: true,
+  }));
 }
 
 /** Test helper: simulate a warm instance that has users but no machines. */
@@ -3646,8 +3751,8 @@ export function createQuote(
       activities: [activity],
       lastReadAt: { [input.customerId]: now },
     };
-    await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
-    return quote;
+    const committed = await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
+    return committed.quotes.find((row) => row.id === quote.id) ?? quote;
   });
 }
 
@@ -3770,8 +3875,11 @@ export function ensurePreviewQaQuoteFixture(tenantId: string): Promise<EnsurePre
       lastReadAt: { [customer.id]: now },
     };
 
-    await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
-    return { status: "created", quote };
+    const committed = await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
+    return {
+      status: "created",
+      quote: committed.quotes.find((row) => row.id === quote.id) ?? quote,
+    };
   });
 }
 
@@ -4019,12 +4127,12 @@ export function createTicket(
       activities,
       lastReadAt: { [input.actor.id]: now },
     };
-    await writeDatabase({
+    const committed = await writeDatabase({
       ...db,
       ...careCollections(db),
       tickets: [ticket, ...careCollections(db).tickets],
     });
-    return { ticket };
+    return { ticket: committed.tickets?.find((row) => row.id === ticket.id) ?? ticket };
   });
 }
 

@@ -1,6 +1,6 @@
 import { publicTicketForUser, requireTicketAccess, ticketReadReceiptsForStaff } from "@/lib/care-http";
 import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { markTicketRead } from "@/lib/store";
 
@@ -21,7 +21,7 @@ export async function GET(
   return json({ receipts });
 }
 
-export async function PATCH(
+async function handlePATCH(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -41,9 +41,12 @@ export async function PATCH(
   });
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   return PATCH(request, context);
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);
+export const POST = withCatalogConflict(handlePOST);

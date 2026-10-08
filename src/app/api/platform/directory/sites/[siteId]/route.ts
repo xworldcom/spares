@@ -1,10 +1,10 @@
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import { removePlatformSite } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ siteId: string }> },
 ) {
@@ -23,3 +23,5 @@ export async function DELETE(
   }
   return json({ ok: true });
 }
+
+export const DELETE = withCatalogConflict(handleDELETE);

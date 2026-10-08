@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { assertPasswordLoginAllowed } from "@/lib/auth/password-login.server";
 import { isSameOriginRequest } from "@/lib/cors";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { isDemoSeedLoginBlocked } from "@/lib/demo-seed-gate";
 import { isLoginAttemptAllowed, recordFailedLoginAttempt } from "@/lib/rate-limit";
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
   return NextResponse.redirect(new URL("/login", request.url), 303);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const html = wantsDocument(request);
   if (!isSameOriginRequest(request)) {
     return html ? redirectNoQuery("/login") : error("Origin not allowed", 403);
@@ -124,3 +124,5 @@ export async function POST(request: Request) {
   }
   return json({ user: toPublicUser(user, [], [], { tenantId, platformOwner }) });
 }
+
+export const POST = withCatalogConflict(handlePOST);

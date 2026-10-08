@@ -4,7 +4,7 @@ import {
   handleChatAttachmentUploadPost,
   parseUploadJsonBody,
 } from "@/lib/chat-attachment-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 
 export async function GET(
   _request: Request,
@@ -18,7 +18,7 @@ export async function GET(
   return chatUploadAvailability();
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -48,3 +48,5 @@ export async function POST(
     `/api/tickets/${id}/attachments/proxy`,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

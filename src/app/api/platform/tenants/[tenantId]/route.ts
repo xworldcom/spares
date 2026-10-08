@@ -4,7 +4,7 @@ import {
   parseSsoTenantIds,
 } from "@/lib/auth/sso-domain";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { AUTOROUTE_NEEDS_ENROLLMENT_MESSAGE } from "@/lib/platform-tenant-create";
 import { parseDisplayTicketEmail } from "@/lib/care-ticket-email";
@@ -23,7 +23,7 @@ type PatchBody = {
   ticketEmailDisplay?: unknown;
 };
 
-export async function PATCH(request: Request, context: Params) {
+async function handlePATCH(request: Request, context: Params) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
@@ -122,7 +122,7 @@ export async function PATCH(request: Request, context: Params) {
   return json({ tenant: updated.tenant });
 }
 
-export async function DELETE(_request: Request, context: Params) {
+async function handleDELETE(_request: Request, context: Params) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
@@ -154,3 +154,6 @@ export async function DELETE(_request: Request, context: Params) {
   });
   return json({ ok: true });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);
+export const DELETE = withCatalogConflict(handleDELETE);

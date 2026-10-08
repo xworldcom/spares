@@ -1,11 +1,11 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { staffCustomerUsers } from "@/lib/care-http";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import { isSeedAllowed } from "@/lib/production-env";
 import { toPublicQuote } from "@/lib/quotes";
 import { ensurePreviewQaQuoteFixture, getMachine, listMachines } from "@/lib/store";
 
-export async function POST() {
+async function handlePOST() {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -52,3 +52,5 @@ export async function POST() {
     }),
   });
 }
+
+export const POST = withCatalogConflict(handlePOST);

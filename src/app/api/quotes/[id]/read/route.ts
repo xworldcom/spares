@@ -1,10 +1,10 @@
 import { machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
 import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
-import { json } from "@/lib/http";
+import { json, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { markQuoteRead } from "@/lib/store";
 
-export async function PATCH(
+async function handlePATCH(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -24,9 +24,12 @@ export async function PATCH(
   });
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   return PATCH(request, context);
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);
+export const POST = withCatalogConflict(handlePOST);

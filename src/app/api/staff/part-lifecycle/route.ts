@@ -1,5 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import type { PartLifecycleStatus } from "@/lib/part-lifecycle";
 import {
   parsePartLifecycleBulk,
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
 
 type PatchBody = { updates?: unknown; partNumber?: unknown };
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -105,3 +105,5 @@ export async function PATCH(request: Request) {
   const parts = await listTenantPartLifecycleCatalog(tenantId, {});
   return json({ ok: true, parts });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

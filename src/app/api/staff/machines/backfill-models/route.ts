@@ -1,5 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import { isModelFilename } from "@/lib/machines";
 import {
   backfillModelToS3,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/model-storage";
 import { listMachineModelFiles } from "@/lib/store";
 
-export async function POST() {
+async function handlePOST() {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -50,3 +50,5 @@ export async function POST() {
 
   return json({ summary, results });
 }
+
+export const POST = withCatalogConflict(handlePOST);

@@ -1,6 +1,6 @@
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { isAllowedAssistantModel } from "@/lib/assistant/models";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import {
   getPlatformAssistantSettingsFromCatalog,
   updatePlatformAssistantSettings,
@@ -27,7 +27,7 @@ export async function GET() {
   });
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
@@ -54,3 +54,5 @@ export async function PATCH(request: Request) {
     models: ASSISTANT_MODEL_OPTIONS,
   });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

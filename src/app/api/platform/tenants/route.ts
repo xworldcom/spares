@@ -1,6 +1,6 @@
 import { hashPassword } from "@/lib/auth";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import {
   mapCreateTenantStoreError,
   parseCreatePlatformTenantBody,
@@ -20,7 +20,7 @@ export async function GET() {
   return json({ tenants });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
@@ -80,3 +80,5 @@ export async function POST(request: Request) {
 
   return json({ tenant: created.tenant, staffUser }, 201);
 }
+
+export const POST = withCatalogConflict(handlePOST);

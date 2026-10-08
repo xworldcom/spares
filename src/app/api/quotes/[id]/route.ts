@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
 import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
 import {
@@ -71,7 +71,7 @@ export async function GET(
   });
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -232,3 +232,5 @@ export async function PATCH(
 
   return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

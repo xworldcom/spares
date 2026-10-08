@@ -1,7 +1,7 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { rejectDisallowedOrigin } from "@/lib/cors";
-import { json, error } from "@/lib/http";
+import { json, error, withCatalogConflict } from "@/lib/http";
 import {
   blobUploadMaxBytes,
   isVercelRuntime,
@@ -39,7 +39,7 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const originError = rejectDisallowedOrigin(request);
   if (originError) {
     return originError;
@@ -151,3 +151,5 @@ export async function POST(request: Request) {
     return error(message, 400);
   }
 }
+
+export const POST = withCatalogConflict(handlePOST);

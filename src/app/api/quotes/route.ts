@@ -1,7 +1,7 @@
 import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { staffCustomerUsers } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import {
   hydrateQuoteItems,
   parseQuoteItems,
@@ -69,7 +69,7 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
@@ -170,3 +170,5 @@ export async function POST(request: Request) {
 
   return json({ quote: await publicQuoteForUser(created, auth.user, machine.name) }, 201);
 }
+
+export const POST = withCatalogConflict(handlePOST);

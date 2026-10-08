@@ -1,6 +1,6 @@
 import { hashPassword, passwordPolicyError } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { toPublicUser } from "@/lib/access";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { createCustomer, getOrgContext, listCustomers } from "@/lib/store";
@@ -22,7 +22,7 @@ type CreateCustomerBody = {
   companyAccess?: unknown;
 };
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -80,3 +80,5 @@ export async function POST(request: Request) {
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

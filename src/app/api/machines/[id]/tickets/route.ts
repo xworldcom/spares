@@ -6,7 +6,7 @@ import {
   toPublicTicket,
 } from "@/lib/care";
 import { actorOf, requireMachineAccess } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { scheduleAssistantReply } from "@/lib/assistant/schedule";
@@ -37,7 +37,7 @@ export async function GET(
   });
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -101,3 +101,5 @@ export async function POST(
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);
