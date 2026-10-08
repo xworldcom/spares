@@ -8,6 +8,7 @@ import {
   isGhosted,
   meshIsolateState,
   viewerNeedsShowAll,
+  viewerPartsFiltered,
 } from "./assemblyView.ts";
 
 describe("explodeTranslation", () => {
@@ -70,7 +71,11 @@ describe("assembly helpers", () => {
       ghosted: false,
       pickable: false,
     });
+    assert.equal(viewerPartsFiltered([], null), false);
+    assert.equal(viewerPartsFiltered(["A"], null), true);
+    assert.equal(viewerPartsFiltered([], "B"), true);
     assert.equal(viewerNeedsShowAll([]), false);
     assert.equal(viewerNeedsShowAll(["A"]), true);
+    assert.equal(viewerNeedsShowAll([], "B"), true);
   });
 });

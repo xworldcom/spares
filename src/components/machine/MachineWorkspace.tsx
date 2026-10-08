@@ -288,7 +288,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [selectedPart]);
 
-  const needsReset = viewerNeedsShowAll(hiddenIds);
+  const needsReset = viewerNeedsShowAll(hiddenIds, isolatedId);
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
@@ -639,8 +639,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <SelectedPartSheet
             part={selectedPart}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
+            isolatedViewPart={
+              isolatedId
+                ? (joinedParts.find((item) => item.id === isolatedId) ??
+                  (selectedPart?.id === isolatedId ? selectedPart : null))
+                : null
+            }
             onHide={hideSelected}
             onIsolate={isolateSelected}
+            onShowAll={showAll}
             onAdd={isCustomer ? addSelected : undefined}
             onDismiss={() => setSelectedPart(null)}
             showAdd={isCustomer}

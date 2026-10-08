@@ -17,7 +17,8 @@ export const DEMO_TICKET_NUMBER = "218";
 
 export const DEMO_SCRUB_EXTRA_SVH = 1000;
 /** Phone: one swipe is ~1 viewport, so 1000svh meant ~9 swipes pinned. */
-export const DEMO_SCRUB_EXTRA_SVH_PHONE = 400;
+/** ~5–6 phone swipes so one fling does not skip workflow beats. */
+export const DEMO_SCRUB_EXTRA_SVH_PHONE = 550;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 

@@ -5,7 +5,7 @@ export function partSheetVisible(selectedId: string | null | undefined) {
 }
 
 export function shouldAutoDismissPartSheet(action: PartSheetAutoDismiss) {
-  return action === "hide" || action === "isolate" || action === "add";
+  return action === "hide" || action === "add";
 }
 
 export type PartSheetRow = { label: string; value: string };

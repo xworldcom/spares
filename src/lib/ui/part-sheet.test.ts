@@ -15,9 +15,9 @@ describe("selected-part sheet", () => {
     assert.equal(partSheetVisible("PN-FRAME-1000"), true);
   });
 
-  it("auto-dismisses after hide, isolate, and add", () => {
+  it("auto-dismisses after hide and add but keeps the sheet open for isolate", () => {
     assert.equal(shouldAutoDismissPartSheet("hide"), true);
-    assert.equal(shouldAutoDismissPartSheet("isolate"), true);
+    assert.equal(shouldAutoDismissPartSheet("isolate"), false);
     assert.equal(shouldAutoDismissPartSheet("add"), true);
   });
 });
