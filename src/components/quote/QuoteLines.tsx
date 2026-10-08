@@ -163,11 +163,13 @@ export function QuoteLines({
             <p className="text-[17px] font-medium tracking-tight">
               {item.name ?? "Part"}
             </p>
-            {role === "staff" ? (
-              <p className="spares-muted mt-0.5 font-mono text-xs">{item.id}</p>
-            ) : (
-              <p className="spares-muted mt-0.5 font-mono text-xs">{item.id}</p>
-            )}
+            <p className="spares-muted mt-0.5 text-xs">
+              <span className="font-medium text-[var(--spares-ink)]">Part no.</span>{" "}
+              <span className="font-mono">{item.id}</span>
+            </p>
+            {item.note ? (
+              <p className="spares-muted mt-1 text-sm leading-snug">{item.note}</p>
+            ) : null}
             <PartLifecycleNotice lifecycle={item.lifecycle} compact />
 
             {editable ? (

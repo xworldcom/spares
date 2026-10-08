@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { LoadingState } from "@/components/states/LoadingState";
+import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { QuoteStatusChip } from "@/components/quote/QuoteStatusChip";
 import { formatDay } from "@/components/quote/quote-format";
@@ -69,7 +69,11 @@ export function QuotesList({
   }, [quotes, role, router]);
 
   if (loading) {
-    return <LoadingState label="Loading quotes…" />;
+    return (
+      <div className="px-1 py-2" aria-busy="true" aria-label="Loading quotes">
+        <CatalogSkeleton variant="table" count={4} />
+      </div>
+    );
   }
 
   if (error) {
@@ -95,7 +99,7 @@ export function QuotesList({
         title={role === "staff" ? "No quotes yet" : "No quotes yet"}
         message={
           machineId
-            ? "No quotes for this machine yet. Add parts from the model, then request a quote."
+            ? "Nothing quoted for this machine yet. Open the model, add parts to the tray, then request a quote."
             : role === "staff"
               ? "New quotes appear when a plant sends a request."
               : "Request a quote from a machine to get started."

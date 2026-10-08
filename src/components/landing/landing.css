@@ -21,6 +21,10 @@
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
 }
 
+.landing-scroll .landing-product-story {
+  margin-top: 1.15rem;
+}
+
 .landing-scroll .landing-scroll-peek {
   position: relative;
   z-index: 2;

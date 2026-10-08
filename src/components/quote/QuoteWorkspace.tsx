@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
@@ -38,6 +39,10 @@ import {
   quoteTitle,
 } from "@/lib/quotes";
 import { quoteSeedForRef } from "@/lib/nav/quote-list-seed";
+import {
+  QUOTE_REQUESTED_QUERY,
+  quoteRequestedBannerText,
+} from "@/lib/ui/quote-requested-banner";
 import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role, TicketCustomerReadReceipt } from "@/types";
 
 function sameReadReceipts(
@@ -66,6 +71,7 @@ export function QuoteWorkspace({
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
   const desktop = useDesktopStage();
+  const searchParams = useSearchParams();
   const seedQuote = quoteSeedForRef(quoteRef);
   const [quote, setQuote] = useState<Quote | null>(() => seedQuote ?? null);
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -76,6 +82,23 @@ export function QuoteWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const runLock = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    if (role !== "customer") {
+      return;
+    }
+    if (searchParams.get(QUOTE_REQUESTED_QUERY) !== "1") {
+      return;
+    }
+    setNotice(quoteRequestedBannerText());
+    if (typeof window === "undefined") {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete(QUOTE_REQUESTED_QUERY);
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", next);
+  }, [role, searchParams]);
 
   function applyQuote(next: Quote) {
     setQuote(next);
@@ -364,7 +387,10 @@ export function QuoteWorkspace({
         </p>
       ) : null}
       {notice ? (
-        <p className="spares-muted text-sm" role="status">
+        <p
+          className="spares-surface rounded-2xl px-4 py-3 text-sm font-medium text-[var(--spares-ink)]"
+          role="status"
+        >
           {notice}
         </p>
       ) : null}

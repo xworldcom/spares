@@ -80,6 +80,7 @@ export function QuoteActivityFeed({
     null,
   );
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [outgoing, setOutgoing] = useState<QuoteActivity[]>([]);
   const [toggleBusy, setToggleBusy] = useState(false);
   const scrollerRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -168,6 +169,7 @@ export function QuoteActivityFeed({
     }
   }, [
     activities,
+    outgoing,
     layout,
     firstUnreadIndex,
     sheetChrome?.snap,
@@ -208,6 +210,18 @@ export function QuoteActivityFeed({
     }
     setComposerError(null);
     setUploading(true);
+    const pendingId = `pending-${Date.now()}`;
+    const optimistic: QuoteActivity = {
+      id: pendingId,
+      at: new Date().toISOString(),
+      actorRole: role,
+      actorEmail: selfEmail,
+      kind: "message",
+      text: next,
+    };
+    setOutgoing((current) => [...current, optimistic]);
+    const draftText = text;
+    setText("");
     try {
       const attachments: ChatAttachment[] = [];
       for (const file of pendingFiles) {
@@ -220,13 +234,14 @@ export function QuoteActivityFeed({
         text: next,
         ...(attachments.length ? { attachments } : {}),
       });
-      setText("");
       setPendingFiles([]);
       setUploadProgress(null);
     } catch (cause) {
+      setText(draftText);
       setComposerError(errorMessage(cause, "Could not send that message."));
       throw cause;
     } finally {
+      setOutgoing((current) => current.filter((row) => row.id !== pendingId));
       setUploading(false);
       setUploadProgress(null);
     }
@@ -256,6 +271,7 @@ export function QuoteActivityFeed({
     layout === "sheet" ? "imsg-card imsg-card--sheet" : "imsg-card";
   const threadClass =
     layout === "sheet" ? "imsg-thread imsg-thread--fill" : "imsg-thread";
+  const threadActivities = [...activities, ...outgoing];
 
   return (
     <section className={cardClass}>
@@ -266,10 +282,11 @@ export function QuoteActivityFeed({
         </header>
       )}
       <ol ref={scrollerRef} className={threadClass}>
-        {activities.length === 0 ? (
+        {threadActivities.length === 0 ? (
           <li className="imsg-empty">No messages yet.</li>
         ) : (
-          activities.map((activity, index) => {
+          threadActivities.map((activity, index) => {
+            const pending = activity.id.startsWith("pending-");
             const lane = activityLane(activity, self);
             if (lane === "system") {
               return (
@@ -285,8 +302,8 @@ export function QuoteActivityFeed({
               );
             }
 
-            const prev = activities[index - 1];
-            const nextActivity = activities[index + 1];
+            const prev = threadActivities[index - 1];
+            const nextActivity = threadActivities[index + 1];
             const stacked = sameMessageAuthor(activity, prev);
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
@@ -297,6 +314,7 @@ export function QuoteActivityFeed({
             const rowClass = [
               own ? "imsg-row imsg-own" : "imsg-row imsg-other",
               assistant ? "imsg-assistant" : "",
+              pending ? "imsg-pending" : "",
               enteringIds.has(activity.id) ? "imsg-enter" : "",
             ]
               .filter(Boolean)
@@ -370,7 +388,7 @@ export function QuoteActivityFeed({
                   </div>
                   {lastInStack ? (
                     <p className="imsg-when">
-                      {formatWhen(activity.at)}
+                      {pending ? "Sending…" : formatWhen(activity.at)}
                       {customerReadReceipts?.length && index === lastOwnIndex
                         ? (
                             <span className="imsg-when-read">

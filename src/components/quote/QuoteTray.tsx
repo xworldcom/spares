@@ -23,6 +23,7 @@ import {
 } from "@/lib/ui/quote-sheet";
 import { ManualQuoteLines } from "@/components/quote/ManualQuoteLines";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { trayCountLabel } from "@/lib/ui/tray-count-label";
 
 export type TrayLine = {
   part: Part;
@@ -77,7 +78,8 @@ function QuoteTrayForm({
   error: string | null;
   onClose?: () => void;
 }) {
-  const count = lines.reduce((sum, line) => sum + line.qty, 0);
+  const unitCount = lines.reduce((sum, line) => sum + line.qty, 0);
+  const countLabel = trayCountLabel(lines.length, unitCount);
   return (
     <div className="quote-sheet-form flex min-h-0 flex-1 flex-col px-5 pb-5">
       <div className="quote-sheet-grab flex items-center justify-between gap-3">
@@ -90,12 +92,9 @@ function QuoteTrayForm({
               {lines.length === 0 ? (
                 allowManual ? "Add a part number to quote." : "Tap a part on the machine."
               ) : (
-                <>
-                  <span key={count} className="quote-count-num">
-                    {count}
-                  </span>
-                  {` ${count === 1 ? "item" : "items"}`}
-                </>
+                <span key={countLabel} className="quote-count-num">
+                  {countLabel}
+                </span>
               )}
             </span>
           </p>
@@ -145,7 +144,7 @@ function QuoteTrayForm({
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-medium">
+                        <p className="line-clamp-2 text-[15px] font-medium leading-snug">
                           {line.part.name}
                         </p>
                         <p className="spares-muted truncate font-mono text-xs">
@@ -300,12 +299,12 @@ export function QuoteTray({
     samples: [] as { t: number; y: number }[],
   });
 
-  const count = lines.reduce((sum, line) => sum + line.qty, 0);
-  const prevCount = useRef(count);
+  const unitCount = lines.reduce((sum, line) => sum + line.qty, 0);
+  const prevCount = useRef(unitCount);
 
   useEffect(() => {
-    const increased = count > prevCount.current;
-    prevCount.current = count;
+    const increased = unitCount > prevCount.current;
+    prevCount.current = unitCount;
     if (!increased) {
       return;
     }
@@ -318,7 +317,7 @@ export function QuoteTray({
     afterNextPaint(() => {
       bounceQuoteCount(node);
     });
-  }, [count]);
+  }, [unitCount]);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);

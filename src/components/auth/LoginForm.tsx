@@ -154,11 +154,13 @@ export function LoginForm({
           {PASSWORD_LOGIN_DISABLED_MESSAGE}
         </p>
       ) : null}
-      {error ? (
-        <p className="text-sm text-[#f0b4b0]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <div className="login-form-error-slot" aria-live="polite">
+        {error ? (
+          <p className="text-sm text-[#f0b4b0]" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
       {passwordLoginEnabled ? (
         <button
           type="submit"

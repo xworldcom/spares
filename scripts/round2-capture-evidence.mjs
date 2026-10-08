@@ -79,8 +79,13 @@ const path = require('path');
     await page.screenshot({ path: path.join(outDir, tag + '-phone-after-add.png') });
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(1200);
+    const quoteHandle = page.locator('.quote-sheet-handle, [data-quote-tray] .quote-sheet-grab').first();
+    if (await quoteHandle.count()) {
+      await quoteHandle.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(500);
+    }
     await page.screenshot({
-      path: path.join(outDir, tag + '-phone-tray-after-reload.png'),
+      path: path.join(outDir, tag + '-phone-tray-open-after-reload.png'),
       fullPage: true,
     });
   }

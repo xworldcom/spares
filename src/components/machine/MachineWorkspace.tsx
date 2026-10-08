@@ -9,6 +9,7 @@ import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
 import { QuoteAddToast } from "@/components/quote/QuoteAddToast";
+import { QuoteUndoToast } from "@/components/quote/QuoteUndoToast";
 import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -68,7 +69,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [savingPart, setSavingPart] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [addToast, setAddToast] = useState<string | null>(null);
+  const [undoRemove, setUndoRemove] = useState<TrayLine | null>(null);
   const addToastTimer = useRef<number | null>(null);
+  const undoRemoveTimer = useRef<number | null>(null);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -235,6 +238,48 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
 
+  const clearUndoRemove = useCallback(() => {
+    if (undoRemoveTimer.current != null) {
+      window.clearTimeout(undoRemoveTimer.current);
+      undoRemoveTimer.current = null;
+    }
+    setUndoRemove(null);
+  }, []);
+
+  const removeTrayLine = useCallback(
+    (partId: string) => {
+      setLines((current) => {
+        const removed = current.find((line) => line.part.id === partId);
+        if (!removed) {
+          return current;
+        }
+        if (undoRemoveTimer.current != null) {
+          window.clearTimeout(undoRemoveTimer.current);
+        }
+        setUndoRemove(removed);
+        undoRemoveTimer.current = window.setTimeout(() => {
+          setUndoRemove(null);
+          undoRemoveTimer.current = null;
+        }, 8000);
+        return current.filter((line) => line.part.id !== partId);
+      });
+    },
+    [],
+  );
+
+  const undoTrayRemove = useCallback(() => {
+    if (!undoRemove) {
+      return;
+    }
+    setLines((current) => {
+      if (current.some((line) => line.part.id === undoRemove.part.id)) {
+        return current;
+      }
+      return [...current, undoRemove];
+    });
+    clearUndoRemove();
+  }, [undoRemove, clearUndoRemove]);
+
   const flashAddToast = useCallback((label: string) => {
     setAddToast(label);
     if (addToastTimer.current != null) {
@@ -295,15 +340,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             ),
           );
         }}
-        onRemove={(partId) => {
-          setLines((current) => current.filter((line) => line.part.id !== partId));
-        }}
+        onRemove={removeTrayLine}
         onClear={() => setLines([])}
         open={trayOpen}
         onOpenChange={setTrayOpen}
       />
     );
-  }, [isCustomer, lines, machineId, trayOpen, commitTrayLine]);
+  }, [isCustomer, lines, machineId, trayOpen, commitTrayLine, removeTrayLine]);
 
   if (loading) {
     return <LoadingState label="Loading machine…" />;
@@ -490,7 +533,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <section
             data-parts-bom=""
             className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
-              isCustomer ? "overflow-y-auto px-4 pb-8" : "flex flex-col"
+              isCustomer
+                ? "overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
+                : "flex flex-col"
             }`}
             style={{ paddingTop: "4.35rem" }}
           >
@@ -694,6 +739,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     <div className="machine-stage">
       <h1 className="sr-only">{machine.name}</h1>
       {isCustomer ? <QuoteAddToast message={addToast} /> : null}
+      {isCustomer && undoRemove ? (
+        <QuoteUndoToast
+          label={undoRemove.part.name}
+          onUndo={undoTrayRemove}
+          onDismiss={clearUndoRemove}
+        />
+      ) : null}
 
       <div
         ref={staffSplitView ? staffSplit.containerRef : undefined}
