@@ -33,6 +33,7 @@ import {
 } from "./model-storage.ts";
 import {
   applyLifecycleUpsert,
+  missingDemoLifecycleRows,
   buildTenantPartCatalog,
   filterCatalogRows,
   healDemoPartLifecycle,
@@ -66,6 +67,7 @@ import {
 } from "./quotes.ts";
 import {
   FIXTURE_MACHINE_IDS,
+  buildFixtureMachineById,
   missingFixtureMachines,
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
@@ -3099,6 +3101,63 @@ export function upsertTenantPartLifecycle(
     }
     await writeDatabase({ ...db, partLifecycle: rows });
     return { ok: true as const };
+  });
+}
+
+export type EnsureLifecycleDemoResult =
+  | { status: "wrong_tenant" }
+  | {
+      status: "ok";
+      machineId: string;
+      machineCreated: boolean;
+      lifecycleAdded: string[];
+    };
+
+/**
+ * Idempotent live migration for the hardware fixture + its lifecycle rows. Production keeps
+ * `SPARES_ALLOW_SEED` off, so heal never creates the fixture there; this is the explicit,
+ * staff-triggered path. Existing machines and edited lifecycle rows are never overwritten.
+ */
+export function ensureLifecycleDemoFixtures(
+  tenantId: string,
+  actorEmail: string,
+): Promise<EnsureLifecycleDemoResult> {
+  return withLock(async () => {
+    if (tenantId !== DEFAULT_TENANT_ID) {
+      return { status: "wrong_tenant" } as const;
+    }
+    const db = await ensureCatalog();
+    const machineId = FIXTURE_MACHINE_IDS.hardware;
+    let machines = db.machines;
+    let machineCreated = false;
+    if (!machines.some((machine) => machine.id === machineId)) {
+      const built = await buildFixtureMachineById(machineId);
+      if (!built) {
+        throw new Error("Hardware fixture definition is missing");
+      }
+      await persistFile(built.machine.storedFileName, built.bytes);
+      machines = [...machines, { ...built.machine, tenantId: DEFAULT_TENANT_ID }];
+      machineCreated = true;
+    }
+    const additions = missingDemoLifecycleRows(
+      db.partLifecycle,
+      tenantId,
+      new Date().toISOString(),
+      actorEmail,
+    );
+    if (machineCreated || additions.length > 0) {
+      await writeDatabase({
+        ...db,
+        machines,
+        partLifecycle: [...(db.partLifecycle ?? []), ...additions],
+      });
+    }
+    return {
+      status: "ok",
+      machineId,
+      machineCreated,
+      lifecycleAdded: additions.map((row) => row.partNumber),
+    } as const;
   });
 }
 
