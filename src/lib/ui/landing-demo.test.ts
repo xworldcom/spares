@@ -376,10 +376,14 @@ describe("landing scrub layout", () => {
   });
 
   it("aligns beat tracks when scroll settles off a snap rail", () => {
+    const beatCount = 6;
     assert.equal(demoBeatTrackSnapAlignmentDelta(80, 56, 14), 24);
     assert.equal(demoBeatTrackSnapAlignmentDelta(60, 56, 14), null);
-    assert.equal(demoInBeatSnapChapter(400, 480, 420), true);
-    assert.equal(demoInBeatSnapChapter(100, 480, 420), false);
+    assert.equal(demoInBeatSnapChapter(400, 480, 420, beatCount), true);
+    assert.equal(demoInBeatSnapChapter(100, 480, 420, beatCount), false);
+    assert.equal(demoInBeatSnapChapter(3000, 480, 420, beatCount), false);
+    assert.equal(demoInBeatSnapChapter(2790, 480, 420, beatCount), true);
+    assert.equal(demoInBeatSnapChapter(2791, 480, 420, beatCount), false);
   });
 
   it("maps each beat track index to the matching handoff quote status at rest", () => {

@@ -29,6 +29,7 @@ import {
   workflowHandoffLinearStart,
   demoHandoffLinearProgressAtBeatRest,
   demoBeatTrackSnapAlignmentDelta,
+  demoBeatTrackRawIndexFromScroll,
   demoInBeatSnapChapter,
   workflowScrubPreHandoffSnapRenderDeltas,
 } from "@/lib/ui/landing-demo";
@@ -339,14 +340,23 @@ export function LandingDemoScrub({
       const beatTrackHeight = beatTracks[0]?.offsetHeight ?? 0;
       const sectionViewportTop = section.getBoundingClientRect().top;
       const scrolled = layout.stickyTop - sectionViewportTop;
-      if (!demoInBeatSnapChapter(scrolled, preHandoffHeight, beatTrackHeight)) {
+      const beatCount = beatTracks.length;
+      if (!demoInBeatSnapChapter(scrolled, preHandoffHeight, beatTrackHeight, beatCount)) {
+        return;
+      }
+      const rawBeatIndex = demoBeatTrackRawIndexFromScroll(
+        scrolled,
+        preHandoffHeight,
+        beatTrackHeight,
+      );
+      if (rawBeatIndex >= beatCount) {
         return;
       }
       const beatTrackIndex = demoBeatTrackIndexFromScroll(
         scrolled,
         preHandoffHeight,
         beatTrackHeight,
-        beatTracks.length,
+        beatCount,
       );
       const track = beatTracks[beatTrackIndex];
       if (!track) {
