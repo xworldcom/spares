@@ -564,14 +564,14 @@ export function QuoteTray({
         type="button"
         onClick={onExitToTray}
         className="viewer-chrome-chip inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold"
-        aria-label={`Quote tray, ${count} ${count === 1 ? "item" : "items"}`}
+        aria-label={`Quote tray, ${trayCountLabel(lines.length, unitCount)}`}
       >
         Quote
         <span
           data-quote-target="badge"
           className="btn-accent inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs tabular-nums"
         >
-          {count}
+          {unitCount}
         </span>
       </button>
     );
