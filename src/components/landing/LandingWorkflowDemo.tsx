@@ -18,6 +18,7 @@ import {
   demoRowHidden,
   reduceDemoFrame,
   workflowGuideCue,
+  workflowHandoffLinearStart,
   workflowHandoffMix,
   workflowHighlightPartId,
   demoWorkflowThreadPlayhead,
@@ -43,6 +44,10 @@ export function LandingWorkflowDemo({
   const step = workflowStep(playhead);
   const spinYaw = useMemo(() => workflowSpinYaw(playhead), [playhead]);
   const handoff = reduceMotion && step === "handoff" ? 1 : workflowHandoffMix(playhead);
+  const inHandoffChapter =
+    reduceMotion && step === "handoff"
+      ? true
+      : linearProgress >= workflowHandoffLinearStart() - 0.002;
   const chatPlayhead = useMemo(
     () => (reduceMotion ? 1 : demoWorkflowThreadPlayhead(linearProgress)),
     [linearProgress, reduceMotion],
@@ -106,7 +111,7 @@ export function LandingWorkflowDemo({
       <div
         className={[
           "landing-workflow-stage",
-          handoff > 0.48 ? "is-handoff" : "",
+          inHandoffChapter ? "is-handoff" : "",
           showQuoteSheet ? "is-quote-focus" : "",
           reduceMotion ? "is-reduced" : "",
         ]

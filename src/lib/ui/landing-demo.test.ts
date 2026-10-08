@@ -12,6 +12,7 @@ import {
   clampDemoScrollProgress,
   createDemoScrubStore,
   demoApplyAtVisibility,
+  demoBeatTrackScrubLinear,
   demoDocumentScrollProgress,
   demoFindScrollRoot,
   demoIsNestedScrollPort,
@@ -202,7 +203,7 @@ describe("demo scroll scrub", () => {
 
   it("reads the playhead from document scroll, not a live client rect", () => {
     const src = readFileSync("src/components/landing/LandingDemoScrub.tsx", "utf8");
-    assert.match(src, /demoDocumentScrollProgress/);
+    assert.match(src, /demoBeatTrackScrubLinear/);
     assert.match(src, /demoPickScrollY/);
     assert.match(src, /demoFindScrollRoot/);
     assert.match(src, /demoWorkflowThreadPlayhead/);
@@ -211,7 +212,7 @@ describe("demo scroll scrub", () => {
     assert.match(src, /requestAnimationFrame\(tick\)/);
     assert.match(src, /data-hydrated/);
     assert.doesNotMatch(src, /flushSync/);
-    assert.doesNotMatch(src, /getBoundingClientRect\(\)\.top/);
+    assert.match(src, /landing-demo-beat-track/);
     assert.doesNotMatch(src, /window\.addEventListener\("scroll"/);
     assert.doesNotMatch(src, /addEventListener\("touchmove"/);
     assert.match(src, /visualViewport\?\.addEventListener\("scroll"/);
@@ -345,6 +346,20 @@ describe("landing scrub layout", () => {
     assert.match(css, /\.spares-app-cinematic \.landing-marketing > \.landing-section[\s\S]*scroll-snap-align:\s*start/);
     assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
     assert.match(css, /scroll-snap-stop:\s*always/);
+    assert.match(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop:\s*always/);
+    assert.match(css, /--landing-demo-beat-track:\s*80svh/);
+  });
+
+  it("maps post-pin beat tracks to handoff linear progress", () => {
+    const handoff = workflowHandoffLinearStart();
+    const n = workflowStatusBeatCount();
+    const pre = 400;
+    const track = 300;
+    const scrollable = pre + n * track;
+    const atRequested = demoBeatTrackScrubLinear(pre + track * 0.1, scrollable, pre, track, n, handoff);
+    assert.ok(atRequested >= handoff - 0.02);
+    const atEnd = demoBeatTrackScrubLinear(scrollable * 0.85, scrollable, pre, track, n, handoff);
+    assert.ok(atEnd > 0.9);
   });
 
   it("places scrub snap markers on each quote status beat", () => {
@@ -732,7 +747,7 @@ describe("workflow demo", () => {
     );
     assert.match(
       css,
-      /^\.landing-workflow \.quote-progress-step \{\n  flex: 0 0 auto;\n  min-width: 4\.85rem;/m,
+      /^\.landing-workflow \.quote-progress-step \{\n  flex: 0 0 auto;\n  min-width: 5\.15rem;/m,
     );
     assert.match(
       css,

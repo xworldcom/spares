@@ -10,7 +10,6 @@ import {
 import {
   createDemoScrubStore,
   demoApplyAtVisibility,
-  demoDocumentScrollProgress,
   demoFindScrollRoot,
   demoOffsetInDocument,
   demoParkedNestedRoot,
@@ -19,12 +18,19 @@ import {
   demoPlayhead,
   demoScrubDebugEnabled,
   demoWindowScrollY,
+  DEMO_SCRUB_END_HOLD,
+  demoBeatTrackScrubLinear,
   demoWorkflowThreadPlayhead,
+  reduceDemoFrame,
+  workflowHandoffBeatStatuses,
+  workflowHandoffLinearStart,
+  workflowScrubLinearForStatusBeatIndex,
+  workflowScrubPreHandoffSnapLinearPositions,
   workflowScrubSnapBeatLabel,
-  workflowScrubSnapLinearPositions,
 } from "@/lib/ui/landing-demo";
 
-const SCRUB_SNAP_LINEAR = workflowScrubSnapLinearPositions();
+const SCRUB_SNAP_LINEAR = workflowScrubPreHandoffSnapLinearPositions();
+const HANDOFF_BEAT_STATUSES = workflowHandoffBeatStatuses();
 
 const SCRUB_SNAP_MARKERS = SCRUB_SNAP_LINEAR.map((linear, index) => {
   const start = SCRUB_SNAP_LINEAR[index - 1] ?? 0;
@@ -206,16 +212,41 @@ export function LandingDemoScrub({
       const sectionTop = root && !parkedRoot
         ? layout.sectionTop - demoOffsetInDocument(root).y
         : layout.sectionTop;
-      const next = demoPlayhead(
-        false,
-        demoDocumentScrollProgress(
-          scrollY,
-          sectionTop,
-          layout.sectionHeight,
-          layout.pinHeight,
-          layout.stickyTop,
-        ),
+      const preSnaps = section.querySelectorAll<HTMLElement>(".landing-demo-scrub-snap");
+      let preHandoffHeight = 0;
+      for (const el of preSnaps) {
+        preHandoffHeight += el.offsetHeight;
+      }
+      const beatTracks = [...section.querySelectorAll<HTMLElement>(".landing-demo-beat-track")];
+      const beatTrackHeight = beatTracks[0]?.offsetHeight ?? 0;
+      const beatCount = beatTracks.length;
+      const sectionViewportTop = section.getBoundingClientRect().top;
+      const scrolled = layout.stickyTop - sectionViewportTop;
+      const scrollable = layout.sectionHeight - layout.pinHeight;
+      let linearProgress = demoBeatTrackScrubLinear(
+        scrolled,
+        scrollable,
+        preHandoffHeight,
+        beatTrackHeight,
+        beatCount,
+        workflowHandoffLinearStart(),
       );
+      if (beatCount > 0 && scrolled > preHandoffHeight + 8) {
+        const anchorY = layout.stickyTop + 6;
+        let bestIdx = 0;
+        let bestDist = Number.POSITIVE_INFINITY;
+        beatTracks.forEach((track, index) => {
+          const dist = Math.abs(track.getBoundingClientRect().top - anchorY);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = index;
+          }
+        });
+        const snapped = workflowScrubLinearForStatusBeatIndex(bestIdx);
+        const active = 1 - DEMO_SCRUB_END_HOLD;
+        linearProgress = Math.min(snapped, active) / active;
+      }
+      const next = demoPlayhead(false, linearProgress);
       applyPin(
         pin,
         demoPinPlacement(
@@ -231,6 +262,8 @@ export function LandingDemoScrub({
       );
       section.dataset.progress = next.toFixed(3);
       const threadPlayhead = demoWorkflowThreadPlayhead(next);
+      const quoteStatus = reduceDemoFrame("quote", threadPlayhead).quoteStatus;
+      section.dataset.activeQuoteStatus = quoteStatus;
       demoApplyAtVisibility(
         section.querySelectorAll<HTMLElement>("[data-demo-at]"),
         threadPlayhead,
@@ -327,6 +360,18 @@ export function LandingDemoScrub({
               aria-hidden="true"
             >
               <span className="sr-only">{marker.label}</span>
+            </div>
+          ))}
+      {snapshot.reduceMotion
+        ? null
+        : HANDOFF_BEAT_STATUSES.map((status) => (
+            <div
+              key={status}
+              className="landing-demo-beat-track"
+              data-quote-status={status}
+              aria-hidden="true"
+            >
+              <span className="sr-only">{status}</span>
             </div>
           ))}
       <div ref={pinRef} className="landing-demo-scrub-pin">
