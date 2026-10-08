@@ -37,6 +37,18 @@ async function apiLogin(context, creds = CUSTOMER) {
   if (!res.ok()) throw new Error("login failed " + res.status());
 }
 
+async function seedTicket(context, machineId, title, note, replies = []) {
+  const created = await context.request.post(`${BASE}/api/machines/${machineId}/tickets`, { data: { title, note } });
+  if (!created.ok()) throw new Error("ticket create failed " + created.status());
+  const body = await created.json();
+  const ticket = body.ticket;
+  for (const text of replies) {
+    const r = await context.request.post(`${BASE}/api/tickets/${ticket.id}/activity`, { data: { text } });
+    if (!r.ok()) throw new Error("reply failed " + r.status());
+  }
+  return ticket;
+}
+
 async function uiLogin(page, creds = CUSTOMER, next = "/machines") {
   await page.goto(BASE + "/login?next=" + encodeURIComponent(next), { waitUntil: "networkidle" });
   await page.fill("#email", creds.email);
@@ -72,4 +84,4 @@ function writeProof(name, extra = {}) {
   if (failed.length) process.exitCode = 1;
 }
 
-module.exports = { BASE, TAG, OUT, CUSTOMER, launch, apiLogin, uiLogin, finish, check, writeProof };
+module.exports = { seedTicket, BASE, TAG, OUT, CUSTOMER, launch, apiLogin, uiLogin, finish, check, writeProof };
