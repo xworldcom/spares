@@ -105,14 +105,14 @@ export function ManualQuoteLines({
           <input
             value={partNumber}
             onChange={(event) => setPartNumber(event.target.value)}
-            className="spares-field manual-quote-part-number h-11 w-full min-w-[12ch] rounded-2xl border-0 px-3 font-mono text-[16px] outline-none"
+            className="spares-field manual-quote-part-number h-11 w-full rounded-2xl border-0 px-3 font-mono text-[16px] outline-none"
             maxLength={MAX_QUOTE_ITEM_ID}
             autoComplete="off"
             spellCheck={false}
             placeholder="A06B-0115"
           />
         </label>
-        <label className="care-field">
+        <label className="care-field manual-quote-desc">
           <span>Description</span>
           <input
             value={description}

@@ -2916,16 +2916,53 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   background: var(--spares-field, rgba(255, 255, 255, 0.04));
 }
 
+.manual-quote-lines {
+  container-type: inline-size;
+  container-name: manual-quote;
+}
+
 .manual-quote-add {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.65rem;
 }
 
-@media (min-width: 640px) {
+.manual-quote-add > * {
+  min-width: 0;
+}
+
+.manual-quote-add .manual-quote-part-number {
+  min-width: 0;
+}
+
+/* Sized by the form's own width (a 20rem dock on desktop), not the viewport. */
+@container manual-quote (min-width: 17rem) {
+  .manual-quote-add {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+    align-items: end;
+  }
+
+  .manual-quote-add > .manual-quote-desc {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .manual-quote-add > button {
+    grid-column: 1 / -1;
+    order: 4;
+    white-space: nowrap;
+  }
+}
+
+@container manual-quote (min-width: 40rem) {
   .manual-quote-add {
     grid-template-columns: minmax(12ch, 1.15fr) minmax(0, 1.35fr) 5.5rem auto;
-    align-items: end;
+  }
+
+  .manual-quote-add > .manual-quote-desc,
+  .manual-quote-add > button {
+    grid-column: auto;
+    order: 0;
   }
 }
 
