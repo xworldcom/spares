@@ -630,11 +630,8 @@ export function demoBeatTrackIndexFromScroll(
   if (beatCount <= 0 || beatTrackHeight <= 0) {
     return 0;
   }
-  const trackPix = Math.max(0, scrolled - preHandoffHeight);
-  return Math.min(
-    beatCount - 1,
-    Math.max(0, Math.floor((trackPix + beatTrackHeight * 0.28) / beatTrackHeight)),
-  );
+  const raw = demoBeatTrackRawIndexFromScroll(scrolled, preHandoffHeight, beatTrackHeight);
+  return Math.min(beatCount - 1, Math.max(0, raw));
 }
 
 /** Linear scrub progress when snapped at rest on beat track `index` (no double /active). */
@@ -739,15 +736,32 @@ export function demoBeatTrackSnapAlignmentDelta(
   return delta;
 }
 
-export function demoInBeatSnapChapter(
+/** Beat track index before clamping to the last track (aligner bail when past chapter). */
+export function demoBeatTrackRawIndexFromScroll(
   scrolled: number,
   preHandoffHeight: number,
   beatTrackHeight: number,
 ) {
   if (beatTrackHeight <= 0) {
+    return 0;
+  }
+  const trackPix = Math.max(0, scrolled - preHandoffHeight);
+  return Math.floor((trackPix + beatTrackHeight * 0.28) / beatTrackHeight);
+}
+
+export function demoInBeatSnapChapter(
+  scrolled: number,
+  preHandoffHeight: number,
+  beatTrackHeight: number,
+  beatCount: number,
+) {
+  if (beatTrackHeight <= 0 || beatCount <= 0) {
     return false;
   }
-  return scrolled >= preHandoffHeight - beatTrackHeight * 0.22;
+  const chapterStart = preHandoffHeight - beatTrackHeight * 0.22;
+  const chapterEnd =
+    preHandoffHeight + (beatCount - 1) * beatTrackHeight + beatTrackHeight * 0.5;
+  return scrolled >= chapterStart && scrolled <= chapterEnd;
 }
 
 /**
