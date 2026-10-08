@@ -4,12 +4,19 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { CareAlertsProvider } from "@/components/care/CareAlerts";
 import { QuoteAlertsProvider } from "@/components/quote/QuoteAlerts";
 import { installClientLogCapture } from "@/lib/bug-report/client-logs";
+import type { PublicUser } from "@/lib/api/types";
 
 installClientLogCapture();
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser?: PublicUser | null;
+}) {
   return (
-    <AuthProvider>
+    <AuthProvider initialUser={initialUser}>
       <CareAlertsProvider>
         <QuoteAlertsProvider>
           {children}

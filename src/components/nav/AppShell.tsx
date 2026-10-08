@@ -126,6 +126,7 @@ export function AppShell({
   const onLogin =
     pathname === "/login" || pathname === "/" || pathname === "/inquire";
   const signedIn = status === "signed-in" && user;
+  const resolvingSession = status === "loading";
   const cinematic = (pathname === "/" || pathname === "/inquire") && !signedIn;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
   const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
@@ -273,7 +274,7 @@ export function AppShell({
                 />
               )}
             </nav>
-          ) : !signedIn && pathname !== "/inquire" ? (
+          ) : !signedIn && !resolvingSession && pathname !== "/inquire" ? (
             <nav className="ml-auto flex shrink-0 items-center gap-1" aria-label="Public">
               <Link
                 href="/inquire"
@@ -301,7 +302,7 @@ export function AppShell({
               >
                 Sign out
               </button>
-            ) : cinematic || pathname === "/login" ? null : (
+            ) : cinematic || resolvingSession || pathname === "/login" ? null : (
               <Link
                 href="/login"
                 className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"

@@ -8,6 +8,7 @@ export {
   SESSION_COOKIE,
   clearSessionCookie,
   getCurrentUser,
+  getCurrentUserReadOnly,
   requireRole,
   requireUser,
   setSessionCookie,

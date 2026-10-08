@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string; tid?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; tid?: string; reason?: string }>;
 }) {
-  const { next, error, tid } = await searchParams;
+  const { next, error, tid, reason } = await searchParams;
   const nextPath = sanitizeNextPath(next);
   const deniedTenantId = tid && isEntraTenantId(tid) ? tid : null;
   const signIn = await getSignInOptions();
@@ -27,6 +27,7 @@ export default async function LoginPage({
       passwordLoginEnabled={signIn.passwordLoginEnabled}
       authErrorCode={authErrorCode}
       deniedTenantId={deniedTenantId}
+      signedOut={reason === "signed-out"}
     />
   );
 }

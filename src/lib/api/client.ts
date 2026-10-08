@@ -1,5 +1,10 @@
-import { ApiError } from "./errors";
-import type { ApiErrorBody } from "./types";
+import { ApiError } from "./errors.ts";
+import type { ApiErrorBody } from "./types.ts";
+import {
+  isSessionProbePath,
+  notifyUnauthorized,
+  SIGNED_OUT_MESSAGE,
+} from "./unauthorized.ts";
 
 function readErrorMessage(body: unknown, status: number) {
   if (body && typeof body === "object" && "error" in body) {
@@ -60,6 +65,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     : await response.text().catch(() => "");
 
   if (!response.ok) {
+    if (response.status === 401 && !isSessionProbePath(path)) {
+      notifyUnauthorized();
+      throw new ApiError(SIGNED_OUT_MESSAGE, 401);
+    }
     throw new ApiError(readErrorMessage(body, response.status), response.status);
   }
 

@@ -13,6 +13,7 @@ export function LandingPageGate({
   authErrorCode = null,
   deniedTenantId = null,
   showMarketing = false,
+  signedOut = false,
 }: {
   nextPath?: string;
   microsoftSignInEnabled?: boolean;
@@ -20,6 +21,7 @@ export function LandingPageGate({
   authErrorCode?: string | null;
   deniedTenantId?: string | null;
   showMarketing?: boolean;
+  signedOut?: boolean;
 }) {
   const { status, user } = useAuth();
   const router = useRouter();
@@ -43,6 +45,7 @@ export function LandingPageGate({
       authErrorCode={authErrorCode}
       deniedTenantId={deniedTenantId}
       showMarketing={showMarketing}
+      signedOut={signedOut}
     />
   );
 }
