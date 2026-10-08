@@ -330,18 +330,20 @@
   }
 }
 
-/* Conversation sheet — Chunk 1: one SheetSurface, height roll-up (reply → full) */
+/* Conversation sheet — Chunk 2: peek → reply (phase A) → full roll-up (phase B) */
 .conversation-sheet.snap-sheet {
   z-index: 52;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   overflow: hidden;
+  --peek-h: 5.75rem;
   --peek-chrome-h: 2.85rem;
+  --peek-thread-h: calc(var(--peek-h) - var(--peek-chrome-h));
   --reply-h: 17.5rem;
   --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
-  --sheet-h: var(--reply-h);
-  --phase-a: 1;
+  --sheet-h: var(--peek-h);
+  --phase-a: 0;
   --phase-b: 0;
   /* Chrome metrics stay fixed at every snap — only layout/content may change. */
   --sheet-drag-handle-w: 2.6rem;
@@ -386,7 +388,11 @@
   touch-action: none;
 }
 
-.conversation-sheet:not(.is-inline).is-peek,
+.conversation-sheet:not(.is-inline).is-peek {
+  --sheet-h: var(--peek-h);
+  touch-action: manipulation;
+}
+
 .conversation-sheet:not(.is-inline).is-reply {
   --sheet-h: var(--reply-h);
   touch-action: manipulation;
@@ -397,12 +403,18 @@
   touch-action: manipulation;
 }
 
-.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling),
 .conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) {
+  --phase-a: 0;
+  --phase-b: 0;
+}
+
+.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) {
+  --phase-a: 1;
   --phase-b: 0;
 }
 
 .conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) {
+  --phase-a: 1;
   --phase-b: 1;
 }
 
@@ -417,7 +429,7 @@
 }
 
 .conversation-sheet:not(.is-inline).is-out {
-  --sheet-h: var(--reply-h);
+  --sheet-h: var(--peek-h);
   transform: translate3d(0, 110%, 0);
   pointer-events: none;
 }
@@ -444,12 +456,45 @@
   overflow: hidden;
   max-height: 12rem;
   flex-shrink: 0;
-  opacity: 1;
+  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * 100%), 0);
+  transform-origin: bottom center;
+  opacity: var(--phase-a, 0);
+  pointer-events: none;
+  transition:
+    transform var(--sheet-duration) var(--sheet-ease),
+    opacity calc(var(--sheet-duration) * 0.75) var(--sheet-ease);
+}
+
+.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) .imsg-composer,
+.conversation-sheet:not(.is-inline).is-full:not(.is-dragging):not(.is-settling) .imsg-composer {
   pointer-events: auto;
 }
 
-.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) .imsg-thread--fill,
-.conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+.conversation-sheet:not(.is-inline).is-dragging .imsg-composer,
+.conversation-sheet:not(.is-inline).is-settling .imsg-composer,
+.conversation-sheet:not(.is-inline)[data-motion-live] .imsg-composer {
+  transition: none;
+  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * 100%), 0);
+  opacity: var(--phase-a, 0);
+  max-height: calc(var(--phase-a, 0) * 12rem);
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline)[data-layout-peek] .imsg-composer {
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) .imsg-thread--fill,
+.conversation-sheet:not(.is-inline)[data-layout-peek]:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+  flex: 0 0 var(--peek-thread-h);
+  height: var(--peek-thread-h);
+  min-height: var(--peek-thread-h);
+  max-height: var(--peek-thread-h);
+  overflow: hidden;
+  justify-content: flex-end;
+}
+
+.conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
@@ -512,6 +557,7 @@
 
 .conversation-sheet:not(.is-inline).is-dragging,
 .conversation-sheet:not(.is-inline).is-settling,
+.conversation-sheet:not(.is-inline).is-peek,
 .conversation-sheet:not(.is-inline).is-reply,
 .conversation-sheet:not(.is-inline).is-full {
   z-index: 62;
@@ -1665,7 +1711,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   .quote-workspace .conversation-sheet-spacer,
   .care-stack .conversation-sheet-spacer {
     display: block;
-    height: calc(var(--reply-h, 17.5rem) + 2.25rem);
+    height: calc(var(--peek-h, 5.75rem) + 2.25rem);
   }
 }
 
