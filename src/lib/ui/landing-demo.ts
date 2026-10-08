@@ -692,6 +692,64 @@ export function workflowScrubPreHandoffSnapLinearPositions() {
   return workflowScrubSnapLinearPositions().filter((pos) => pos <= handoffLinear + 1e-5);
 }
 
+export type WorkflowScrubSnapMarker = {
+  linear: number;
+  heightDelta: number;
+  label: string;
+  /** Last marker before handoff beat tracks — stronger snap stop in CSS. */
+  handoffEntry: boolean;
+};
+
+/**
+ * One DOM snap per workflow label before handoff (drops crowded plateau duplicates near Quote tray).
+ */
+export function workflowScrubPreHandoffSnapRenderMarkers(): WorkflowScrubSnapMarker[] {
+  const linear = workflowScrubPreHandoffSnapLinearPositions();
+  const markers: WorkflowScrubSnapMarker[] = linear.map((lin, index) => ({
+    linear: lin,
+    heightDelta: lin - (linear[index - 1] ?? 0),
+    label: workflowScrubSnapBeatLabel(lin),
+    handoffEntry: false,
+  }));
+  const filtered = markers.filter((marker, index) => {
+    const next = markers[index + 1];
+    return !next || next.label !== marker.label;
+  });
+  if (filtered.length > 0) {
+    filtered[filtered.length - 1]!.handoffEntry = true;
+  }
+  return filtered;
+}
+
+/** Height deltas for pre-handoff snap elements (excludes the zero-height origin). */
+export function workflowScrubPreHandoffSnapRenderDeltas() {
+  return workflowScrubPreHandoffSnapRenderMarkers().slice(1);
+}
+
+/** Pixel delta to align a beat track with the sticky pin rail, or null when already aligned. */
+export function demoBeatTrackSnapAlignmentDelta(
+  trackViewportTop: number,
+  stickyTop: number,
+  tolerancePx = 14,
+): number | null {
+  const delta = trackViewportTop - stickyTop;
+  if (Math.abs(delta) <= tolerancePx) {
+    return null;
+  }
+  return delta;
+}
+
+export function demoInBeatSnapChapter(
+  scrolled: number,
+  preHandoffHeight: number,
+  beatTrackHeight: number,
+) {
+  if (beatTrackHeight <= 0) {
+    return false;
+  }
+  return scrolled >= preHandoffHeight - beatTrackHeight * 0.22;
+}
+
 /**
  * Map scroll offset through pre-handoff markers + equal post-pin beat tracks to linear scrub [0, 1].
  */

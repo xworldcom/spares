@@ -47,6 +47,10 @@ import {
   demoQuoteStatusAtBeatTrackRest,
   demoHandoffLinearProgressAtBeatRest,
   demoThreadPlayheadAtBeatRest,
+  demoBeatTrackSnapAlignmentDelta,
+  demoInBeatSnapChapter,
+  workflowScrubPreHandoffSnapRenderDeltas,
+  workflowScrubPreHandoffSnapLinearPositions,
   DEMO_BEAT_TRACK_SVH_PHONE,
   workflowScrubLinearForStatusBeatIndex,
   workflowStatusBeatCount,
@@ -219,7 +223,10 @@ describe("demo scroll scrub", () => {
     assert.match(src, /data-hydrated/);
     assert.doesNotMatch(src, /flushSync/);
     assert.match(src, /landing-demo-beat-track/);
-    assert.doesNotMatch(src, /window\.addEventListener\("scroll"/);
+    assert.match(src, /addEventListener\("scrollend"/);
+    assert.match(src, /alignBeatSnap/);
+    assert.match(src, /"onscrollend" in window/);
+    assert.doesNotMatch(src, /window\.addEventListener\("scroll",\s*tick/);
     assert.doesNotMatch(src, /addEventListener\("touchmove"/);
     assert.match(src, /visualViewport\?\.addEventListener\("scroll"/);
     assert.doesNotMatch(src, /demoPickScrollY\(0,/);
@@ -351,10 +358,28 @@ describe("landing scrub layout", () => {
     assert.match(css, /scroll-snap-type:\s*y mandatory/);
     assert.match(css, /\.spares-app-cinematic \.landing-marketing > \.landing-section[\s\S]*scroll-snap-align:\s*start/);
     assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
-    assert.match(css, /scroll-snap-stop:\s*always/);
     assert.match(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop:\s*always/);
+    assert.match(css, /\.landing-demo-scrub-snap--handoff-entry[\s\S]*scroll-snap-stop:\s*always/);
     assert.match(css, /--landing-demo-beat-track:\s*56svh/);
     assert.equal(DEMO_BEAT_TRACK_SVH_PHONE, 56);
+  });
+
+  it("renders one pre-handoff snap per workflow label (no crowded tray markers)", () => {
+    const linear = workflowScrubPreHandoffSnapLinearPositions();
+    const deltas = workflowScrubPreHandoffSnapRenderDeltas();
+    assert.ok(linear.length >= 8);
+    assert.ok(deltas.length < linear.length - 1);
+    assert.ok(deltas.length <= 8);
+    const handoff = deltas.at(-1);
+    assert.ok(handoff?.handoffEntry);
+    assert.match(handoff?.label ?? "", /Requested/i);
+  });
+
+  it("aligns beat tracks when scroll settles off a snap rail", () => {
+    assert.equal(demoBeatTrackSnapAlignmentDelta(80, 56, 14), 24);
+    assert.equal(demoBeatTrackSnapAlignmentDelta(60, 56, 14), null);
+    assert.equal(demoInBeatSnapChapter(400, 480, 420), true);
+    assert.equal(demoInBeatSnapChapter(100, 480, 420), false);
   });
 
   it("maps each beat track index to the matching handoff quote status at rest", () => {

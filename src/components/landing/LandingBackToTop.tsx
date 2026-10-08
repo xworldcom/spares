@@ -25,6 +25,9 @@ function productStoryChapterActive() {
   }
   const scrub = story.querySelector<HTMLElement>(".landing-demo-scrub");
   const pin = scrub?.querySelector<HTMLElement>(".landing-demo-scrub-pin");
+  if (pin?.dataset.pin === "end") {
+    return false;
+  }
   if (pin?.dataset.pin === "track") {
     return true;
   }
