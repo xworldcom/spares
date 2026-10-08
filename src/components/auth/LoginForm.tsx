@@ -160,6 +160,7 @@ export function LoginForm({
           type="submit"
           disabled={!hydrated || submitting}
           aria-disabled={!hydrated || submitting}
+          aria-busy={submitting}
           className="login-submit mt-2 inline-flex h-12 w-full items-center justify-center rounded-full text-[16px] font-semibold disabled:opacity-40"
         >
           {!hydrated ? "Sign in" : submitting ? "Signing in…" : "Sign in"}
