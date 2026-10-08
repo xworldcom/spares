@@ -31,8 +31,11 @@ export class PersistenceReadError extends Error {
   }
 }
 
-/** The two catalog documents that are read-modify-written by every mutation. */
-export type CatalogDocument = "database" | "care";
+/**
+ * Documents that are read-modify-written and therefore written conditionally:
+ * the two catalog halves on every mutation, plus the small settings / activity files.
+ */
+export type CatalogDocument = "database" | "care" | "platformSettings" | "activity";
 
 /** Content plus an opaque version (Blob ETag, or a content hash on disk / in memory). */
 export type VersionedJson = { json: string | null; version: string | null };
@@ -99,12 +102,9 @@ export function filesDir() {
 }
 
 export function createMemoryPersistence(): Persistence {
-  let json: string | null = null;
-  let careJson: string | null = null;
-  let platformSettingsJson: string | null = null;
-  let activityJson: string | null = null;
+  const docs = new Map<CatalogDocument, string>();
   const files = new Map<string, Buffer>();
-  const current = (doc: CatalogDocument) => (doc === "database" ? json : careJson);
+  const current = (doc: CatalogDocument) => docs.get(doc) ?? null;
   return {
     kind: "memory",
     async readVersioned(doc) {
@@ -116,36 +116,32 @@ export function createMemoryPersistence(): Persistence {
       if ((value === null ? null : contentVersion(value)) !== expected) {
         return { ok: false };
       }
-      if (doc === "database") {
-        json = next;
-      } else {
-        careJson = next;
-      }
+      docs.set(doc, next);
       return { ok: true, version: contentVersion(next) };
     },
     async readDatabaseJson() {
-      return json;
+      return current("database");
     },
     async writeDatabaseJson(next) {
-      json = next;
+      docs.set("database", next);
     },
     async readCareJson() {
-      return careJson;
+      return current("care");
     },
     async writeCareJson(next) {
-      careJson = next;
+      docs.set("care", next);
     },
     async readPlatformSettingsJson() {
-      return platformSettingsJson;
+      return current("platformSettings");
     },
     async writePlatformSettingsJson(next) {
-      platformSettingsJson = next;
+      docs.set("platformSettings", next);
     },
     async readActivityJson() {
-      return activityJson;
+      return current("activity");
     },
     async writeActivityJson(next) {
-      activityJson = next;
+      docs.set("activity", next);
     },
     async readFileBytes(name) {
       const bytes = files.get(safeStoredFileName(name));
@@ -209,7 +205,13 @@ function fsPersistence(root: string): Persistence {
   const platformSettingsFile = path.join(root, "platform-settings.json");
   const activityFile = path.join(root, "activity.json");
   const filesRoot = path.join(root, "files");
-  const fileFor = (doc: CatalogDocument) => (doc === "database" ? dbFile : careFile);
+  const fileFor = (doc: CatalogDocument) =>
+    ({
+      database: dbFile,
+      care: careFile,
+      platformSettings: platformSettingsFile,
+      activity: activityFile,
+    })[doc];
   return {
     kind: "fs",
     async readVersioned(doc) {
@@ -376,7 +378,16 @@ const vercelBlobClient: BlobClient = {
 };
 
 function blobPathFor(doc: CatalogDocument) {
-  return doc === "database" ? blobDbPath() : blobCarePath();
+  switch (doc) {
+    case "database":
+      return blobDbPath();
+    case "care":
+      return blobCarePath();
+    case "platformSettings":
+      return blobPlatformSettingsPath();
+    case "activity":
+      return blobActivityPath();
+  }
 }
 
 /** The SDK's error classes do not set `name`, so match on the stable message instead. */

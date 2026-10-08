@@ -1,3 +1,4 @@
+import { updateJsonDocument } from "./json-document.ts";
 import { getPersistence } from "./persistence.ts";
 
 /** Persisted in `platform-settings.json`, not `db.json`, so catalog heals cannot wipe it. */
@@ -53,14 +54,15 @@ export async function readPersistedPlatformSettings(): Promise<PlatformSettingsD
 export async function writePersistedPlatformSettings(
   patch: PlatformSettingsDocument,
 ): Promise<PlatformSettingsDocument> {
-  const current = (await readPersistedPlatformSettings()) ?? {};
-  const next: PlatformSettingsDocument = {
-    ...current,
-    ...patch,
-    schemaVersion: SCHEMA_VERSION,
-  };
-  await getPersistence().writePlatformSettingsJson(JSON.stringify(next, null, 2));
-  return next;
+  return await updateJsonDocument("platformSettings", (raw) => {
+    const current = (raw === null ? null : parsePlatformSettingsDocument(raw)) ?? {};
+    const next: PlatformSettingsDocument = {
+      ...current,
+      ...patch,
+      schemaVersion: SCHEMA_VERSION,
+    };
+    return { json: JSON.stringify(next, null, 2), result: next };
+  });
 }
 
 export async function readPersistedPlatformSignInSettings(): Promise<PlatformSignInSettings | null> {

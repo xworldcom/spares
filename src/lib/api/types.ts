@@ -117,4 +117,5 @@ export type SubmitBugReportResponse = {
 
 export type ApiErrorBody = {
   error: string;
+  code?: string;
 };

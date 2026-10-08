@@ -28,7 +28,48 @@ function readErrorMessage(body: unknown, status: number) {
   return `Request failed (${status})`;
 }
 
+function readErrorCode(body: unknown) {
+  if (body && typeof body === "object" && "code" in body) {
+    const code = (body as { code?: unknown }).code;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
+
+const CATALOG_CONFLICT_CODE = "catalog-conflict";
+const CONFLICT_RETRY_DELAY_MS = 400;
+
+function isReplayableBody(body: RequestInit["body"]) {
+  return body == null || typeof body === "string" || (typeof FormData !== "undefined" && body instanceof FormData);
+}
+
+/**
+ * A 409 `catalog-conflict` means another save landed at the same moment and nothing was
+ * written, so one automatic retry is safe. If it conflicts again the friendly server
+ * message ("Someone saved at the same moment… try again") reaches the caller as an ApiError.
+ */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    return await apiFetchOnce<T>(path, init);
+  } catch (cause) {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (
+      cause instanceof ApiError &&
+      cause.status === 409 &&
+      cause.code === CATALOG_CONFLICT_CODE &&
+      method !== "GET" &&
+      method !== "HEAD" &&
+      isReplayableBody(init?.body) &&
+      !init?.signal?.aborted
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, CONFLICT_RETRY_DELAY_MS));
+      return await apiFetchOnce<T>(path, init);
+    }
+    throw cause;
+  }
+}
+
+async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     const headers = new Headers(init?.headers);
@@ -69,7 +110,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       notifyUnauthorized();
       throw new ApiError(SIGNED_OUT_MESSAGE, 401);
     }
-    throw new ApiError(readErrorMessage(body, response.status), response.status);
+    throw new ApiError(
+      readErrorMessage(body, response.status),
+      response.status,
+      readErrorCode(body),
+    );
   }
 
   return body as T;
