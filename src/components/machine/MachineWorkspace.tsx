@@ -322,7 +322,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           setUndoRemove(null);
           undoRemoveTimer.current = null;
         }, 8000);
-        return current.filter((line) => line.part.id !== partId);
+        const next = current.filter((line) => line.part.id !== partId);
+        if (next.length === 0) {
+          setTrayNote("");
+        }
+        return next;
       });
     },
     [],

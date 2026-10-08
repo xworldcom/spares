@@ -1,9 +1,22 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const path = require("node:path");
 const fs = require("node:fs");
-const { chromium } = require(
-  path.join(__dirname, "../../.cursor/skills/verify-oee360/scripts/node_modules/playwright"),
-);
+function loadPlaywright() {
+  const candidates = [
+    path.join(__dirname, "../../node_modules/playwright"),
+    path.join(__dirname, "../../.cursor/skills/verify-oee360/scripts/node_modules/playwright"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      return require(candidate);
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("playwright not installed (npm install playwright)");
+}
+
+const { chromium } = loadPlaywright();
 
 const BASE = process.env.R4_BASE ?? "http://localhost:3014";
 const TAG = process.env.R4_TAG ?? "after";

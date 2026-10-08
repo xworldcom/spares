@@ -22,8 +22,8 @@ export const DEMO_SCRUB_EXTRA_SVH = 1000;
 export const DEMO_SCRUB_EXTRA_SVH_PHONE = 550;
 
 /** Tall post-pin snap rails — one fling cannot skip a quote-status beat. */
-export const DEMO_BEAT_TRACK_SVH = 48;
-export const DEMO_BEAT_TRACK_SVH_PHONE = 80;
+export const DEMO_BEAT_TRACK_SVH = 56;
+export const DEMO_BEAT_TRACK_SVH_PHONE = 56;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
@@ -595,6 +595,95 @@ export function workflowHandoffBeatStatuses() {
     statuses.push(beat.status);
   }
   return statuses;
+}
+
+/** Beat track DOM order index → quote status (geometry source of truth). */
+export function workflowHandoffBeatStatusAtIndex(index: number): QuoteStatus {
+  const statuses = workflowHandoffBeatStatuses();
+  if (statuses.length === 0) {
+    return "requested";
+  }
+  const clamped = Math.min(Math.max(0, index), statuses.length - 1);
+  return statuses[clamped]!;
+}
+
+export function demoNearestBeatTrackIndex(trackTops: readonly number[], anchorY: number) {
+  let bestIdx = 0;
+  let bestDist = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < trackTops.length; i += 1) {
+    const dist = Math.abs(trackTops[i]! - anchorY);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+/** Beat track index from pinned-section scroll offset (tracks sit above the pin in document order). */
+export function demoBeatTrackIndexFromScroll(
+  scrolled: number,
+  preHandoffHeight: number,
+  beatTrackHeight: number,
+  beatCount: number,
+) {
+  if (beatCount <= 0 || beatTrackHeight <= 0) {
+    return 0;
+  }
+  const trackPix = Math.max(0, scrolled - preHandoffHeight);
+  return Math.min(
+    beatCount - 1,
+    Math.max(0, Math.floor((trackPix + beatTrackHeight * 0.28) / beatTrackHeight)),
+  );
+}
+
+/** Linear scrub progress when snapped at rest on beat track `index` (no double /active). */
+export function demoHandoffLinearProgressAtBeatRest(index: number) {
+  return workflowScrubLinearForStatusBeatIndex(index);
+}
+
+/** Quote-thread playhead when resting on beat track `index`. */
+export function demoThreadPlayheadAtBeatRest(index: number) {
+  const thresholds = demoQuoteStatusBeatThresholds();
+  const at = thresholds[index];
+  return at ?? thresholds.at(-1) ?? 0;
+}
+
+export function demoResolveHandoffQuoteStatus(
+  nearestTrackIndex: number,
+  inBeatChapter: boolean,
+  linearProgress: number,
+): QuoteStatus {
+  if (inBeatChapter) {
+    return workflowHandoffBeatStatusAtIndex(nearestTrackIndex);
+  }
+  return reduceDemoFrame("quote", demoWorkflowThreadPlayhead(linearProgress)).quoteStatus;
+}
+
+/**
+ * Expected at-rest quote status for beat track `trackIndex` given layout (unit + regression guard).
+ */
+export function demoQuoteStatusAtBeatTrackRest(
+  trackIndex: number,
+  layout: {
+    preHandoffHeight: number;
+    beatTrackHeight: number;
+    beatCount: number;
+    scrollable: number;
+  },
+): QuoteStatus {
+  const { preHandoffHeight, beatTrackHeight, beatCount, scrollable } = layout;
+  const scrolled = preHandoffHeight + trackIndex * beatTrackHeight + beatTrackHeight * 0.42;
+  const handoffLinearStart = workflowHandoffLinearStart();
+  const linearProgress = demoBeatTrackScrubLinear(
+    scrolled,
+    scrollable,
+    preHandoffHeight,
+    beatTrackHeight,
+    beatCount,
+  );
+  const inBeatChapter = beatCount > 0 && scrolled > preHandoffHeight + 8;
+  return demoResolveHandoffQuoteStatus(trackIndex, inBeatChapter, linearProgress);
 }
 
 /** Pre-handoff scrub snap positions (handoff beats use post-pin tracks). */

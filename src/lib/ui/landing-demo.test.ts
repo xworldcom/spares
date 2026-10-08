@@ -42,6 +42,12 @@ import {
   workflowScrubSnapLinearPositions,
   workflowScrubSnapBeatLabel,
   workflowHandoffLinearStart,
+  workflowHandoffBeatStatuses,
+  workflowHandoffBeatStatusAtIndex,
+  demoQuoteStatusAtBeatTrackRest,
+  demoHandoffLinearProgressAtBeatRest,
+  demoThreadPlayheadAtBeatRest,
+  DEMO_BEAT_TRACK_SVH_PHONE,
   workflowScrubLinearForStatusBeatIndex,
   workflowStatusBeatCount,
   workflowStatusBeatLinearShare,
@@ -347,7 +353,38 @@ describe("landing scrub layout", () => {
     assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
     assert.match(css, /scroll-snap-stop:\s*always/);
     assert.match(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop:\s*always/);
-    assert.match(css, /--landing-demo-beat-track:\s*80svh/);
+    assert.match(css, /--landing-demo-beat-track:\s*56svh/);
+    assert.equal(DEMO_BEAT_TRACK_SVH_PHONE, 56);
+  });
+
+  it("maps each beat track index to the matching handoff quote status at rest", () => {
+    const statuses = workflowHandoffBeatStatuses();
+    assert.equal(statuses.length, 6);
+    for (let i = 0; i < statuses.length; i += 1) {
+      assert.equal(workflowHandoffBeatStatusAtIndex(i), statuses[i]);
+    }
+    const beatTrackHeight = 420;
+    const preHandoffHeight = 480;
+    const beatCount = statuses.length;
+    const scrollable = preHandoffHeight + beatCount * beatTrackHeight;
+    const layout = { preHandoffHeight, beatTrackHeight, beatCount, scrollable };
+    for (let i = 0; i < beatCount; i += 1) {
+      const status = demoQuoteStatusAtBeatTrackRest(i, layout);
+      assert.equal(status, statuses[i], `beat track ${i}`);
+      assert.equal(
+        reduceDemoFrame("quote", demoThreadPlayheadAtBeatRest(i)).quoteStatus,
+        statuses[i],
+        `thread plateau ${i}`,
+      );
+    }
+  });
+
+  it("does not double-divide handoff linear progress in the scrub component", () => {
+    const src = readFileSync("src/components/landing/LandingDemoScrub.tsx", "utf8");
+    assert.doesNotMatch(src, /Math\.min\(snapped,\s*active\)\s*\/\s*active/);
+    assert.match(src, /demoResolveHandoffQuoteStatus/);
+    assert.match(src, /demoHandoffLinearProgressAtBeatRest/);
+    assert.match(src, /demoBeatTrackIndexFromScroll/);
   });
 
   it("maps post-pin beat tracks to handoff linear progress", () => {
