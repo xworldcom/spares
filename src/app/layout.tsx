@@ -28,8 +28,8 @@ html:has(.spares-app-cinematic),html:has(.spares-app-cinematic) body{overflow-x:
 @layer base{
 a{color:inherit;text-decoration:none;}
 button,input,textarea,select{font:inherit;color:inherit;}
-}
 button{cursor:pointer;border:0;background:transparent;}
+}
 .btn-primary{background:#eceae4;color:#0c0d0f;}
 .btn-accent{background:#0a84ff;color:#fff;}
 .btn-danger{background:#c23b3b;color:#fff;}

@@ -20,7 +20,14 @@ import {
   demoScrubDebugEnabled,
   demoWindowScrollY,
   demoWorkflowThreadPlayhead,
+  workflowScrubSnapLinearPositions,
 } from "@/lib/ui/landing-demo";
+
+const SCRUB_SNAP_LINEAR = workflowScrubSnapLinearPositions();
+const SCRUB_SNAP_DELTAS = SCRUB_SNAP_LINEAR.slice(1).map((end, index) => {
+  const start = SCRUB_SNAP_LINEAR[index] ?? 0;
+  return end - start;
+});
 
 export type LandingDemoScrubSnapshot = {
   progress: number;
@@ -301,6 +308,18 @@ export function LandingDemoScrub({
       data-progress={snapshot.progress.toFixed(3)}
       aria-label={ariaLabel}
     >
+      {snapshot.reduceMotion
+        ? null
+        : SCRUB_SNAP_DELTAS.map((delta, index) => (
+            <div
+              key={index}
+              className="landing-demo-scrub-snap"
+              style={{
+                height: `calc(${delta} * var(--landing-demo-scrub-extra, 1000svh))`,
+              }}
+              aria-hidden="true"
+            />
+          ))}
       <div ref={pinRef} className="landing-demo-scrub-pin">
         <div className="landing-demo-scrub-meter" aria-hidden="true">
           <i style={sdaMeter ? undefined : { transform: `scaleX(${snapshot.progress})` }} />

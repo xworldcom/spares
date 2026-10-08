@@ -408,10 +408,23 @@
 }
 
 .landing-demo-scrub:not([data-reduce-motion]) {
-  height: calc(100svh - var(--spares-header) - 0.75rem + var(--landing-demo-scrub-extra, 1000svh));
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--spares-header) - 0.75rem + var(--landing-demo-scrub-extra, 1000svh));
   view-timeline-name: --landing-demo-chapter;
   view-timeline-axis: block;
   view-timeline-inset: var(--spares-header) 0.75rem;
+}
+
+.landing-demo-scrub-snap {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  pointer-events: none;
+}
+
+html:has(.spares-app-cinematic) {
+  scroll-snap-type: y proximity;
 }
 
 .landing-demo-scrub-pin {

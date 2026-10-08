@@ -20,7 +20,7 @@ import {
   workflowGuideCue,
   workflowHandoffMix,
   workflowHighlightPartId,
-  workflowQuoteChatPlayhead,
+  demoWorkflowThreadPlayhead,
   workflowScrubPlayhead,
   workflowSpinYaw,
   workflowStep,
@@ -43,7 +43,10 @@ export function LandingWorkflowDemo({
   const step = workflowStep(playhead);
   const spinYaw = useMemo(() => workflowSpinYaw(playhead), [playhead]);
   const handoff = reduceMotion && step === "handoff" ? 1 : workflowHandoffMix(playhead);
-  const chatPlayhead = useMemo(() => workflowQuoteChatPlayhead(playhead), [playhead]);
+  const chatPlayhead = useMemo(
+    () => (reduceMotion ? 1 : demoWorkflowThreadPlayhead(linearProgress)),
+    [linearProgress, reduceMotion],
+  );
   const quoteFrame = useMemo(() => reduceDemoFrame("quote", chatPlayhead), [chatPlayhead]);
   const completeThread = useMemo(() => reduceDemoFrame("quote", 1), []);
   const liveById = useMemo(
