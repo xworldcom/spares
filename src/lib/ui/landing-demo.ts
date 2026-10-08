@@ -558,17 +558,45 @@ function easeBetweenPlateaus(index: number) {
   return fromRest && toRest;
 }
 
-function demoQuoteThreadBeatThresholds() {
-  const seen = new Set<number>();
+/** Script playhead (`at`) for each quote status beat, in story order. */
+export function demoQuoteStatusBeatThresholds() {
   const thresholds: number[] = [];
+  const seen = new Set<QuoteStatus>();
   for (const beat of DEMO_QUOTE_SCRIPT) {
-    if (seen.has(beat.at)) {
+    if (beat.kind !== "quoteStatus" || seen.has(beat.status)) {
       continue;
     }
-    seen.add(beat.at);
+    seen.add(beat.status);
     thresholds.push(beat.at);
   }
-  return thresholds.sort((a, b) => a - b);
+  return thresholds;
+}
+
+/** Plateau share within each equal handoff segment where the beat rests at full opacity. */
+export const WORKFLOW_STATUS_BEAT_PLATEAU = 0.1;
+
+export function workflowHandoffLinearStart() {
+  return workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+}
+
+export function workflowStatusBeatCount() {
+  return demoQuoteStatusBeatThresholds().length;
+}
+
+/** Equal linear scrub share per quote-status beat in the handoff chapter. */
+export function workflowStatusBeatLinearShare() {
+  const start = workflowHandoffLinearStart();
+  const n = workflowStatusBeatCount();
+  if (n <= 0) {
+    return 0;
+  }
+  return (1 - start) / n;
+}
+
+export function workflowScrubLinearForStatusBeatIndex(index: number) {
+  const start = workflowHandoffLinearStart();
+  const share = workflowStatusBeatLinearShare();
+  return clampDemoScrollProgress(start + index * share);
 }
 
 function interpolateWorkflowScrubMap(linear: number) {
@@ -611,20 +639,18 @@ export function workflowScrubLinearForVisual(targetVisual: number) {
   return lo;
 }
 
-/** Inverse of `demoWorkflowThreadPlayhead` for snap markers on quote status beats. */
+/** Linear scrub at the start of the handoff segment for a quote-thread playhead threshold. */
 export function workflowScrubLinearForThreadPlayhead(targetPlayhead: number) {
   const target = clampDemoScrollProgress(targetPlayhead);
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 56; i += 1) {
-    const mid = (lo + hi) / 2;
-    if (demoWorkflowThreadPlayhead(mid) < target - 1e-5) {
-      lo = mid;
-    } else {
-      hi = mid;
+  const thresholds = demoQuoteStatusBeatThresholds();
+  let index = 0;
+  for (let i = 0; i < thresholds.length; i += 1) {
+    const at = thresholds[i] ?? 0;
+    if (at <= target + 1e-5) {
+      index = i;
     }
   }
-  return hi;
+  return workflowScrubLinearForStatusBeatIndex(index);
 }
 
 const WORKFLOW_STEP_SNAP_LABELS: Record<WorkflowStep, string> = {
@@ -655,27 +681,12 @@ export function workflowScrubSnapLinearPositions() {
       positions.add(anchor.linear);
     }
   }
-  const statusLinear = new Map<QuoteStatus, number>();
-  for (const beat of DEMO_QUOTE_SCRIPT) {
-    if (beat.kind !== "quoteStatus" || statusLinear.has(beat.status)) {
-      continue;
-    }
-    statusLinear.set(beat.status, workflowScrubLinearForThreadPlayhead(beat.at));
+  const statusCount = workflowStatusBeatCount();
+  for (let i = 0; i < statusCount; i += 1) {
+    positions.add(workflowScrubLinearForStatusBeatIndex(i));
   }
-  const statusOrder = [...statusLinear.entries()].sort((a, b) => a[1] - b[1]);
-  for (let i = 0; i < statusOrder.length; i += 1) {
-    const [status, fromLinear] = statusOrder[i] ?? [];
-    if (!status) {
-      continue;
-    }
-    const toLinear = statusOrder[i + 1]?.[1] ?? 1;
-    const span = Math.max(0.012, toLinear - fromLinear);
-    positions.add(fromLinear);
-    if (status === statusOrder.at(-1)?.[0]) {
-      positions.add(Math.min(1, toLinear));
-    }
-  }
-  return [...positions].sort((a, b) => a - b);
+  const sorted = [...positions].sort((a, b) => a - b);
+  return sorted.filter((pos, index) => index === 0 || pos - sorted[index - 1]! > 1e-5);
 }
 
 export type WorkflowGuideTarget = "scroll" | "orbit" | "hotspot" | "add" | "quote" | "request";
@@ -855,12 +866,12 @@ export function demoWorkflowThreadPlayhead(workflowProgress: number) {
   if (visual < WORKFLOW_HANDOFF_START) {
     return 0;
   }
-  const linearStart = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+  const linearStart = workflowHandoffLinearStart();
   if (linear <= linearStart) {
     return 0;
   }
   const chapter = clampDemoScrollProgress((linear - linearStart) / (1 - linearStart));
-  const thresholds = demoQuoteThreadBeatThresholds();
+  const thresholds = demoQuoteStatusBeatThresholds();
   const n = thresholds.length;
   if (n <= 1) {
     return chapter;
@@ -870,16 +881,21 @@ export function demoWorkflowThreadPlayhead(workflowProgress: number) {
   const local = scaled - idx;
   const from = thresholds[idx] ?? 0;
   const to = thresholds[idx + 1] ?? 1;
+  const plateau = WORKFLOW_STATUS_BEAT_PLATEAU;
   if (idx >= n - 1) {
+    if (local < plateau) {
+      return from;
+    }
     return 1;
   }
-  if (local < 0.04) {
+  if (local < plateau) {
     return from;
   }
-  if (local > 0.96) {
+  if (local > 1 - plateau) {
     return to;
   }
-  return from + local * (to - from);
+  const t = (local - plateau) / (1 - 2 * plateau);
+  return from + t * (to - from);
 }
 
 /** Scroll-driven yaw for the marketing workflow cell (radians). */

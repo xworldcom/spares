@@ -22,6 +22,7 @@ import {
   demoRowHidden,
   demoScrubDebugEnabled,
   demoSectionScrollProgress,
+  demoQuoteStatusBeatThresholds,
   demoWorkflowThreadPlayhead,
   marketingCopyBan,
   marketingTutorialCopyBan,
@@ -39,6 +40,10 @@ import {
   workflowScrubLinearForThreadPlayhead,
   workflowScrubSnapLinearPositions,
   workflowScrubSnapBeatLabel,
+  workflowHandoffLinearStart,
+  workflowScrubLinearForStatusBeatIndex,
+  workflowStatusBeatCount,
+  workflowStatusBeatLinearShare,
   workflowSpinYaw,
   workflowStep,
   WORKFLOW_DEMO_PART,
@@ -411,6 +416,10 @@ describe("landing scrub layout", () => {
       css,
       /\.landing-marketing > \.landing-section\[id\]\s*\{[^}]*scroll-margin-top:\s*var\(--spares-header\)/,
     );
+    assert.match(
+      css,
+      /\.spares-app-cinematic \.landing-scroll \.landing-hero\s*\{[^}]*scroll-margin-top:\s*var\(--spares-header\)/,
+    );
   });
 
   it("keeps a phone swipe scrolling over the model and a 44px story peek", () => {
@@ -636,12 +645,31 @@ describe("workflow demo", () => {
     assert.ok(edge < mid * 0.55, `yaw ease edge ${edge} mid ${mid}`);
   });
 
-  it("gives each quote-thread beat equal linear scroll during handoff", () => {
-    const handoffLinear = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+  it("gives each quote status beat equal linear scroll during handoff", () => {
+    const handoffLinear = workflowHandoffLinearStart();
     assert.ok(handoffLinear < 0.5);
     assert.equal(demoWorkflowThreadPlayhead(handoffLinear - 0.01), 0);
     assert.ok(demoWorkflowThreadPlayhead(handoffLinear + 0.02) > 0);
     const span = 1 - handoffLinear;
+    const share = workflowStatusBeatLinearShare();
+    assert.equal(share, span / workflowStatusBeatCount());
+    assert.ok(share >= span * 0.1, `status share ${share} of handoff ${span}`);
+    const positions = workflowScrubSnapLinearPositions();
+    for (let i = 1; i < workflowStatusBeatCount(); i += 1) {
+      const prev = workflowScrubLinearForStatusBeatIndex(i - 1);
+      const next = workflowScrubLinearForStatusBeatIndex(i);
+      assert.ok(Math.abs(next - prev - share) < 1e-5, `beat ${i} delta`);
+      assert.ok(positions.some((pos) => Math.abs(pos - prev) < 1e-4));
+    }
+    const thresholds = demoQuoteStatusBeatThresholds();
+    assert.equal(thresholds.length, 6);
+    for (let i = 0; i < thresholds.length - 1; i += 1) {
+      const linear = workflowScrubLinearForStatusBeatIndex(i);
+      const plateau = demoWorkflowThreadPlayhead(linear + share * 0.05);
+      assert.equal(plateau, thresholds[i], `plateau ${i}`);
+    }
+    const lastLinear = workflowScrubLinearForStatusBeatIndex(thresholds.length - 1);
+    assert.equal(demoWorkflowThreadPlayhead(lastLinear), thresholds.at(-1));
     const firstBeat = demoWorkflowThreadPlayhead(handoffLinear + span * 0.08);
     const pricingBeat = demoWorkflowThreadPlayhead(handoffLinear + span * 0.45);
     assert.ok(firstBeat < pricingBeat);
@@ -697,6 +725,7 @@ describe("workflow demo", () => {
       css,
       /\.landing-workflow-model-panel\s*\{[^}]*opacity:\s*calc\(1 - var\(--wf-handoff\) \* 0\.5\)/,
     );
+    assert.match(css, /\.landing-workflow-stage\.is-handoff \.landing-workflow-request\.is-visible\s*\{[^}]*opacity:\s*1/);
     assert.match(
       css,
       /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*4\.85rem/,

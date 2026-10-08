@@ -106,7 +106,7 @@ export function LandingWorkflowDemo({
       <div
         className={[
           "landing-workflow-stage",
-          handoff > 0.55 ? "is-handoff" : "",
+          handoff > 0.48 ? "is-handoff" : "",
           showQuoteSheet ? "is-quote-focus" : "",
           reduceMotion ? "is-reduced" : "",
         ]
