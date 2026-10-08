@@ -36,19 +36,15 @@ after(() => {
 });
 
 describe("ensureLifecycleDemoFixtures (SPARES_ALLOW_SEED off)", () => {
-  it("creates the hardware fixture and lifecycle rows once, then is a no-op", async () => {
+  it("auto-migrates on first catalog read without staff POST", async () => {
     await productionLikeStore();
-    assert.equal(await getMachine(FIXTURE_MACHINE_IDS.hardware, T), null);
+    await listMachines(T);
+    assert.ok(await getMachine(FIXTURE_MACHINE_IDS.hardware, T));
+  });
 
-    const first = await ensureLifecycleDemoFixtures(T, "owner@example.test");
-    assert.equal(first.status, "ok");
-    assert.ok(first.status === "ok" && first.machineCreated);
-    assert.ok(first.status === "ok" && first.lifecycleAdded.includes("6331K32"));
-
-    const machine = await getMachine(FIXTURE_MACHINE_IDS.hardware, T);
-    assert.ok(machine && machine.parts.some((part) => part.id === "6331K32"));
-    assert.ok((await listMachines(T)).some((row) => row.id === FIXTURE_MACHINE_IDS.hardware));
-
+  it("staff POST path stays idempotent after auto migration", async () => {
+    await productionLikeStore();
+    await listMachines(T);
     const second = await ensureLifecycleDemoFixtures(T, "owner@example.test");
     assert.deepEqual(second, {
       status: "ok",

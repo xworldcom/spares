@@ -5,8 +5,8 @@ import { ensureLifecycleDemoFixtures } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 /**
- * Idempotent: creates the Hardware fixture machine and its demo lifecycle rows on the host
- * company when they are missing. Works with `SPARES_ALLOW_SEED` off (Production).
+ * Optional manual replay of the v1 demo-tenant migration (normally runs automatically on boot).
+ * Platform owner only; Production keeps `SPARES_ALLOW_SEED` off.
  */
 export async function POST() {
   const auth = await requireTenantStaff();

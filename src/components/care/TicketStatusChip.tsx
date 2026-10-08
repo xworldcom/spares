@@ -13,10 +13,10 @@ export function TicketStatusChip({
     <span
       className={
         closed
-          ? "btn-soft inline-flex h-8 items-center rounded-full px-3 text-xs font-medium"
+          ? "status-pill status-pill--muted"
           : current
-            ? "btn-primary inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold"
-            : "btn-accent inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold"
+            ? "status-pill status-pill--current"
+            : "status-pill status-pill--accent"
       }
     >
       {TICKET_STATUS_LABELS[status]}

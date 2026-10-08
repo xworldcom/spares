@@ -6,7 +6,7 @@ const { chromium } = require(
   path.join(__dirname, "../../.cursor/skills/verify-oee360/scripts/node_modules/playwright"),
 );
 
-const BASE = process.env.R3_BASE ?? "http://localhost:3012";
+const BASE = process.env.R3_BASE ?? "http://localhost:3013";
 const TAG = process.env.R3_TAG ?? "after";
 const OUT = process.env.R3_OUT ?? "/cursor/stores/self/media/round3";
 const CUSTOMER = { email: "customer@spares.local", password: "SparesCustomer1!" };
@@ -51,9 +51,18 @@ async function seedTicket(context, machineId, title, note, replies = []) {
 
 async function uiLogin(page, creds = CUSTOMER, next = "/machines") {
   await page.goto(BASE + "/login?next=" + encodeURIComponent(next), { waitUntil: "networkidle" });
+  const submit = page.getByRole("button", { name: "Sign in" });
+  await submit.waitFor({ state: "visible" });
+  await page.waitForFunction(
+    () => {
+      const button = document.querySelector(".login-submit");
+      return button && !button.disabled && button.getAttribute("aria-disabled") !== "true";
+    },
+    { timeout: 15000 },
+  );
   await page.fill("#email", creds.email);
   await page.fill("#password", creds.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submit.click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
 }
 

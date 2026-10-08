@@ -73,6 +73,7 @@ import {
 } from "./seed-fixtures.ts";
 import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.ts";
 import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
+import { applyDemoTenantV1Migration } from "./demo-tenant-data-migration.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -351,6 +352,8 @@ type OrgTombstones = {
 
 type Database = {
   schemaVersion?: number;
+  /** One-shot data migrations (e.g. Production demo tenant fixture). */
+  dataMigrations?: import("./demo-tenant-data-migration.ts").DataMigrations;
   tenants?: Tenant[];
   customers?: CustomerAccount[];
   users: StoredUser[];
@@ -1278,6 +1281,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
         partLifecycle: parsed.partLifecycle ?? [],
+        dataMigrations: parsed.dataMigrations,
         orgTombstones: parsed.orgTombstones,
         platformSettings: parsed.platformSettings,
       },
@@ -1312,8 +1316,10 @@ async function readDatabase(): Promise<Database> {
   const loaded = await loadPersistedSnapshot();
   if (!loaded) {
     const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
-    const seeded = await overlayPersistedCare(
-      await withFixtureMachines(await ensureOwnerStaff(base)),
+    const seeded = await runDemoTenantMigration(
+      await overlayPersistedCare(
+        await withFixtureMachines(await ensureOwnerStaff(base)),
+      ),
     );
     // Another instance may have created the catalog while we were building fixtures.
     const appeared = await loadPersistedSnapshot();
@@ -1326,22 +1332,38 @@ async function readDatabase(): Promise<Database> {
   return await healLoadedDatabase(loaded);
 }
 
+async function persistModelBytes(name: string, bytes: Uint8Array | Buffer) {
+  await persistFile(name, Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes));
+}
+
+async function runDemoTenantMigration(db: Database): Promise<Database> {
+  const migrated = await applyDemoTenantV1Migration(db, "migration@oee360.com", persistModelBytes);
+  return migrated.changed ? migrated.db : db;
+}
+
 async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
   const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
-  const next = await overlayPersistedCare(
+  const stabilized = await overlayPersistedCare(
     ensureOrg(
       await withFixtureMachines(
         await stabilizeCatalogUsers({ ...loaded.db, quotes }),
       ),
     ),
   );
+  const next = await runDemoTenantMigration(stabilized);
   const usersRemapped =
     next.users.length !== loaded.db.users.length ||
     next.users.some((user, index) => user.id !== loaded.db.users[index]?.id);
+  const lifecycleChanged =
+    (next.partLifecycle?.length ?? 0) !== (loaded.db.partLifecycle?.length ?? 0);
+  const migrationsChanged =
+    next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1;
   if (
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
     usersRemapped ||
+    lifecycleChanged ||
+    migrationsChanged ||
     staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
     (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
@@ -3127,36 +3149,23 @@ export function ensureLifecycleDemoFixtures(
       return { status: "wrong_tenant" } as const;
     }
     const db = await ensureCatalog();
+    const migrated = await applyDemoTenantV1Migration(db, actorEmail, persistModelBytes);
+    if (migrated.changed && migrated.result) {
+      await writeDatabase(migrated.db);
+      const { machineId, machineCreated, lifecycleAdded } = migrated.result;
+      return {
+        status: "ok",
+        machineId,
+        machineCreated,
+        lifecycleAdded,
+      } as const;
+    }
     const machineId = FIXTURE_MACHINE_IDS.hardware;
-    let machines = db.machines;
-    let machineCreated = false;
-    if (!machines.some((machine) => machine.id === machineId)) {
-      const built = await buildFixtureMachineById(machineId);
-      if (!built) {
-        throw new Error("Hardware fixture definition is missing");
-      }
-      await persistFile(built.machine.storedFileName, built.bytes);
-      machines = [...machines, { ...built.machine, tenantId: DEFAULT_TENANT_ID }];
-      machineCreated = true;
-    }
-    const additions = missingDemoLifecycleRows(
-      db.partLifecycle,
-      tenantId,
-      new Date().toISOString(),
-      actorEmail,
-    );
-    if (machineCreated || additions.length > 0) {
-      await writeDatabase({
-        ...db,
-        machines,
-        partLifecycle: [...(db.partLifecycle ?? []), ...additions],
-      });
-    }
     return {
       status: "ok",
       machineId,
-      machineCreated,
-      lifecycleAdded: additions.map((row) => row.partNumber),
+      machineCreated: false,
+      lifecycleAdded: [],
     } as const;
   });
 }

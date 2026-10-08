@@ -503,7 +503,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onCaptureReady={(capture) => {
               captureThumb.current = capture;
             }}
-            className={`absolute inset-0 ${view === "list" ? "hidden" : ""}`}
+            className={`absolute inset-0 ${view === "list" ? "invisible pointer-events-none" : ""}`}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
@@ -548,7 +548,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 ? "overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
                 : "flex flex-col"
             }`}
-            style={{ paddingTop: "4.35rem" }}
+            style={{ paddingTop: "3.65rem" }}
           >
             {isCustomer ? (
               <>
@@ -623,7 +623,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           ) : null}
           {hasModel && ((showViewToggle && view === "model") || staffSplitView) ? (
             <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
-              <span className="chrome-quiet hidden shrink-0 text-[13px] font-medium tracking-wide sm:inline">
+              <span className="chrome-quiet shrink-0 text-[12px] font-medium tracking-wide sm:text-[13px]">
                 Explode
               </span>
               <input

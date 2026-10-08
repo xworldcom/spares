@@ -10,7 +10,6 @@ import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { ErrorState } from "@/components/states/ErrorState";
-import { LoadingState } from "@/components/states/LoadingState";
 import {
   getTicket,
   postTicketActivity,
@@ -22,6 +21,24 @@ import { careHref, ticketContextLine, ticketRefMatches } from "@/lib/care";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
+
+function TicketDetailSkeleton() {
+  return (
+    <div className="care-stack animate-pulse" aria-busy="true" aria-label="Loading ticket">
+      <div className="h-4 w-24 rounded bg-white/10" />
+      <div className="space-y-2">
+        <div className="h-3 w-20 rounded bg-white/8" />
+        <div className="h-8 w-3/4 max-w-md rounded bg-white/12" />
+        <div className="h-4 w-full max-w-sm rounded bg-white/8" />
+      </div>
+      <div className="mt-4 space-y-3 rounded-[22px] bg-white/6 p-4">
+        <div className="h-4 w-28 rounded bg-white/10" />
+        <div className="h-16 rounded-2xl bg-white/8" />
+        <div className="h-16 rounded-2xl bg-white/8" />
+      </div>
+    </div>
+  );
+}
 
 function sameReadReceipts(
   a: TicketCustomerReadReceipt[] | undefined,
@@ -67,7 +84,7 @@ export function TicketDetail({
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
-  const conversationTitle = staff ? "Notes" : "Messages";
+  const conversationTitle = "Messages";
 
   const lastTicketIdRef = useRef<string | null>(null);
 
@@ -196,7 +213,7 @@ export function TicketDetail({
   }
 
   if (authStatus === "loading" && !ticket) {
-    return <LoadingState label="Loading ticket…" />;
+    return <TicketDetailSkeleton />;
   }
 
   if (!ticket) {
@@ -212,11 +229,11 @@ export function TicketDetail({
         />
       );
     }
-    return <LoadingState label="Loading ticket…" />;
+    return <TicketDetailSkeleton />;
   }
 
   if (!user) {
-    return <LoadingState label="Loading ticket…" />;
+    return <TicketDetailSkeleton />;
   }
 
   const threadReady = ticketRefMatches(ticket, ticketId);
@@ -298,7 +315,7 @@ export function TicketDetail({
           threadKind="ticket"
           threadId={ticket.id}
           title={conversationTitle}
-          layout="sheet"
+          layout={embedded ? "card" : "sheet"}
           customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
           assistantAvailable={staff ? ticket.assistantAvailable : undefined}
           assistantPaused={ticket.assistantPaused}

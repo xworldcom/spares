@@ -66,7 +66,13 @@ export function LandingMarketing() {
         <Link href="/inquire" className="landing-cta">
           Request access
         </Link>
-        <p className="landing-section-foot">Already have a login? Sign in above.</p>
+        <p className="landing-section-foot">
+          Already have a login?{" "}
+          <Link href="/login" className="landing-section-foot-link">
+            Sign in
+          </Link>
+          .
+        </p>
       </section>
     </div>
   );

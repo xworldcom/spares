@@ -33,10 +33,6 @@ export function QuoteTrackingPanel({
     return null;
   }
 
-  if (role === "customer" && quote.shipments.length === 0) {
-    return null;
-  }
-
   return (
     <section className="spares-surface rounded-[24px] p-5">
       <h2 className="text-[19px] font-semibold tracking-tight">Tracking</h2>
@@ -48,7 +44,11 @@ export function QuoteTrackingPanel({
         <p className="spares-muted mt-1 text-sm">
           Add tracking to mark this shipped. Carrier is optional.
         </p>
-      ) : null}
+      ) : (
+        <p className="spares-muted mt-1 text-sm">
+          Tracking numbers appear here once your order ships.
+        </p>
+      )}
 
       <ul className="mt-4 space-y-3">
         {rows.map((row, index) => (

@@ -306,7 +306,7 @@ export function MachinesList() {
         <p className="sr-only" aria-live="polite">
           Loading machines…
         </p>
-        <CatalogSkeleton variant="machine" count={4} />
+        <CatalogSkeleton variant="machine" count={3} />
       </div>
     );
   }
