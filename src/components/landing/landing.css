@@ -402,6 +402,7 @@
 .landing-demo-scrub {
   position: relative;
   --landing-demo-scrub-extra: 1000svh;
+  --landing-demo-beat-track: 56svh;
 }
 
 .landing-demo-scrub-stack > .landing-demo-scrub + .landing-demo-scrub {
@@ -1063,6 +1064,12 @@ html:has(.spares-app-cinematic) {
 
 .landing-demo-stage .quote-progress-track {
   overflow-x: hidden;
+}
+
+.landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-track {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 0.65rem;
 }
 
 .landing-workflow-request .quote-progress-track {
@@ -1933,6 +1940,12 @@ html:has(.spares-app-cinematic) {
 @media (max-width: 899px) {
   .landing-demo-scrub {
     --landing-demo-scrub-extra: 550svh;
-    --landing-demo-beat-track: 80svh;
+    --landing-demo-beat-track: 56svh;
+  }
+}
+
+@media (min-width: 900px) {
+  .landing-demo-scrub {
+    --landing-demo-beat-track: 52svh;
   }
 }

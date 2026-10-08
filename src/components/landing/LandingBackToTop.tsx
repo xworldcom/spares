@@ -24,6 +24,10 @@ function productStoryChapterActive() {
     return false;
   }
   const scrub = story.querySelector<HTMLElement>(".landing-demo-scrub");
+  const pin = scrub?.querySelector<HTMLElement>(".landing-demo-scrub-pin");
+  if (pin?.dataset.pin === "track") {
+    return true;
+  }
   const rect = story.getBoundingClientRect();
   const header = readSparesHeaderPx();
   const pinned = rect.top <= header + 2 && rect.bottom > window.innerHeight * 0.4;

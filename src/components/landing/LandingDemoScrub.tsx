@@ -18,13 +18,16 @@ import {
   demoPlayhead,
   demoScrubDebugEnabled,
   demoWindowScrollY,
-  DEMO_SCRUB_END_HOLD,
   demoBeatTrackScrubLinear,
+  demoBeatTrackIndexFromScroll,
+  demoResolveHandoffQuoteStatus,
+  demoThreadPlayheadAtBeatRest,
   demoWorkflowThreadPlayhead,
   reduceDemoFrame,
   workflowHandoffBeatStatuses,
+  workflowHandoffBeatStatusAtIndex,
   workflowHandoffLinearStart,
-  workflowScrubLinearForStatusBeatIndex,
+  demoHandoffLinearProgressAtBeatRest,
   workflowScrubPreHandoffSnapLinearPositions,
   workflowScrubSnapBeatLabel,
 } from "@/lib/ui/landing-demo";
@@ -223,28 +226,24 @@ export function LandingDemoScrub({
       const sectionViewportTop = section.getBoundingClientRect().top;
       const scrolled = layout.stickyTop - sectionViewportTop;
       const scrollable = layout.sectionHeight - layout.pinHeight;
+      const handoffLinearStart = workflowHandoffLinearStart();
       let linearProgress = demoBeatTrackScrubLinear(
         scrolled,
         scrollable,
         preHandoffHeight,
         beatTrackHeight,
         beatCount,
-        workflowHandoffLinearStart(),
+        handoffLinearStart,
       );
-      if (beatCount > 0 && scrolled > preHandoffHeight + 8) {
-        const anchorY = layout.stickyTop + 6;
-        let bestIdx = 0;
-        let bestDist = Number.POSITIVE_INFINITY;
-        beatTracks.forEach((track, index) => {
-          const dist = Math.abs(track.getBoundingClientRect().top - anchorY);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestIdx = index;
-          }
-        });
-        const snapped = workflowScrubLinearForStatusBeatIndex(bestIdx);
-        const active = 1 - DEMO_SCRUB_END_HOLD;
-        linearProgress = Math.min(snapped, active) / active;
+      const beatTrackIndex = demoBeatTrackIndexFromScroll(
+        scrolled,
+        preHandoffHeight,
+        beatTrackHeight,
+        beatCount,
+      );
+      const inBeatChapter = beatCount > 0 && scrolled > preHandoffHeight + 8;
+      if (inBeatChapter) {
+        linearProgress = demoHandoffLinearProgressAtBeatRest(beatTrackIndex);
       }
       const next = demoPlayhead(false, linearProgress);
       applyPin(
@@ -261,8 +260,14 @@ export function LandingDemoScrub({
         window.pageXOffset || 0,
       );
       section.dataset.progress = next.toFixed(3);
-      const threadPlayhead = demoWorkflowThreadPlayhead(next);
-      const quoteStatus = reduceDemoFrame("quote", threadPlayhead).quoteStatus;
+      const statusFromTrack = beatTracks[beatTrackIndex]?.dataset.quoteStatus;
+      const quoteStatus = inBeatChapter
+        ? ((statusFromTrack as (typeof HANDOFF_BEAT_STATUSES)[number]) ??
+          workflowHandoffBeatStatusAtIndex(beatTrackIndex))
+        : demoResolveHandoffQuoteStatus(beatTrackIndex, false, next);
+      const threadPlayhead = inBeatChapter
+        ? demoThreadPlayheadAtBeatRest(beatTrackIndex)
+        : demoWorkflowThreadPlayhead(next);
       section.dataset.activeQuoteStatus = quoteStatus;
       demoApplyAtVisibility(
         section.querySelectorAll<HTMLElement>("[data-demo-at]"),
