@@ -924,6 +924,11 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
         latest,
         mergeUsersForHeal(healed.users, latest.users),
       ),
+      machines: mergeRowsForWrite(latest.machines, healed.machines),
+      partLifecycle: mergeRowsForWrite(
+        latest.partLifecycle ?? [],
+        healed.partLifecycle ?? [],
+      ),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       accessInquiries: mergeRowsForWrite(
@@ -1228,7 +1233,12 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
     );
   }
   const kept = await overlayPersistedCare(healDemoPartLifecycle(next));
-  if (catalogChanged(db, kept)) {
+  const latestForHeal = (await loadPersistedSnapshot())?.db ?? db;
+  if (
+    catalogChanged(db, kept) &&
+    (catalogHealWouldPersistChange(latestForHeal, kept) ||
+      catalogHealWouldPersistChange(db, kept))
+  ) {
     await writeCatalogHeal(kept);
     return kept;
   }
@@ -1362,19 +1372,20 @@ async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
     (next.partLifecycle?.length ?? 0) !== (loaded.db.partLifecycle?.length ?? 0);
   const migrationsChanged =
     next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1;
+  const latestBeforeWrite = (await loadPersistedSnapshot())?.db ?? loaded.db;
   if (
-    next.machines.length !== loaded.db.machines.length ||
+    catalogHealWouldPersistChange(latestBeforeWrite, next) ||
     loaded.numbersAssigned ||
     usersRemapped ||
     lifecycleChanged ||
     migrationsChanged ||
     demoStateRestored ||
-    staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
-    (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
-    (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
-    (next.customers?.length ?? 0) !== (loaded.db.customers?.length ?? 0) ||
-    (next.schemaVersion ?? 1) !== (loaded.db.schemaVersion ?? 1) ||
-    inboundLocalPartsChanged(loaded.db.tenants, next.tenants)
+    staffTenantAssignmentsChanged(latestBeforeWrite.users, next.users) ||
+    (next.tenants?.length ?? 0) !== (latestBeforeWrite.tenants?.length ?? 0) ||
+    (next.sites?.length ?? 0) !== (latestBeforeWrite.sites?.length ?? 0) ||
+    (next.customers?.length ?? 0) !== (latestBeforeWrite.customers?.length ?? 0) ||
+    (next.schemaVersion ?? 1) !== (latestBeforeWrite.schemaVersion ?? 1) ||
+    inboundLocalPartsChanged(latestBeforeWrite.tenants, next.tenants)
   ) {
     await writeCatalogHeal(next);
     return next;
@@ -1491,25 +1502,106 @@ async function writeDatabaseWithOrgDelete(next: Database) {
   await persistDatabase(merged);
 }
 
-/** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
-async function writeCatalogHeal(next: Database) {
-  let merged = next;
-  for (let pass = 0; pass < 2; pass++) {
-    const latest = (await loadPersistedSnapshot())?.db;
-    if (!latest) {
-      break;
-    }
-    merged = mergeOrgCrudFromLatest(merged, latest);
+function quoteIdsFromList(quotes: StoredQuote[]): Set<string> {
+  return new Set(quotes.map((quote) => quote.id));
+}
+
+/** True when a heal write would add machines, lifecycle, migrations, or org rows not on the blob. */
+function catalogHealWouldPersistChange(baseline: Database, healed: Database): boolean {
+  if (baseline.machines.length !== healed.machines.length) {
+    return true;
   }
-  // Merging with the blob lets the stored user row win field by field, which erases a grant
-  // this heal just added. Re-check demo-tenant state against the merged result before writing.
+  const baselineMachineIds = new Set(baseline.machines.map((machine) => machine.id));
+  if (healed.machines.some((machine) => !baselineMachineIds.has(machine.id))) {
+    return true;
+  }
+  if ((healed.partLifecycle?.length ?? 0) !== (baseline.partLifecycle?.length ?? 0)) {
+    return true;
+  }
+  if (healed.dataMigrations?.demoTenantV1 !== baseline.dataMigrations?.demoTenantV1) {
+    return true;
+  }
+  if ((healed.schemaVersion ?? 1) !== (baseline.schemaVersion ?? 1)) {
+    return true;
+  }
+  if ((healed.tenants?.length ?? 0) !== (baseline.tenants?.length ?? 0)) {
+    return true;
+  }
+  if ((healed.sites?.length ?? 0) !== (baseline.sites?.length ?? 0)) {
+    return true;
+  }
+  if ((healed.customers?.length ?? 0) !== (baseline.customers?.length ?? 0)) {
+    return true;
+  }
+  if (staffTenantAssignmentsChanged(baseline.users, healed.users)) {
+    return true;
+  }
+  if (inboundLocalPartsChanged(baseline.tenants, healed.tenants)) {
+    return true;
+  }
+  for (const user of healed.users) {
+    const before = baseline.users.find((row) => row.id === user.id);
+    if (!before) {
+      return true;
+    }
+    const beforeMachines = new Set(before.machineIds ?? []);
+    const afterMachines = new Set(user.machineIds ?? []);
+    if (afterMachines.size > beforeMachines.size) {
+      return true;
+    }
+    for (const id of afterMachines) {
+      if (!beforeMachines.has(id)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function latestQuotesPreserved(latest: StoredQuote[], kept: StoredQuote[]): boolean {
+  const keptIds = quoteIdsFromList(kept);
+  return latest.every((quote) => keptIds.has(quote.id));
+}
+
+async function rebaseCatalogHealIntent(intent: Database): Promise<Database> {
+  const snap = await loadPersistedSnapshot();
+  const latest = snap?.db ?? intent;
+  let merged = mergeOrgCrudFromLatest(intent, latest);
   merged = (await runDemoTenantMigration(merged)).db;
-  const kept = await overlayPersistedCare(clampSatelliteStaffTenants(merged));
-  memory = kept;
-  await Promise.all([
-    getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2)),
-    writeCareStore(careCollections(kept)),
-  ]);
+  return await overlayPersistedCare(clampSatelliteStaffTenants(merged));
+}
+
+/** Catalog/seed heals rewrite db.json — never replace the Care sidecar. */
+async function writeCatalogHeal(healIntent: Database) {
+  const MAX_ATTEMPTS = 6;
+  let intent = healIntent;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const latestSnap = await loadPersistedSnapshot();
+    const latest = latestSnap?.db ?? intent;
+    const kept = await rebaseCatalogHealIntent(intent);
+
+    if (!latestQuotesPreserved(latest.quotes, kept.quotes)) {
+      intent = kept;
+      continue;
+    }
+
+    if (!catalogHealWouldPersistChange(latest, kept)) {
+      memory = kept;
+      return;
+    }
+
+    memory = kept;
+    await Promise.all([
+      getPersistence().writeDatabaseJson(JSON.stringify(kept, null, 2)),
+      writeCareStore(careCollections(kept)),
+    ]);
+
+    const after = await loadPersistedSnapshot();
+    if (after && latestQuotesPreserved(after.db.quotes, kept.quotes)) {
+      return;
+    }
+    intent = kept;
+  }
 }
 
 function normalizeEmail(email: string) {
