@@ -1,5 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import { ensureLifecycleDemoFixtures } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * Optional manual replay of the v1 demo-tenant migration (normally runs automatically on boot).
  * Platform owner only; Production keeps `SPARES_ALLOW_SEED` off.
  */
-export async function POST() {
+async function handlePOST() {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -22,3 +22,5 @@ export async function POST() {
   }
   return json(result);
 }
+
+export const POST = withCatalogConflict(handlePOST);

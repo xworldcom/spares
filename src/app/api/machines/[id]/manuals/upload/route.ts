@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { isManualFilename, manualExtension } from "@/lib/care";
 import { requireStaffMachine } from "@/lib/care-http";
 import { rejectDisallowedOrigin } from "@/lib/cors";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import {
   assertManualUploadAllowed,
   createManualUploadUrl,
@@ -25,7 +25,7 @@ export async function GET(
   });
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -78,3 +78,5 @@ export async function POST(
     return error(message, 400);
   }
 }
+
+export const POST = withCatalogConflict(handlePOST);

@@ -3,9 +3,9 @@ import {
   handleChatAttachmentProxyPost,
   parseChatAttachmentProxyUpload,
 } from "@/lib/chat-attachment-http";
-import { error } from "@/lib/http";
+import { error, withCatalogConflict } from "@/lib/http";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -27,3 +27,5 @@ export async function POST(
     parsed.contentType,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

@@ -3,7 +3,7 @@ import {
   handleChatAttachmentUploadPost,
   parseUploadJsonBody,
 } from "@/lib/chat-attachment-http";
-import { error, isErrorResponse, readJson } from "@/lib/http";
+import { error, isErrorResponse, readJson, withCatalogConflict } from "@/lib/http";
 import { requireQuoteAccess } from "@/lib/quote-http";
 
 export async function GET(
@@ -18,7 +18,7 @@ export async function GET(
   return chatUploadAvailability();
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -48,3 +48,5 @@ export async function POST(
     `/api/quotes/${id}/attachments/proxy`,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

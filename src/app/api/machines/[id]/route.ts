@@ -1,6 +1,6 @@
 import { requireTenantStaff, requireTenantUser } from "@/lib/auth/tenant-scope";
 import { canAccessMachine } from "@/lib/access";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail } from "@/lib/machines";
 import { parseStaffPartEdit, type StaffPartEdit } from "@/lib/staff-catalog";
@@ -60,7 +60,7 @@ type PatchBody = {
   part?: unknown;
 };
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -146,7 +146,7 @@ export async function PATCH(
   );
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -171,3 +171,6 @@ export async function DELETE(
 
   return json({ ok: true });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);
+export const DELETE = withCatalogConflict(handleDELETE);

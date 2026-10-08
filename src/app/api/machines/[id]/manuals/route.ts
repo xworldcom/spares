@@ -10,7 +10,7 @@ import {
   parseCareText,
 } from "@/lib/care";
 import { requireMachineAccess, requireStaffMachine } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { manualFileUrl } from "@/lib/manual-file-url";
 import {
   assertManualUploadAllowed,
@@ -57,7 +57,7 @@ export async function GET(
   return json({ manuals: await toPublic(request, access.machine.id, manuals) });
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -216,3 +216,5 @@ async function createFromMultipart(
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

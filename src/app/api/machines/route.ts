@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireTenantStaff, requireTenantUser } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail, toMachineSummary } from "@/lib/machines";
 import { parseModelLessMachineBody } from "@/lib/machine-create";
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     const auth = await requireTenantUser();
@@ -193,3 +193,5 @@ export async function POST(request: Request) {
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

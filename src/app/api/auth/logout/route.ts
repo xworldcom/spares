@@ -1,9 +1,9 @@
 import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
-import { json } from "@/lib/http";
+import { json, withCatalogConflict } from "@/lib/http";
 import { revokeUserSessions } from "@/lib/store";
 
-export async function POST() {
+async function handlePOST() {
   const user = await getCurrentUser();
   if (user) {
     await revokeUserSessions(user.id);
@@ -19,3 +19,5 @@ export async function POST() {
   await clearSessionCookie();
   return json({ ok: true });
 }
+
+export const POST = withCatalogConflict(handlePOST);

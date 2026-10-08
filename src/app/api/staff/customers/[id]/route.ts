@@ -1,5 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { deletePerson, getOrgContext, updatePerson } from "@/lib/store";
 import { toPublicUser } from "@/lib/access";
@@ -11,7 +11,7 @@ type PatchBody = {
   machineIds?: unknown;
 };
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -80,7 +80,7 @@ export async function PATCH(
   return json({ user: toPublicUser(updated.user, org.sites, org.customers) });
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -107,3 +107,6 @@ export async function DELETE(
   });
   return json({ ok: true });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);
+export const DELETE = withCatalogConflict(handleDELETE);

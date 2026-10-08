@@ -5,7 +5,7 @@ import {
   parseOptionalNumber,
 } from "@/lib/care";
 import { requireMachineAccess, requireStaffMachine } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { getMachineUsage, updateMachineUsage } from "@/lib/store";
 
@@ -29,7 +29,7 @@ export async function GET(
   return json({ usage: await getMachineUsage(access.machine.id, tenantId) });
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -92,3 +92,5 @@ export async function PATCH(
   }
   return json({ usage: updated.usage });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

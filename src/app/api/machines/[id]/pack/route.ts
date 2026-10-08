@@ -1,5 +1,5 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail } from "@/lib/machines";
 import {
@@ -18,7 +18,7 @@ import {
 
 export const maxDuration = 120;
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -96,3 +96,5 @@ export async function POST(
     ),
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

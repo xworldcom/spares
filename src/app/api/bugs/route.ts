@@ -10,7 +10,7 @@ import {
 } from "@/lib/bug-report/format";
 import { bugReportWebhookUrl, notifyBugReportWebhook } from "@/lib/bug-report/notify";
 import { createGithubBugIssue, githubToken } from "@/lib/github/bugs";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { allowRateLimit, clientIp } from "@/lib/rate-limit";
 import {
   attachBugReportGithubIssue,
@@ -72,7 +72,7 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!isSameOriginRequest(request)) {
     return error("Origin not allowed", 403);
   }
@@ -224,3 +224,5 @@ export async function POST(request: Request) {
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

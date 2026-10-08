@@ -1,6 +1,6 @@
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { toPublicUser } from "@/lib/access";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { bulkUpdateCustomerAccess, getOrgContext } from "@/lib/store";
 
@@ -9,7 +9,7 @@ type Body = {
   siteIds?: unknown;
 };
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
@@ -42,3 +42,5 @@ export async function POST(request: Request) {
     customers: users.map((user) => toPublicUser(user, org.sites, org.customers)),
   });
 }
+
+export const POST = withCatalogConflict(handlePOST);

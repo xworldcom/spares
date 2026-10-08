@@ -53,6 +53,7 @@ import {
   safeStoredFileName,
   type ReadMode,
 } from "./persistence.ts";
+import { CatalogWriteConflictError } from "./catalog-conflict.ts";
 import { rebaseCatalog } from "./catalog-rebase.ts";
 import {
   bumpChatWatch,
@@ -151,6 +152,7 @@ import { normalizeAssistantSettings } from "./assistant/settings.ts";
 import { resolveAssistantModel } from "./assistant/models.ts";
 
 export { filesDir, getDataDir } from "./persistence.ts";
+export { CatalogWriteConflictError } from "./catalog-conflict.ts";
 export type { PlatformSignInSettings, PlatformSettingsDocument };
 
 export const SEED_STAFF = {
@@ -1286,19 +1288,6 @@ function snapshotOf(db: Database): SnapshotBase | undefined {
   return (db as { [SNAPSHOT_BASE]?: SnapshotBase })[SNAPSHOT_BASE];
 }
 
-/**
- * The stored catalog changed between this request's read and its write, and the retry
- * budget ran out. Nothing was written; the caller may safely retry the whole request.
- */
-export class CatalogWriteConflictError extends Error {
-  constructor() {
-    super(
-      "The catalog kept changing while saving. Nothing was overwritten — please retry.",
-    );
-    this.name = "CatalogWriteConflictError";
-  }
-}
-
 const CATALOG_WRITE_ATTEMPTS = 8;
 
 /**
@@ -1609,11 +1598,55 @@ function applyMutationOnLatest(
     return next;
   }
   const baseDb = materializeBase(base);
-  return baseDb ? rebaseCatalog(baseDb, next, latest.db) : next;
+  return baseDb ? renumberAddedRows(baseDb, next, rebaseCatalog(baseDb, next, latest.db)) : next;
 }
 
-async function writeDatabase(next: Database) {
-  await commitCatalog(async (latest) => ({
+/**
+ * Display numbers are `max + 1` of the snapshot a request read. When another instance
+ * created a quote or ticket meanwhile, a row this request added can now share its number;
+ * give the added row the next free number on the freshest list (ids were always unique).
+ */
+function renumberAddedRows(baseDb: Database, next: Database, merged: Database): Database {
+  const renumber = <T extends { id: string; number?: number }>(
+    baseRows: T[],
+    nextRows: T[],
+    mergedRows: T[],
+    nextNumber: (rows: T[]) => number,
+  ) => {
+    const baseIds = new Set(baseRows.map((row) => row.id));
+    const mineIds = new Set(nextRows.filter((row) => !baseIds.has(row.id)).map((row) => row.id));
+    const others = mergedRows.filter((row) => !mineIds.has(row.id));
+    const taken = new Set(others.map((row) => row.number));
+    const mine = mergedRows.filter((row) => mineIds.has(row.id));
+    if (!mine.some((row) => taken.has(row.number))) {
+      return mergedRows;
+    }
+    const placed = new Map<string, T>();
+    const settled = [...others];
+    for (const row of mine) {
+      const fresh = taken.has(row.number)
+        ? { ...row, number: nextNumber(settled) }
+        : row;
+      settled.push(fresh);
+      taken.add(fresh.number);
+      placed.set(row.id, fresh);
+    }
+    return mergedRows.map((row) => placed.get(row.id) ?? row);
+  };
+  const quotes = renumber(baseDb.quotes, next.quotes, merged.quotes, nextQuoteNumber);
+  const tickets = renumber(
+    baseDb.tickets ?? [],
+    next.tickets ?? [],
+    merged.tickets ?? [],
+    nextTicketNumber,
+  );
+  return quotes === merged.quotes && tickets === merged.tickets
+    ? merged
+    : { ...merged, quotes, tickets };
+}
+
+async function writeDatabase(next: Database): Promise<Database> {
+  return commitCatalog(async (latest) => ({
     db: applyMutationOnLatest(next, latest, "identity"),
     write: true,
   }));
@@ -3713,8 +3746,8 @@ export function createQuote(
       activities: [activity],
       lastReadAt: { [input.customerId]: now },
     };
-    await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
-    return quote;
+    const committed = await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
+    return committed.quotes.find((row) => row.id === quote.id) ?? quote;
   });
 }
 
@@ -3837,8 +3870,11 @@ export function ensurePreviewQaQuoteFixture(tenantId: string): Promise<EnsurePre
       lastReadAt: { [customer.id]: now },
     };
 
-    await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
-    return { status: "created", quote };
+    const committed = await writeDatabase({ ...db, quotes: [...db.quotes, quote] });
+    return {
+      status: "created",
+      quote: committed.quotes.find((row) => row.id === quote.id) ?? quote,
+    };
   });
 }
 
@@ -4086,12 +4122,12 @@ export function createTicket(
       activities,
       lastReadAt: { [input.actor.id]: now },
     };
-    await writeDatabase({
+    const committed = await writeDatabase({
       ...db,
       ...careCollections(db),
       tickets: [ticket, ...careCollections(db).tickets],
     });
-    return { ticket };
+    return { ticket: committed.tickets?.find((row) => row.id === ticket.id) ?? ticket };
   });
 }
 

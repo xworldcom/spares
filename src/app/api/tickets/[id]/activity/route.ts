@@ -2,7 +2,7 @@ import { MAX_CARE_TEXT } from "@/lib/care";
 import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
 import { verifyActivityAttachments } from "@/lib/chat-attachment-http";
 import { parseChatActivityBody } from "@/lib/chat-attachments";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { notifyMachineChatUpdate } from "@/lib/notifications/chat-email";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
@@ -14,7 +14,7 @@ type ActivityBody = {
   attachments?: unknown;
 };
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -99,3 +99,5 @@ export async function POST(
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

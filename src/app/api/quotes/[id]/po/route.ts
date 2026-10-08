@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
-import { error, json } from "@/lib/http";
+import { error, json, withCatalogConflict } from "@/lib/http";
 import {
   canUploadPo,
   isPdfUpload,
@@ -46,7 +46,7 @@ export async function GET(
   }
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -140,3 +140,5 @@ export async function POST(
     201,
   );
 }
+
+export const POST = withCatalogConflict(handlePOST);

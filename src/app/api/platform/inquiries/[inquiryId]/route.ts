@@ -4,7 +4,7 @@ import {
   accessInquiryStatusLabel,
   parseAccessInquiryStatusUpdate,
 } from "@/lib/access-inquiry";
-import { error, isErrorResponse, json, readJson } from "@/lib/http";
+import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { getAccessInquiry, updateAccessInquiryStatus } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function GET(_request: Request, { params }: Params) {
   });
 }
 
-export async function PATCH(request: Request, { params }: Params) {
+async function handlePATCH(request: Request, { params }: Params) {
   const auth = await requirePlatformOwner();
   if ("error" in auth) {
     return auth.error;
@@ -62,3 +62,5 @@ export async function PATCH(request: Request, { params }: Params) {
     },
   });
 }
+
+export const PATCH = withCatalogConflict(handlePATCH);

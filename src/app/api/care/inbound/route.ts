@@ -1,9 +1,9 @@
 import { inboundCareHttpResult } from "@/lib/care-ticket-email";
-import { isErrorResponse, json, readJson } from "@/lib/http";
+import { isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await readJson<unknown>(request);
   if (isErrorResponse(body)) {
     return body;
@@ -11,3 +11,5 @@ export async function POST(request: Request) {
   const result = inboundCareHttpResult(body);
   return json(result.body, result.status);
 }
+
+export const POST = withCatalogConflict(handlePOST);
