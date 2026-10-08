@@ -21,6 +21,7 @@ import {
   ISOLATE_OPACITY,
   meshIsolateState,
 } from "./assemblyView";
+import { pickNearest } from "./pickHit";
 import {
   buildPartIndex,
   meshMatchesSelection,
@@ -340,9 +341,10 @@ function LoadedModel({
   }
 
   function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
     clearHold();
     gestureRef.current.fired = false;
-    const hit = resolvePick(event.object, partsByName);
+    const hit = pickNearest(event.intersections, partsByName);
     gestureRef.current.pendingHit = hit;
     const part = hit && "part" in hit ? hit.part : null;
     holdRef.current.timer = window.setTimeout(() => {
@@ -354,6 +356,7 @@ function LoadedModel({
   }
 
   function handlePointerUp(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
     clearHold();
     if (!isTap(event)) {
       return;
@@ -376,7 +379,8 @@ function LoadedModel({
     ) {
       return;
     }
-    const hit = resolvePick(event.object, partsByName);
+    event.stopPropagation();
+    const hit = pickNearest(event.intersections, partsByName);
     if (!hit) {
       setHovered(null);
       return;

@@ -1,6 +1,6 @@
-import { cadKeys, isIgnoredCadNodeName } from "@/lib/cad-name";
+import { cadKeys, isIgnoredCadNodeName } from "../../lib/cad-name.ts";
 import type { Object3D } from "three";
-import type { ViewerPart } from "./types";
+import type { ViewerPart } from "./types.ts";
 
 export function buildPartIndex(
   parts: ViewerPart[],
