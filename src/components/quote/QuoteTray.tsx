@@ -257,6 +257,8 @@ function QuoteTrayForm({
 export function QuoteTray({
   machineId,
   lines,
+  note = "",
+  onNote,
   onQty,
   onRemove,
   onAdd,
@@ -269,6 +271,8 @@ export function QuoteTray({
 }: {
   machineId: string;
   lines: TrayLine[];
+  note?: string;
+  onNote?: (value: string) => void;
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
   onAdd?: (part: Part, qty: number) => void;
@@ -280,7 +284,7 @@ export function QuoteTray({
   onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [note, setNote] = useState("");
+  const setNote = onNote ?? (() => undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { refresh: refreshQuoteAlerts } = useQuoteAlerts();
@@ -369,7 +373,7 @@ export function QuoteTray({
         })),
         note: note.trim() || undefined,
       });
-      setNote("");
+      onNote?.("");
       onClear();
       setSheet("full");
       setOpen(true);

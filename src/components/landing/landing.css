@@ -636,16 +636,21 @@
     display: none;
   }
 
-  .landing-demo-scrub-pin,
   .landing-demo-stage,
-  .landing-workflow-request,
-  .landing-workflow-quote-sheet {
+  .landing-workflow-request {
     touch-action: pan-y;
     overflow: clip;
     overflow-x: clip;
     overflow-y: clip;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: auto;
+  }
+
+  .landing-demo-scrub-pin,
+  .landing-workflow-quote-sheet {
+    touch-action: pan-y;
+    overflow: visible;
+    overscroll-behavior: auto;
   }
 
   .landing-workflow-stage {
@@ -1068,6 +1073,13 @@
 .landing-back-to-top-icon {
   font-size: 15px;
   line-height: 1;
+}
+
+@media (max-width: 899px) {
+  .landing-scroll .landing-back-to-top {
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (min-width: 900px) {

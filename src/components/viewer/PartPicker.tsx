@@ -196,15 +196,21 @@ function AssemblyBoundsRefresh({
   explode,
   isolatedId,
   hiddenKey,
+  selectedId,
 }: {
   explode: number;
   isolatedId: string | null;
   hiddenKey: string;
+  selectedId: string | null;
 }) {
   const bounds = useBounds();
+  // Explode only moves meshes — refitting the camera each tick drops selection and feels like a reset.
+  useLayoutEffect(() => {
+    bounds.refresh().clip();
+  }, [bounds, explode, selectedId]);
   useLayoutEffect(() => {
     bounds.refresh().clip().fit();
-  }, [bounds, explode, isolatedId, hiddenKey]);
+  }, [bounds, isolatedId, hiddenKey, selectedId]);
   return null;
 }
 
@@ -740,6 +746,11 @@ function ViewerCanvas({
             explode={explode}
             isolatedId={isolatedId}
             hiddenKey={hiddenIds.join("\0")}
+            selectedId={
+              selected && "id" in selected && typeof selected.id === "string"
+                ? selected.id
+                : null
+            }
           />
           <LoadedModel
             src={src}

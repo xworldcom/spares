@@ -811,11 +811,13 @@
   flex: 1 1 auto;
   gap: 0.2rem;
   padding: 0.2rem;
+  padding-inline-end: 0.65rem;
   overflow-x: auto;
+  scroll-padding-inline-end: 0.65rem;
   border-radius: 999px;
   background: var(--spares-soft);
-  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1.25rem), transparent);
-  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1.25rem), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 0.5rem), transparent);
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 0.5rem), transparent);
   scrollbar-width: thin;
 }
 
@@ -833,9 +835,10 @@
 .machine-context-tab {
   display: inline-flex;
   min-height: 2.25rem;
+  flex-shrink: 0;
   align-items: center;
   border-radius: 999px;
-  padding: 0 0.8rem;
+  padding: 0 0.72rem;
   color: var(--spares-muted);
   font-size: 13px;
   font-weight: 600;

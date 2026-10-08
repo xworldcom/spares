@@ -19,7 +19,6 @@ import {
 } from "@/components/quote/QuoteTrackingPanel";
 import { formatDay } from "@/components/quote/quote-format";
 import { ErrorState } from "@/components/states/ErrorState";
-import { LoadingState } from "@/components/states/LoadingState";
 import { errorMessage } from "@/lib/api/errors";
 import {
   getQuote,
@@ -243,7 +242,18 @@ export function QuoteWorkspace({
         />
       );
     }
-    return <LoadingState label="Loading quote…" />;
+    return (
+      <div
+        className="quote-workspace mx-auto w-full max-w-5xl space-y-5 px-1 py-2"
+        aria-busy="true"
+        aria-label="Loading quote"
+      >
+        <div className="catalog-skeleton h-8 w-48 rounded-2xl" />
+        <div className="catalog-skeleton h-24 w-full rounded-[22px]" />
+        <div className="catalog-skeleton h-32 w-full rounded-[22px]" />
+        <div className="catalog-skeleton h-40 w-full rounded-[22px]" />
+      </div>
+    );
   }
 
   if (!user) {
@@ -475,7 +485,10 @@ export function QuoteWorkspace({
         <p className="spares-muted text-sm">Invoice opens after PO is received.</p>
       )}
 
-      {role === "staff" || quote.shipments.length > 0 || canEditTracking(quote.status) ? (
+      {role === "customer" ||
+      role === "staff" ||
+      quote.shipments.length > 0 ||
+      canEditTracking(quote.status) ? (
         <QuoteTrackingPanel
           quote={quote}
           role={role}

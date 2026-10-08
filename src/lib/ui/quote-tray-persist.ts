@@ -11,6 +11,37 @@ export function quoteTrayStorageKey(tenantId: string, machineId: string) {
   return `spares-quote-tray:${tenantId}:${machineId}`;
 }
 
+export function quoteTrayNoteStorageKey(tenantId: string, machineId: string) {
+  return `spares-quote-tray-note:${tenantId}:${machineId}`;
+}
+
+export function readPersistedTrayNote(key: string): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  try {
+    return window.localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function writePersistedTrayNote(key: string, note: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const trimmed = note.trim();
+    if (!trimmed) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, trimmed);
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 export function readPersistedTrayLines(key: string): PersistedTrayLine[] {
   if (typeof window === "undefined") {
     return [];

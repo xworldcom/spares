@@ -169,12 +169,9 @@ export function QuoteLines({
                 </p>
               </>
             ) : (
-              <>
-                <p className="text-[17px] font-medium tracking-tight">
-                  {item.name?.trim() || item.id}
-                </p>
-                <p className="spares-muted mt-0.5 text-xs font-mono">{item.id}</p>
-              </>
+              <p className="text-[17px] font-medium tracking-tight">
+                {item.name?.trim() || item.id}
+              </p>
             )}
             {item.note ? (
               <p className="spares-muted mt-1 text-sm leading-snug">{item.note}</p>
