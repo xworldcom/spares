@@ -36,12 +36,23 @@ const QUOTE_STATUS_SNAP_LABELS = new Set([
 
 const HANDOFF_SNAP_MIN_DELTA = 0.078;
 
+const QUOTE_STATUS_SNAP_MIN_DELTA: Partial<Record<string, number>> = {
+  Requested: 0.09,
+  "In review": 0.095,
+  Pricing: 0.095,
+  Quoted: 0.11,
+  "PO received": 0.11,
+};
+
 const SCRUB_SNAP_MARKERS = SCRUB_SNAP_LINEAR.map((linear, index) => {
   const start = SCRUB_SNAP_LINEAR[index - 1] ?? 0;
   const label = workflowScrubSnapBeatLabel(linear);
   let heightDelta = linear - start;
   if (QUOTE_STATUS_SNAP_LABELS.has(label)) {
-    heightDelta = Math.max(heightDelta, HANDOFF_SNAP_MIN_DELTA);
+    heightDelta = Math.max(
+      heightDelta,
+      QUOTE_STATUS_SNAP_MIN_DELTA[label] ?? HANDOFF_SNAP_MIN_DELTA,
+    );
   }
   return {
     linear,

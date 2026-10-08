@@ -424,7 +424,19 @@
 }
 
 html:has(.spares-app-cinematic) {
-  scroll-snap-type: y proximity;
+  scroll-snap-type: y mandatory;
+}
+
+/* Mandatory snap is scoped to explicit targets: demo scrub markers + page chapters. */
+.spares-app-cinematic .landing-scroll .landing-hero,
+.spares-app-cinematic .landing-marketing > .landing-section,
+.spares-app-cinematic .landing-site-footer {
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
+}
+
+.spares-app-cinematic .landing-site-footer {
+  scroll-snap-align: end;
 }
 
 .landing-demo-scrub-pin {
@@ -832,8 +844,16 @@ html:has(.spares-app-cinematic) {
   }
 
   .landing-demo-stage.landing-workflow .landing-workflow-request .quote-progress-step[data-state="current"] .quote-progress-label-full {
-    white-space: normal;
-    line-height: 1.2;
+    white-space: nowrap;
+    font-size: 11px;
+    line-height: 1.15;
+  }
+
+  .landing-demo-stage.landing-workflow .landing-workflow-request .status-pill {
+    white-space: nowrap;
+    font-size: 11px;
+    line-height: 1.15;
+    padding-inline: 0.55rem;
   }
 
   .landing-demo-stage.landing-workflow .landing-workflow-request-head {
@@ -1051,7 +1071,7 @@ html:has(.spares-app-cinematic) {
 
 .landing-back-to-top {
   position: fixed;
-  z-index: 40;
+  z-index: 50;
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: max(1.1rem, env(safe-area-inset-bottom, 0px));
   display: inline-flex;
@@ -1114,6 +1134,10 @@ html:has(.spares-app-cinematic) {
   .landing-scroll .landing-back-to-top {
     right: auto;
     left: max(1rem, env(safe-area-inset-left, 0px));
+  }
+
+  .landing-scroll:has(.landing-workflow-request.is-visible) .landing-back-to-top.is-visible {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
