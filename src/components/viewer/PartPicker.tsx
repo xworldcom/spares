@@ -193,24 +193,22 @@ function captureRestPose(scene: Object3D) {
 }
 
 function AssemblyBoundsRefresh({
-  explode,
+  explodeFitKey,
   isolatedId,
   hiddenKey,
   selectedId,
 }: {
-  explode: number;
+  explodeFitKey: number;
   isolatedId: string | null;
   hiddenKey: string;
   selectedId: string | null;
 }) {
   const bounds = useBounds();
-  // Explode only moves meshes — refitting the camera each tick drops selection and feels like a reset.
-  useLayoutEffect(() => {
-    bounds.refresh().clip();
-  }, [bounds, explode, selectedId]);
+  // Explode moves meshes every slider tick; the camera is only refit when the parent bumps
+  // `explodeFitKey` (slider release / reset), so dragging never fights the viewer.
   useLayoutEffect(() => {
     bounds.refresh().clip().fit();
-  }, [bounds, isolatedId, hiddenKey, selectedId]);
+  }, [bounds, explodeFitKey, isolatedId, hiddenKey, selectedId]);
   return null;
 }
 
@@ -643,6 +641,7 @@ function ViewerCanvas({
   parts,
   selected,
   explode,
+  explodeFitKey,
   hiddenIds,
   isolatedId,
   onPick,
@@ -653,6 +652,7 @@ function ViewerCanvas({
   parts: ViewerPart[];
   selected: ViewerPart | UnmatchedMesh | null;
   explode: number;
+  explodeFitKey: number;
   hiddenIds: readonly string[];
   isolatedId: string | null;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
@@ -742,16 +742,6 @@ function ViewerCanvas({
       {load.status === "ready" ? (
         <Suspense fallback={null}>
         <Bounds fit clip observe margin={1.3}>
-          <AssemblyBoundsRefresh
-            explode={explode}
-            isolatedId={isolatedId}
-            hiddenKey={hiddenIds.join("\0")}
-            selectedId={
-              selected && "id" in selected && typeof selected.id === "string"
-                ? selected.id
-                : null
-            }
-          />
           <LoadedModel
             src={src}
             parts={parts}
@@ -768,6 +758,16 @@ function ViewerCanvas({
             onRegisterClearHover={(clearHover) => {
               clearHoverRef.current = clearHover;
             }}
+          />
+          <AssemblyBoundsRefresh
+            explodeFitKey={explodeFitKey}
+            isolatedId={isolatedId}
+            hiddenKey={hiddenIds.join("\0")}
+            selectedId={
+              selected && "id" in selected && typeof selected.id === "string"
+                ? selected.id
+                : null
+            }
           />
         </Bounds>
         </Suspense>
@@ -790,6 +790,7 @@ export function PartPicker({
   parts,
   selectedId,
   explode = 0,
+  explodeFitKey = 0,
   hiddenIds = [],
   isolatedId = null,
   onSelect,
@@ -847,6 +848,7 @@ export function PartPicker({
         parts={parts}
         selected={selected}
         explode={explode}
+        explodeFitKey={explodeFitKey}
         hiddenIds={hiddenIds}
         isolatedId={isolatedId}
         onPick={handlePick}

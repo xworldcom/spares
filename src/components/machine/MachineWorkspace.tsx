@@ -13,7 +13,7 @@ import { QuoteUndoToast } from "@/components/quote/QuoteUndoToast";
 import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { LoadingState } from "@/components/states/LoadingState";
+import { MachineWorkspaceSkeleton } from "./MachineWorkspaceSkeleton";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
 import { viewerNeedsReset } from "@/components/viewer/assemblyView";
@@ -61,6 +61,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [explode, setExplode] = useState(0);
+  const [explodeFitKey, setExplodeFitKey] = useState(0);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [isolatedId, setIsolatedId] = useState<string | null>(null);
   const [lines, setLines] = useState<TrayLine[]>([]);
@@ -396,10 +397,18 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         onOpenChange={setTrayOpen}
       />
     );
-  }, [isCustomer, trayLines, machineId, trayOpen, commitTrayLine, removeTrayLine]);
+  }, [
+    isCustomer,
+    trayLines,
+    trayNote,
+    machineId,
+    trayOpen,
+    commitTrayLine,
+    removeTrayLine,
+  ]);
 
   if (loading) {
-    return <LoadingState label="Loading machine…" />;
+    return <MachineWorkspaceSkeleton />;
   }
 
   if (notFound) {
@@ -424,8 +433,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     );
   }
 
+  function fitExploded() {
+    setExplodeFitKey((key) => key + 1);
+  }
+
   function showAll() {
     setExplode(0);
+    fitExploded();
     setHiddenIds([]);
     setIsolatedId(null);
   }
@@ -521,6 +535,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             parts={joinedParts}
             selectedId={selectedPart?.id ?? null}
             explode={explode}
+            explodeFitKey={explodeFitKey}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
             onSelect={setSelectedPart}
@@ -673,6 +688,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 max={100}
                 value={Math.round(explode * 100)}
                 onChange={(event) => setExplode(Number(event.target.value) / 100)}
+                onPointerUp={fitExploded}
+                onPointerCancel={fitExploded}
+                onKeyUp={fitExploded}
                 className="explode-slider"
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -704,6 +722,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             <QuoteTray
               machineId={machine.id}
               lines={trayLines}
+              note={trayNote}
+              onNote={setTrayNote}
               onQty={() => undefined}
               onRemove={() => undefined}
               onClear={() => undefined}
