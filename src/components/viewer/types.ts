@@ -14,6 +14,8 @@ export type PartPickerProps = {
   parts: ViewerPart[];
   selectedId?: string | null;
   explode?: number;
+  /** Bump to refit the camera to the current (exploded) assembly. */
+  explodeFitKey?: number;
   hiddenIds?: readonly string[];
   isolatedId?: string | null;
   onSelect?: (part: ViewerPart | null) => void;
