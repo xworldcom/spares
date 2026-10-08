@@ -27,7 +27,7 @@ import type { MachineDetail, Part } from "@/lib/api/types";
 import { lookupPartLifecycle } from "@/lib/api/part-lifecycle";
 import { playQuoteAddMotion } from "@/lib/ui/quote-feedback";
 import {
-  persistedToPart,
+  mergeHydratedTrayLines,
   quoteTrayStorageKey,
   readPersistedTrayLines,
   trayLineToPersisted,
@@ -76,7 +76,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
   const captureThumb = useRef<(partId: string) => string | null>(() => null);
-  const trayHydratedKey = useRef<string | null>(null);
+  const [linesKey, setLinesKey] = useState<string | null>(null);
   const trayStorageKey =
     isCustomer && user?.tenantId
       ? quoteTrayStorageKey(user.tenantId, machineId)
@@ -144,32 +144,27 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }, [machineId, reloadKey, user?.role]);
 
   useEffect(() => {
-    trayHydratedKey.current = null;
     setLines([]);
+    setLinesKey(null);
   }, [machineId]);
 
+  // Read storage as soon as the key exists (not after the machine loads), and only let the
+  // persist effect write once `linesKey` says `lines` belongs to this key. Otherwise the first
+  // render with an empty tray, or the previous machine's tray, overwrites what was saved.
   useEffect(() => {
-    if (!trayStorageKey || !machine) {
+    if (!trayStorageKey) {
       return;
     }
-    if (trayHydratedKey.current === trayStorageKey) {
-      return;
-    }
-    trayHydratedKey.current = trayStorageKey;
     const persisted = readPersistedTrayLines(trayStorageKey);
+    setLines((current) => mergeHydratedTrayLines(persisted, current));
+    setLinesKey(trayStorageKey);
     if (persisted.length === 0) {
       return;
     }
-    const partsById = new Map(machine.parts.map((part) => [part.id, part]));
-    setLines(
-      persisted.map((row) => ({
-        part: persistedToPart(row, partsById.get(row.id)),
-        qty: row.qty,
-      })),
-    );
+    let cancelled = false;
     void lookupPartLifecycle(persisted.map((row) => row.id))
       .then((map) => {
-        if (Object.keys(map).length === 0) {
+        if (cancelled || Object.keys(map).length === 0) {
           return;
         }
         setLines((current) =>
@@ -182,17 +177,33 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         );
       })
       .catch(() => undefined);
-  }, [trayStorageKey, machine]);
+    return () => {
+      cancelled = true;
+    };
+  }, [trayStorageKey]);
+
+  const trayLines = useMemo(() => {
+    if (!machine) {
+      return lines;
+    }
+    const partsById = new Map(machine.parts.map((part) => [part.id, part]));
+    return lines.map((line) => {
+      const full = partsById.get(line.part.id);
+      return full
+        ? { ...line, part: { ...full, lifecycle: line.part.lifecycle ?? full.lifecycle } }
+        : line;
+    });
+  }, [lines, machine]);
 
   useEffect(() => {
-    if (!trayStorageKey) {
+    if (!trayStorageKey || linesKey !== trayStorageKey) {
       return;
     }
     writePersistedTrayLines(
       trayStorageKey,
       lines.map((line) => trayLineToPersisted(line.part, line.qty)),
     );
-  }, [lines, trayStorageKey]);
+  }, [lines, linesKey, trayStorageKey]);
 
   useEffect(() => {
     if (!selectedPart) {
@@ -328,7 +339,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return (
       <QuoteTray
         machineId={machineId}
-        lines={lines}
+        lines={trayLines}
         allowManual
         onAdd={(part, qty) => {
           commitTrayLine(part, qty);
@@ -346,7 +357,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         onOpenChange={setTrayOpen}
       />
     );
-  }, [isCustomer, lines, machineId, trayOpen, commitTrayLine, removeTrayLine]);
+  }, [isCustomer, trayLines, machineId, trayOpen, commitTrayLine, removeTrayLine]);
 
   if (loading) {
     return <LoadingState label="Loading machine…" />;
@@ -448,7 +459,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
   }
 
-  const quoteCount = lines.reduce((sum, line) => sum + line.qty, 0);
+  const quoteCount = trayLines.reduce((sum, line) => sum + line.qty, 0);
 
   const viewerBlock = (
     <div
@@ -651,7 +662,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           {isCustomer && fullscreen ? (
             <QuoteTray
               machineId={machine.id}
-              lines={lines}
+              lines={trayLines}
               onQty={() => undefined}
               onRemove={() => undefined}
               onClear={() => undefined}
