@@ -283,6 +283,8 @@ export type StoredUser = {
   companyAccess?: string[];
   machineIds?: string[];
   deletedAt?: string;
+  /** Bumped on logout so prior session cookies stop working. */
+  sessionStamp?: number;
 };
 
 export type StoredMachine = {
@@ -1503,6 +1505,25 @@ export function findUserByEmail(email: string) {
       return matches[0];
     }
     return null;
+  });
+}
+
+/** Invalidate every outstanding session cookie for this user (logout). */
+export function revokeUserSessions(userId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const index = db.users.findIndex((user) => user.id === userId && !user.deletedAt);
+    if (index < 0) {
+      return { error: "not-found" as const };
+    }
+    const current = db.users[index];
+    const users = db.users.slice();
+    users[index] = {
+      ...current,
+      sessionStamp: (current.sessionStamp ?? 0) + 1,
+    };
+    await writeDatabase({ ...db, users });
+    return { user: users[index] };
   });
 }
 

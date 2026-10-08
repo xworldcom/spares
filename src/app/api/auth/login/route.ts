@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       ? redirectNoQuery("/login")
       : error("Account is missing a host tenant. Contact support.", 403);
   }
-  await setSessionCookie(user.id, user.email, tenantId);
+  await setSessionCookie(user.id, user.email, tenantId, user.sessionStamp ?? 0);
   await recordAccountActivity({
     tenantId,
     actor: actorFromUser(user),

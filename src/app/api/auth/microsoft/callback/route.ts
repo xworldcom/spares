@@ -84,7 +84,14 @@ export async function GET(request: Request) {
     return loginErrorRedirect(state.origin, MICROSOFT_ACCESS_DENIED_CODE, identity.tid);
   }
 
-  await setSessionCookie(session.userId, session.email, session.tenantId);
+  const sessionStamp =
+    "user" in resolved ? (resolved.user.sessionStamp ?? 0) : 0;
+  await setSessionCookie(
+    session.userId,
+    session.email,
+    session.tenantId,
+    sessionStamp,
+  );
   const actor = actorFromUser({
     id: session.userId,
     email: session.email,

@@ -8,6 +8,7 @@ import {
   SESSION_COOKIE,
   SESSION_MS,
   sessionCookieOptions,
+  sessionMatchesUserStamp,
   signSession,
   verifySession,
 } from "@/lib/auth/session-token";
@@ -18,11 +19,12 @@ export async function setSessionCookie(
   userId: string,
   email?: string,
   tenantId?: string,
+  sessionStamp = 0,
 ) {
   const store = await cookies();
   store.set(
     SESSION_COOKIE,
-    signSession(userId, email, tenantId),
+    signSession(userId, email, tenantId, sessionStamp),
     sessionCookieOptions(SESSION_MS / 1000),
   );
 }
@@ -50,15 +52,19 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
   if (!user || user.deletedAt) {
     return null;
   }
+  if (!sessionMatchesUserStamp(session, user)) {
+    return null;
+  }
 
   const tenantId = effectiveStaffTenantId(user) ?? undefined;
+  const stamp = user.sessionStamp ?? 0;
   if (
     !session.email ||
     session.email !== user.email ||
     session.userId !== user.id ||
     session.tenantId !== tenantId
   ) {
-    await setSessionCookie(user.id, user.email, tenantId);
+    await setSessionCookie(user.id, user.email, tenantId, stamp);
   }
 
   const platformOwner = isPlatformOwnerEmail(user.email);

@@ -8,6 +8,8 @@ export type SessionPayload = {
   email?: string;
   tenantId?: string;
   exp: number;
+  /** Must match StoredUser.sessionStamp (default 0). */
+  stamp?: number;
 };
 
 const LOCAL_DEV_SECRET = "spares-not-live-local-secret";
@@ -35,17 +37,30 @@ export function sessionCookieOptions(maxAge: number) {
   };
 }
 
-export function signSession(userId: string, email?: string, tenantId?: string) {
+export function signSession(
+  userId: string,
+  email?: string,
+  tenantId?: string,
+  stamp = 0,
+) {
   const payload = Buffer.from(
     JSON.stringify({
       userId,
       exp: Date.now() + SESSION_MS,
+      stamp,
       ...(email ? { email: email.trim().toLowerCase() } : {}),
       ...(tenantId ? { tenantId } : {}),
     } satisfies SessionPayload),
   ).toString("base64url");
   const signature = createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
   return `${payload}.${signature}`;
+}
+
+export function sessionMatchesUserStamp(
+  session: { stamp?: number },
+  user: { sessionStamp?: number },
+) {
+  return (session.stamp ?? 0) === (user.sessionStamp ?? 0);
 }
 
 export function verifySession(token: string): SessionPayload | null {
@@ -66,6 +81,9 @@ export function verifySession(token: string): SessionPayload | null {
       Buffer.from(payload, "base64url").toString("utf8"),
     ) as SessionPayload;
     if (!data.userId || typeof data.exp !== "number" || data.exp < Date.now()) {
+      return null;
+    }
+    if (data.stamp !== undefined && typeof data.stamp !== "number") {
       return null;
     }
     return data;
