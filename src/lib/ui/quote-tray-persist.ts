@@ -73,3 +73,13 @@ export function persistedToPart(line: PersistedTrayLine, machinePart?: Part): Pa
     qty: 1,
   };
 }
+
+/** Saved lines first, then anything already in the tray that was not saved (added before hydrate). */
+export function mergeHydratedTrayLines<T extends { part: Part; qty: number }>(
+  persisted: PersistedTrayLine[],
+  current: T[],
+): T[] {
+  const saved = persisted.map((row) => ({ part: persistedToPart(row), qty: row.qty }) as T);
+  const ids = new Set(persisted.map((row) => row.id));
+  return [...saved, ...current.filter((line) => !ids.has(line.part.id))];
+}
