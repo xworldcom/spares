@@ -10,6 +10,7 @@ import {
   type StaffPartCatalogRow,
 } from "@/lib/api/part-lifecycle";
 import { errorMessage } from "@/lib/api/errors";
+import { LoadingState } from "@/components/states/LoadingState";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
   { value: "all", label: "All statuses" },
@@ -230,6 +231,22 @@ export function PartLifecyclePanel() {
           <button
             type="button"
             disabled={bulkBusy}
+            onClick={() => void bulkSetStatus("announced")}
+            className="btn-soft inline-flex h-8 items-center rounded-full px-3 font-medium disabled:opacity-40"
+          >
+            Mark announced
+          </button>
+          <button
+            type="button"
+            disabled={bulkBusy}
+            onClick={() => void bulkSetStatus("obsolete")}
+            className="btn-soft inline-flex h-8 items-center rounded-full px-3 font-medium disabled:opacity-40"
+          >
+            Mark obsolete
+          </button>
+          <button
+            type="button"
+            disabled={bulkBusy}
             onClick={() => void bulkSetStatus("unknown")}
             className="btn-soft inline-flex h-8 items-center rounded-full px-3 font-medium disabled:opacity-40"
           >
@@ -250,7 +267,7 @@ export function PartLifecyclePanel() {
       ) : null}
 
       {loading ? (
-        <p className="spares-muted text-sm">Loading parts…</p>
+        <LoadingState label="Loading parts…" />
       ) : parts.length === 0 ? (
         <p className="spares-muted text-sm">No parts match these filters.</p>
       ) : (
