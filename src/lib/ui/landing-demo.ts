@@ -671,7 +671,6 @@ export function workflowScrubSnapLinearPositions() {
     const toLinear = statusOrder[i + 1]?.[1] ?? 1;
     const span = Math.max(0.012, toLinear - fromLinear);
     positions.add(fromLinear);
-    positions.add(fromLinear + span * 0.34);
     if (status === statusOrder.at(-1)?.[0]) {
       positions.add(Math.min(1, toLinear));
     }
@@ -873,6 +872,12 @@ export function demoWorkflowThreadPlayhead(workflowProgress: number) {
   const to = thresholds[idx + 1] ?? 1;
   if (idx >= n - 1) {
     return 1;
+  }
+  if (local < 0.04) {
+    return from;
+  }
+  if (local > 0.96) {
+    return to;
   }
   return from + local * (to - from);
 }

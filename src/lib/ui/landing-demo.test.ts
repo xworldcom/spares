@@ -336,7 +336,9 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(css, /\.landing-workflow-request\.is-visible\s*\{[^}]*transition:/);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
-    assert.match(css, /scroll-snap-type:\s*y proximity/);
+    assert.match(css, /scroll-snap-type:\s*y mandatory/);
+    assert.match(css, /\.spares-app-cinematic \.landing-marketing > \.landing-section[\s\S]*scroll-snap-align:\s*start/);
+    assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
     assert.match(css, /scroll-snap-stop:\s*always/);
   });
 
@@ -444,7 +446,7 @@ describe("landing cell stage", () => {
     assert.match(control, /scrollTo\(\{ top: 0/);
     const css = readFileSync("src/components/landing/landing.css", "utf8");
     assert.match(css, /\.landing-back-to-top/);
-    assert.match(css, /z-index:\s*40/);
+    assert.match(css, /z-index:\s*50/);
   });
 });
 

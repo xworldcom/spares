@@ -302,7 +302,7 @@ export function AppShell({
               >
                 Sign out
               </button>
-            ) : cinematic || resolvingSession || pathname === "/login" ? null : (
+            ) : resolvingSession || pathname === "/login" ? null : cinematic && pathname !== "/" ? null : (
               <Link
                 href="/login"
                 className="spares-header-sign-in btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
