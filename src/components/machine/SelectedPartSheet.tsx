@@ -10,8 +10,10 @@ import { useHydrated } from "@/lib/use-hydrated";
 export function SelectedPartSheet({
   part,
   isolated,
+  isolatedViewPart,
   onHide,
   onIsolate,
+  onShowAll,
   onAdd,
   onDismiss,
   showAdd,
@@ -19,8 +21,10 @@ export function SelectedPartSheet({
 }: {
   part: Part | null;
   isolated?: boolean;
+  isolatedViewPart?: Part | null;
   onHide: () => void;
   onIsolate: () => void;
+  onShowAll: () => void;
   onAdd?: () => void;
   onDismiss: () => void;
   showAdd?: boolean;
@@ -89,6 +93,26 @@ export function SelectedPartSheet({
           event.stopPropagation();
         }}
       >
+        {isolatedViewPart ? (
+          <div
+            className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/8 pb-2"
+            data-isolation-banner=""
+          >
+            <p className="chrome-quiet min-w-0 flex-1 text-[11px] leading-snug">
+              Showing only{" "}
+              <span className="font-medium text-[var(--spares-on-chip)]">
+                {isolatedViewPart.name}
+              </span>
+            </p>
+            <button
+              type="button"
+              {...activate(onShowAll)}
+              className="inline-flex h-8 shrink-0 items-center rounded-full bg-white/10 px-2.5 text-[11px] font-semibold"
+            >
+              Show all
+            </button>
+          </div>
+        ) : null}
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-[13px] leading-tight font-semibold tracking-tight">
@@ -138,10 +162,12 @@ export function SelectedPartSheet({
               {...activate(onIsolate)}
               disabled={!canAct}
               className={`${
-                isolated ? "bg-[var(--spares-on-chip)] text-[var(--spares-chip)]" : "bg-white/8"
+                isolated
+                  ? "bg-[var(--spares-on-chip)] text-[var(--spares-chip)]"
+                  : "bg-white/8 text-[var(--spares-on-chip)]"
               } inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30`}
             >
-              Only this
+              {isolated ? "Show all parts" : "Only this"}
             </button>
             <button
               type="button"

@@ -1839,6 +1839,6 @@
 
 @media (max-width: 899px) {
   .landing-demo-scrub {
-    --landing-demo-scrub-extra: 400svh;
+    --landing-demo-scrub-extra: 550svh;
   }
 }

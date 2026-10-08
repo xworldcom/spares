@@ -321,7 +321,7 @@ describe("landing scrub layout", () => {
     assert.match(css, /\.landing-demo-scrub-pin\s*\{[^}]*100svh/);
     assert.match(css, /var\(--landing-demo-scrub-extra,\s*1000svh\)|--landing-demo-scrub-extra:\s*1000svh/);
     assert.equal(DEMO_SCRUB_EXTRA_SVH, 1000);
-    assert.equal(DEMO_SCRUB_EXTRA_SVH_PHONE, 400);
+    assert.equal(DEMO_SCRUB_EXTRA_SVH_PHONE, 550);
     assert.match(
       css,
       new RegExp(`\\.landing-demo-scrub\\s*\\{[^}]*--landing-demo-scrub-extra:\\s*${DEMO_SCRUB_EXTRA_SVH_PHONE}svh`),

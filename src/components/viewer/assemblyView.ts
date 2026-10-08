@@ -71,7 +71,18 @@ export function meshIsolateState(
   return { hidden, ghosted, pickable: !hidden && !ghosted };
 }
 
-/** "Show all" restores hidden parts; it appears only when a part is actually hidden. */
-export function viewerNeedsShowAll(hiddenIds: readonly string[]): boolean {
-  return hiddenIds.length > 0;
+/** Part visibility is filtered when anything is hidden or one part is isolated. */
+export function viewerPartsFiltered(
+  hiddenIds: readonly string[],
+  isolatedId: string | null,
+): boolean {
+  return hiddenIds.length > 0 || isolatedId != null;
+}
+
+/** Chrome "Show all" and in-sheet exit use the same filter signal. */
+export function viewerNeedsShowAll(
+  hiddenIds: readonly string[],
+  isolatedId: string | null = null,
+): boolean {
+  return viewerPartsFiltered(hiddenIds, isolatedId);
 }
