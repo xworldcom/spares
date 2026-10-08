@@ -336,7 +336,7 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(css, /\.landing-workflow-request\.is-visible\s*\{[^}]*transition:/);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
-    assert.match(css, /scroll-snap-type:\s*y mandatory/);
+    assert.match(css, /scroll-snap-type:\s*y proximity/);
     assert.match(css, /scroll-snap-stop:\s*always/);
   });
 
