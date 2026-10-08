@@ -1,4 +1,5 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdir, readFile, rename, rmdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   BLOB_FILES_PREFIX,
@@ -30,8 +31,30 @@ export class PersistenceReadError extends Error {
   }
 }
 
+/** The two catalog documents that are read-modify-written by every mutation. */
+export type CatalogDocument = "database" | "care";
+
+/** Content plus an opaque version (Blob ETag, or a content hash on disk / in memory). */
+export type VersionedJson = { json: string | null; version: string | null };
+
+export type ConditionalWriteResult = { ok: true; version: string } | { ok: false };
+
 export type Persistence = {
   kind: StoreKind;
+  /**
+   * Read a catalog document together with the version a later conditional write must
+   * present. `version` is null exactly when the document does not exist yet.
+   */
+  readVersioned(doc: CatalogDocument): Promise<VersionedJson>;
+  /**
+   * Write only if the stored version still equals `expected` (null = must not exist).
+   * Returns `{ ok: false }` when another writer got there first; callers re-read and retry.
+   */
+  writeIfVersion(
+    doc: CatalogDocument,
+    json: string,
+    expected: string | null,
+  ): Promise<ConditionalWriteResult>;
   readDatabaseJson(): Promise<string | null>;
   writeDatabaseJson(json: string): Promise<void>;
   readCareJson(): Promise<string | null>;
@@ -75,8 +98,25 @@ export function createMemoryPersistence(): Persistence {
   let platformSettingsJson: string | null = null;
   let activityJson: string | null = null;
   const files = new Map<string, Buffer>();
+  const current = (doc: CatalogDocument) => (doc === "database" ? json : careJson);
   return {
     kind: "memory",
+    async readVersioned(doc) {
+      const value = current(doc);
+      return { json: value, version: value === null ? null : contentVersion(value) };
+    },
+    async writeIfVersion(doc, next, expected) {
+      const value = current(doc);
+      if ((value === null ? null : contentVersion(value)) !== expected) {
+        return { ok: false };
+      }
+      if (doc === "database") {
+        json = next;
+      } else {
+        careJson = next;
+      }
+      return { ok: true, version: contentVersion(next) };
+    },
     async readDatabaseJson() {
       return json;
     },
@@ -114,6 +154,10 @@ export function createMemoryPersistence(): Persistence {
   };
 }
 
+export function contentVersion(json: string) {
+  return createHash("sha256").update(json).digest("hex");
+}
+
 export function setPersistenceForTests(next: Persistence | null) {
   override = next;
 }
@@ -143,7 +187,7 @@ function selectPersistence(): Persistence {
     return fsPersistence(path.resolve(process.env.SPARES_DATA_DIR));
   }
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    return blobPersistence();
+    return blobPersistence(vercelBlobClient);
   }
   if (isManagedRuntime()) {
     throw new Error(
@@ -159,21 +203,38 @@ function fsPersistence(root: string): Persistence {
   const platformSettingsFile = path.join(root, "platform-settings.json");
   const activityFile = path.join(root, "activity.json");
   const filesRoot = path.join(root, "files");
+  const fileFor = (doc: CatalogDocument) => (doc === "database" ? dbFile : careFile);
   return {
     kind: "fs",
+    async readVersioned(doc) {
+      const json = await readJsonFile(fileFor(doc));
+      return { json, version: json === null ? null : contentVersion(json) };
+    },
+    async writeIfVersion(doc, json, expected) {
+      const file = fileFor(doc);
+      await mkdir(filesRoot, { recursive: true });
+      return withFileLock(`${file}.lock`, async () => {
+        const stored = await readJsonFile(file);
+        if ((stored === null ? null : contentVersion(stored)) !== expected) {
+          return { ok: false } as const;
+        }
+        await writeFileAtomic(file, json);
+        return { ok: true, version: contentVersion(json) } as const;
+      });
+    },
     async readDatabaseJson() {
       return readJsonFile(dbFile);
     },
     async writeDatabaseJson(json) {
       await mkdir(filesRoot, { recursive: true });
-      await writeFile(dbFile, json);
+      await withFileLock(`${dbFile}.lock`, () => writeFileAtomic(dbFile, json));
     },
     async readCareJson() {
       return readJsonFile(careFile);
     },
     async writeCareJson(json) {
       await mkdir(filesRoot, { recursive: true });
-      await writeFile(careFile, json);
+      await withFileLock(`${careFile}.lock`, () => writeFileAtomic(careFile, json));
     },
     async readPlatformSettingsJson() {
       return readJsonFile(platformSettingsFile);
@@ -210,6 +271,53 @@ function fsPersistence(root: string): Persistence {
   };
 }
 
+/** Readers never see a half-written document: write a sibling, then rename over it. */
+async function writeFileAtomic(file: string, json: string) {
+  const temp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+  try {
+    await writeFile(temp, json);
+    await rename(temp, file);
+  } catch (cause) {
+    await unlink(temp).catch(() => undefined);
+    throw cause;
+  }
+}
+
+const FILE_LOCK_STALE_MS = 15_000;
+const FILE_LOCK_WAIT_MS = 20_000;
+
+/**
+ * Cross-process mutex for the local store, so compare-and-write is atomic between the
+ * several Node processes that can share one data dir. `mkdir` is the atomic primitive.
+ */
+async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T> {
+  const started = Date.now();
+  for (;;) {
+    try {
+      await mkdir(lockDir);
+      break;
+    } catch (cause) {
+      if ((cause as { code?: string })?.code !== "EEXIST") {
+        throw cause;
+      }
+      const held = await stat(lockDir).catch(() => null);
+      if (held && Date.now() - held.mtimeMs > FILE_LOCK_STALE_MS) {
+        await rmdir(lockDir).catch(() => undefined);
+        continue;
+      }
+      if (Date.now() - started > FILE_LOCK_WAIT_MS) {
+        throw new Error(`Timed out waiting for the store lock ${lockDir}`);
+      }
+      await delay(3 + Math.floor(Math.random() * 7));
+    }
+  }
+  try {
+    return await fn();
+  } finally {
+    await rmdir(lockDir).catch(() => undefined);
+  }
+}
+
 /** Missing files are a first boot; anything else must not look like an empty store. */
 async function readJsonFile(file: string) {
   try {
@@ -222,37 +330,147 @@ async function readJsonFile(file: string) {
   }
 }
 
-function blobPersistence(): Persistence {
+/** The slice of `@vercel/blob` the store uses, so the CAS logic can run against a fake. */
+export type BlobClient = {
+  put(
+    pathname: string,
+    body: string | Buffer,
+    options: Record<string, unknown>,
+  ): Promise<{ etag: string }>;
+  get(
+    pathname: string,
+    options: { access: "private"; useCache: false },
+  ): Promise<{
+    statusCode: number;
+    stream: ReadableStream<Uint8Array> | null;
+    blob: { etag: string };
+  } | null>;
+  del(pathname: string): Promise<void>;
+};
+
+const vercelBlobClient: BlobClient = {
+  async put(pathname, body, options) {
+    const { put } = await import("@vercel/blob");
+    return put(pathname, body, options as unknown as Parameters<typeof put>[2]);
+  },
+  async get(pathname, options) {
+    const { get } = await import("@vercel/blob");
+    return get(pathname, options);
+  },
+  async del(pathname) {
+    const { del } = await import("@vercel/blob");
+    await del(pathname);
+  },
+};
+
+function blobPathFor(doc: CatalogDocument) {
+  return doc === "database" ? blobDbPath() : blobCarePath();
+}
+
+/** The SDK's error classes do not set `name`, so match on the stable message instead. */
+function isPreconditionFailed(cause: unknown) {
+  return (
+    cause instanceof Error &&
+    (cause.constructor?.name === "BlobPreconditionFailedError" ||
+      /precondition failed/i.test(cause.message))
+  );
+}
+
+function isAlreadyExists(cause: unknown) {
+  return cause instanceof Error && /already exists/i.test(cause.message);
+}
+
+function isNotFoundError(cause: unknown) {
+  return (
+    cause instanceof Error &&
+    (cause.constructor?.name === "BlobNotFoundError" || isMissingBlob(cause))
+  );
+}
+
+export function createBlobPersistence(client: BlobClient = vercelBlobClient): Persistence {
+  return blobPersistence(client);
+}
+
+function blobPersistence(client: BlobClient): Persistence {
+  async function readVersionedBlob(pathname: string): Promise<VersionedJson> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= JSON_READ_ATTEMPTS; attempt++) {
+      try {
+        const result = await client.get(pathname, { access: "private", useCache: false });
+        if (!result) {
+          return { json: null, version: null };
+        }
+        if (result.statusCode !== 200 || !result.stream) {
+          throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
+        }
+        const json = Buffer.from(await new Response(result.stream).arrayBuffer()).toString("utf8");
+        return { json, version: result.blob.etag };
+      } catch (cause) {
+        if (isNotFoundError(cause)) {
+          return { json: null, version: null };
+        }
+        lastError = cause;
+        if (attempt < JSON_READ_ATTEMPTS) {
+          await delay(150 * attempt);
+        }
+      }
+    }
+    throw new PersistenceReadError(pathname, { cause: lastError });
+  }
+
+  async function putIfVersion(
+    doc: CatalogDocument,
+    json: string,
+    expected: string | null,
+  ): Promise<ConditionalWriteResult> {
+    const options = {
+      access: "private",
+      addRandomSuffix: false,
+      // Blob CDN minimum is 60s; every read uses useCache: false.
+      cacheControlMaxAge: 60,
+      contentType: "application/json",
+      ...(expected === null ? { allowOverwrite: false } : { allowOverwrite: true, ifMatch: expected }),
+    };
+    try {
+      const written = await client.put(blobPathFor(doc), json, options);
+      return { ok: true, version: written.etag };
+    } catch (cause) {
+      if (isPreconditionFailed(cause) || isAlreadyExists(cause) || isNotFoundError(cause)) {
+        return { ok: false };
+      }
+      throw cause;
+    }
+  }
+
+  async function putUnconditional(pathname: string, json: string) {
+    await client.put(pathname, json, {
+      access: "private",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      cacheControlMaxAge: 60,
+      contentType: "application/json",
+    });
+  }
+
   return {
     kind: "blob",
+    readVersioned(doc) {
+      return readVersionedBlob(blobPathFor(doc));
+    },
+    writeIfVersion: putIfVersion,
     async readDatabaseJson() {
       const bytes = await readJsonBlob(blobDbPath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeDatabaseJson(json) {
-      const { put } = await import("@vercel/blob");
-      await put(blobDbPath(), json, {
-        access: "private",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        // Blob CDN minimum is 60s; every read uses useCache: false.
-        cacheControlMaxAge: 60,
-        contentType: "application/json",
-      });
+      await putUnconditional(blobDbPath(), json);
     },
     async readCareJson() {
       const bytes = await readJsonBlob(blobCarePath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeCareJson(json) {
-      const { put } = await import("@vercel/blob");
-      await put(blobCarePath(), json, {
-        access: "private",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        cacheControlMaxAge: 60,
-        contentType: "application/json",
-      });
+      await putUnconditional(blobCarePath(), json);
     },
     async readPlatformSettingsJson() {
       const bytes = await readJsonBlob(blobPlatformSettingsPath());
