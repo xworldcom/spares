@@ -1,3 +1,4 @@
+import { parseBlobCasTelemetry, type BlobCasTelemetry } from "./blob-cas-telemetry.ts";
 import { updateJsonDocument } from "./json-document.ts";
 import { getPersistence } from "./persistence.ts";
 
@@ -11,6 +12,7 @@ export type PlatformSettingsDocument = {
   passwordLoginEnabled?: boolean;
   assistantEnabled?: boolean;
   assistantModel?: string;
+  blobCas?: BlobCasTelemetry;
 };
 
 const SCHEMA_VERSION = 2;
@@ -36,6 +38,10 @@ function parsePlatformSettingsDocument(raw: string): PlatformSettingsDocument | 
       next.assistantModel = parsed.assistantModel;
     } else if (parsed.assistantModel !== undefined) {
       return null;
+    }
+    const blobCas = parseBlobCasTelemetry(parsed as Record<string, unknown>);
+    if (Object.keys(blobCas).length > 0) {
+      next.blobCas = blobCas;
     }
     return next;
   } catch {

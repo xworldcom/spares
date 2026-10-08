@@ -28,10 +28,13 @@ import { lookupPartLifecycle } from "@/lib/api/part-lifecycle";
 import { playQuoteAddMotion } from "@/lib/ui/quote-feedback";
 import {
   mergeHydratedTrayLines,
+  quoteTrayNoteStorageKey,
   quoteTrayStorageKey,
   readPersistedTrayLines,
+  readPersistedTrayNote,
   trayLineToPersisted,
   writePersistedTrayLines,
+  writePersistedTrayNote,
 } from "@/lib/ui/quote-tray-persist";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
@@ -81,6 +84,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     isCustomer && user?.tenantId
       ? quoteTrayStorageKey(user.tenantId, machineId)
       : null;
+  const trayNoteStorageKey =
+    isCustomer && user?.tenantId
+      ? quoteTrayNoteStorageKey(user.tenantId, machineId)
+      : null;
+  const [trayNote, setTrayNote] = useState("");
   const customerTrayInViewer = isCustomer && !desktopStage;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
@@ -155,6 +163,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!trayStorageKey) {
       return;
     }
+    if (trayNoteStorageKey) {
+      setTrayNote(readPersistedTrayNote(trayNoteStorageKey));
+    }
     const persisted = readPersistedTrayLines(trayStorageKey);
     setLines((current) => mergeHydratedTrayLines(persisted, current));
     setLinesKey(trayStorageKey);
@@ -180,7 +191,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [trayStorageKey]);
+  }, [trayStorageKey, trayNoteStorageKey]);
+
+  useEffect(() => {
+    if (!trayNoteStorageKey || linesKey !== trayStorageKey) {
+      return;
+    }
+    writePersistedTrayNote(trayNoteStorageKey, trayNote);
+  }, [trayNote, trayNoteStorageKey, linesKey, trayStorageKey]);
 
   const trayLines = useMemo(() => {
     if (!machine) {
@@ -233,6 +251,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         return;
       }
       if (target.closest("[data-show-all]")) {
+        return;
+      }
+      if (target.closest(".explode-slider")) {
         return;
       }
       if (target.closest("[data-bug-report]")) {
@@ -315,6 +336,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     });
     playQuoteAddMotion();
     flashAddToast(part.name);
+    if (!thumb) {
+      window.requestAnimationFrame(() => {
+        const captured = captureThumb.current(part.id) ?? undefined;
+        if (!captured) {
+          return;
+        }
+        setLines((current) =>
+          current.map((line) =>
+            line.part.id === part.id && !line.thumb ? { ...line, thumb: captured } : line,
+          ),
+        );
+      });
+    }
     void lookupPartLifecycle([part.id])
       .then((map) => {
         const lifecycle = map[part.id];
@@ -340,6 +374,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       <QuoteTray
         machineId={machineId}
         lines={trayLines}
+        note={trayNote}
+        onNote={setTrayNote}
         allowManual
         onAdd={(part, qty) => {
           commitTrayLine(part, qty);
@@ -352,7 +388,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           );
         }}
         onRemove={removeTrayLine}
-        onClear={() => setLines([])}
+        onClear={() => {
+          setLines([]);
+          setTrayNote("");
+        }}
         open={trayOpen}
         onOpenChange={setTrayOpen}
       />
@@ -418,8 +457,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }
 
   function addPart(part: Part) {
-    const thumb = captureThumb.current(part.id) ?? undefined;
-    commitTrayLine(part, part.qty || 1, thumb);
+    commitTrayLine(part, part.qty || 1);
   }
 
   function addSelected() {
@@ -552,7 +590,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           >
             {isCustomer ? (
               <>
-                <p className="mb-3 truncate text-[15px] font-semibold">
+                <p
+                  className="mb-3 line-clamp-2 text-[15px] font-semibold leading-snug"
+                  title={machine.name}
+                >
                   {machine.name}
                 </p>
                 <PartsBom

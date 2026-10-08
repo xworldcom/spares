@@ -1,6 +1,7 @@
 import { getSignInOptions } from "@/lib/auth/password-login.server";
 import { requirePlatformOwner } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
+import { readPersistedPlatformSettings } from "@/lib/platform-settings-persistence";
 import { updatePlatformSignInSettings } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +16,15 @@ export async function GET() {
     return auth.error;
   }
   const options = await getSignInOptions();
+  const platform = await readPersistedPlatformSettings();
   return json({
     passwordLoginEnabled: options.passwordLoginEnabled,
     passwordLoginStoredEnabled: options.passwordLoginStoredEnabled,
     passwordLoginEnvOverride: options.passwordLoginEnvOverride,
     microsoftSignInEnabled: options.microsoftSignInEnabled,
+    blobCasTelemetry: platform?.blobCas ?? {
+      phantom412Count: 0,
+    },
   });
 }
 

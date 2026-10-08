@@ -90,7 +90,20 @@ export function QuoteActivityFeed({
   const bootstrappedRef = useRef(false);
   const unreadJumpedRef = useRef(false);
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
+  const hasPendingSend = outgoing.length > 0 || uploading;
   const self = { email: selfEmail, role };
+
+  useEffect(() => {
+    if (!hasPendingSend) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasPendingSend]);
   const firstUnreadIndex = firstUnreadActivityIndex(activities, self, viewerReadAt);
   const lastOwnIndex = activities.reduce(
     (found, activity, index) =>

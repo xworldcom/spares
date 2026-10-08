@@ -1,51 +1,26 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it, beforeEach } from "vitest";
 import {
-  quoteTrayStorageKey,
-  trayLineToPersisted,
-  persistedToPart,
-  mergeHydratedTrayLines,
+  quoteTrayNoteStorageKey,
+  readPersistedTrayNote,
+  writePersistedTrayNote,
 } from "./quote-tray-persist.ts";
 
-describe("quote tray persistence", () => {
-  it("builds stable storage keys per tenant and machine", () => {
-    assert.equal(
-      quoteTrayStorageKey("tenant-a", "hardware-fixture"),
-      "spares-quote-tray:tenant-a:hardware-fixture",
-    );
+describe("quote tray note persistence", () => {
+  const key = quoteTrayNoteStorageKey("tenant-a", "machine-b");
+
+  beforeEach(() => {
+    window.localStorage.clear();
   });
 
-  it("round-trips manual line snapshots", () => {
-    const persisted = trayLineToPersisted(
-      {
-        id: "5972K325",
-        name: "Bearing",
-        meshName: "",
-        qty: 1,
-      },
-      2,
-    );
-    assert.equal(persisted.id, "5972K325");
-    assert.equal(persisted.qty, 2);
-    const part = persistedToPart(persisted);
-    assert.equal(part.id, "5972K325");
-    assert.equal(part.name, "Bearing");
+  it("round-trips note text", () => {
+    writePersistedTrayNote(key, "Need by Friday");
+    expect(readPersistedTrayNote(key)).toBe("Need by Friday");
   });
 
-  it("hydrates saved lines and keeps lines added before hydrate", () => {
-    const merged = mergeHydratedTrayLines(
-      [{ id: "A", name: "Alpha", meshName: "A_1", qty: 2 }],
-      [
-        { part: { id: "A", name: "Alpha", meshName: "A_1", qty: 1 }, qty: 1 },
-        { part: { id: "B", name: "Beta", meshName: "B_1", qty: 1 }, qty: 3 },
-      ],
-    );
-    assert.deepEqual(
-      merged.map((line) => [line.part.id, line.qty]),
-      [
-        ["A", 2],
-        ["B", 3],
-      ],
-    );
+  it("clears storage when note is empty", () => {
+    writePersistedTrayNote(key, "x");
+    writePersistedTrayNote(key, "   ");
+    expect(readPersistedTrayNote(key)).toBe("");
+    expect(window.localStorage.getItem(key)).toBeNull();
   });
 });

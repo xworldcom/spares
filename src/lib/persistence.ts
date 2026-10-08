@@ -583,6 +583,9 @@ function blobPersistence(client: BlobClient): Persistence {
       console.error(
         `[blob-cas] ${pathname}: ifMatch ${expected} rejected although head reports the same ETag; using head-compare writes for ${SOFT_CAS_MS / 1000}s`,
       );
+      void import("./blob-cas-telemetry.ts")
+        .then(({ recordBlobCasPhantom412 }) => recordBlobCasPhantom412(pathname))
+        .catch(() => undefined);
       softCasUntil.set(pathname, Date.now() + SOFT_CAS_MS);
       return await putSoft(pathname, json, expected);
     }

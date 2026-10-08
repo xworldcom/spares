@@ -13,6 +13,11 @@ type SignInSettingsResponse = {
   passwordLoginStoredEnabled: boolean;
   passwordLoginEnvOverride: "force-off" | "force-on" | null;
   microsoftSignInEnabled: boolean;
+  blobCasTelemetry?: {
+    phantom412Count?: number;
+    phantom412LastAt?: string;
+    phantom412LastPath?: string;
+  };
 };
 
 export default function PlatformSignInSettingsPage() {
@@ -120,6 +125,39 @@ function PlatformSignInSettings() {
           Saved. The login page updates immediately.
         </p>
       ) : null}
+
+      <section
+        className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3 mb-6"
+        aria-labelledby="blob-cas-telemetry-heading"
+      >
+        <h2 id="blob-cas-telemetry-heading" className="text-base font-semibold">
+          Catalog write telemetry
+        </h2>
+        <p className="text-sm text-muted">
+          Phantom HTTP 412s on Blob <code className="text-xs">ifMatch</code> (head-compare fallback).
+          Goal: stay at zero in production, then remove the fallback.
+        </p>
+        <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-muted">Phantom 412 count</dt>
+            <dd className="font-mono text-lg tabular-nums">
+              {settings?.blobCasTelemetry?.phantom412Count ?? 0}
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted">Last event</dt>
+            <dd className="font-mono text-xs break-all">
+              {settings?.blobCasTelemetry?.phantom412LastAt
+                ? `${settings.blobCasTelemetry.phantom412LastAt}${
+                    settings.blobCasTelemetry.phantom412LastPath
+                      ? ` · ${settings.blobCasTelemetry.phantom412LastPath}`
+                      : ""
+                  }`
+                : "None recorded"}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
         <label className="flex items-start gap-3 cursor-pointer">
