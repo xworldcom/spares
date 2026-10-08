@@ -34,6 +34,7 @@ describe("session cookie payload", () => {
     assert.ok(session);
     assert.equal(session.userId, "old-random-uuid");
     assert.equal(session.email, "customer@spares.local");
+    assert.equal(session.stamp, 0);
     assert.ok(session.exp > Date.now());
   });
 
