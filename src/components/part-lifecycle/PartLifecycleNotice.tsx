@@ -1,14 +1,8 @@
+import {
+  partLifecycleDetailParts,
+  partLifecycleStatusHeadline,
+} from "@/lib/part-lifecycle-copy";
 import type { PartLifecycleInfo } from "@/types";
-
-function statusHeadline(status: PartLifecycleInfo["status"]) {
-  if (status === "obsolete") {
-    return "Discontinued";
-  }
-  if (status === "announced") {
-    return "Discontinuation announced";
-  }
-  return null;
-}
 
 export function PartLifecycleNotice({
   lifecycle,
@@ -20,21 +14,12 @@ export function PartLifecycleNotice({
   if (!lifecycle) {
     return null;
   }
-  const headline = statusHeadline(lifecycle.status);
+  const headline = partLifecycleStatusHeadline(lifecycle.status);
   if (!headline) {
     return null;
   }
 
-  const details: string[] = [];
-  if (lifecycle.discontinuationDate) {
-    details.push(`Ends ${lifecycle.discontinuationDate}`);
-  }
-  if (lifecycle.lastTimeBuyDate) {
-    details.push(`Last time buy ${lifecycle.lastTimeBuyDate}`);
-  }
-  if (lifecycle.successorPartNumber) {
-    details.push(`Use ${lifecycle.successorPartNumber}`);
-  }
+  const details = partLifecycleDetailParts(lifecycle);
 
   return (
     <p
