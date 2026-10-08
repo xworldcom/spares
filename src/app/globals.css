@@ -1069,6 +1069,8 @@ html.spares-embed .spares-app-stage {
 
   button {
     cursor: pointer;
+    border: 0;
+    background: transparent;
   }
 }
 
@@ -1507,6 +1509,28 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     font-size: 11px;
     line-height: 1.15;
     white-space: normal;
+  }
+}
+
+@media (max-width: 360px) {
+  .quote-progress-track {
+    scroll-padding-inline: 0.35rem;
+    padding-inline: 0.15rem;
+  }
+
+  .quote-progress-step {
+    flex: 0 0 4.35rem;
+    min-width: 4.35rem;
+  }
+
+  .quote-progress-label {
+    font-size: 10px;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .quote-progress-step[data-state="current"] .quote-progress-label-full {
+    font-size: 10px;
   }
 }
 

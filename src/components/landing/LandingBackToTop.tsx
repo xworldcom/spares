@@ -69,10 +69,14 @@ export function LandingBackToTop() {
     motion.addEventListener("change", syncMotion);
 
     const syncVisible = () => {
-      const threshold = Math.max(320, window.innerHeight * 0.45);
+      const threshold = Math.max(520, window.innerHeight * 0.92);
       const scrolled = readScrollY() > threshold;
+      const story = document.getElementById("product-story");
+      const storyDeep =
+        story !== null &&
+        story.getBoundingClientRect().top < -Math.round(window.innerHeight * 0.2);
       const hideForStory = productStoryChapterActive();
-      setVisible(scrolled && !hideForStory);
+      setVisible(scrolled && storyDeep && !hideForStory);
     };
     syncVisible();
     window.addEventListener("scroll", syncVisible, { passive: true });

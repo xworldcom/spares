@@ -557,6 +557,19 @@ function easeBetweenPlateaus(index: number) {
   return fromRest && toRest;
 }
 
+function demoQuoteThreadBeatThresholds() {
+  const seen = new Set<number>();
+  const thresholds: number[] = [];
+  for (const beat of DEMO_QUOTE_SCRIPT) {
+    if (seen.has(beat.at)) {
+      continue;
+    }
+    seen.add(beat.at);
+    thresholds.push(beat.at);
+  }
+  return thresholds.sort((a, b) => a - b);
+}
+
 function interpolateWorkflowScrubMap(linear: number) {
   const p = clampDemoScrollProgress(linear);
   const first = WORKFLOW_SCRUB_MAP[0];
@@ -580,6 +593,36 @@ function interpolateWorkflowScrubMap(linear: number) {
 
 export function workflowScrubPlayhead(linearProgress: number) {
   return clampDemoScrollProgress(interpolateWorkflowScrubMap(linearProgress));
+}
+
+export function workflowScrubLinearForVisual(targetVisual: number) {
+  const target = clampDemoScrollProgress(targetVisual);
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 48; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (interpolateWorkflowScrubMap(mid) < target) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+
+/** Linear scrub positions where scroll should snap (workflow + equal quote-thread beats). */
+export function workflowScrubSnapLinearPositions() {
+  const positions = new Set<number>([0, 1]);
+  for (const anchor of WORKFLOW_SCRUB_MAP) {
+    positions.add(anchor.linear);
+  }
+  const handoffLinear = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+  const beatCount = demoQuoteThreadBeatThresholds().length;
+  for (let i = 1; i <= beatCount; i += 1) {
+    const t = i / beatCount;
+    positions.add(handoffLinear + t * (1 - handoffLinear));
+  }
+  return [...positions].sort((a, b) => a - b);
 }
 
 export type WorkflowGuideTarget = "scroll" | "orbit" | "hotspot" | "add" | "quote" | "request";
@@ -752,9 +795,32 @@ export function workflowQuoteChatPlayhead(playhead: number) {
   return clampDemoScrollProgress((p - WORKFLOW_CHAT_START) / span);
 }
 
-/** Map linear scrub progress to quote-thread beat visibility. */
+/** Map linear scrub progress to quote-thread beat visibility (equal share per beat in handoff). */
 export function demoWorkflowThreadPlayhead(workflowProgress: number) {
-  return workflowQuoteChatPlayhead(workflowScrubPlayhead(workflowProgress));
+  const linear = clampDemoScrollProgress(workflowProgress);
+  const visual = workflowScrubPlayhead(linear);
+  if (visual < WORKFLOW_HANDOFF_START) {
+    return 0;
+  }
+  const linearStart = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+  if (linear <= linearStart) {
+    return 0;
+  }
+  const chapter = clampDemoScrollProgress((linear - linearStart) / (1 - linearStart));
+  const thresholds = demoQuoteThreadBeatThresholds();
+  const n = thresholds.length;
+  if (n <= 1) {
+    return chapter;
+  }
+  const scaled = chapter * n;
+  const idx = Math.min(n - 1, Math.floor(scaled));
+  const local = scaled - idx;
+  const from = thresholds[idx] ?? 0;
+  const to = thresholds[idx + 1] ?? 1;
+  if (idx >= n - 1) {
+    return 1;
+  }
+  return from + local * (to - from);
 }
 
 /** Scroll-driven yaw for the marketing workflow cell (radians). */

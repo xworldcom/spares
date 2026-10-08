@@ -34,7 +34,9 @@ import {
   workflowMeshNameMatchesPart,
   workflowIntroFade,
   workflowQuoteChatPlayhead,
+  workflowScrubLinearForVisual,
   workflowScrubPlayhead,
+  workflowScrubSnapLinearPositions,
   workflowSpinYaw,
   workflowStep,
   WORKFLOW_DEMO_PART,
@@ -197,6 +199,7 @@ describe("demo scroll scrub", () => {
     assert.match(src, /demoPickScrollY/);
     assert.match(src, /demoFindScrollRoot/);
     assert.match(src, /demoWorkflowThreadPlayhead/);
+    assert.match(src, /landing-demo-scrub-snap/);
     assert.match(src, /useSyncExternalStore/);
     assert.match(src, /requestAnimationFrame\(tick\)/);
     assert.match(src, /data-hydrated/);
@@ -586,10 +589,7 @@ describe("workflow demo", () => {
     assert.equal(WORKFLOW_CHAT_START, WORKFLOW_HANDOFF_START);
     assert.equal(workflowQuoteChatPlayhead(WORKFLOW_HANDOFF_START), 0);
     assert.equal(workflowQuoteChatPlayhead(1), 1);
-    assert.equal(
-      demoWorkflowThreadPlayhead(0.9),
-      workflowQuoteChatPlayhead(workflowScrubPlayhead(0.9)),
-    );
+    assert.equal(demoWorkflowThreadPlayhead(0.4), 0);
     assert.equal(reduceDemoFrame("quote", workflowQuoteChatPlayhead(1)).quoteStatus, "confirmed");
     const midSpin = workflowSpinYaw((WORKFLOW_FIND_START + WORKFLOW_SELECT_START) / 2);
     const endSpin = workflowSpinYaw(WORKFLOW_SELECT_START);
@@ -612,12 +612,23 @@ describe("workflow demo", () => {
     assert.ok(edge < mid * 0.55, `yaw ease edge ${edge} mid ${mid}`);
   });
 
-  it("lets the remapped handoff drive chat row visibility before linear 0.78", () => {
-    const linear = 0.7;
-    const remapped = workflowScrubPlayhead(linear);
-    assert.ok(remapped >= WORKFLOW_HANDOFF_START);
-    assert.equal(demoWorkflowThreadPlayhead(linear), workflowQuoteChatPlayhead(remapped));
-    assert.ok(demoWorkflowThreadPlayhead(linear) > 0);
+  it("gives each quote-thread beat equal linear scroll during handoff", () => {
+    const handoffLinear = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+    assert.ok(handoffLinear < 0.5);
+    assert.equal(demoWorkflowThreadPlayhead(handoffLinear - 0.01), 0);
+    assert.ok(demoWorkflowThreadPlayhead(handoffLinear + 0.02) > 0);
+    const span = 1 - handoffLinear;
+    const firstBeat = demoWorkflowThreadPlayhead(handoffLinear + span * 0.08);
+    const pricingBeat = demoWorkflowThreadPlayhead(handoffLinear + span * 0.45);
+    assert.ok(firstBeat < pricingBeat);
+    assert.ok(pricingBeat < demoWorkflowThreadPlayhead(handoffLinear + span * 0.92));
+    const quoted = reduceDemoFrame("quote", 0.62).quoteStatus;
+    const po = reduceDemoFrame("quote", 0.84).quoteStatus;
+    assert.equal(quoted, "quoted");
+    assert.equal(po, "po_received");
+    const midHandoff = handoffLinear + (1 - handoffLinear) * 0.55;
+    const frameMid = reduceDemoFrame("quote", demoWorkflowThreadPlayhead(midHandoff));
+    assert.equal(frameMid.quoteStatus, "quoted");
     assert.ok(
       reduceDemoFrame("quote", demoWorkflowThreadPlayhead(1)).quoteStatus === "confirmed",
     );
