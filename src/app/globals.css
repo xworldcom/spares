@@ -220,7 +220,7 @@
   color: var(--spares-ink);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
-  --peek-h: 7.85rem;
+  --peek-h: 8.65rem;
   --sheet-y: max(0px, calc(100% - var(--peek-h)));
   --drag: 0px;
   transform: translate3d(0, calc(var(--sheet-y) + var(--drag)), 0);
@@ -814,6 +814,9 @@
   overflow-x: auto;
   border-radius: 999px;
   background: var(--spares-soft);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1.25rem), transparent);
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1.25rem), transparent);
+  scrollbar-width: thin;
 }
 
 @media (min-width: 1024px) {
@@ -2796,9 +2799,10 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 
 .quote-add-toast {
   position: fixed;
-  z-index: 60;
+  z-index: 35;
   left: 50%;
-  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  top: calc(var(--spares-header, 3.5rem) + 0.65rem);
+  bottom: auto;
   max-width: min(20rem, calc(100% - 2rem));
   transform: translateX(-50%);
   pointer-events: none;
@@ -2888,7 +2892,43 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 }
 
 .login-form-error-slot {
-  min-height: 1.35rem;
+  min-height: 3.25rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  height: 2rem;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  pointer-events: none;
+}
+
+.status-pill--muted {
+  color: var(--spares-muted);
+  background: color-mix(in srgb, var(--spares-soft) 88%, transparent);
+  border-color: color-mix(in srgb, var(--spares-ink) 8%, transparent);
+}
+
+.status-pill--current {
+  color: var(--spares-ink);
+  background: color-mix(in srgb, var(--spares-accent) 22%, var(--spares-soft));
+  border-color: color-mix(in srgb, var(--spares-accent) 35%, transparent);
+}
+
+.status-pill--accent {
+  color: var(--spares-ink);
+  background: color-mix(in srgb, var(--spares-lift) 92%, transparent);
+  border-color: color-mix(in srgb, var(--spares-ink) 10%, transparent);
+}
+
+.status-pill--danger {
+  color: var(--spares-danger);
+  background: color-mix(in srgb, var(--spares-danger) 12%, var(--spares-soft));
+  border-color: color-mix(in srgb, var(--spares-danger) 28%, transparent);
 }
 
 .manual-quote-lines {
@@ -2916,16 +2956,53 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   background: var(--spares-field, rgba(255, 255, 255, 0.04));
 }
 
+.manual-quote-lines {
+  container-type: inline-size;
+  container-name: manual-quote;
+}
+
 .manual-quote-add {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.65rem;
 }
 
-@media (min-width: 640px) {
+.manual-quote-add > * {
+  min-width: 0;
+}
+
+.manual-quote-add .manual-quote-part-number {
+  min-width: 0;
+}
+
+/* Sized by the form's own width (a 20rem dock on desktop), not the viewport. */
+@container manual-quote (min-width: 17rem) {
+  .manual-quote-add {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+    align-items: end;
+  }
+
+  .manual-quote-add > .manual-quote-desc {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .manual-quote-add > button {
+    grid-column: 1 / -1;
+    order: 4;
+    white-space: nowrap;
+  }
+}
+
+@container manual-quote (min-width: 40rem) {
   .manual-quote-add {
     grid-template-columns: minmax(12ch, 1.15fr) minmax(0, 1.35fr) 5.5rem auto;
-    align-items: end;
+  }
+
+  .manual-quote-add > .manual-quote-desc,
+  .manual-quote-add > button {
+    grid-column: auto;
+    order: 0;
   }
 }
 

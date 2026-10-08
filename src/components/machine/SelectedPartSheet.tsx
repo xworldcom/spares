@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { PartDetailSheet } from "@/components/machine/PartDetailSheet";
-import { partSheetVisible } from "@/lib/ui/part-sheet";
+import { partSheetMetaLine, partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
 export function SelectedPartSheet({
@@ -91,19 +91,15 @@ export function SelectedPartSheet({
       >
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] leading-tight font-semibold tracking-tight">
+            <p className="line-clamp-2 text-[13px] leading-tight font-semibold tracking-tight">
               {part.name}
             </p>
             <p className="chrome-quiet truncate font-mono text-[11px]">
               {part.id}
             </p>
             <PartLifecycleNotice lifecycle={part.lifecycle} compact />
-            {part.vendor || part.stock ? (
-              <p className="chrome-quiet truncate text-[11px]">
-                {[part.vendor, part.stock ? `stock ${part.stock}` : ""]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
+            {partSheetMetaLine(part) ? (
+              <p className="chrome-quiet truncate text-[11px]">{partSheetMetaLine(part)}</p>
             ) : null}
           </div>
           {showAdd && onAdd ? (

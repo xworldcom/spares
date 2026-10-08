@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { BrandMark } from "@/components/brand/BrandMark";
@@ -64,6 +65,12 @@ export function LandingScreen({
         {showMarketing ? <LandingScrollPeek /> : null}
       </section>
       {showMarketing ? <LandingMarketing /> : null}
+      {showMarketing ? (
+        <footer className="landing-site-footer">
+          <p className="landing-site-footer-copy">OEE360 — spare parts and machine care.</p>
+          <Link href="/login" className="landing-site-footer-link">Sign in</Link>
+        </footer>
+      ) : null}
       {showMarketing ? <LandingBackToTop /> : null}
     </div>
   );

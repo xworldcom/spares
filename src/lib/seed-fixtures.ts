@@ -104,6 +104,13 @@ export async function buildFixtureMachine(
   };
 }
 
+export async function buildFixtureMachineById(
+  id: string,
+): Promise<{ machine: FixtureMachine; bytes: Buffer } | null> {
+  const spec = FIXTURES.find((row) => row.id === id);
+  return spec ? await buildFixtureMachine(spec) : null;
+}
+
 type SaveStoredFile = (storedFileName: string, bytes: Buffer) => Promise<void>;
 
 export async function missingFixtureMachines(

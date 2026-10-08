@@ -521,7 +521,7 @@ export function QuoteWorkspace({
       </div>
 
       <ConversationSheet
-        title="Conversation"
+        title="Messages"
         peekLine={peek.text}
         unread={quote.unread}
         threadKey={quote.id}
@@ -536,7 +536,8 @@ export function QuoteWorkspace({
           onSend={sendActivity}
           threadKind="quote"
           threadId={quote.id}
-          layout="sheet"
+          layout={desktop ? "card" : "sheet"}
+          title="Messages"
           customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
           assistantPaused={quote.assistantPaused}

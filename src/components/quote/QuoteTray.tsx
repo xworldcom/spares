@@ -82,12 +82,12 @@ function QuoteTrayForm({
   const countLabel = trayCountLabel(lines.length, unitCount);
   return (
     <div className="quote-sheet-form flex min-h-0 flex-1 flex-col px-5 pb-5">
-      <div className="quote-sheet-grab flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[22px] leading-tight font-semibold tracking-tight">
+      <div className="quote-sheet-grab flex min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-[22px] leading-tight font-semibold tracking-tight">
             Quote
           </h2>
-          <p className="spares-muted mt-0.5 text-sm">
+          <p className="spares-muted mt-0.5 truncate text-sm">
             <span data-quote-target="count" className="quote-count">
               {lines.length === 0 ? (
                 allowManual ? "Add a part number to quote." : "Tap a part on the machine."

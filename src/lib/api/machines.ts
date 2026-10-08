@@ -13,6 +13,7 @@ import {
 } from "../model-upload-policy.ts";
 import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
+import { normalizePart } from "./normalize-part";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 import type {
   MachineDetail,
@@ -23,21 +24,6 @@ import type {
 } from "./types";
 
 const MODEL_UPLOAD = "/api/machines/model-upload";
-
-function normalizePart(part: Part): Part {
-  return {
-    id: part.id,
-    name: part.name,
-    meshName: part.meshName,
-    qty: typeof part.qty === "number" && Number.isFinite(part.qty) ? part.qty : 1,
-    ...(part.material ? { material: part.material } : {}),
-    ...(part.vendor ? { vendor: part.vendor } : {}),
-    ...(part.weight ? { weight: part.weight } : {}),
-    ...(part.category ? { category: part.category } : {}),
-    ...(part.replaces ? { replaces: part.replaces } : {}),
-    ...(part.stock ? { stock: part.stock } : {}),
-  };
-}
 
 /**
  * Same-origin API path for PartPicker when object storage CDN is not configured.

@@ -33,6 +33,7 @@ import {
 } from "./model-storage.ts";
 import {
   applyLifecycleUpsert,
+  missingDemoLifecycleRows,
   buildTenantPartCatalog,
   filterCatalogRows,
   healDemoPartLifecycle,
@@ -66,11 +67,13 @@ import {
 } from "./quotes.ts";
 import {
   FIXTURE_MACHINE_IDS,
+  buildFixtureMachineById,
   missingFixtureMachines,
   restoreMissingFixtureFiles,
 } from "./seed-fixtures.ts";
 import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.ts";
 import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
+import { applyDemoTenantV1Migration } from "./demo-tenant-data-migration.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -349,6 +352,8 @@ type OrgTombstones = {
 
 type Database = {
   schemaVersion?: number;
+  /** One-shot data migrations (e.g. Production demo tenant fixture). */
+  dataMigrations?: import("./demo-tenant-data-migration.ts").DataMigrations;
   tenants?: Tenant[];
   customers?: CustomerAccount[];
   users: StoredUser[];
@@ -1276,6 +1281,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
         partLifecycle: parsed.partLifecycle ?? [],
+        dataMigrations: parsed.dataMigrations,
         orgTombstones: parsed.orgTombstones,
         platformSettings: parsed.platformSettings,
       },
@@ -1310,8 +1316,10 @@ async function readDatabase(): Promise<Database> {
   const loaded = await loadPersistedSnapshot();
   if (!loaded) {
     const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
-    const seeded = await overlayPersistedCare(
-      await withFixtureMachines(await ensureOwnerStaff(base)),
+    const seeded = await runDemoTenantMigration(
+      await overlayPersistedCare(
+        await withFixtureMachines(await ensureOwnerStaff(base)),
+      ),
     );
     // Another instance may have created the catalog while we were building fixtures.
     const appeared = await loadPersistedSnapshot();
@@ -1324,22 +1332,38 @@ async function readDatabase(): Promise<Database> {
   return await healLoadedDatabase(loaded);
 }
 
+async function persistModelBytes(name: string, bytes: Uint8Array | Buffer) {
+  await persistFile(name, Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes));
+}
+
+async function runDemoTenantMigration(db: Database): Promise<Database> {
+  const migrated = await applyDemoTenantV1Migration(db, "migration@oee360.com", persistModelBytes);
+  return migrated.changed ? migrated.db : db;
+}
+
 async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
   const quotes = assignMissingQuoteNumbers(loaded.db.quotes);
-  const next = await overlayPersistedCare(
+  const stabilized = await overlayPersistedCare(
     ensureOrg(
       await withFixtureMachines(
         await stabilizeCatalogUsers({ ...loaded.db, quotes }),
       ),
     ),
   );
+  const next = await runDemoTenantMigration(stabilized);
   const usersRemapped =
     next.users.length !== loaded.db.users.length ||
     next.users.some((user, index) => user.id !== loaded.db.users[index]?.id);
+  const lifecycleChanged =
+    (next.partLifecycle?.length ?? 0) !== (loaded.db.partLifecycle?.length ?? 0);
+  const migrationsChanged =
+    next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1;
   if (
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
     usersRemapped ||
+    lifecycleChanged ||
+    migrationsChanged ||
     staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
     (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
@@ -3099,6 +3123,50 @@ export function upsertTenantPartLifecycle(
     }
     await writeDatabase({ ...db, partLifecycle: rows });
     return { ok: true as const };
+  });
+}
+
+export type EnsureLifecycleDemoResult =
+  | { status: "wrong_tenant" }
+  | {
+      status: "ok";
+      machineId: string;
+      machineCreated: boolean;
+      lifecycleAdded: string[];
+    };
+
+/**
+ * Idempotent live migration for the hardware fixture + its lifecycle rows. Production keeps
+ * `SPARES_ALLOW_SEED` off, so heal never creates the fixture there; this is the explicit,
+ * staff-triggered path. Existing machines and edited lifecycle rows are never overwritten.
+ */
+export function ensureLifecycleDemoFixtures(
+  tenantId: string,
+  actorEmail: string,
+): Promise<EnsureLifecycleDemoResult> {
+  return withLock(async () => {
+    if (tenantId !== DEFAULT_TENANT_ID) {
+      return { status: "wrong_tenant" } as const;
+    }
+    const db = await ensureCatalog();
+    const migrated = await applyDemoTenantV1Migration(db, actorEmail, persistModelBytes);
+    if (migrated.changed && migrated.result) {
+      await writeDatabase(migrated.db);
+      const { machineId, machineCreated, lifecycleAdded } = migrated.result;
+      return {
+        status: "ok",
+        machineId,
+        machineCreated,
+        lifecycleAdded,
+      } as const;
+    }
+    const machineId = FIXTURE_MACHINE_IDS.hardware;
+    return {
+      status: "ok",
+      machineId,
+      machineCreated: false,
+      lifecycleAdded: [],
+    } as const;
   });
 }
 

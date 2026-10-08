@@ -308,6 +308,35 @@ const DEMO_LIFECYCLE: Array<
   },
 ];
 
+/** Part numbers (hardware fixture) that carry demo lifecycle rows. */
+export function demoLifecyclePartNumbers() {
+  return DEMO_LIFECYCLE.map((row) => normalizePartNumber(row.partNumber));
+}
+
+/** Missing demo rows for `tenantId`; never overwrites a row staff already edited. */
+export function missingDemoLifecycleRows(
+  existing: StoredPartLifecycle[] | undefined,
+  tenantId: string,
+  at: string,
+  actorEmail: string,
+): StoredPartLifecycle[] {
+  const have = new Set(
+    (existing ?? [])
+      .filter((row) => row.tenantId === tenantId)
+      .map((row) => normalizePartNumber(row.partNumber)),
+  );
+  return DEMO_LIFECYCLE.filter((row) => !have.has(normalizePartNumber(row.partNumber))).map(
+    (row) => ({
+      ...row,
+      partNumber: normalizePartNumber(row.partNumber),
+      id: partLifecycleRowId(tenantId, row.partNumber),
+      tenantId,
+      updatedAt: at,
+      updatedByEmail: actorEmail,
+    }),
+  );
+}
+
 /**
  * Ensure demo lifecycle rows exist when catalog seeding is on.
  * Future manufacturer obsolescence feeds can merge into `partLifecycle` here.

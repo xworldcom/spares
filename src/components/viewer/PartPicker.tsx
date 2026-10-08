@@ -1,6 +1,6 @@
 "use client";
 
-import { Bounds, OrbitControls } from "@react-three/drei";
+import { Bounds, OrbitControls, useBounds } from "@react-three/drei";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   Suspense,
@@ -190,6 +190,22 @@ function captureRestPose(scene: Object3D) {
       ? object.parent.matrixWorld.clone().invert()
       : new Matrix4();
   });
+}
+
+function AssemblyBoundsRefresh({
+  explode,
+  isolatedId,
+  hiddenKey,
+}: {
+  explode: number;
+  isolatedId: string | null;
+  hiddenKey: string;
+}) {
+  const bounds = useBounds();
+  useLayoutEffect(() => {
+    bounds.refresh().clip().fit();
+  }, [bounds, explode, isolatedId, hiddenKey]);
+  return null;
 }
 
 function applyExplode(scene: Object3D, amount: number) {
@@ -720,6 +736,11 @@ function ViewerCanvas({
       {load.status === "ready" ? (
         <Suspense fallback={null}>
         <Bounds fit clip observe margin={1.3}>
+          <AssemblyBoundsRefresh
+            explode={explode}
+            isolatedId={isolatedId}
+            hiddenKey={hiddenIds.join("\0")}
+          />
           <LoadedModel
             src={src}
             parts={parts}

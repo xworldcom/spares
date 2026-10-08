@@ -638,16 +638,27 @@
 
   .landing-demo-scrub-pin,
   .landing-demo-stage,
-  .landing-workflow-stage,
   .landing-workflow-request,
-  .landing-workflow-quote-sheet,
-  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] {
+  .landing-workflow-quote-sheet {
     touch-action: pan-y;
     overflow: clip;
     overflow-x: clip;
     overflow-y: clip;
-    overscroll-behavior: none;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: auto;
+  }
+
+  .landing-workflow-stage {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  .landing-workflow-stage .imsg-thread.landing-workflow-thread[data-scrubbed] {
+    touch-action: pan-y;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .landing-demo-scrub-pin {
@@ -1684,6 +1695,32 @@
 
 .landing-section-foot {
   margin: 1rem 0 0;
+  color: rgba(236, 234, 228, 0.45);
+  font-size: 13px;
+}
+
+.landing-section-foot-link,
+.landing-site-footer-link {
+  color: rgba(236, 234, 228, 0.82);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.landing-site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+  padding: 2.5rem 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(236, 234, 228, 0.08);
+  background: #000;
+}
+
+.landing-site-footer-copy {
+  margin: 0;
   color: rgba(236, 234, 228, 0.45);
   font-size: 13px;
 }

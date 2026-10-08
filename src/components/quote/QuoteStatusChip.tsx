@@ -13,10 +13,10 @@ export function QuoteStatusChip({
     <span
       className={
         cancelled
-          ? "btn-danger inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold"
+          ? "status-pill status-pill--danger"
           : current
-            ? "btn-primary inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold"
-            : "btn-soft inline-flex h-8 items-center rounded-full px-3 text-xs font-medium"
+            ? "status-pill status-pill--current"
+            : "status-pill status-pill--muted"
       }
     >
       {QUOTE_STATUS_LABELS[status]}

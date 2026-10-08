@@ -9,6 +9,8 @@ export type ConversationSheetChrome = {
   /** Latest row pinned above composer; false when user scrolled history at full. */
   threadDocked: boolean;
   collapse: () => void;
+  /** Desktop split pane: a normal top-down scroller, not the flex-end bottom-glued sheet. */
+  inline?: boolean;
 };
 
 const ConversationSheetContext = createContext<ConversationSheetChrome | null>(null);

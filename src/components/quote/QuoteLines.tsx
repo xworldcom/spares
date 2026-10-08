@@ -160,13 +160,22 @@ export function QuoteLines({
             key={item.id}
             className="spares-surface rounded-[22px] px-4 py-4"
           >
-            <p className="text-[17px] font-medium tracking-tight">
-              {item.name ?? "Part"}
-            </p>
-            <p className="spares-muted mt-0.5 text-xs">
-              <span className="font-medium text-[var(--spares-ink)]">Part no.</span>{" "}
-              <span className="font-mono">{item.id}</span>
-            </p>
+            {item.name && item.name !== item.id ? (
+              <>
+                <p className="text-[17px] font-medium tracking-tight">{item.name}</p>
+                <p className="spares-muted mt-0.5 text-xs">
+                  <span className="font-medium text-[var(--spares-ink)]">Part no.</span>{" "}
+                  <span className="font-mono">{item.id}</span>
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[17px] font-medium tracking-tight">
+                  {item.name?.trim() || item.id}
+                </p>
+                <p className="spares-muted mt-0.5 text-xs font-mono">{item.id}</p>
+              </>
+            )}
             {item.note ? (
               <p className="spares-muted mt-1 text-sm leading-snug">{item.note}</p>
             ) : null}

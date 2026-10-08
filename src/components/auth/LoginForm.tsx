@@ -92,6 +92,7 @@ export function LoginForm({
       method="post"
       action={LOGIN_ACTION}
       autoComplete="on"
+      noValidate
       className="login-form space-y-5"
       onSubmit={(event) => {
         event.preventDefault();
@@ -124,7 +125,6 @@ export function LoginForm({
               name="email"
               type="email"
               autoComplete="username"
-              required
               defaultValue=""
               className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
             />
@@ -139,7 +139,6 @@ export function LoginForm({
               name="password"
               type="password"
               autoComplete="current-password"
-              required
               defaultValue=""
               className="login-input mt-2 h-12 w-full rounded-[0.9rem] border-0 px-4 text-[16px] outline-none"
             />

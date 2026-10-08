@@ -97,10 +97,10 @@ export function WorkListScopeBar({
                 className="work-list-scope-filter-select"
                 value=""
                 onChange={(event) => onPickMachine(event.target.value)}
-                aria-label={`Show ${kind} for one machine`}
+                aria-label="Filter by machine"
               >
-                <option value="" disabled hidden>
-                  One machine…
+                <option value="" disabled>
+                  All machines
                 </option>
                 {machineOptions.map((machine) => (
                   <option key={machine.id} value={machine.id}>
