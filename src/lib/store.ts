@@ -1316,11 +1316,13 @@ async function readDatabase(): Promise<Database> {
   const loaded = await loadPersistedSnapshot();
   if (!loaded) {
     const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
-    const seeded = await runDemoTenantMigration(
-      await overlayPersistedCare(
-        await withFixtureMachines(await ensureOwnerStaff(base)),
-      ),
-    );
+    const seeded = (
+      await runDemoTenantMigration(
+        await overlayPersistedCare(
+          await withFixtureMachines(await ensureOwnerStaff(base)),
+        ),
+      )
+    ).db;
     // Another instance may have created the catalog while we were building fixtures.
     const appeared = await loadPersistedSnapshot();
     if (appeared) {
@@ -1336,9 +1338,11 @@ async function persistModelBytes(name: string, bytes: Uint8Array | Buffer) {
   await persistFile(name, Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes));
 }
 
-async function runDemoTenantMigration(db: Database): Promise<Database> {
+async function runDemoTenantMigration(
+  db: Database,
+): Promise<{ db: Database; changed: boolean }> {
   const migrated = await applyDemoTenantV1Migration(db, "migration@oee360.com", persistModelBytes);
-  return migrated.changed ? migrated.db : db;
+  return migrated.changed ? { db: migrated.db, changed: true } : { db, changed: false };
 }
 
 async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
@@ -1350,7 +1354,7 @@ async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
       ),
     ),
   );
-  const next = await runDemoTenantMigration(stabilized);
+  const { db: next, changed: demoStateRestored } = await runDemoTenantMigration(stabilized);
   const usersRemapped =
     next.users.length !== loaded.db.users.length ||
     next.users.some((user, index) => user.id !== loaded.db.users[index]?.id);
@@ -1364,6 +1368,7 @@ async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
     usersRemapped ||
     lifecycleChanged ||
     migrationsChanged ||
+    demoStateRestored ||
     staffTenantAssignmentsChanged(loaded.db.users, next.users) ||
     (next.tenants?.length ?? 0) !== (loaded.db.tenants?.length ?? 0) ||
     (next.sites?.length ?? 0) !== (loaded.db.sites?.length ?? 0) ||
@@ -1496,6 +1501,9 @@ async function writeCatalogHeal(next: Database) {
     }
     merged = mergeOrgCrudFromLatest(merged, latest);
   }
+  // Merging with the blob lets the stored user row win field by field, which erases a grant
+  // this heal just added. Re-check demo-tenant state against the merged result before writing.
+  merged = (await runDemoTenantMigration(merged)).db;
   const kept = await overlayPersistedCare(clampSatelliteStaffTenants(merged));
   memory = kept;
   await Promise.all([

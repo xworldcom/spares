@@ -58,6 +58,8 @@ export type DemoTenantV1ApplyResult = {
   buyerCreated: boolean;
 };
 
+let warnedMissingBuyer = false;
+
 function migrationMarker(db: DemoMigrationDb) {
   return db.dataMigrations?.demoTenantV1 === DEMO_TENANT_DATA_MIGRATION_V1;
 }
@@ -84,7 +86,11 @@ function grantHardwareFixture(user: DemoMigrationUser, machineId: string): DemoM
 /**
  * Idempotent demo-tenant content for Production (`SPARES_ALLOW_SEED` off): hardware fixture,
  * lifecycle rows, and an existing `user@demo.com` hardware-fixture grant (never creates users
- * or touches passwords). Skips when the v1 marker is already set.
+ * or touches passwords).
+ *
+ * The v1 marker only records that the migration once ran. It never gates the work: every call
+ * checks the real state and applies only the pieces that are missing, because a concurrent or
+ * stale catalog write can lose any of them while the marker survives.
  */
 export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
   db: T,
@@ -94,10 +100,6 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
   if (isSeedAllowed()) {
     return { db, changed: false, result: null };
   }
-  if (migrationMarker(db)) {
-    return { db, changed: false, result: null };
-  }
-
   const machineId = FIXTURE_MACHINE_IDS.hardware;
   let machines = db.machines;
   let machineCreated = false;
@@ -132,14 +134,20 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
       buyerGranted = true;
     }
   } else {
-    console.warn(
-      `[demo-tenant-v1] skipping demo buyer step: ${buyerEmail} is not in the catalog (no user created)`,
-    );
+    if (!warnedMissingBuyer) {
+      warnedMissingBuyer = true;
+      console.warn(
+        `[demo-tenant-v1] skipping demo buyer step: ${buyerEmail} is not in the catalog (no user created)`,
+      );
+    }
   }
 
   const changed =
     machineCreated || additions.length > 0 || buyerGranted;
   if (!changed) {
+    if (migrationMarker(db)) {
+      return { db, changed: false, result: null };
+    }
     return {
       db: withMarker(db) as T,
       changed: true,
