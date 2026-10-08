@@ -9,7 +9,8 @@ import {
 import { refuseMultipartModelInForm } from "./model-upload-policy.ts";
 import { joinParts, parsePartsList } from "./parts.ts";
 import { isModelFilename, modelExtension } from "./machines.ts";
-import { modelExistsInS3, readModelFile, selectModelStoreKind } from "./model-storage.ts";
+import { modelExistsInS3, selectModelStoreKind } from "./model-storage.ts";
+import { readStoredModelAfterUpload } from "./read-stored-model.ts";
 
 export type PackFormSuccess = {
   name: string;
@@ -31,23 +32,6 @@ export function isPackFormError(
   value: PackFormSuccess | PackFormError,
 ): value is PackFormError {
   return "status" in value;
-}
-
-async function readUploadedModel(storedFileName: string) {
-  const read = async () => {
-    const bytes = await readModelFile(storedFileName);
-    return bytes?.length ? bytes : null;
-  };
-  try {
-    return await read();
-  } catch {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    try {
-      return await read();
-    } catch {
-      return null;
-    }
-  }
 }
 
 export async function readPackForm(
@@ -103,7 +87,7 @@ export async function readPackForm(
       }
       alreadyStored = true;
     }
-    const bytes = await readUploadedModel(storedFileName);
+    const bytes = await readStoredModelAfterUpload(storedFileName);
     if (!bytes) {
       return {
         error:
