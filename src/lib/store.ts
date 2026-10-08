@@ -933,6 +933,11 @@ function mergeOrgCrudFromLatest(healed: Database, latest: Database): Database {
         latest,
         mergeUsersForHeal(healed.users, latest.users),
       ),
+      machines: mergeRowsForWrite(latest.machines, healed.machines),
+      partLifecycle: mergeRowsForWrite(
+        latest.partLifecycle ?? [],
+        healed.partLifecycle ?? [],
+      ),
       quotes: unionQuotes(healed.quotes, latest.quotes ?? []),
       bugReports: latest.bugReports ?? healed.bugReports,
       accessInquiries: mergeRowsForWrite(
