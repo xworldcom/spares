@@ -10,7 +10,6 @@ import {
 } from "./demo-tenant-data-migration.ts";
 import { setPersistenceForTests } from "./persistence.ts";
 import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
-import { verifyPassword } from "./auth/password.ts";
 import {
   findUserByEmail,
   getMachine,
@@ -53,9 +52,52 @@ describe("demo tenant v1 migration (auto)", () => {
     const first = await applyDemoTenantV1Migration(empty, "migration@oee360.com", noopPersist);
     assert.ok(first.changed);
     assert.equal(first.db.dataMigrations?.demoTenantV1, DEMO_TENANT_DATA_MIGRATION_V1);
+    assert.equal(await findUserByEmail(DEMO_TENANT_BUYER.email), null);
 
     const second = await applyDemoTenantV1Migration(first.db, "migration@oee360.com", noopPersist);
     assert.equal(second.changed, false);
+  });
+
+  it("does not change passwordHash or sessionStamp for an existing demo buyer", async () => {
+    const noopPersist = async () => undefined;
+    const passwordHash = "existing-hash-must-not-change";
+    const sessionStamp = 7;
+    const seed = {
+      users: [
+        {
+          id: "existing-demo-buyer",
+          email: DEMO_TENANT_BUYER.email,
+          passwordHash,
+          role: "customer" as const,
+          tenantId: DEFAULT_TENANT_ID,
+          siteIds: [],
+          machineIds: [],
+          name: DEMO_TENANT_BUYER.name,
+          sessionStamp,
+        },
+      ],
+      machines: [],
+      partLifecycle: [],
+    };
+
+    const first = await applyDemoTenantV1Migration(seed, "migration@oee360.com", noopPersist);
+    assert.ok(first.changed);
+    const afterFirst = first.db.users.find((user) => user.email === DEMO_TENANT_BUYER.email);
+    assert.ok(afterFirst);
+    assert.equal(afterFirst.passwordHash, passwordHash);
+    assert.equal(afterFirst.sessionStamp, sessionStamp);
+    assert.ok(afterFirst.machineIds?.includes(FIXTURE_MACHINE_IDS.hardware));
+
+    const replay = {
+      ...first.db,
+      dataMigrations: { demoTenantV1: undefined },
+    };
+    const second = await applyDemoTenantV1Migration(replay, "migration@oee360.com", noopPersist);
+    assert.ok(second.changed);
+    const afterSecond = second.db.users.find((user) => user.email === DEMO_TENANT_BUYER.email);
+    assert.ok(afterSecond);
+    assert.equal(afterSecond.passwordHash, passwordHash);
+    assert.equal(afterSecond.sessionStamp, sessionStamp);
   });
 
   it("hydrates hardware fixture via catalog read (empty store boot)", async () => {
@@ -72,12 +114,28 @@ describe("demo tenant v1 migration (auto)", () => {
     );
   });
 
-  it("creates demo buyer grant for user@demo.com", async () => {
-    await productionLikeStore();
-    await listMachines(T);
-    const buyer = await findUserByEmail(DEMO_TENANT_BUYER.email);
+  it("grants hardware-fixture to an existing user@demo.com without creating the account", async () => {
+    const noopPersist = async () => undefined;
+    const seed = {
+      users: [
+        {
+          id: "preexisting-demo-buyer",
+          email: DEMO_TENANT_BUYER.email,
+          passwordHash: "preexisting-hash",
+          role: "customer" as const,
+          tenantId: DEFAULT_TENANT_ID,
+          machineIds: [],
+          name: DEMO_TENANT_BUYER.name,
+        },
+      ],
+      machines: [],
+      partLifecycle: [],
+    };
+    const result = await applyDemoTenantV1Migration(seed, "migration@oee360.com", noopPersist);
+    assert.ok(result.changed);
+    const buyer = result.db.users.find((user) => user.email === DEMO_TENANT_BUYER.email);
     assert.ok(buyer);
     assert.ok(buyer.machineIds?.includes(FIXTURE_MACHINE_IDS.hardware));
-    assert.ok(await verifyPassword(DEMO_TENANT_BUYER.password, buyer.passwordHash));
+    assert.equal(buyer.passwordHash, "preexisting-hash");
   });
 });

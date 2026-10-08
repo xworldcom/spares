@@ -1,4 +1,3 @@
-import { hashPassword } from "./auth/password.ts";
 import {
   missingDemoLifecycleRows,
   type StoredPartLifecycle,
@@ -14,9 +13,16 @@ function normalizeEmail(email: string) {
 /** Recorded in catalog `dataMigrations` once v1 has completed successfully. */
 export const DEMO_TENANT_DATA_MIGRATION_V1 = 1;
 
+/** Env var for optional demo-buyer creation outside this migration (never read here). */
+export const SPARES_DEMO_BUYER_PASSWORD_ENV = "SPARES_DEMO_BUYER_PASSWORD";
+
+export function readDemoBuyerPasswordFromEnv(): string | undefined {
+  const value = process.env[SPARES_DEMO_BUYER_PASSWORD_ENV]?.trim();
+  return value && value.length > 0 ? value : undefined;
+}
+
 export const DEMO_TENANT_BUYER = {
   email: "user@demo.com",
-  password: "Oee360Demo1!",
   name: "Demo buyer",
 } as const;
 
@@ -34,6 +40,7 @@ type DemoMigrationUser = {
   machineIds?: string[];
   name?: string;
   deletedAt?: string;
+  sessionStamp?: number;
 };
 
 type DemoMigrationDb = {
@@ -76,7 +83,8 @@ function grantHardwareFixture(user: DemoMigrationUser, machineId: string): DemoM
 
 /**
  * Idempotent demo-tenant content for Production (`SPARES_ALLOW_SEED` off): hardware fixture,
- * lifecycle rows, and `user@demo.com` machine grant. Skips when the v1 marker is already set.
+ * lifecycle rows, and an existing `user@demo.com` hardware-fixture grant (never creates users
+ * or touches passwords). Skips when the v1 marker is already set.
  */
 export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
   db: T,
@@ -112,7 +120,6 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
 
   const buyerEmail = normalizeEmail(DEMO_TENANT_BUYER.email);
   let users = db.users;
-  let buyerCreated = false;
   let buyerGranted = false;
   const existingIndex = users.findIndex(
     (user) => normalizeEmail(user.email) === buyerEmail && !user.deletedAt,
@@ -125,24 +132,13 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
       buyerGranted = true;
     }
   } else {
-    const passwordHash = await hashPassword(DEMO_TENANT_BUYER.password);
-    const user: DemoMigrationUser = {
-      id: "demo-tenant-buyer-v1",
-      email: buyerEmail,
-      passwordHash,
-      role: "customer",
-      tenantId: DEFAULT_TENANT_ID,
-      siteIds: [],
-      machineIds: [machineId],
-      name: DEMO_TENANT_BUYER.name,
-    };
-    users = [...users, user];
-    buyerCreated = true;
-    buyerGranted = true;
+    console.warn(
+      `[demo-tenant-v1] skipping demo buyer step: ${buyerEmail} is not in the catalog (no user created)`,
+    );
   }
 
   const changed =
-    machineCreated || additions.length > 0 || buyerCreated || buyerGranted;
+    machineCreated || additions.length > 0 || buyerGranted;
   if (!changed) {
     return {
       db: withMarker(db) as T,
@@ -172,7 +168,7 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
       machineCreated,
       lifecycleAdded: additions.map((row) => row.partNumber),
       buyerGranted,
-      buyerCreated,
+      buyerCreated: false,
     },
   };
 }
