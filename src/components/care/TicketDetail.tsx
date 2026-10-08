@@ -67,6 +67,7 @@ export function TicketDetail({
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
+  const conversationTitle = staff ? "Notes" : "Messages";
 
   const lastTicketIdRef = useRef<string | null>(null);
 
@@ -262,7 +263,7 @@ export function TicketDetail({
       ) : null}
       {embedded ? null : <div className="conversation-sheet-spacer" aria-hidden="true" />}
       <ConversationSheet
-        title="Notes"
+        title={conversationTitle}
         peekLine={peek.text}
         unread={ticket.unread}
         threadKey={ticket.id}
@@ -296,7 +297,7 @@ export function TicketDetail({
           onSend={onSend}
           threadKind="ticket"
           threadId={ticket.id}
-          title="Notes"
+          title={conversationTitle}
           layout="sheet"
           customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
           assistantAvailable={staff ? ticket.assistantAvailable : undefined}

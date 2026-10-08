@@ -1491,6 +1491,17 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     box-sizing: border-box;
     white-space: nowrap;
   }
+
+  .quote-progress-step[data-state="current"] .quote-progress-label-short {
+    display: none;
+  }
+
+  .quote-progress-step[data-state="current"] .quote-progress-label-full {
+    display: block;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: normal;
+  }
 }
 
 @media (min-width: 640px) {
@@ -2816,6 +2827,68 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.quote-undo-toast {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  max-width: min(22rem, calc(100% - 2rem));
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(12, 13, 15, 0.94);
+  border: 1px solid rgba(236, 234, 228, 0.14);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  animation: quote-add-toast-in 0.22s ease-out;
+}
+
+.quote-undo-toast-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #eceae4;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quote-undo-toast-action {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.22);
+  color: #7ec8ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quote-undo-toast-dismiss {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: rgba(236, 234, 228, 0.72);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.imsg-row.imsg-pending .imsg-bubble {
+  opacity: 0.72;
+}
+
+.imsg-row.imsg-pending .imsg-when {
+  color: var(--spares-muted);
+  font-style: italic;
+}
+
+.login-form-error-slot {
+  min-height: 1.35rem;
 }
 
 .manual-quote-lines {

@@ -1,6 +1,7 @@
 import { warmRead } from "@/lib/api/warm-read";
 import { quoteHref } from "@/lib/quotes";
 import { rememberQuoteForNav } from "@/lib/nav/quote-list-seed";
+import { QUOTE_REQUESTED_QUERY } from "@/lib/ui/quote-requested-banner";
 import type { Quote, Role } from "@/types";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
@@ -23,7 +24,7 @@ export function navigateToQuoteDetail(
   quote: Quote,
 ) {
   primeQuoteDetailNav(quote);
-  const href = quoteHref(role, quote);
+  const href = `${quoteHref(role, quote)}?${QUOTE_REQUESTED_QUERY}=1`;
   const go = () => {
     router.push(href);
   };
