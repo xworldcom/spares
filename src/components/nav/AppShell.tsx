@@ -305,7 +305,7 @@ export function AppShell({
             ) : cinematic || resolvingSession || pathname === "/login" ? null : (
               <Link
                 href="/login"
-                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+                className="spares-header-sign-in btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
               >
                 Sign in
               </Link>

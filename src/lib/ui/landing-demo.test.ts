@@ -36,7 +36,9 @@ import {
   workflowQuoteChatPlayhead,
   workflowScrubLinearForVisual,
   workflowScrubPlayhead,
+  workflowScrubLinearForThreadPlayhead,
   workflowScrubSnapLinearPositions,
+  workflowScrubSnapBeatLabel,
   workflowSpinYaw,
   workflowStep,
   WORKFLOW_DEMO_PART,
@@ -334,6 +336,24 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(css, /\.landing-workflow-request\.is-visible\s*\{[^}]*transition:/);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
+    assert.match(css, /scroll-snap-type:\s*y mandatory/);
+    assert.match(css, /scroll-snap-stop:\s*always/);
+  });
+
+  it("places scrub snap markers on each quote status beat", () => {
+    const positions = workflowScrubSnapLinearPositions();
+    for (const beat of DEMO_QUOTE_SCRIPT) {
+      if (beat.kind !== "quoteStatus") {
+        continue;
+      }
+      const linear = workflowScrubLinearForThreadPlayhead(beat.at);
+      assert.ok(
+        positions.some((pos) => Math.abs(pos - linear) < 1e-4),
+        `missing snap for ${beat.status}`,
+      );
+      assert.equal(workflowScrubSnapBeatLabel(linear), workflowScrubSnapBeatLabel(linear));
+    }
+    assert.equal(workflowScrubSnapBeatLabel(0), "Intro");
   });
 
   it("pins one workspace chapter at a time with a tree and one status strip", () => {
@@ -379,6 +399,8 @@ describe("landing scrub layout", () => {
     const critical = readFileSync("src/app/layout.tsx", "utf8");
     assert.match(critical, /\.spares-app-cinematic\{[^}]*overflow-y:visible/);
     assert.match(critical, /html:has\(\.spares-app-cinematic\)[^\{]*\{[^}]*scrollbar-width:none/);
+    assert.match(critical, /header a\.spares-header-sign-in/);
+    assert.doesNotMatch(critical, /\.spares-app a\[href="\/login"\]/);
   });
 
   it("offsets landing anchors by the sticky header", () => {
@@ -675,11 +697,11 @@ describe("workflow demo", () => {
     );
     assert.match(
       css,
-      /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*5rem/,
+      /\.landing-demo-stage\.landing-workflow \.landing-workflow-request \.quote-progress-step\s*\{[^}]*min-width:\s*4\.85rem/,
     );
     assert.match(
       css,
-      /^\.landing-workflow \.quote-progress-step \{\n  flex: 0 0 5rem;\n  min-width: 5rem;/m,
+      /^\.landing-workflow \.quote-progress-step \{\n  flex: 0 0 auto;\n  min-width: 4\.85rem;/m,
     );
     assert.match(
       css,
