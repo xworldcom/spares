@@ -89,7 +89,12 @@ const path = require('path');
       fullPage: true,
     });
   }
-  await page.getByRole('button', { name: 'List' }).click();
+  const hideQuote = page.getByRole('button', { name: 'Hide quote' }).first();
+  if (await hideQuote.count()) {
+    await hideQuote.click({ force: true });
+    await page.waitForTimeout(400);
+  }
+  await page.getByRole('button', { name: 'List' }).click({ force: true });
   await page.waitForTimeout(400);
   const rowBtn = page.locator('[data-parts-bom] button').first();
   if (await rowBtn.count()) {
