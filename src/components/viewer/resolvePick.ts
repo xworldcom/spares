@@ -40,6 +40,14 @@ export function resolvePick(
   object: Object3D,
   partsByName: Map<string, ViewerPart>,
 ): { part: ViewerPart } | { meshName: string } | null {
+  const leafName = object.name?.trim();
+  if (leafName && !isIgnoredCadNodeName(leafName)) {
+    const direct = lookupPart(leafName, partsByName);
+    if (direct) {
+      return { part: direct };
+    }
+  }
+
   let current: Object3D | null = object;
   let firstName: string | null = null;
 

@@ -169,6 +169,7 @@ export type QuoteItem = {
   replaces?: string;
   stock?: string;
   category?: string;
+  lifecycle?: PartLifecycleInfo;
 };
 
 export type QuoteActivityKind = "message" | "status" | "pricing" | "po" | "shipment";
