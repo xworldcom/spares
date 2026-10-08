@@ -10,6 +10,8 @@ import {
   type StaffPartCatalogRow,
 } from "@/lib/api/part-lifecycle";
 import { errorMessage } from "@/lib/api/errors";
+import { EmptyState } from "@/components/states/EmptyState";
+import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
@@ -263,13 +265,16 @@ export function PartLifecyclePanel() {
       ) : null}
 
       {error ? (
-        <p className="text-sm text-[#f0c4c0]" role="alert">{error}</p>
+        <ErrorState message={error} onRetry={() => void load()} />
       ) : null}
 
       {loading ? (
         <LoadingState label="Loading parts…" />
       ) : parts.length === 0 ? (
-        <p className="spares-muted text-sm">No parts match these filters.</p>
+        <EmptyState
+          title="No parts found"
+          message="Try a different search, machine filter, or status."
+        />
       ) : (
         <ul className="spares-surface overflow-hidden rounded-[22px]">
           {parts.map((row) => {
