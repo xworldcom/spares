@@ -1,4 +1,4 @@
-import { formatCalendarDay } from "@/lib/format-calendar-day";
+import { formatCalendarDay } from "./format-calendar-day.ts";
 import type { PartLifecycleInfo } from "@/types";
 
 export function partLifecycleStatusHeadline(status: PartLifecycleInfo["status"]) {

@@ -14,14 +14,7 @@ import { listActivityLog } from "@/lib/api/activity";
 import { errorMessage } from "@/lib/api/errors";
 import { ACTIVITY_LOG_POLL_MS } from "@/lib/hooks/conversation-poll-constants";
 import { useConversationPoll } from "@/lib/hooks/useConversationPoll";
-
-function formatWhen(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
-}
+import { formatWhen } from "@/components/quote/quote-format";
 
 function actorLabel(event: ActivityEvent) {
   return event.actorName || event.actorEmail || event.actorUserId || "System";
