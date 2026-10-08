@@ -1,25 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { formatWhen } from "@/components/quote/quote-format";
+import { formatDay, formatWhen } from "@/components/quote/quote-format";
 import { careHref } from "@/lib/care";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import type { UsageHistoryEntry } from "@/types";
-
-function formatDay(value?: string) {
-  if (!value) {
-    return "—";
-  }
-  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function ServiceVisitDetail({
   machineId,

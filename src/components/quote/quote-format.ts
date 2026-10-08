@@ -11,8 +11,11 @@ export function formatWhen(value: string) {
   });
 }
 
-export function formatDay(value: string) {
-  const date = new Date(value);
+export function formatDay(value?: string) {
+  if (!value) {
+    return "—";
+  }
+  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) {
     return value;
   }

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
-import { formatWhen } from "@/components/quote/quote-format";
+import { formatDay, formatWhen } from "@/components/quote/quote-format";
 import { ServiceVisitDetail } from "@/components/care/ServiceVisitDetail";
 import { getMachineUsage, updateMachineUsage } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
@@ -25,21 +25,6 @@ function dateInputValue(value?: string) {
     return value.slice(0, 10);
   }
   return date.toISOString().slice(0, 10);
-}
-
-function formatDay(value?: string) {
-  if (!value) {
-    return "—";
-  }
-  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export function ServicePanel({
