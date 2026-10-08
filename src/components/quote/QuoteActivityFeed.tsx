@@ -86,6 +86,7 @@ export function QuoteActivityFeed({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const seenIdsRef = useRef(new Set<string>());
+  const stickToBottomRef = useRef(true);
   const bootstrappedRef = useRef(false);
   const unreadJumpedRef = useRef(false);
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
@@ -121,7 +122,20 @@ export function QuoteActivityFeed({
 
   useEffect(() => {
     unreadJumpedRef.current = false;
+    stickToBottomRef.current = true;
   }, [threadId]);
+
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) {
+      return;
+    }
+    const onScroll = () => {
+      stickToBottomRef.current = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => root.removeEventListener("scroll", onScroll);
+  }, []);
 
   useLayoutEffect(() => {
     const root = scrollerRef.current;
@@ -145,6 +159,15 @@ export function QuoteActivityFeed({
     }
 
     const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
+    if (layout === "sheet" && sheetChrome?.inline) {
+      const last = outgoing.at(-1) ?? activities.at(-1);
+      const sentByViewer = last ? activityLane(last, { email: selfEmail, role }) === "own" : false;
+      if (stickToBottomRef.current || sentByViewer) {
+        pinThreadScrollerToComposer(root, true);
+        stickToBottomRef.current = true;
+      }
+      return;
+    }
     if (layout === "sheet") {
       if (sheetSnap === "reply" || sheetSnap === "peek") {
         // Flex-end layout pins latest — never set a non-zero scrollTop (poisons full open).
@@ -174,6 +197,9 @@ export function QuoteActivityFeed({
     firstUnreadIndex,
     sheetChrome?.snap,
     sheetChrome?.threadDocked,
+    sheetChrome?.inline,
+    selfEmail,
+    role,
     threadId,
   ]);
 

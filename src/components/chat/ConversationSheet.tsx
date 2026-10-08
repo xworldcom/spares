@@ -145,6 +145,7 @@ export function ConversationSheet({
           snap: sheet,
           dragging,
           threadDocked,
+          inline: layout === "inline",
           collapse: collapseToPeek,
         }}
       >
