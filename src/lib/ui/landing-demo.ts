@@ -21,6 +21,10 @@ export const DEMO_SCRUB_EXTRA_SVH = 1000;
 /** ~5–6 phone swipes so one fling does not skip workflow beats. */
 export const DEMO_SCRUB_EXTRA_SVH_PHONE = 550;
 
+/** Tall post-pin snap rails — one fling cannot skip a quote-status beat. */
+export const DEMO_BEAT_TRACK_SVH = 48;
+export const DEMO_BEAT_TRACK_SVH_PHONE = 80;
+
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
 export type DemoBeat =
@@ -577,6 +581,71 @@ export const WORKFLOW_STATUS_BEAT_PLATEAU = 0.1;
 
 export function workflowHandoffLinearStart() {
   return workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+}
+
+/** Quote-status beats in story order (handoff chapter). */
+export function workflowHandoffBeatStatuses() {
+  const statuses: QuoteStatus[] = [];
+  const seen = new Set<QuoteStatus>();
+  for (const beat of DEMO_QUOTE_SCRIPT) {
+    if (beat.kind !== "quoteStatus" || seen.has(beat.status)) {
+      continue;
+    }
+    seen.add(beat.status);
+    statuses.push(beat.status);
+  }
+  return statuses;
+}
+
+/** Pre-handoff scrub snap positions (handoff beats use post-pin tracks). */
+export function workflowScrubPreHandoffSnapLinearPositions() {
+  const handoffLinear = workflowHandoffLinearStart();
+  return workflowScrubSnapLinearPositions().filter((pos) => pos <= handoffLinear + 1e-5);
+}
+
+/**
+ * Map scroll offset through pre-handoff markers + equal post-pin beat tracks to linear scrub [0, 1].
+ */
+export function demoBeatTrackScrubLinear(
+  scrolled: number,
+  scrollable: number,
+  preHandoffHeight: number,
+  beatTrackHeight: number,
+  beatCount: number,
+  handoffLinearStart = workflowHandoffLinearStart(),
+) {
+  if (scrollable <= 0) {
+    return scrolled > 0 ? 1 : 0;
+  }
+  const active = 1 - DEMO_SCRUB_END_HOLD;
+  const raw = clampDemoScrollProgress(scrolled / scrollable);
+  if (raw >= active) {
+    return 1;
+  }
+  const cap = scrollable * active;
+  const pix = Math.min(Math.max(0, scrolled), cap);
+  if (beatCount <= 0 || beatTrackHeight <= 0 || cap <= 0) {
+    return clampDemoScrollProgress(raw / active);
+  }
+
+  const mapTrackChapter = (trackPix: number) => {
+    const tracksTotal = beatCount * beatTrackHeight;
+    const clamped = Math.min(Math.max(0, trackPix), tracksTotal);
+    const trackIdx = Math.min(
+      beatCount - 1,
+      Math.max(0, Math.floor((clamped + beatTrackHeight * 0.28) / beatTrackHeight)),
+    );
+    return workflowScrubLinearForStatusBeatIndex(trackIdx);
+  };
+
+  let linear = 0;
+  if (pix <= preHandoffHeight || preHandoffHeight <= 0) {
+    const t = preHandoffHeight <= 0 ? 1 : pix / preHandoffHeight;
+    linear = t * handoffLinearStart;
+  } else {
+    linear = mapTrackChapter(pix - preHandoffHeight);
+  }
+  return clampDemoScrollProgress(linear / active);
 }
 
 export function workflowStatusBeatCount() {
