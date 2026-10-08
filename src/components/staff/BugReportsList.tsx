@@ -7,14 +7,7 @@ import { LoadingState } from "@/components/states/LoadingState";
 import { listBugReports } from "@/lib/api/bugs";
 import { errorMessage } from "@/lib/api/errors";
 import type { BugReport } from "@/lib/api/types";
-
-function formatWhen(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
-}
+import { formatWhen } from "@/components/quote/quote-format";
 
 export function BugReportsList() {
   const [reports, setReports] = useState<BugReport[]>([]);
