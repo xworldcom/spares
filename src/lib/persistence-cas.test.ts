@@ -3,6 +3,7 @@ import { mkdtemp, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
+import { createFakeVercelBlob } from "./fake-vercel-blob.ts";
 import {
   createBlobPersistence,
   createMemoryPersistence,
@@ -12,48 +13,7 @@ import {
   type Persistence,
 } from "./persistence.ts";
 
-class BlobPreconditionFailedError extends Error {
-  constructor() {
-    super("Vercel Blob: Precondition failed: ETag mismatch.");
-  }
-}
-
-/** In-memory stand-in for `@vercel/blob` with its real ETag / ifMatch / allowOverwrite rules. */
-function fakeBlob() {
-  const objects = new Map<string, { body: string; etag: string }>();
-  let counter = 0;
-  const client: BlobClient = {
-    async put(pathname, body, options) {
-      const existing = objects.get(pathname);
-      if (options.ifMatch !== undefined) {
-        if (!existing || existing.etag !== options.ifMatch) {
-          throw new BlobPreconditionFailedError();
-        }
-      } else if (existing && options.allowOverwrite === false) {
-        throw new Error("Vercel Blob: This blob already exists, use `allowOverwrite: true`.");
-      }
-      counter += 1;
-      const etag = `"etag-${counter}"`;
-      objects.set(pathname, { body: String(body), etag });
-      return { etag };
-    },
-    async get(pathname) {
-      const found = objects.get(pathname);
-      if (!found) {
-        return null;
-      }
-      return {
-        statusCode: 200,
-        stream: new Response(found.body).body,
-        blob: { etag: found.etag },
-      };
-    },
-    async del(pathname) {
-      objects.delete(pathname);
-    },
-  };
-  return { client, objects };
-}
+const fakeBlob = () => createFakeVercelBlob({ edgeEtag: "same" });
 
 const docs: CatalogDocument[] = ["database", "care"];
 
@@ -92,10 +52,12 @@ describe("conditional (compare-and-swap) catalog writes", () => {
     await exerciseConditionalWrites(createMemoryPersistence());
   });
 
-  it("Vercel Blob backend maps ETag / ifMatch / allowOverwrite", async () => {
-    const { client } = fakeBlob();
-    await exerciseConditionalWrites(createBlobPersistence(client));
-  });
+  for (const edgeEtag of ["same", "weak", "edge"] as const) {
+    it(`Vercel Blob backend maps ETag / ifMatch / allowOverwrite (edge ETag: ${edgeEtag})`, async () => {
+      const { client } = createFakeVercelBlob({ edgeEtag });
+      await exerciseConditionalWrites(createBlobPersistence(client));
+    });
+  }
 
   it("Blob: sends ifMatch with the ETag that was read and never overwrites blindly", async () => {
     const { client } = fakeBlob();

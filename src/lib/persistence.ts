@@ -37,6 +37,12 @@ export type CatalogDocument = "database" | "care";
 /** Content plus an opaque version (Blob ETag, or a content hash on disk / in memory). */
 export type VersionedJson = { json: string | null; version: string | null };
 
+/**
+ * `commit` (default) returns a version a conditional write can safely present. `snapshot`
+ * is the cheap read for request handling: the content is as fresh, the version is advisory.
+ */
+export type ReadMode = "commit" | "snapshot";
+
 export type ConditionalWriteResult = { ok: true; version: string } | { ok: false };
 
 export type Persistence = {
@@ -45,7 +51,7 @@ export type Persistence = {
    * Read a catalog document together with the version a later conditional write must
    * present. `version` is null exactly when the document does not exist yet.
    */
-  readVersioned(doc: CatalogDocument): Promise<VersionedJson>;
+  readVersioned(doc: CatalogDocument, mode?: ReadMode): Promise<VersionedJson>;
   /**
    * Write only if the stored version still equals `expected` (null = must not exist).
    * Returns `{ ok: false }` when another writer got there first; callers re-read and retry.
@@ -345,6 +351,8 @@ export type BlobClient = {
     stream: ReadableStream<Uint8Array> | null;
     blob: { etag: string };
   } | null>;
+  /** Authoritative (API-side) metadata; its `etag` is the one `put({ ifMatch })` compares. */
+  head(pathname: string): Promise<{ etag: string }>;
   del(pathname: string): Promise<void>;
 };
 
@@ -356,6 +364,10 @@ const vercelBlobClient: BlobClient = {
   async get(pathname, options) {
     const { get } = await import("@vercel/blob");
     return get(pathname, options);
+  },
+  async head(pathname) {
+    const { head } = await import("@vercel/blob");
+    return head(pathname);
   },
   async del(pathname) {
     const { del } = await import("@vercel/blob");
@@ -391,20 +403,103 @@ export function createBlobPersistence(client: BlobClient = vercelBlobClient): Pe
   return blobPersistence(client);
 }
 
+/** How long a document keeps the head-compare fallback after its `ifMatch` proved unusable. */
+const SOFT_CAS_MS = 5 * 60_000;
+const VERSION_READ_ATTEMPTS = 5;
+
 function blobPersistence(client: BlobClient): Persistence {
-  async function readVersionedBlob(pathname: string): Promise<VersionedJson> {
+  const softCasUntil = new Map<string, number>();
+
+  async function readBuffer(pathname: string): Promise<Buffer | null> {
+    const result = await client.get(pathname, { access: "private", useCache: false });
+    if (!result) {
+      return null;
+    }
+    if (result.statusCode !== 200 || !result.stream) {
+      throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
+    }
+    return Buffer.from(await new Response(result.stream).arrayBuffer());
+  }
+
+  /**
+   * Catalog JSON is the source of truth for logins, so a rate limit or a dropped socket
+   * must surface as an error rather than as "no catalog yet". Retry first, then throw.
+   */
+  async function readJsonBuffer(pathname: string): Promise<Buffer | null> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= JSON_READ_ATTEMPTS; attempt++) {
       try {
-        const result = await client.get(pathname, { access: "private", useCache: false });
-        if (!result) {
-          return { json: null, version: null };
+        return await readBuffer(pathname);
+      } catch (cause) {
+        if (isNotFoundError(cause)) {
+          return null;
         }
-        if (result.statusCode !== 200 || !result.stream) {
-          throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
+        lastError = cause;
+        if (attempt < JSON_READ_ATTEMPTS) {
+          await delay(150 * attempt);
         }
-        const json = Buffer.from(await new Response(result.stream).arrayBuffer()).toString("utf8");
-        return { json, version: result.blob.etag };
+      }
+    }
+    throw new PersistenceReadError(pathname, { cause: lastError });
+  }
+
+  async function readBody(pathname: string): Promise<{ json: string; etag: string } | null> {
+    const result = await client.get(pathname, { access: "private", useCache: false });
+    if (!result) {
+      return null;
+    }
+    if (result.statusCode !== 200 || !result.stream) {
+      throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
+    }
+    const json = Buffer.from(await new Response(result.stream).arrayBuffer()).toString("utf8");
+    return { json, etag: result.blob.etag };
+  }
+
+  async function headEtag(pathname: string): Promise<string | null> {
+    try {
+      return (await client.head(pathname)).etag;
+    } catch (cause) {
+      if (isNotFoundError(cause)) {
+        return null;
+      }
+      throw cause;
+    }
+  }
+
+  /**
+   * Content plus the version `ifMatch` will accept. `put({ ifMatch })` is checked by the
+   * Blob API against the ETag the API itself reports (`head` / `put`). The ETag on a
+   * `get` response comes from the storage edge and is not guaranteed to be the same
+   * string (weak `W/` form when the edge compresses, different quoting), so it is never
+   * used as a precondition. Instead the version is `head` taken before and after the
+   * content read; equal ETags prove the content belongs to that version.
+   */
+  async function readCommitVersion(pathname: string): Promise<VersionedJson> {
+    let lastError: unknown = new Error("The blob changed on every read attempt");
+    for (let attempt = 1; attempt <= VERSION_READ_ATTEMPTS; attempt++) {
+      try {
+        const before = await headEtag(pathname);
+        const body = await readBody(pathname);
+        const after = await headEtag(pathname);
+        if (before === after && (before === null) === (body === null)) {
+          return { json: body?.json ?? null, version: before };
+        }
+      } catch (cause) {
+        lastError = cause;
+      }
+      if (attempt < VERSION_READ_ATTEMPTS) {
+        await delay(100 * attempt);
+      }
+    }
+    throw new PersistenceReadError(pathname, { cause: lastError });
+  }
+
+  async function readSnapshot(pathname: string): Promise<VersionedJson> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= JSON_READ_ATTEMPTS; attempt++) {
+      try {
+        const body = await readBody(pathname);
+        return body ? { json: body.json, version: body.etag } : { json: null, version: null };
       } catch (cause) {
         if (isNotFoundError(cause)) {
           return { json: null, version: null };
@@ -418,100 +513,120 @@ function blobPersistence(client: BlobClient): Persistence {
     throw new PersistenceReadError(pathname, { cause: lastError });
   }
 
+  const putOptions = {
+    access: "private",
+    addRandomSuffix: false,
+    // Blob CDN minimum is 60s; every read uses useCache: false.
+    cacheControlMaxAge: 60,
+    contentType: "application/json",
+  } as const;
+
+  /**
+   * Fallback when the platform rejects a precondition that is demonstrably satisfied
+   * (the blob still has exactly the ETag we sent). Compare the live ETag ourselves and
+   * overwrite: the race window shrinks to one round trip, and writes keep working.
+   */
+  async function putSoft(
+    pathname: string,
+    json: string,
+    expected: string,
+  ): Promise<ConditionalWriteResult> {
+    if ((await headEtag(pathname)) !== expected) {
+      return { ok: false };
+    }
+    const written = await client.put(pathname, json, { ...putOptions, allowOverwrite: true });
+    return { ok: true, version: written.etag };
+  }
+
   async function putIfVersion(
     doc: CatalogDocument,
     json: string,
     expected: string | null,
   ): Promise<ConditionalWriteResult> {
-    const options = {
-      access: "private",
-      addRandomSuffix: false,
-      // Blob CDN minimum is 60s; every read uses useCache: false.
-      cacheControlMaxAge: 60,
-      contentType: "application/json",
-      ...(expected === null ? { allowOverwrite: false } : { allowOverwrite: true, ifMatch: expected }),
-    };
+    const pathname = blobPathFor(doc);
     try {
-      const written = await client.put(blobPathFor(doc), json, options);
+      if (expected === null) {
+        const created = await client.put(pathname, json, { ...putOptions, allowOverwrite: false });
+        return { ok: true, version: created.etag };
+      }
+      if ((softCasUntil.get(pathname) ?? 0) > Date.now()) {
+        return await putSoft(pathname, json, expected);
+      }
+      const written = await client.put(pathname, json, {
+        ...putOptions,
+        allowOverwrite: true,
+        ifMatch: expected,
+      });
       return { ok: true, version: written.etag };
     } catch (cause) {
-      if (isPreconditionFailed(cause) || isAlreadyExists(cause) || isNotFoundError(cause)) {
+      if (isAlreadyExists(cause) || isNotFoundError(cause)) {
         return { ok: false };
       }
-      throw cause;
+      if (!isPreconditionFailed(cause) || expected === null) {
+        throw cause;
+      }
+      const current = await headEtag(pathname);
+      if (current !== expected) {
+        return { ok: false };
+      }
+      console.error(
+        `[blob-cas] ${pathname}: ifMatch ${expected} rejected although head reports the same ETag; using head-compare writes for ${SOFT_CAS_MS / 1000}s`,
+      );
+      softCasUntil.set(pathname, Date.now() + SOFT_CAS_MS);
+      return await putSoft(pathname, json, expected);
     }
   }
 
   async function putUnconditional(pathname: string, json: string) {
-    await client.put(pathname, json, {
-      access: "private",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      cacheControlMaxAge: 60,
-      contentType: "application/json",
-    });
+    await client.put(pathname, json, { ...putOptions, allowOverwrite: true });
   }
 
   return {
     kind: "blob",
-    readVersioned(doc) {
-      return readVersionedBlob(blobPathFor(doc));
+    readVersioned(doc, mode = "commit") {
+      const pathname = blobPathFor(doc);
+      return mode === "snapshot" ? readSnapshot(pathname) : readCommitVersion(pathname);
     },
     writeIfVersion: putIfVersion,
     async readDatabaseJson() {
-      const bytes = await readJsonBlob(blobDbPath());
+      const bytes = await readJsonBuffer(blobDbPath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeDatabaseJson(json) {
       await putUnconditional(blobDbPath(), json);
     },
     async readCareJson() {
-      const bytes = await readJsonBlob(blobCarePath());
+      const bytes = await readJsonBuffer(blobCarePath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeCareJson(json) {
       await putUnconditional(blobCarePath(), json);
     },
     async readPlatformSettingsJson() {
-      const bytes = await readJsonBlob(blobPlatformSettingsPath());
+      const bytes = await readJsonBuffer(blobPlatformSettingsPath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writePlatformSettingsJson(json) {
-      const { put } = await import("@vercel/blob");
-      await put(blobPlatformSettingsPath(), json, {
-        access: "private",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        cacheControlMaxAge: 60,
-        contentType: "application/json",
-      });
+      await putUnconditional(blobPlatformSettingsPath(), json);
     },
     async readActivityJson() {
-      const bytes = await readJsonBlob(blobActivityPath());
+      const bytes = await readJsonBuffer(blobActivityPath());
       return bytes ? bytes.toString("utf8") : null;
     },
     async writeActivityJson(json) {
-      const { put } = await import("@vercel/blob");
-      await put(blobActivityPath(), json, {
-        access: "private",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        cacheControlMaxAge: 60,
-        contentType: "application/json",
-      });
+      await putUnconditional(blobActivityPath(), json);
     },
     async readFileBytes(name) {
       // Binaries are re-uploadable; a failed read stays "missing" as before.
       try {
-        return await readBlob(blobFilePath(name));
+        return await readBuffer(blobFilePath(name));
       } catch {
         return null;
       }
     },
     async writeFileBytes(name, bytes) {
-      const { put } = await import("@vercel/blob");
       const stored = safeStoredFileName(name);
-      await put(blobFilePath(stored), bytes, {
+      await client.put(blobFilePath(stored), bytes, {
         access: "private",
         addRandomSuffix: false,
         allowOverwrite: true,
@@ -521,9 +636,8 @@ function blobPersistence(client: BlobClient): Persistence {
       });
     },
     async deleteFileBytes(name) {
-      const { del } = await import("@vercel/blob");
       try {
-        await del(blobFilePath(safeStoredFileName(name)));
+        await client.del(blobFilePath(safeStoredFileName(name)));
       } catch {
         // Missing blobs are fine during cleanup.
       }
@@ -554,18 +668,6 @@ function contentTypeFor(name: string) {
   return "application/octet-stream";
 }
 
-async function readBlob(pathname: string): Promise<Buffer | null> {
-  const { get } = await import("@vercel/blob");
-  const result = await get(pathname, { access: "private", useCache: false });
-  if (!result) {
-    return null;
-  }
-  if (result.statusCode !== 200) {
-    throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
-  }
-  return Buffer.from(await new Response(result.stream).arrayBuffer());
-}
-
 function isMissingBlob(cause: unknown) {
   return cause instanceof Error && cause.name === "BlobNotFoundError";
 }
@@ -574,26 +676,4 @@ const JSON_READ_ATTEMPTS = 3;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Catalog JSON is the source of truth for logins, so a rate limit or a dropped socket
- * must surface as an error rather than as "no catalog yet". Retry first, then throw.
- */
-async function readJsonBlob(pathname: string): Promise<Buffer | null> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= JSON_READ_ATTEMPTS; attempt++) {
-    try {
-      return await readBlob(pathname);
-    } catch (cause) {
-      if (isMissingBlob(cause)) {
-        return null;
-      }
-      lastError = cause;
-      if (attempt < JSON_READ_ATTEMPTS) {
-        await delay(150 * attempt);
-      }
-    }
-  }
-  throw new PersistenceReadError(pathname, { cause: lastError });
 }

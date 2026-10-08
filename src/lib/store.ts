@@ -51,6 +51,7 @@ import {
   filesDir,
   getPersistence,
   safeStoredFileName,
+  type ReadMode,
 } from "./persistence.ts";
 import { rebaseCatalog } from "./catalog-rebase.ts";
 import {
@@ -1367,11 +1368,11 @@ function overlayStoredCare(db: Database, careRaw: string | null): Database {
 }
 
 /** Throws {@link CatalogUnreadableError} rather than treating bad JSON as an empty store. */
-async function readLatestCatalog(): Promise<LatestCatalog> {
+async function readLatestCatalog(mode: ReadMode = "commit"): Promise<LatestCatalog> {
   const persistence = getPersistence();
   const [dbRead, careRead] = await Promise.all([
-    persistence.readVersioned("database"),
-    persistence.readVersioned("care"),
+    persistence.readVersioned("database", mode),
+    persistence.readVersioned("care", mode),
   ]);
   const base: SnapshotBase = { dbJson: dbRead.json, careJson: careRead.json };
   const common = { dbVersion: dbRead.version, careVersion: careRead.version, base };
@@ -1387,7 +1388,7 @@ async function readLatestCatalog(): Promise<LatestCatalog> {
 }
 
 async function loadPersistedSnapshot(): Promise<LoadedDatabase | null> {
-  return (await readLatestCatalog()).loaded;
+  return (await readLatestCatalog("snapshot")).loaded;
 }
 
 function materializeBase(base: SnapshotBase): Database | null {
