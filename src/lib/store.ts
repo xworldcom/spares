@@ -237,7 +237,7 @@ const SEED_USER_SITES: Record<string, string[]> = {
 
 /** Canonical preview seed access; applied when a seed user has no modern grants yet. */
 const SEED_USER_GRANTS: Record<string, { siteIds: string[]; machineIds: string[] }> = {
-  "user-customer": { siteIds: [], machineIds: ["palletizer"] },
+  "user-customer": { siteIds: [], machineIds: ["palletizer", "hardware-fixture"] },
   "user-acme": { siteIds: ["site-acme-dayton"], machineIds: [] },
   "user-mill": { siteIds: ["site-demo-plant1"], machineIds: [] },
   "user-cargill-corp": {

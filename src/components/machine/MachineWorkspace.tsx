@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
@@ -8,6 +8,7 @@ import { StaffPartsReview } from "@/components/machine/StaffPartsReview";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
+import { QuoteAddToast } from "@/components/quote/QuoteAddToast";
 import { QuoteTray, SHEET_EASE_MS, type TrayLine } from "@/components/quote/QuoteTray";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -66,6 +67,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [suggestedMesh, setSuggestedMesh] = useState<string | null>(null);
   const [savingPart, setSavingPart] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [addToast, setAddToast] = useState<string | null>(null);
+  const addToastTimer = useRef<number | null>(null);
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -231,6 +234,48 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
+
+  const flashAddToast = useCallback((label: string) => {
+    setAddToast(label);
+    if (addToastTimer.current != null) {
+      window.clearTimeout(addToastTimer.current);
+    }
+    addToastTimer.current = window.setTimeout(() => {
+      setAddToast(null);
+      addToastTimer.current = null;
+    }, 2400);
+  }, []);
+
+  const commitTrayLine = useCallback((part: Part, addQty: number, thumb?: string) => {
+    const qty = Math.max(1, addQty);
+    setLines((current) => {
+      const existing = current.find((line) => line.part.id === part.id);
+      if (existing) {
+        return current.map((line) =>
+          line.part.id === part.id ? { ...line, qty: line.qty + qty } : line,
+        );
+      }
+      return [...current, { part, qty, ...(thumb ? { thumb } : {}) }];
+    });
+    playQuoteAddMotion();
+    flashAddToast(part.name);
+    void lookupPartLifecycle([part.id])
+      .then((map) => {
+        const lifecycle = map[part.id];
+        if (!lifecycle) {
+          return;
+        }
+        setLines((current) =>
+          current.map((line) =>
+            line.part.id === part.id
+              ? { ...line, part: { ...line.part, lifecycle } }
+              : line,
+          ),
+        );
+      })
+      .catch(() => undefined);
+  }, [flashAddToast]);
+
   const tray = useMemo(() => {
     if (!isCustomer) {
       return null;
@@ -241,38 +286,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         lines={lines}
         allowManual
         onAdd={(part, qty) => {
-          const addQty = Math.max(1, qty);
-          void lookupPartLifecycle([part.id])
-            .then((map) => {
-              const lifecycle = map[part.id];
-              const enriched = lifecycle ? { ...part, lifecycle } : part;
-              setLines((current) => {
-                const existing = current.find((line) => line.part.id === enriched.id);
-                if (existing) {
-                  return current.map((line) =>
-                    line.part.id === enriched.id
-                      ? { ...line, qty: line.qty + addQty, part: enriched }
-                      : line,
-                  );
-                }
-                return [...current, { part: enriched, qty: addQty }];
-              });
-              playQuoteAddMotion();
-            })
-            .catch(() => {
-              setLines((current) => {
-                const existing = current.find((line) => line.part.id === part.id);
-                if (existing) {
-                  return current.map((line) =>
-                    line.part.id === part.id
-                      ? { ...line, qty: line.qty + addQty }
-                      : line,
-                  );
-                }
-                return [...current, { part, qty: addQty }];
-              });
-              playQuoteAddMotion();
-            });
+          commitTrayLine(part, qty);
         }}
         onQty={(partId, qty) => {
           setLines((current) =>
@@ -289,7 +303,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         onOpenChange={setTrayOpen}
       />
     );
-  }, [isCustomer, lines, machineId, trayOpen]);
+  }, [isCustomer, lines, machineId, trayOpen, commitTrayLine]);
 
   if (loading) {
     return <LoadingState label="Loading machine…" />;
@@ -351,17 +365,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   function addPart(part: Part) {
     const thumb = captureThumb.current(part.id) ?? undefined;
-    const addQty = Math.max(1, part.qty || 1);
-    setLines((current) => {
-      const existing = current.find((line) => line.part.id === part.id);
-      if (existing) {
-        return current.map((line) =>
-          line.part.id === part.id ? { ...line, qty: line.qty + addQty } : line,
-        );
-      }
-      return [...current, { part, qty: addQty, thumb }];
-    });
-    playQuoteAddMotion();
+    commitTrayLine(part, part.qty || 1, thumb);
   }
 
   function addSelected() {
@@ -689,6 +693,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   return (
     <div className="machine-stage">
       <h1 className="sr-only">{machine.name}</h1>
+      {isCustomer ? <QuoteAddToast message={addToast} /> : null}
 
       <div
         ref={staffSplitView ? staffSplit.containerRef : undefined}
