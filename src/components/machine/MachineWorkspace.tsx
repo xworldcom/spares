@@ -22,7 +22,15 @@ import { machineTabHref } from "@/lib/machine-context";
 import { staffCatalogRows } from "@/lib/staff-catalog";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
+import { lookupPartLifecycle } from "@/lib/api/part-lifecycle";
 import { playQuoteAddMotion } from "@/lib/ui/quote-feedback";
+import {
+  persistedToPart,
+  quoteTrayStorageKey,
+  readPersistedTrayLines,
+  trayLineToPersisted,
+  writePersistedTrayLines,
+} from "@/lib/ui/quote-tray-persist";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#12161c";
@@ -62,6 +70,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
   const captureThumb = useRef<(partId: string) => string | null>(() => null);
+  const trayHydratedKey = useRef<string | null>(null);
+  const trayStorageKey =
+    isCustomer && user?.tenantId
+      ? quoteTrayStorageKey(user.tenantId, machineId)
+      : null;
   const customerTrayInViewer = isCustomer && !desktopStage;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
@@ -91,7 +104,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         }
         setMachine(next);
         setSelectedPart(null);
-        setLines([]);
         setHiddenIds([]);
         setIsolatedId(null);
         setExplode(0);
@@ -124,6 +136,57 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       cancelled = true;
     };
   }, [machineId, reloadKey, user?.role]);
+
+  useEffect(() => {
+    trayHydratedKey.current = null;
+    setLines([]);
+  }, [machineId]);
+
+  useEffect(() => {
+    if (!trayStorageKey || !machine) {
+      return;
+    }
+    if (trayHydratedKey.current === trayStorageKey) {
+      return;
+    }
+    trayHydratedKey.current = trayStorageKey;
+    const persisted = readPersistedTrayLines(trayStorageKey);
+    if (persisted.length === 0) {
+      return;
+    }
+    const partsById = new Map(machine.parts.map((part) => [part.id, part]));
+    setLines(
+      persisted.map((row) => ({
+        part: persistedToPart(row, partsById.get(row.id)),
+        qty: row.qty,
+      })),
+    );
+    void lookupPartLifecycle(persisted.map((row) => row.id))
+      .then((map) => {
+        if (Object.keys(map).length === 0) {
+          return;
+        }
+        setLines((current) =>
+          current.map((line) => {
+            const lifecycle = map[line.part.id];
+            return lifecycle
+              ? { ...line, part: { ...line.part, lifecycle } }
+              : line;
+          }),
+        );
+      })
+      .catch(() => undefined);
+  }, [trayStorageKey, machine]);
+
+  useEffect(() => {
+    if (!trayStorageKey) {
+      return;
+    }
+    writePersistedTrayLines(
+      trayStorageKey,
+      lines.map((line) => trayLineToPersisted(line.part, line.qty)),
+    );
+  }, [lines, trayStorageKey]);
 
   useEffect(() => {
     if (!selectedPart) {
@@ -178,12 +241,38 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         lines={lines}
         allowManual
         onAdd={(part, qty) => {
-          setLines((current) => {
-            if (current.some((line) => line.part.id === part.id)) {
-              return current;
-            }
-            return [...current, { part, qty }];
-          });
+          const addQty = Math.max(1, qty);
+          void lookupPartLifecycle([part.id])
+            .then((map) => {
+              const lifecycle = map[part.id];
+              const enriched = lifecycle ? { ...part, lifecycle } : part;
+              setLines((current) => {
+                const existing = current.find((line) => line.part.id === enriched.id);
+                if (existing) {
+                  return current.map((line) =>
+                    line.part.id === enriched.id
+                      ? { ...line, qty: line.qty + addQty, part: enriched }
+                      : line,
+                  );
+                }
+                return [...current, { part: enriched, qty: addQty }];
+              });
+              playQuoteAddMotion();
+            })
+            .catch(() => {
+              setLines((current) => {
+                const existing = current.find((line) => line.part.id === part.id);
+                if (existing) {
+                  return current.map((line) =>
+                    line.part.id === part.id
+                      ? { ...line, qty: line.qty + addQty }
+                      : line,
+                  );
+                }
+                return [...current, { part, qty: addQty }];
+              });
+              playQuoteAddMotion();
+            });
         }}
         onQty={(partId, qty) => {
           setLines((current) =>
@@ -262,17 +351,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   function addPart(part: Part) {
     const thumb = captureThumb.current(part.id) ?? undefined;
-    let added = false;
+    const addQty = Math.max(1, part.qty || 1);
     setLines((current) => {
-      if (current.some((line) => line.part.id === part.id)) {
-        return current;
+      const existing = current.find((line) => line.part.id === part.id);
+      if (existing) {
+        return current.map((line) =>
+          line.part.id === part.id ? { ...line, qty: line.qty + addQty } : line,
+        );
       }
-      added = true;
-      return [...current, { part, qty: 1, thumb }];
+      return [...current, { part, qty: addQty, thumb }];
     });
-    if (added) {
-      playQuoteAddMotion();
-    }
+    playQuoteAddMotion();
   }
 
   function addSelected() {
@@ -356,7 +445,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onCaptureReady={(capture) => {
               captureThumb.current = capture;
             }}
-            className={`absolute inset-0 ${view === "list" ? "invisible" : ""}`}
+            className={`absolute inset-0 ${view === "list" ? "hidden" : ""}`}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center px-8 text-center">

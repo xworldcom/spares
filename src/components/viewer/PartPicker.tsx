@@ -215,6 +215,16 @@ function applyExplode(scene: Object3D, amount: number) {
     targetLocal.copy(worldTarget).applyMatrix4(inverse);
     mesh.position.copy(base).add(targetLocal.sub(restLocal));
   }
+  if (amount > 0) {
+    scene.updateMatrixWorld(true);
+    const floorY = 0;
+    for (const mesh of meshes) {
+      box.setFromObject(mesh);
+      if (box.min.y < floorY) {
+        mesh.position.y += floorY - box.min.y;
+      }
+    }
+  }
 }
 
 function LoadedModel({

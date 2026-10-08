@@ -2816,7 +2816,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 
 @media (min-width: 640px) {
   .manual-quote-add {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr) 4.5rem auto;
+    grid-template-columns: minmax(12ch, 1.15fr) minmax(0, 1.35fr) 5.5rem auto;
     align-items: end;
   }
 }

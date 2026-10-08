@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { PartDetailSheet } from "@/components/machine/PartDetailSheet";
 import { partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -126,13 +127,7 @@ export function SelectedPartSheet({
         </div>
         {more ? (
           <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
-            {part.material || part.weight || part.replaces || part.category ? (
-              <p className="chrome-quiet text-[12px] leading-snug">
-                {[part.category, part.material, part.weight, part.replaces ? `replaces ${part.replaces}` : ""]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            ) : null}
+            <PartDetailSheet part={part} />
             <div className="flex flex-wrap gap-1.5">
             <button
               type="button"

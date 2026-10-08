@@ -1,6 +1,6 @@
 import type { Part, UnmatchedPart } from "@/types/index.ts";
 import type { StoredMachine } from "./store.ts";
-import { isSeedAllowed } from "./production-env.ts";
+import { isManagedRuntime, isSeedAllowed } from "./production-env.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 /** Durable lifecycle status for a catalog part number (per host tenant). */
@@ -254,6 +254,24 @@ export function lifecycleMapForTenant(
   return map;
 }
 
+export function enrichQuoteItemsWithLifecycle<
+  T extends { id: string },
+>(
+  items: readonly T[],
+  map: Map<string, StoredPartLifecycle>,
+  role: "staff" | "customer",
+): Array<T & { lifecycle?: PublicPartLifecycle | PartLifecycleFields }> {
+  return items.map((item) => {
+    const record = map.get(normalizePartNumber(item.id));
+    const fields = effectiveLifecycle(record);
+    if (role === "staff") {
+      return { ...item, lifecycle: fields };
+    }
+    const publicFields = publicLifecycle(fields);
+    return publicFields ? { ...item, lifecycle: publicFields } : item;
+  });
+}
+
 export function enrichPartsWithLifecycle(
   parts: Part[],
   map: Map<string, StoredPartLifecycle>,
@@ -297,7 +315,7 @@ const DEMO_LIFECYCLE: Array<
 export function healDemoPartLifecycle<T extends { partLifecycle?: StoredPartLifecycle[] }>(
   db: T,
 ): T {
-  if (!isSeedAllowed()) {
+  if (!isSeedAllowed() && !isManagedRuntime()) {
     return db;
   }
   const tenantId = DEFAULT_TENANT_ID;

@@ -4,7 +4,11 @@ import { staffCustomerUsersForThread } from "@/lib/care-http";
 import { error } from "@/lib/http";
 import { canViewQuote, toPublicQuote } from "@/lib/quotes";
 import { effectiveTenantId, tenantIdForUser, userTenantId } from "@/lib/tenant";
-import { getQuote, listMachines } from "@/lib/store";
+import {
+  enrichQuoteItemsWithLifecycle,
+  lifecycleMapForTenant,
+} from "@/lib/part-lifecycle";
+import { getQuote, listMachines, listPartLifecycleRows } from "@/lib/store";
 import type { PublicUser, Quote, QuoteRecord } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -55,8 +59,12 @@ export async function publicQuoteForUser(
     user.role === "staff" && tenantId
       ? await staffCustomerUsersForThread(tenantId, quote)
       : undefined;
-  return attachStaffAssistantAvailability(
-    user,
-    toPublicQuote(quote, user, machineName, { customerUsers }),
-  );
+  const base = toPublicQuote(quote, user, machineName, { customerUsers });
+  if (!tenantId) {
+    return attachStaffAssistantAvailability(user, base);
+  }
+  const rows = (await listPartLifecycleRows()).filter((row) => row.tenantId === tenantId);
+  const map = lifecycleMapForTenant(rows, tenantId);
+  const items = enrichQuoteItemsWithLifecycle(base.items, map, user.role);
+  return attachStaffAssistantAvailability(user, { ...base, items });
 }

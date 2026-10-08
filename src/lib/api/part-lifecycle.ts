@@ -72,3 +72,19 @@ export async function bulkSaveStaffPartLifecycle(input: {
     },
   );
 }
+
+/** Customer/staff lookup by part number (tenant from session). */
+export async function lookupPartLifecycle(partNumbers: string[]) {
+  const unique = [...new Set(partNumbers.map((n) => n.trim()).filter(Boolean))];
+  if (unique.length === 0) {
+    return {} as Record<string, PartLifecycleInfo>;
+  }
+  const params = new URLSearchParams();
+  for (const partNumber of unique) {
+    params.append("partNumber", partNumber);
+  }
+  const result = await apiFetch<{ parts: Record<string, PartLifecycleInfo> }>(
+    `/api/part-lifecycle/lookup?${params.toString()}`,
+  );
+  return result.parts;
+}
