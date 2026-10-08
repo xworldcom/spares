@@ -250,12 +250,18 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!selectedPart) {
       return;
     }
+    function partSheetGesture(event: PointerEvent) {
+      return event.composedPath().some(
+        (node) => node instanceof Element && node.closest("[data-part-sheet]") !== null,
+      );
+    }
+
     function onPointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (!(target instanceof Element)) {
+      if (partSheetGesture(event)) {
         return;
       }
-      if (target.closest("[data-part-sheet]")) {
+      const target = event.target;
+      if (!(target instanceof Element)) {
         return;
       }
       if (target.closest("[data-parts-bom]")) {

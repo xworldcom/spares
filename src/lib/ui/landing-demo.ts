@@ -1,3 +1,4 @@
+import { QUOTE_STATUS_LABELS } from "../quotes.ts";
 import type { QuoteStatus, Role, TicketStatus } from "../../types/index.ts";
 import type { ActivityLane } from "./activity-lane.ts";
 
@@ -610,17 +611,70 @@ export function workflowScrubLinearForVisual(targetVisual: number) {
   return lo;
 }
 
-/** Linear scrub positions where scroll should snap (workflow + equal quote-thread beats). */
+/** Inverse of `demoWorkflowThreadPlayhead` for snap markers on quote status beats. */
+export function workflowScrubLinearForThreadPlayhead(targetPlayhead: number) {
+  const target = clampDemoScrollProgress(targetPlayhead);
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 56; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (demoWorkflowThreadPlayhead(mid) < target - 1e-5) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return hi;
+}
+
+const WORKFLOW_STEP_SNAP_LABELS: Record<WorkflowStep, string> = {
+  hub: "Intro",
+  find: "Find part",
+  select: "Select part",
+  quote: "Quote tray",
+  send: "Request quote",
+  handoff: "Quote thread",
+};
+
+export function workflowScrubSnapBeatLabel(linear: number) {
+  const handoffLinear = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
+  if (linear + 1e-4 < handoffLinear) {
+    const visual = workflowScrubPlayhead(linear);
+    return WORKFLOW_STEP_SNAP_LABELS[workflowStep(visual)];
+  }
+  const frame = reduceDemoFrame("quote", demoWorkflowThreadPlayhead(linear));
+  return QUOTE_STATUS_LABELS[frame.quoteStatus];
+}
+
+/** Linear scrub positions where scroll should snap (workflow plateaus + each quote status). */
 export function workflowScrubSnapLinearPositions() {
+  const handoffLinear = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
   const positions = new Set<number>([0, 1]);
   for (const anchor of WORKFLOW_SCRUB_MAP) {
-    positions.add(anchor.linear);
+    if (anchor.linear <= handoffLinear + 1e-4) {
+      positions.add(anchor.linear);
+    }
   }
-  const handoffLinear = workflowScrubLinearForVisual(WORKFLOW_HANDOFF_START);
-  const beatCount = demoQuoteThreadBeatThresholds().length;
-  for (let i = 1; i <= beatCount; i += 1) {
-    const t = i / beatCount;
-    positions.add(handoffLinear + t * (1 - handoffLinear));
+  const statusLinear = new Map<QuoteStatus, number>();
+  for (const beat of DEMO_QUOTE_SCRIPT) {
+    if (beat.kind !== "quoteStatus" || statusLinear.has(beat.status)) {
+      continue;
+    }
+    statusLinear.set(beat.status, workflowScrubLinearForThreadPlayhead(beat.at));
+  }
+  const statusOrder = [...statusLinear.entries()].sort((a, b) => a[1] - b[1]);
+  for (let i = 0; i < statusOrder.length; i += 1) {
+    const [status, fromLinear] = statusOrder[i] ?? [];
+    if (!status) {
+      continue;
+    }
+    const toLinear = statusOrder[i + 1]?.[1] ?? 1;
+    const span = Math.max(0.012, toLinear - fromLinear);
+    positions.add(fromLinear);
+    positions.add(fromLinear + span * 0.34);
+    if (status === statusOrder.at(-1)?.[0]) {
+      positions.add(Math.min(1, toLinear));
+    }
   }
   return [...positions].sort((a, b) => a - b);
 }

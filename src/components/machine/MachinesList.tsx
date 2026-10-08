@@ -340,7 +340,7 @@ export function MachinesList() {
         </p>
         <button
           type="button"
-          className="btn-soft catalog-toolbar-action"
+          className="btn-primary catalog-toolbar-action"
           aria-expanded={adding}
           onClick={() => setAdding((open) => !open)}
         >

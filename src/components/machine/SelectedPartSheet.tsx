@@ -138,8 +138,10 @@ export function SelectedPartSheet({
           ) : null}
           <button
             type="button"
-            onClick={() => setMore((current) => !current)}
-            className="chrome-quiet inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-medium hover:text-[var(--spares-on-chip)]"
+            data-part-sheet-control=""
+            {...activate(() => setMore((current) => !current))}
+            disabled={!canAct}
+            className="chrome-quiet inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-medium hover:text-[var(--spares-on-chip)] disabled:opacity-30"
             aria-expanded={more}
           >
             More

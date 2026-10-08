@@ -20,14 +20,36 @@ import {
   demoScrubDebugEnabled,
   demoWindowScrollY,
   demoWorkflowThreadPlayhead,
+  workflowScrubSnapBeatLabel,
   workflowScrubSnapLinearPositions,
 } from "@/lib/ui/landing-demo";
 
 const SCRUB_SNAP_LINEAR = workflowScrubSnapLinearPositions();
-const SCRUB_SNAP_DELTAS = SCRUB_SNAP_LINEAR.slice(1).map((end, index) => {
-  const start = SCRUB_SNAP_LINEAR[index] ?? 0;
-  return end - start;
+const QUOTE_STATUS_SNAP_LABELS = new Set([
+  "Requested",
+  "In review",
+  "Pricing",
+  "Quoted",
+  "PO received",
+  "Confirmed",
+]);
+
+const HANDOFF_SNAP_MIN_DELTA = 0.078;
+
+const SCRUB_SNAP_MARKERS = SCRUB_SNAP_LINEAR.map((linear, index) => {
+  const start = SCRUB_SNAP_LINEAR[index - 1] ?? 0;
+  const label = workflowScrubSnapBeatLabel(linear);
+  let heightDelta = linear - start;
+  if (QUOTE_STATUS_SNAP_LABELS.has(label)) {
+    heightDelta = Math.max(heightDelta, HANDOFF_SNAP_MIN_DELTA);
+  }
+  return {
+    linear,
+    heightDelta,
+    label,
+  };
 });
+const SCRUB_SNAP_DELTAS = SCRUB_SNAP_MARKERS.slice(1);
 
 export type LandingDemoScrubSnapshot = {
   progress: number;
@@ -310,15 +332,17 @@ export function LandingDemoScrub({
     >
       {snapshot.reduceMotion
         ? null
-        : SCRUB_SNAP_DELTAS.map((delta, index) => (
+        : SCRUB_SNAP_DELTAS.map((marker, index) => (
             <div
               key={index}
               className="landing-demo-scrub-snap"
               style={{
-                height: `calc(${delta} * var(--landing-demo-scrub-extra, 1000svh))`,
+                height: `calc(${marker.heightDelta} * var(--landing-demo-scrub-extra, 1000svh))`,
               }}
               aria-hidden="true"
-            />
+            >
+              <span className="sr-only">{marker.label}</span>
+            </div>
           ))}
       <div ref={pinRef} className="landing-demo-scrub-pin">
         <div className="landing-demo-scrub-meter" aria-hidden="true">
