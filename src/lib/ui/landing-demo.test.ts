@@ -232,7 +232,7 @@ describe("demo scroll scrub", () => {
     assert.match(src, /addEventListener\("keydown", onKeyDown/);
     assert.match(src, /addEventListener\("scrollend"/);
     assert.doesNotMatch(src, /window\.addEventListener\("scroll",\s*tick/);
-    assert.doesNotMatch(src, /addEventListener\("touchmove"/);
+    assert.match(src, /addEventListener\("touchmove", onTouchMove/);
     assert.match(src, /visualViewport\?\.addEventListener\("scroll"/);
     assert.doesNotMatch(src, /demoPickScrollY\(0,/);
   });
