@@ -28,6 +28,22 @@ function productStoryChapterActive() {
   if (pin?.dataset.pin === "end") {
     return false;
   }
+  const progress = scrub ? Number.parseFloat(scrub.dataset.progress ?? "0") : 0;
+  const quoteStatus = scrub?.dataset.activeQuoteStatus;
+  if (quoteStatus === "confirmed" && progress >= 0.88) {
+    return true;
+  }
+  const partSheet = story.querySelector<HTMLElement>(".landing-workflow-part-sheet");
+  const hotspot = story.querySelector<HTMLElement>(".landing-workflow-hotspot.is-on");
+  if (
+    pin?.dataset.pin === "track" &&
+    progress < 0.52 &&
+    partSheet &&
+    hotspot &&
+    partSheet.getBoundingClientRect().height > 24
+  ) {
+    return true;
+  }
   if (pin?.dataset.pin === "track") {
     return true;
   }
@@ -37,7 +53,6 @@ function productStoryChapterActive() {
   if (!pinned) {
     return false;
   }
-  const progress = scrub ? Number.parseFloat(scrub.dataset.progress ?? "0") : 0;
   return progress > 0.03 && progress < 0.995;
 }
 

@@ -433,9 +433,6 @@
   flex: 0 0 auto;
   height: var(--landing-demo-beat-track, 48svh);
   min-height: var(--landing-demo-beat-track, 48svh);
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  scroll-margin-top: var(--spares-header);
   pointer-events: none;
 }
 
@@ -443,9 +440,9 @@ html:has(.spares-app-cinematic) {
   scroll-snap-type: y mandatory;
 }
 
-/* Mandatory snap is scoped to explicit targets: demo scrub markers + page chapters. */
+/* Mandatory snap: hero, product-story chapter, footer — beats are JS-owned; other marketing is free scroll. */
 .spares-app-cinematic .landing-scroll .landing-hero,
-.spares-app-cinematic .landing-marketing > .landing-section,
+.spares-app-cinematic .landing-marketing > .landing-section#product-story,
 .spares-app-cinematic .landing-site-footer {
   scroll-snap-align: start;
   scroll-snap-stop: normal;
