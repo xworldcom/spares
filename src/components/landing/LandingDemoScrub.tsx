@@ -598,6 +598,15 @@ export function LandingDemoScrub({
       scheduleBeatSnap();
     };
 
+    const flushWheelInertiaStep = (threshold: number) => {
+      if (Math.abs(wheelInertiaAcc) < threshold) {
+        return;
+      }
+      const direction = wheelInertiaAcc > 0 ? 1 : -1;
+      wheelInertiaAcc = 0;
+      stepLandingScrollStop(direction, "wheel");
+    };
+
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) < 0.5) {
         return;
@@ -618,13 +627,10 @@ export function LandingDemoScrub({
       wheelInertiaAcc += event.deltaY;
       window.clearTimeout(wheelIdleTimer);
       wheelIdleTimer = window.setTimeout(() => {
+        flushWheelInertiaStep(threshold);
         wheelInertiaAcc = 0;
-      }, 220);
-      if (Math.abs(wheelInertiaAcc) < threshold) {
-        return;
-      }
-      wheelInertiaAcc = 0;
-      stepLandingScrollStop(direction, "wheel");
+      }, 260);
+      flushWheelInertiaStep(threshold);
     };
 
     const onTouchStart = (event: TouchEvent) => {

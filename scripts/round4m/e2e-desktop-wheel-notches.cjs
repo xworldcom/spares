@@ -15,7 +15,7 @@ async function waitScrubHydrated(page) {
 
 async function scrollToTop(page) {
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForTimeout(200);
+  await waitScrubSettle(page, 1600);
 }
 
 async function reachConfirmed(page, h) {
@@ -31,6 +31,33 @@ async function reachConfirmed(page, h) {
   }
   const final = await readActiveQuoteStatus(page);
   h.check("reached Confirmed beat", final === "confirmed", final);
+}
+
+async function wheelNotchesPastConfirmed(page, notches, trackHeight, height, h, label) {
+  const delta = Math.max(8, Math.round(trackHeight / notches));
+  const startY = await page.evaluate(() => window.scrollY);
+  const startStatus = await readActiveQuoteStatus(page);
+  h.check(`${label} starts on Confirmed`, startStatus === "confirmed", startStatus);
+  const maxY = await page.evaluate(() => {
+    const el = document.scrollingElement ?? document.documentElement;
+    return el.scrollHeight - window.innerHeight;
+  });
+  for (let i = 0; i < 320; i += 1) {
+    const box = await page.locator(".landing-site-footer-link").boundingBox();
+    if (box && box.y >= 0 && box.y + box.height <= height + 4) {
+      break;
+    }
+    const y = await page.evaluate(() => window.scrollY);
+    if (y >= maxY - 12) {
+      break;
+    }
+    await page.mouse.wheel(0, delta);
+    await page.waitForTimeout(120);
+  }
+  await waitScrubSettle(page, 3200);
+  const endY = await page.evaluate(() => window.scrollY);
+  h.check(`${label} scrollY advanced`, endY > startY + 80, `start=${startY} end=${endY}`);
+  h.check(`${label} reached footer scroll depth`, endY >= maxY - 48, `end=${endY} max=${maxY}`);
 }
 
 (async () => {
@@ -57,19 +84,14 @@ async function reachConfirmed(page, h) {
     await reachConfirmed(page, h);
     for (const notches of [1, 3, 5]) {
       await reachConfirmed(page, h);
-      const delta = Math.max(8, Math.round(trackHeight / notches));
-      const startY = await page.evaluate(() => window.scrollY);
-      for (let i = 0; i < 24; i += 1) {
-        const box = await page.locator(".landing-site-footer-link").boundingBox();
-        if (box && box.y >= 0 && box.y + box.height <= height + 4) {
-          break;
-        }
-        await page.mouse.wheel(0, delta);
-        await page.waitForTimeout(120);
-      }
-      await waitScrubSettle(page, 3200);
-      const endY = await page.evaluate(() => window.scrollY);
-      h.check(`${notches}-notch wheel down advanced`, endY > startY + 40, `start=${startY} end=${endY}`);
+      await wheelNotchesPastConfirmed(
+        page,
+        notches,
+        trackHeight,
+        height,
+        h,
+        `${notches}-notch wheel down`,
+      );
       await scrollToTop(page);
     }
 
