@@ -201,7 +201,7 @@ for (let i = 0; i < phaseB.length; i += 1) {
 }
 if (phaseA.length < 2) failures.push("phase A samples missing");
 for (const s of phaseA) {
-  if (s.gap != null && s.gap > 84) {
+  if (s.gap != null && s.gap > 48) {
     failures.push(`phase A opened composer gap at phaseA ${s.phaseA}: ${s.gap}`);
   }
 }
@@ -211,7 +211,7 @@ for (let i = 1; i < phaseA.length; i += 1) {
   }
 }
 const peek = samples.at(-1);
-if (!peek || peek.phaseA !== 0 || peek.sheetH > 200) {
+if (!peek || peek.phaseA !== 0 || peek.sheetH > 120) {
   failures.push(`did not finish at peek: ${JSON.stringify(peek)}`);
 }
 if (failures.length) {

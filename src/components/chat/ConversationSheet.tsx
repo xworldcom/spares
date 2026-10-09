@@ -61,10 +61,8 @@ export function ConversationSheet({
   const expanded =
     sheet === "full" ||
     sheet === "reply" ||
-    sheet === "peek" ||
     displaySnap === "full" ||
     displaySnap === "reply" ||
-    displaySnap === "peek" ||
     (layout === "inline" && desktop);
   const showChrome =
     overlayMobile && sheet !== "out" && (sheet === "reply" || sheet === "full" || sheet === "peek");
@@ -74,7 +72,7 @@ export function ConversationSheet({
       ref={card}
       data-conversation-sheet=""
       data-layout={layout}
-      data-snap={sheet}
+      data-snap={displaySnap}
       className={[
         "conversation-sheet",
         "snap-sheet",
