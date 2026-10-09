@@ -1026,6 +1026,88 @@ export function demoLandingWheelCapRegion(
   return scrollY <= footerScrollY + 32 && scrollY >= -8 && scrubEndScrollY > 0;
 }
 
+export function demoParseLandingStopRail(
+  rail: string,
+): { kind: string; scrollY: number }[] {
+  if (!rail.trim()) {
+    return [];
+  }
+  return rail
+    .split("|")
+    .filter(Boolean)
+    .map((part) => {
+      const idx = part.lastIndexOf(":");
+      return {
+        kind: part.slice(0, idx),
+        scrollY: Number(part.slice(idx + 1)),
+      };
+    })
+    .filter((stop) => Number.isFinite(stop.scrollY));
+}
+
+export function demoFirstLandingRailBeatScrollY(rail: string): number | null {
+  const beat = demoParseLandingStopRail(rail).find((stop) => stop.kind === "beat");
+  return beat?.scrollY ?? null;
+}
+
+export type DemoLandingBackToTopInput = {
+  scrollY: number;
+  viewportHeight: number;
+  storyViewportTop: number;
+  footerInView: boolean;
+  pinPhase: string | null | undefined;
+  scrubProgress: number;
+  quoteStatus: string | null | undefined;
+  stopRail: string | null | undefined;
+  hotspotSelectUi: boolean;
+};
+
+/** Hide ↑ Top over the immersive scrub chrome (not after beat rail depth). */
+export function demoLandingBackToTopHideForScrub(input: {
+  scrollY: number;
+  pinPhase: string | null | undefined;
+  scrubProgress: number;
+  quoteStatus: string | null | undefined;
+  stopRail: string | null | undefined;
+  hotspotSelectUi: boolean;
+}): boolean {
+  if (input.pinPhase === "end" || input.pinPhase === "start") {
+    return false;
+  }
+  const firstBeatY = input.stopRail
+    ? demoFirstLandingRailBeatScrollY(input.stopRail)
+    : null;
+  if (firstBeatY !== null && input.scrollY >= firstBeatY - 32) {
+    return false;
+  }
+  if (input.quoteStatus === "confirmed" && input.scrubProgress >= 0.88) {
+    return true;
+  }
+  if (input.hotspotSelectUi) {
+    return true;
+  }
+  if (input.pinPhase === "track") {
+    return true;
+  }
+  const pinnedStory =
+    input.scrubProgress > 0.03 && input.scrubProgress < 0.995;
+  return pinnedStory;
+}
+
+export function demoLandingBackToTopShown(input: DemoLandingBackToTopInput): boolean {
+  if (input.footerInView) {
+    return false;
+  }
+  const threshold = Math.max(520, input.viewportHeight * 0.92);
+  const scrolled = input.scrollY > threshold;
+  const storyDeep =
+    input.storyViewportTop < -Math.round(input.viewportHeight * 0.2);
+  if (!scrolled || !storyDeep) {
+    return false;
+  }
+  return !demoLandingBackToTopHideForScrub(input);
+}
+
 export function demoBeatTrackSnapAlignmentDeltaDirected(
   trackViewportTop: number,
   stickyTop: number,

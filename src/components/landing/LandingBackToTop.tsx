@@ -1,6 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import {
+  demoLandingBackToTopShown,
+  type DemoLandingBackToTopInput,
+} from "@/lib/ui/landing-demo";
 
 function readScrollY() {
   return (
@@ -12,48 +16,34 @@ function readScrollY() {
   );
 }
 
-function readSparesHeaderPx() {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue("--spares-header");
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : 56;
-}
-
-function productStoryChapterActive() {
+function readBackToTopInput(footerInView: boolean): DemoLandingBackToTopInput | null {
   const story = document.getElementById("product-story");
   if (!story) {
-    return false;
+    return null;
   }
   const scrub = story.querySelector<HTMLElement>(".landing-demo-scrub");
   const pin = scrub?.querySelector<HTMLElement>(".landing-demo-scrub-pin");
-  if (pin?.dataset.pin === "end") {
-    return false;
-  }
-  const progress = scrub ? Number.parseFloat(scrub.dataset.progress ?? "0") : 0;
-  const quoteStatus = scrub?.dataset.activeQuoteStatus;
-  if (quoteStatus === "confirmed" && progress >= 0.88) {
-    return true;
-  }
   const partSheet = story.querySelector<HTMLElement>(".landing-workflow-part-sheet");
   const hotspot = story.querySelector<HTMLElement>(".landing-workflow-hotspot.is-on");
-  if (
+  const progress = scrub ? Number.parseFloat(scrub.dataset.progress ?? "0") : 0;
+  const hotspotSelectUi =
     pin?.dataset.pin === "track" &&
     progress < 0.52 &&
-    partSheet &&
-    hotspot &&
-    partSheet.getBoundingClientRect().height > 24
-  ) {
-    return true;
-  }
-  if (pin?.dataset.pin === "track") {
-    return true;
-  }
-  const rect = story.getBoundingClientRect();
-  const header = readSparesHeaderPx();
-  const pinned = rect.top <= header + 2 && rect.bottom > window.innerHeight * 0.4;
-  if (!pinned) {
-    return false;
-  }
-  return progress > 0.03 && progress < 0.995;
+    Boolean(partSheet) &&
+    Boolean(hotspot) &&
+    (partSheet?.getBoundingClientRect().height ?? 0) > 24;
+
+  return {
+    scrollY: readScrollY(),
+    viewportHeight: window.innerHeight,
+    storyViewportTop: story.getBoundingClientRect().top,
+    footerInView,
+    pinPhase: pin?.dataset.pin ?? null,
+    scrubProgress: progress,
+    quoteStatus: scrub?.dataset.activeQuoteStatus ?? null,
+    stopRail: scrub?.dataset.landingStopRail ?? null,
+    hotspotSelectUi,
+  };
 }
 
 function scrollPageToTop(reduceMotion: boolean) {
@@ -66,10 +56,24 @@ function scrollPageToTop(reduceMotion: boolean) {
   }
 }
 
+function measureQuoteTrayBottomInset(): string | null {
+  const sheet = document.querySelector<HTMLElement>(".landing-workflow-quote-sheet");
+  if (!sheet) {
+    return null;
+  }
+  const rect = sheet.getBoundingClientRect();
+  if (rect.height < 12 || rect.bottom < window.innerHeight * 0.3) {
+    return null;
+  }
+  const gap = 12;
+  return `${Math.max(0, window.innerHeight - rect.top + gap)}px`;
+}
+
 export function LandingBackToTop() {
   const [visible, setVisible] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [footerInView, setFooterInView] = useState(false);
+  const [trayBottom, setTrayBottom] = useState<string | null>(null);
 
   useEffect(() => {
     const footer = document.querySelector(".landing-site-footer");
@@ -90,27 +94,47 @@ export function LandingBackToTop() {
     syncMotion();
     motion.addEventListener("change", syncMotion);
 
-    const syncVisible = () => {
-      const threshold = Math.max(520, window.innerHeight * 0.92);
-      const scrolled = readScrollY() > threshold;
-      const story = document.getElementById("product-story");
-      const storyDeep =
-        story !== null &&
-        story.getBoundingClientRect().top < -Math.round(window.innerHeight * 0.2);
-      const hideForStory = productStoryChapterActive();
-      setVisible(scrolled && storyDeep && !hideForStory);
+    const syncChrome = () => {
+      const input = readBackToTopInput(footerInView);
+      if (input) {
+        setVisible(demoLandingBackToTopShown(input));
+      }
+      setTrayBottom(measureQuoteTrayBottomInset());
     };
-    syncVisible();
-    window.addEventListener("scroll", syncVisible, { passive: true });
-    window.visualViewport?.addEventListener("scroll", syncVisible);
-    window.visualViewport?.addEventListener("resize", syncVisible);
+
+    syncChrome();
+    window.addEventListener("scroll", syncChrome, { passive: true });
+    window.visualViewport?.addEventListener("scroll", syncChrome);
+    window.visualViewport?.addEventListener("resize", syncChrome);
+    window.addEventListener("resize", syncChrome, { passive: true });
+
+    const storyRoot = document.getElementById("product-story");
+    const storyObserver =
+      storyRoot && typeof MutationObserver !== "undefined"
+        ? new MutationObserver(syncChrome)
+        : null;
+    storyObserver?.observe(storyRoot, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: [
+        "data-progress",
+        "data-active-quote-status",
+        "data-landing-stop-rail",
+        "data-pin",
+        "class",
+      ],
+    });
+
     return () => {
       motion.removeEventListener("change", syncMotion);
-      window.removeEventListener("scroll", syncVisible);
-      window.visualViewport?.removeEventListener("scroll", syncVisible);
-      window.visualViewport?.removeEventListener("resize", syncVisible);
+      window.removeEventListener("scroll", syncChrome);
+      window.visualViewport?.removeEventListener("scroll", syncChrome);
+      window.visualViewport?.removeEventListener("resize", syncChrome);
+      window.removeEventListener("resize", syncChrome);
+      storyObserver?.disconnect();
     };
-  }, []);
+  }, [footerInView]);
 
   const handleClick = useCallback(() => {
     scrollPageToTop(reduceMotion);
@@ -122,6 +146,11 @@ export function LandingBackToTop() {
     <button
       type="button"
       className={shown ? "landing-back-to-top is-visible" : "landing-back-to-top"}
+      style={
+        trayBottom
+          ? ({ "--landing-btt-bottom": trayBottom } as CSSProperties)
+          : undefined
+      }
       onClick={handleClick}
       aria-label="Back to top — sign in"
       tabIndex={shown ? 0 : -1}

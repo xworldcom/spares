@@ -53,6 +53,8 @@ import {
   demoLandingScrollStopStepTargetIndex,
   demoBuildLandingScrollStops,
   demoLandingScrollStopsDedupe,
+  demoLandingBackToTopHideForScrub,
+  demoLandingBackToTopShown,
   demoLandingStopScrollY,
   demoLandingScrollTargetY,
   demoBeatAlignIndexRespectsDirection,
@@ -595,6 +597,40 @@ describe("landing cell stage", () => {
     const ground = readFileSync("src/components/viewer/StudioGround.tsx", "utf8");
     assert.match(ground, /cellColor="#5b6776"/);
     assert.match(ground, /infiniteGrid/);
+  });
+
+  it("shows back-to-top after the first beat rail stop, not for the whole track phase", () => {
+    const rail =
+      "hero:0|preHandoff:902|beat:2747|beat:3215|confirmedHold:9902|schematic:10786|footer:11362";
+    const base = {
+      viewportHeight: 900,
+      storyViewportTop: -240,
+      footerInView: false,
+      pinPhase: "track",
+      scrubProgress: 0.72,
+      quoteStatus: "in_review",
+      stopRail: rail,
+      hotspotSelectUi: false,
+    };
+    assert.equal(
+      demoLandingBackToTopShown({ ...base, scrollY: 2500 }),
+      false,
+    );
+    assert.equal(
+      demoLandingBackToTopShown({ ...base, scrollY: 2800 }),
+      true,
+    );
+    assert.equal(
+      demoLandingBackToTopHideForScrub({
+        scrollY: 2800,
+        pinPhase: "track",
+        scrubProgress: 0.72,
+        quoteStatus: "in_review",
+        stopRail: rail,
+        hotspotSelectUi: false,
+      }),
+      false,
+    );
   });
 
   it("offers a back-to-top escape once marketing scroll leaves the hero", () => {

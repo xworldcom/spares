@@ -654,6 +654,11 @@
 }
 
 @media (max-width: 899px) {
+  .spares-app-cinematic .landing-scroll {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
   .landing-demo-tree {
     display: none;
   }
@@ -1088,7 +1093,7 @@
   position: fixed;
   z-index: 50;
   right: max(1rem, env(safe-area-inset-right, 0px));
-  bottom: max(1.1rem, env(safe-area-inset-bottom, 0px));
+  bottom: var(--landing-btt-bottom, max(1.1rem, env(safe-area-inset-bottom, 0px)));
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;

@@ -53,6 +53,21 @@ async function desktopGate() {
     const heroY = await page.evaluate(() => window.scrollY);
     log("desktop-pageup-hero", heroY <= 4, `scrollY=${heroY}`);
 
+    for (let i = 0; i < 40; i += 1) {
+      const y = await page.evaluate(() => window.scrollY);
+      const rail = await page.evaluate(
+        () => document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "",
+      );
+      const beat = rail.match(/beat:(\d+)/);
+      if (beat && y >= Number(beat[1]) - 8) break;
+      await page.keyboard.press("PageDown");
+      await waitScrubSettle(page, 1600);
+    }
+    const topVisible = await page.evaluate(() =>
+      document.querySelector(".landing-back-to-top")?.classList.contains("is-visible"),
+    );
+    log("desktop-back-to-top-visible", topVisible === true, String(topVisible));
+
     const stops = [];
     for (let i = 0; i < 8; i += 1) {
       await page.keyboard.press("PageDown");
