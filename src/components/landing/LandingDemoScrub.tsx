@@ -328,8 +328,6 @@ export function LandingDemoScrub({
     let touchStartClientY = 0;
     let touchLastClientY = 0;
     let touchNetFingerDelta = 0;
-    let touchStepToken = 0;
-    let touchStepStartScrollY = 0;
     let wheelInertiaAcc = 0;
     let wheelIdleTimer = 0;
     const viewportWidth = () => window.innerWidth;
@@ -443,12 +441,12 @@ export function LandingDemoScrub({
             stop.kind !== "schematic" && stop.kind !== "assembly" && stop.kind !== "footer",
         );
       }
+      const marketingStopScrollY = (el: HTMLElement) =>
+        Math.max(0, Math.round(demoOffsetInDocument(el).y - layout.stickyTop));
       const postChapter = demoBuildLandingPostChapterStops(
-        pageScrollY,
-        layout.stickyTop,
         maxY,
-        schematic?.getBoundingClientRect().top ?? null,
-        assembly?.getBoundingClientRect().top ?? null,
+        schematic ? marketingStopScrollY(schematic) : null,
+        assembly ? marketingStopScrollY(assembly) : null,
       );
       const sorted = demoMergeLandingScrollStops(cachedChapterStops, postChapter);
       section.dataset.landingStopRail = sorted
@@ -538,11 +536,9 @@ export function LandingDemoScrub({
 
     const onTouchStart = (event: TouchEvent) => {
       lastInputKind = "touch";
-      touchStepToken += 1;
       touchStartClientY = event.touches[0]?.clientY ?? 0;
       touchLastClientY = touchStartClientY;
       touchNetFingerDelta = 0;
-      touchStepStartScrollY = readPageScrollY();
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -570,33 +566,10 @@ export function LandingDemoScrub({
       if (viewportWidth() >= 900) {
         return;
       }
-      const token = touchStepToken;
-      const startY = touchStepStartScrollY;
-      window.setTimeout(() => {
-        if (token !== touchStepToken || performance.now() < programmaticScrollUntil) {
-          return;
-        }
-        const settledY = readPageScrollY();
-        if (direction > 0 && settledY < startY - 12) {
-          return;
-        }
-        if (direction < 0 && settledY > startY + 12) {
-          return;
-        }
-        const beforeStep = settledY;
-        if (!stepLandingScrollStop(direction, "touch")) {
-          return;
-        }
-        window.setTimeout(() => {
-          const afterStep = readPageScrollY();
-          if (direction > 0 && afterStep < beforeStep - 8) {
-            scrollByBeatDelta(beforeStep - afterStep);
-          }
-          if (direction < 0 && afterStep > beforeStep + 8) {
-            scrollByBeatDelta(beforeStep - afterStep);
-          }
-        }, 60);
-      }, 300);
+      if (!inLandingWheelCapRegion()) {
+        return;
+      }
+      stepLandingScrollStop(direction, "touch");
     };
 
     const onPointerDown = () => {

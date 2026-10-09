@@ -919,26 +919,24 @@ export function demoBuildLandingScrollStops(input: DemoLandingStopBuildInput): D
   return merged.sort((a, b) => a.scrollY - b.scrollY);
 }
 
-/** Post-chapter stops from live viewport (rebuilt every step). */
+/** Post-chapter stops from document layout (stable while scrolling). */
 export function demoBuildLandingPostChapterStops(
-  pageScrollY: number,
-  stickyTop: number,
   maxScrollY: number,
-  schematicViewportTop: number | null,
-  assemblyViewportTop: number | null,
+  schematicScrollY: number | null,
+  assemblyScrollY: number | null,
 ): DemoLandingScrollStop[] {
-  const y = (viewportTop: number) => demoLandingStopScrollY(pageScrollY, viewportTop, stickyTop);
+  const clamp = (y: number) => Math.min(Math.max(0, Math.round(y)), maxScrollY);
   const out: DemoLandingScrollStop[] = [];
-  if (schematicViewportTop !== null) {
+  if (schematicScrollY !== null) {
     out.push({
       kind: "schematic",
-      scrollY: Math.min(y(schematicViewportTop), maxScrollY),
+      scrollY: clamp(schematicScrollY),
     });
   }
-  if (assemblyViewportTop !== null) {
+  if (assemblyScrollY !== null) {
     out.push({
       kind: "assembly",
-      scrollY: Math.min(y(assemblyViewportTop), maxScrollY),
+      scrollY: clamp(assemblyScrollY),
     });
   }
   out.push({ kind: "footer", scrollY: maxScrollY });
