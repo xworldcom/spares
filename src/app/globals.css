@@ -339,7 +339,9 @@
   overflow: hidden;
   --peek-chrome-h: 2.85rem;
   --reply-h: 17.5rem;
-  --full-h: min(92dvh, calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 0.5rem));
+  --full-h: calc(
+    100dvh - var(--spares-header) - var(--spares-tabbar) - env(safe-area-inset-top, 0px) - 0.75rem
+  );
   --sheet-h: var(--reply-h);
   --phase-a: 1;
   --phase-b: 0;
@@ -591,6 +593,12 @@
 .conversation-sheet:not(.is-inline) .conversation-sheet-close {
   opacity: 1;
   pointer-events: auto;
+}
+
+.conversation-sheet:not(.is-inline).is-out .conversation-sheet-toolbar,
+.conversation-sheet:not(.is-inline).is-out > .snap-sheet-handle {
+  position: relative;
+  z-index: 1;
 }
 
 .conversation-sheet-toolbar-title {

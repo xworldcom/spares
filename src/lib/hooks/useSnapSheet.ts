@@ -123,15 +123,44 @@ function headerPx() {
   return Number.isFinite(parsed) ? parsed : 56;
 }
 
+function safeAreaTopPx() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+  const probe = document.createElement("div");
+  probe.style.paddingTop = "env(safe-area-inset-top)";
+  document.body.appendChild(probe);
+  const pt = Number.parseFloat(getComputedStyle(probe).paddingTop);
+  document.body.removeChild(probe);
+  return Number.isFinite(pt) ? pt : 0;
+}
+
+/** Bottom edge of the live site header (safe area + nav chrome). */
+function measuredSiteHeaderBottomPx() {
+  if (typeof window === "undefined") {
+    return headerPx() + safeAreaTopPx();
+  }
+  const header = document.querySelector(".spares-header");
+  if (header instanceof HTMLElement) {
+    const bottom = header.getBoundingClientRect().bottom;
+    if (Number.isFinite(bottom) && bottom > 0) {
+      return bottom;
+    }
+  }
+  return headerPx() + safeAreaTopPx();
+}
+
 function openHeightPx(card?: Element | null) {
+  const bottomInset = tabBarPx() + safeAreaBottomPx();
+  const topClearance = measuredSiteHeaderBottomPx() + 8;
+  const maxFromViewport = Math.max(120, window.innerHeight - bottomInset - topClearance);
   if (card instanceof HTMLElement) {
     const maxH = Number.parseFloat(getComputedStyle(card).maxHeight);
     if (Number.isFinite(maxH) && maxH > 120) {
-      return maxH;
+      return Math.min(maxH, maxFromViewport);
     }
   }
-  const inset = tabBarPx() + headerPx() + 8;
-  return Math.min(window.innerHeight * 0.92, window.innerHeight - inset);
+  return maxFromViewport;
 }
 
 function heightForSnap(snap: ConversationSheetSnap, card?: Element | null) {

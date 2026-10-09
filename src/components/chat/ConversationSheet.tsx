@@ -62,10 +62,14 @@ export function ConversationSheet({
   const expanded =
     sheet === "full" ||
     sheet === "reply" ||
+    (overlayMobile && sheet === "out") ||
     displaySnap === "full" ||
     displaySnap === "reply" ||
     (layout === "inline" && desktop);
-  const showChrome =
+  const showToolbar =
+    overlayMobile &&
+    (sheet === "reply" || sheet === "full" || sheet === "peek" || sheet === "out");
+  const showCloseButton =
     overlayMobile && sheet !== "out" && (sheet === "reply" || sheet === "full" || sheet === "peek");
 
   return (
@@ -121,7 +125,7 @@ export function ConversationSheet({
           toggleHandle();
         }}
       />
-      {showChrome ? (
+      {showToolbar ? (
         <div className="conversation-sheet-toolbar">
           <p className="conversation-sheet-toolbar-title">
             {title}
@@ -129,16 +133,18 @@ export function ConversationSheet({
               <span className="conversation-sheet-unread-dot" aria-label="Unread messages" />
             ) : null}
           </p>
-          <button
-            type="button"
-            className="conversation-sheet-close"
-            onClick={(event) => {
-              event.stopPropagation();
-              collapseToPeek();
-            }}
-          >
-            Close
-          </button>
+          {showCloseButton ? (
+            <button
+              type="button"
+              className="conversation-sheet-close"
+              onClick={(event) => {
+                event.stopPropagation();
+                collapseToPeek();
+              }}
+            >
+              Close
+            </button>
+          ) : null}
         </div>
       ) : null}
       <ConversationSheetProvider
