@@ -33,6 +33,7 @@ import {
   demoLandingScrubChapterEndScrollY,
   demoLandingScrollStopStepTargetIndex,
   demoMergeLandingScrollStops,
+  demoLandingScrollStopsDedupe,
   demoLandingWheelCapRegion,
   type DemoBeatScrollInputKind,
   type DemoLandingScrollStop,
@@ -311,6 +312,7 @@ export function LandingDemoScrub({
     const onResize = () => {
       measureStickyTop();
       cachedChapterStops = null;
+      cachedFullStops = null;
       lastY = Number.NaN;
     };
 
@@ -330,7 +332,30 @@ export function LandingDemoScrub({
     let touchNetFingerDelta = 0;
     let wheelInertiaAcc = 0;
     let wheelIdleTimer = 0;
+    let railSettledScrollY = 0;
+    let lastInputAt = performance.now();
+    let touchSettleTimer = 0;
     const viewportWidth = () => window.innerWidth;
+
+    const noteInput = () => {
+      lastInputAt = performance.now();
+    };
+
+    const calibrateReachableScrollY = (targetY: number) => {
+      const anchor = readPageScrollY();
+      window.scrollTo({ top: Math.max(0, targetY), left: 0, behavior: "auto" });
+      const landed = Math.round(readPageScrollY());
+      window.scrollTo({ top: anchor, left: 0, behavior: "auto" });
+      return landed;
+    };
+
+    const calibrateLandingStops = (stops: DemoLandingScrollStop[]) =>
+      demoLandingScrollStopsDedupe(
+        stops.map((stop) => ({
+          ...stop,
+          scrollY: calibrateReachableScrollY(stop.scrollY),
+        })),
+      );
 
     const readBeatLayout = () => {
       measureLayout();
@@ -380,17 +405,12 @@ export function LandingDemoScrub({
         : Math.max(0, rootY);
       lastUserScrollDir = delta > 0 ? 1 : -1;
       programmaticScrollUntil = performance.now() + 520;
-      const html = document.documentElement;
-      const snapRestore = html.style.scrollSnapType;
-      html.style.scrollSnapType = "none";
       const targetTop = Math.max(0, scrollY + delta);
       window.scrollTo({ top: targetTop, left: 0, behavior: "auto" });
-      window.setTimeout(() => {
-        html.style.scrollSnapType = snapRestore;
-      }, 480);
       if (root && !parkedRoot) {
         root.scrollTop = Math.max(0, root.scrollTop + delta);
       }
+      railSettledScrollY = readPageScrollY();
       lastY = Number.NaN;
       apply();
     };
@@ -405,8 +425,12 @@ export function LandingDemoScrub({
     };
 
     let cachedChapterStops: DemoLandingScrollStop[] | null = null;
+    let cachedFullStops: DemoLandingScrollStop[] | null = null;
 
     const buildLandingScrollStops = (): DemoLandingScrollStop[] => {
+      if (cachedFullStops) {
+        return cachedFullStops;
+      }
       measureLayout();
       measureStickyTop();
       const preSnaps = section.querySelectorAll<HTMLElement>(".landing-demo-scrub-snap");
@@ -446,7 +470,9 @@ export function LandingDemoScrub({
         schematic ? elementStopScrollY(schematic) : null,
         assembly ? elementStopScrollY(assembly) : null,
       );
-      const sorted = demoMergeLandingScrollStops(cachedChapterStops, postChapter);
+      const merged = demoMergeLandingScrollStops(cachedChapterStops, postChapter);
+      const sorted = calibrateLandingStops(merged);
+      cachedFullStops = sorted;
       section.dataset.landingStopRail = sorted
         .map((stop) => `${stop.kind}:${Math.round(stop.scrollY)}`)
         .join("|");
@@ -488,7 +514,11 @@ export function LandingDemoScrub({
       if (!inLandingWheelCapRegion()) {
         return false;
       }
-      const targetIndex = demoLandingScrollStopStepTargetIndex(stops, scrollY, direction);
+      const targetIndex = demoLandingScrollStopStepTargetIndex(
+        stops,
+        readPageScrollY(),
+        direction,
+      );
       if (targetIndex === null) {
         return false;
       }
@@ -508,10 +538,30 @@ export function LandingDemoScrub({
       return true;
     };
 
+    const onScroll = () => {
+      const now = performance.now();
+      if (now < programmaticScrollUntil) {
+        railSettledScrollY = readPageScrollY();
+        return;
+      }
+      if (now - lastInputAt < 320) {
+        return;
+      }
+      if (!inLandingWheelCapRegion()) {
+        railSettledScrollY = readPageScrollY();
+        return;
+      }
+      const y = readPageScrollY();
+      if (Math.abs(y - railSettledScrollY) > 2) {
+        scrollToAbsoluteY(railSettledScrollY);
+      }
+    };
+
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) < 0.5) {
         return;
       }
+      noteInput();
       const direction = event.deltaY > 0 ? 1 : -1;
       lastInputKind = "wheel";
       lastUserScrollDir = direction;
@@ -533,6 +583,8 @@ export function LandingDemoScrub({
     };
 
     const onTouchStart = (event: TouchEvent) => {
+      noteInput();
+      window.clearTimeout(touchSettleTimer);
       lastInputKind = "touch";
       lastUserScrollDir = 0;
       touchStartClientY = event.touches[0]?.clientY ?? 0;
@@ -541,6 +593,7 @@ export function LandingDemoScrub({
     };
 
     const onTouchMove = (event: TouchEvent) => {
+      noteInput();
       if (inLandingWheelCapRegion()) {
         event.preventDefault();
       }
@@ -554,17 +607,23 @@ export function LandingDemoScrub({
     };
 
     const onTouchEnd = () => {
+      noteInput();
       const net = touchNetFingerDelta;
       touchNetFingerDelta = 0;
       const fingerSpan = touchStartClientY - touchLastClientY;
       const delta =
         Math.abs(net) >= 6 ? net : Math.abs(fingerSpan) >= 6 ? fingerSpan : 0;
-      if (delta === 0) {
-        return;
-      }
       const direction =
-        lastUserScrollDir !== 0 ? lastUserScrollDir : delta > 0 ? 1 : -1;
-      lastUserScrollDir = direction;
+        delta === 0
+          ? 0
+          : lastUserScrollDir !== 0
+            ? lastUserScrollDir
+            : delta > 0
+              ? 1
+              : -1;
+      if (direction !== 0) {
+        lastUserScrollDir = direction;
+      }
       lastInputKind = "touch";
       if (viewportWidth() >= 900) {
         return;
@@ -572,7 +631,22 @@ export function LandingDemoScrub({
       if (!inLandingWheelCapRegion()) {
         return;
       }
-      stepLandingScrollStop(direction, "touch");
+      window.clearTimeout(touchSettleTimer);
+      const runTouchRailStep = () => {
+        if (direction === 0) {
+          return;
+        }
+        stepLandingScrollStop(direction, "touch");
+        railSettledScrollY = readPageScrollY();
+      };
+      runTouchRailStep();
+      touchSettleTimer = window.setTimeout(() => {
+        const y = readPageScrollY();
+        if (Math.abs(y - railSettledScrollY) > 8 && direction !== 0) {
+          stepLandingScrollStop(direction, "touch");
+          railSettledScrollY = readPageScrollY();
+        }
+      }, 360);
     };
 
     const onPointerDown = () => {
@@ -583,6 +657,7 @@ export function LandingDemoScrub({
       if (event.key !== "PageDown" && event.key !== "PageUp") {
         return;
       }
+      noteInput();
       const direction = event.key === "PageDown" ? 1 : -1;
       if (!stepLandingScrollStop(direction, "keyboard")) {
         return;
@@ -594,9 +669,11 @@ export function LandingDemoScrub({
     measureStickyTop();
     apply();
     buildLandingScrollStops();
+    railSettledScrollY = readPageScrollY();
     frame = window.requestAnimationFrame(tick);
 
     window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("wheel", onWheel, { passive: false });
     const touchOpts: AddEventListenerOptions = { capture: true };
@@ -611,6 +688,8 @@ export function LandingDemoScrub({
     return () => {
       running = false;
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(touchSettleTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("wheel", onWheel);
       document.removeEventListener("touchstart", onTouchStart, touchOpts);

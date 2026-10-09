@@ -367,19 +367,11 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(css, /\.landing-workflow-request\.is-visible\s*\{[^}]*transition:/);
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
-    assert.match(css, /scroll-snap-type:\s*y mandatory/);
-    assert.doesNotMatch(
-      css,
-      /\.landing-marketing > \.landing-section#product-story[\s\S]*scroll-snap-align/,
-    );
-    assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
+    assert.doesNotMatch(css, /scroll-snap-type:\s*y mandatory/);
+    assert.doesNotMatch(css, /scroll-snap-align/);
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-align/);
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop/);
     assert.doesNotMatch(css, /\.landing-demo-scrub-snap\s*\{[^}]*scroll-snap-align/);
-    assert.doesNotMatch(
-      css,
-      /\.landing-marketing > \.landing-section#machine-model[\s\S]*scroll-snap-align/,
-    );
     assert.match(css, /--landing-demo-beat-track:\s*56svh/);
     assert.equal(DEMO_BEAT_TRACK_SVH_PHONE, 56);
   });

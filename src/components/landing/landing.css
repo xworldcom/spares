@@ -431,20 +431,7 @@
   pointer-events: none;
 }
 
-html:has(.spares-app-cinematic) {
-  scroll-snap-type: y mandatory;
-}
-
-/* Mandatory snap: hero, product-story chapter, footer — beats are JS-owned; other marketing is free scroll. */
-.spares-app-cinematic .landing-scroll .landing-hero,
-.spares-app-cinematic .landing-site-footer {
-  scroll-snap-align: start;
-  scroll-snap-stop: normal;
-}
-
-.spares-app-cinematic .landing-site-footer {
-  scroll-snap-align: end;
-}
+/* Landing scroll stops: JS stop rail only (round 4o). */
 
 .landing-demo-scrub-pin {
   position: sticky;

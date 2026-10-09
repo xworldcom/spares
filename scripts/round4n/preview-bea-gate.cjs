@@ -74,11 +74,39 @@ async function desktopGate() {
     const rail = await page.evaluate(() => document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "");
     const schMatch = rail.match(/schematic:(\d+)/);
     const schY = schMatch ? Number(schMatch[1]) : null;
-    log("desktop-pagedown-schematic", schY !== null && Math.abs(ySch - schY) <= 64 && ySch > yHold + 40, {
+    log("desktop-pagedown-schematic", schY !== null && ySch === schY && ySch > yHold + 40, {
       yHold,
       ySch,
       schY,
     });
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await waitScrubSettle(page, 1500);
+    const railStops = await page.evaluate(() => {
+      const rail = document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "";
+      return rail
+        .split("|")
+        .filter(Boolean)
+        .map((part) => {
+          const idx = part.lastIndexOf(":");
+          return { kind: part.slice(0, idx), scrollY: Number(part.slice(idx + 1)) };
+        });
+    });
+    const landedYs = [];
+    let railOk = true;
+    for (let i = 0; i < Math.min(railStops.length, 24); i += 1) {
+      if (i > 0) {
+        await page.keyboard.press("PageDown");
+        await waitScrubSettle(page, 1800);
+      }
+      const y = await page.evaluate(() => window.scrollY);
+      landedYs.push(y);
+      const expected = railStops[i]?.scrollY;
+      if (expected !== undefined && y !== expected) {
+        railOk = false;
+      }
+    }
+    log("desktop-rail-landed-y", railOk, { railStops: railStops.slice(0, 12), landedYs });
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await waitScrubSettle(page, 1500);
@@ -138,7 +166,7 @@ async function phoneGate(width, label) {
   const failed = results.filter((r) => !r.ok);
   const summary = {
     base: BASE,
-    sha: "ab29c1b",
+    sha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? process.env.GIT_SHA ?? "local",
     pr: 328,
     elapsedMs: Date.now() - started,
     pass: results.length - failed.length,
