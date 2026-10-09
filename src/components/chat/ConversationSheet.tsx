@@ -74,7 +74,7 @@ export function ConversationSheet({
       ref={card}
       data-conversation-sheet=""
       data-layout={layout}
-      data-snap={displaySnap}
+      data-snap={sheet}
       className={[
         "conversation-sheet",
         "snap-sheet",

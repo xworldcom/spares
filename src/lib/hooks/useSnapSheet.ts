@@ -256,8 +256,6 @@ export function useSnapSheet({
     samples: [] as { t: number; y: number }[],
     gesture: null as ConversationSheetGesture | null,
     liveH: 0,
-    ty: 0,
-    phaseAActive: false,
   });
   const dockedRef = useRef(true);
 
@@ -371,24 +369,22 @@ export function useSnapSheet({
       fullH,
     );
     card.setAttribute("data-motion-live", "");
-    const draggingNow = card.classList.contains("is-dragging");
-    const inPhaseABand = liveHeightPx <= replyH + 0.5;
-    const shellH = draggingNow && inPhaseABand ? drag.current.startH : liveHeightPx;
-    const sheetHValue = draggingNow && inPhaseABand ? `${shellH}px` : `${Math.round(liveHeightPx)}px`;
-    card.style.setProperty("--sheet-h", sheetHValue);
-    if (draggingNow && inPhaseABand) {
-      card.style.setProperty("--motion-ty", `${drag.current.ty}px`);
-    } else {
-      card.style.removeProperty("--motion-ty");
-    }
+    card.style.setProperty("--sheet-h", `${Math.round(liveHeightPx)}px`);
+    card.style.removeProperty("--motion-ty");
     card.style.setProperty("--peek-h", `${Math.round(peekH)}px`);
     card.style.setProperty("--reply-h", `${Math.round(replyH)}px`);
     card.style.setProperty("--full-h", `${Math.round(fullH)}px`);
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
-    void composerH;
+    card.style.setProperty("--composer-seat-h", `${Math.round(phaseA * composerH)}px`);
+    const contentLift =
+      liveHeightPx > peekH + 0.5 && liveHeightPx < replyH - 0.5 ? peekH - liveHeightPx : 0;
+    if (Math.abs(contentLift) > 0.25) {
+      card.style.setProperty("--content-lift", `${contentLift}px`);
+    } else {
+      card.style.removeProperty("--content-lift");
+    }
     setMotionPhases({ phaseA, phaseB });
-    setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
     drag.current.liveH = liveHeightPx;
   }
 
@@ -402,6 +398,8 @@ export function useSnapSheet({
     const handoff =
       handoffHeightPx ?? (snap === "peek" ? peekH : snap === "reply" ? replyH : snap === "full" ? fullH : peekH);
     card.style.removeProperty("--motion-ty");
+    card.style.removeProperty("--composer-seat-h");
+    card.style.removeProperty("--content-lift");
     card.style.setProperty("--sheet-h", `${Math.round(handoff)}px`);
     card.removeAttribute("data-motion-live");
     if (snap === "peek") {
@@ -440,14 +438,16 @@ export function useSnapSheet({
     });
   }
 
-  function finishSettle(next: ConversationSheetSnap, target: number, live: number) {
-    setSheet(next);
+  function finishSettle(next: ConversationSheetSnap, target: number, _live: number) {
+    paintMotion(target);
+    clearMotionSnap(next);
+    clearMotionPaint(next, target);
     setSettling(false);
     setSettlingClass(false);
-    clearMotionSnap(next);
-    paintMotion(target);
-    clearMotionPaint(next, target);
+    setDragging(false);
+    setDraggingClass(false);
     drag.current.liveH = target;
+    setSheet(next);
   }
 
   function clearMotionSnap(atSnap?: ConversationSheetSnap) {
@@ -459,7 +459,7 @@ export function useSnapSheet({
     );
   }
 
-  function paintDrag(dy: number, clientY: number) {
+  function paintDrag(dy: number, _clientY: number) {
     const { peekH, replyH, fullH } = heightsForMotion();
     const live = conversationSheetDragHeight({
       from: drag.current.from,
@@ -469,20 +469,6 @@ export function useSnapSheet({
       replyH,
       fullH,
     });
-    if (live <= replyH + 0.5) {
-      if (!drag.current.phaseAActive) {
-        drag.current.phaseAActive = true;
-        drag.current.startH = live;
-        drag.current.y = clientY;
-        drag.current.ty = 0;
-      } else {
-        drag.current.ty = clientY - drag.current.y;
-      }
-    } else {
-      drag.current.phaseAActive = false;
-      drag.current.ty = 0;
-    }
-    drag.current.liveH = live;
     paintMotion(live);
   }
 
@@ -707,7 +693,6 @@ export function useSnapSheet({
   ) {
     const startH =
       cardRef.current?.getBoundingClientRect().height ?? heightForSnapState(from);
-    const { replyH } = snapHeights();
     lockMotionHeights();
     cardRef.current?.removeAttribute("data-layout-peek");
     drag.current = {
@@ -720,8 +705,6 @@ export function useSnapSheet({
       samples: [{ t: performance.now(), y: event.clientY }],
       gesture: null,
       liveH: startH,
-      ty: 0,
-      phaseAActive: from !== "full" && startH <= replyH + 0.5,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
@@ -864,12 +847,13 @@ export function useSnapSheet({
     const settleGesture: ConversationSheetGesture | null =
       target < live - 2 ? "collapsing" : target > live + 2 ? "expanding" : null;
     lockMotionHeights();
+    setSettling(true);
+    setSettlingClass(true);
+    paintMotion(live, settleGesture);
+    drag.current.liveH = live;
     setDragging(false);
     setDraggingClass(false);
     cardRef.current?.classList.remove("is-dragging");
-    setSettling(true);
-    setSettlingClass(true);
-    drag.current.ty = 0;
     cardRef.current?.style.removeProperty("--motion-ty");
     if (settleGesture === "collapsing") {
       resetThreadScrollForMotion(sheet === "full" ? "full" : drag.current.from);
@@ -877,8 +861,6 @@ export function useSnapSheet({
       resetThreadScrollForMotion("reply");
     }
     setOpen(true);
-    paintMotion(live, settleGesture);
-    drag.current.liveH = live;
     if (Math.abs(live - target) <= NEAR_DETENT_PX) {
       finishSettle(next, target, live);
       return;
