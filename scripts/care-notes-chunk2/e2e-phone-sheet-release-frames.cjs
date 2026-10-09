@@ -109,6 +109,10 @@ async function run() {
     await page.waitForTimeout(20);
   }
   await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForFunction(() => {
+    const card = document.querySelector("[data-conversation-sheet]");
+    return card && !card.classList.contains("is-dragging");
+  });
 
   const frames = [];
   for (let f = 0; f < 40; f += 1) {
