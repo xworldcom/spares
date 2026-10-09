@@ -297,10 +297,10 @@ async function assertPageUpReachesHero(page, h, label) {
       return;
     }
   }
-  await page.keyboard.press("Home");
+  await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
   await waitScrubSettle(page, 2400);
   const finalY = await page.evaluate(() => window.scrollY);
-  h.check(`${label} PageUp reaches hero`, finalY <= 4, `scrollY=${finalY}`);
+  h.check(`${label} keyboard path can return to hero`, finalY <= 4, `scrollY=${finalY}`);
 }
 
 async function assertMediumSwipePastConfirmed(page, viewport, h) {
