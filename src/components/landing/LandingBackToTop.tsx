@@ -113,7 +113,8 @@ export function LandingBackToTop() {
       storyRoot && typeof MutationObserver !== "undefined"
         ? new MutationObserver(syncChrome)
         : null;
-    storyObserver?.observe(storyRoot, {
+    if (storyRoot && storyObserver) {
+      storyObserver.observe(storyRoot, {
       attributes: true,
       childList: true,
       subtree: true,
@@ -124,7 +125,8 @@ export function LandingBackToTop() {
         "data-pin",
         "class",
       ],
-    });
+      });
+    }
 
     return () => {
       motion.removeEventListener("change", syncMotion);
