@@ -146,7 +146,11 @@ async function assertWheelLandsSchematic(page) {
   await waitScrubSettle(page, 2800);
   const after = await page.evaluate(() => window.scrollY);
   return {
-    ok: Number.isFinite(schY) && after === schY && after > before,
+    ok:
+      Number.isFinite(schY) &&
+      Math.abs(after - schY) <= 2 &&
+      Math.abs(before - holdY) <= 48 &&
+      after > before + 20,
     before,
     after,
     schY,
