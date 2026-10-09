@@ -862,34 +862,31 @@ export function demoLandingScrubChapterEndScrollY(
 }
 
 export type DemoLandingStopBuildInput = {
-  pageScrollY: number;
   stickyTop: number;
   viewportWidth: number;
   maxScrollY: number;
   sectionDocTop: number;
   sectionHeight: number;
   pinHeight: number;
-  preHandoffViewportTops: readonly number[];
-  beatViewportTops: readonly number[];
+  preHandoffStopYs: readonly number[];
+  beatStopYs: readonly number[];
   beatTrackHeight: number;
-  schematicViewportTop: number | null;
-  assemblyViewportTop: number | null;
+  schematicScrollY: number | null;
+  assemblyScrollY: number | null;
 };
 
 /** One stop list: hero → pre-handoff → beats → hold (beat-derived) → schematic → assembly → footer. */
 export function demoBuildLandingScrollStops(input: DemoLandingStopBuildInput): DemoLandingScrollStop[] {
-  const { pageScrollY, stickyTop } = input;
-  const y = (viewportTop: number) => demoLandingStopScrollY(pageScrollY, viewportTop, stickyTop);
   const stops: DemoLandingScrollStop[] = [{ kind: "hero", scrollY: 0 }];
 
-  for (const top of input.preHandoffViewportTops) {
-    stops.push({ kind: "preHandoff", scrollY: y(top) });
+  for (const scrollY of input.preHandoffStopYs) {
+    stops.push({ kind: "preHandoff", scrollY: Math.max(0, Math.round(scrollY)) });
   }
-  input.beatViewportTops.forEach((top, beatIndex) => {
-    stops.push({ kind: "beat", beatIndex, scrollY: y(top) });
+  input.beatStopYs.forEach((scrollY, beatIndex) => {
+    stops.push({ kind: "beat", beatIndex, scrollY: Math.max(0, Math.round(scrollY)) });
   });
 
-  if (input.beatViewportTops.length > 0 && input.beatTrackHeight > 0) {
+  if (input.beatStopYs.length > 0 && input.beatTrackHeight > 0) {
     stops.push({
       kind: "confirmedHold",
       scrollY: demoLandingScrubChapterEndScrollY(
@@ -901,17 +898,12 @@ export function demoBuildLandingScrollStops(input: DemoLandingStopBuildInput): D
     });
   }
 
-  if (input.schematicViewportTop !== null) {
-    stops.push({
-      kind: "schematic",
-      scrollY: Math.min(y(input.schematicViewportTop), input.maxScrollY),
-    });
+  const clamp = (y: number) => Math.min(Math.max(0, Math.round(y)), input.maxScrollY);
+  if (input.schematicScrollY !== null) {
+    stops.push({ kind: "schematic", scrollY: clamp(input.schematicScrollY) });
   }
-  if (input.assemblyViewportTop !== null) {
-    stops.push({
-      kind: "assembly",
-      scrollY: Math.min(y(input.assemblyViewportTop), input.maxScrollY),
-    });
+  if (input.assemblyScrollY !== null) {
+    stops.push({ kind: "assembly", scrollY: clamp(input.assemblyScrollY) });
   }
 
   const merged = demoLandingScrollStopsDedupe(stops);

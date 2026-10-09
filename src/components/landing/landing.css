@@ -437,7 +437,6 @@ html:has(.spares-app-cinematic) {
 
 /* Mandatory snap: hero, product-story chapter, footer — beats are JS-owned; other marketing is free scroll. */
 .spares-app-cinematic .landing-scroll .landing-hero,
-.spares-app-cinematic .landing-marketing > .landing-section#product-story,
 .spares-app-cinematic .landing-site-footer {
   scroll-snap-align: start;
   scroll-snap-stop: normal;

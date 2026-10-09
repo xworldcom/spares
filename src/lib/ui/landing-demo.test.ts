@@ -367,9 +367,9 @@ describe("landing scrub layout", () => {
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
     assert.match(css, /scroll-snap-type:\s*y mandatory/);
-    assert.match(
+    assert.doesNotMatch(
       css,
-      /\.spares-app-cinematic \.landing-marketing > \.landing-section#product-story[\s\S]*scroll-snap-align:\s*start/,
+      /\.landing-marketing > \.landing-section#product-story[\s\S]*scroll-snap-align/,
     );
     assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-align/);
@@ -427,18 +427,17 @@ describe("landing scrub layout", () => {
     assert.equal(demoLandingScrollStopStepTargetIndex(beaLike, 1115, -1), 0);
     assert.equal(demoLandingScrollStopStepTargetIndex(beaLike, 1560, -1), 1);
     const built = demoBuildLandingScrollStops({
-      pageScrollY: 0,
       stickyTop: 56,
       viewportWidth: 1280,
       maxScrollY: 9000,
       sectionDocTop: 800,
       sectionHeight: 3200,
       pinHeight: 844,
-      preHandoffViewportTops: [1171, 1616],
-      beatViewportTops: [2000, 2500],
+      preHandoffStopYs: [1115, 1560],
+      beatStopYs: [2000, 2500],
       beatTrackHeight: 420,
-      schematicViewportTop: 7000,
-      assemblyViewportTop: 7500,
+      schematicScrollY: 7000,
+      assemblyScrollY: 7500,
     });
     assert.ok(built.some((s) => s.kind === "schematic"));
     assert.ok(built.some((s) => s.kind === "assembly"));

@@ -33,7 +33,6 @@ import {
   demoLandingScrubChapterEndScrollY,
   demoLandingScrollStopStepTargetIndex,
   demoMergeLandingScrollStops,
-  demoLandingScrubChapterCapRegion,
   demoLandingWheelCapRegion,
   type DemoBeatScrollInputKind,
   type DemoLandingScrollStop,
@@ -329,6 +328,7 @@ export function LandingDemoScrub({
     let touchStartClientY = 0;
     let touchLastClientY = 0;
     let touchNetFingerDelta = 0;
+    let touchTrackReady = false;
     let wheelInertiaAcc = 0;
     let wheelIdleTimer = 0;
     const viewportWidth = () => window.innerWidth;
@@ -386,9 +386,9 @@ export function LandingDemoScrub({
       html.style.scrollSnapType = "none";
       const targetTop = Math.max(0, scrollY + delta);
       window.scrollTo({ top: targetTop, left: 0, behavior: "auto" });
-      window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
         html.style.scrollSnapType = snapRestore;
-      });
+      }, 480);
       if (root && !parkedRoot) {
         root.scrollTop = Math.max(0, root.scrollTop + delta);
       }
@@ -410,7 +410,6 @@ export function LandingDemoScrub({
     const buildLandingScrollStops = (): DemoLandingScrollStop[] => {
       measureLayout();
       measureStickyTop();
-      const pageScrollY = readPageScrollY();
       const preSnaps = section.querySelectorAll<HTMLElement>(".landing-demo-scrub-snap");
       const beatTracks = [...section.querySelectorAll<HTMLElement>(".landing-demo-beat-track")];
       const beatTrackHeight = beatTracks[0]?.offsetHeight ?? 0;
@@ -423,31 +422,30 @@ export function LandingDemoScrub({
       const pinEl = pinRef.current;
       const pinHeight = pinEl?.offsetHeight ?? layout.pinHeight;
       const sectionDocTop = demoOffsetInDocument(section).y;
-      if (pageScrollY < 16 || !cachedChapterStops) {
+      const elementStopScrollY = (el: HTMLElement) =>
+        Math.max(0, Math.round(demoOffsetInDocument(el).y - layout.stickyTop));
+      if (!cachedChapterStops) {
         cachedChapterStops = demoBuildLandingScrollStops({
-          pageScrollY,
           stickyTop: layout.stickyTop,
           viewportWidth: window.innerWidth,
           maxScrollY: maxY,
           sectionDocTop,
           sectionHeight: layout.sectionHeight,
           pinHeight,
-          preHandoffViewportTops: [...preSnaps].map((el) => el.getBoundingClientRect().top),
-          beatViewportTops: beatTracks.map((track) => track.getBoundingClientRect().top),
+          preHandoffStopYs: [...preSnaps].map((el) => elementStopScrollY(el)),
+          beatStopYs: beatTracks.map((track) => elementStopScrollY(track)),
           beatTrackHeight,
-          schematicViewportTop: null,
-          assemblyViewportTop: null,
+          schematicScrollY: null,
+          assemblyScrollY: null,
         }).filter(
           (stop) =>
             stop.kind !== "schematic" && stop.kind !== "assembly" && stop.kind !== "footer",
         );
       }
-      const marketingStopScrollY = (el: HTMLElement) =>
-        Math.max(0, Math.round(demoOffsetInDocument(el).y - layout.stickyTop));
       const postChapter = demoBuildLandingPostChapterStops(
         maxY,
-        schematic ? marketingStopScrollY(schematic) : null,
-        assembly ? marketingStopScrollY(assembly) : null,
+        schematic ? elementStopScrollY(schematic) : null,
+        assembly ? elementStopScrollY(assembly) : null,
       );
       const sorted = demoMergeLandingScrollStops(cachedChapterStops, postChapter);
       section.dataset.landingStopRail = sorted
@@ -476,11 +474,6 @@ export function LandingDemoScrub({
     const inLandingWheelCapRegion = () => {
       const scrollY = readPageScrollY();
       return demoLandingWheelCapRegion(scrollY, scrubChapterEndScrollY(), readFooterScrollY());
-    };
-
-    const inScrubChapterTouchCap = () => {
-      const scrollY = readPageScrollY();
-      return demoLandingScrubChapterCapRegion(scrollY, scrubChapterEndScrollY());
     };
 
     const scrubEndScrollY = () => {
@@ -542,16 +535,24 @@ export function LandingDemoScrub({
 
     const onTouchStart = (event: TouchEvent) => {
       lastInputKind = "touch";
+      lastUserScrollDir = 0;
       touchStartClientY = event.touches[0]?.clientY ?? 0;
       touchLastClientY = touchStartClientY;
       touchNetFingerDelta = 0;
+      touchTrackReady = true;
     };
 
     const onTouchMove = (event: TouchEvent) => {
-      if (inScrubChapterTouchCap()) {
+      if (inLandingWheelCapRegion()) {
         event.preventDefault();
       }
       const y = event.touches[0]?.clientY ?? touchLastClientY;
+      if (!touchTrackReady) {
+        touchTrackReady = true;
+        touchStartClientY = y;
+        touchLastClientY = y;
+        return;
+      }
       const step = touchLastClientY - y;
       touchNetFingerDelta += step;
       touchLastClientY = y;
@@ -563,10 +564,14 @@ export function LandingDemoScrub({
     const onTouchEnd = () => {
       const net = touchNetFingerDelta;
       touchNetFingerDelta = 0;
-      if (Math.abs(net) < 6) {
+      const fingerSpan = touchStartClientY - touchLastClientY;
+      const delta =
+        Math.abs(net) >= 6 ? net : Math.abs(fingerSpan) >= 6 ? fingerSpan : 0;
+      if (delta === 0) {
         return;
       }
-      const direction = net > 0 ? 1 : -1;
+      const direction =
+        lastUserScrollDir !== 0 ? lastUserScrollDir : delta > 0 ? 1 : -1;
       lastUserScrollDir = direction;
       lastInputKind = "touch";
       if (viewportWidth() >= 900) {
