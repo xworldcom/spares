@@ -20,6 +20,10 @@ import {
   flushPinThreadScrollerToComposer,
   pinThreadScrollerToComposer,
 } from "@/lib/ui/conversation-sheet-thread-pin";
+import {
+  conversationSheetFullHeightPx,
+  safeAreaBottomPx,
+} from "@/lib/ui/conversation-sheet-viewport";
 
 const DRAG_SLOP = 8;
 const SAMPLE_WINDOW_MS = 90;
@@ -101,59 +105,8 @@ function measureDetentHeights(card: HTMLElement | null) {
   return { replyH, composerH };
 }
 
-function tabBarPx() {
-  if (typeof window === "undefined") {
-    return 56;
-  }
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue("--spares-tabbar")
-    .trim();
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : 56;
-}
-
-function headerPx() {
-  if (typeof window === "undefined") {
-    return 56;
-  }
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue("--spares-header")
-    .trim();
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : 56;
-}
-
-function safeAreaTopPx() {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-  const probe = document.createElement("div");
-  probe.style.paddingTop = "env(safe-area-inset-top)";
-  document.body.appendChild(probe);
-  const pt = Number.parseFloat(getComputedStyle(probe).paddingTop);
-  document.body.removeChild(probe);
-  return Number.isFinite(pt) ? pt : 0;
-}
-
-/** Bottom edge of the live site header (safe area + nav chrome). */
-function measuredSiteHeaderBottomPx() {
-  if (typeof window === "undefined") {
-    return headerPx() + safeAreaTopPx();
-  }
-  const header = document.querySelector(".spares-header");
-  if (header instanceof HTMLElement) {
-    const bottom = header.getBoundingClientRect().bottom;
-    if (Number.isFinite(bottom) && bottom > 0) {
-      return bottom;
-    }
-  }
-  return headerPx() + safeAreaTopPx();
-}
-
 function openHeightPx(card?: Element | null) {
-  const bottomInset = tabBarPx() + safeAreaBottomPx();
-  const topClearance = measuredSiteHeaderBottomPx() + 8;
-  const maxFromViewport = Math.max(120, window.innerHeight - bottomInset - topClearance);
+  const maxFromViewport = conversationSheetFullHeightPx();
   if (card instanceof HTMLElement) {
     const maxH = Number.parseFloat(getComputedStyle(card).maxHeight);
     if (Number.isFinite(maxH) && maxH > 120) {
@@ -212,18 +165,6 @@ function stepToward(
     return "out";
   }
   return STAGE_ORDER[Math.max(index - 1, 0)]!;
-}
-
-function safeAreaBottomPx() {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-  const probe = document.createElement("div");
-  probe.style.paddingBottom = "env(safe-area-inset-bottom)";
-  document.body.appendChild(probe);
-  const pb = Number.parseFloat(getComputedStyle(probe).paddingBottom);
-  document.body.removeChild(probe);
-  return Number.isFinite(pb) ? pb : 0;
 }
 
 function isSkipTarget(target: EventTarget | null) {
@@ -637,17 +578,42 @@ export function useSnapSheet({
     }
   }, [sheet, dragging, settling, desktopStage]);
 
-  useEffect(() => {
-    if (dragging || settling || desktopStage || sheet === "out") {
-      return;
-    }
+  function paintDetentHeightVars() {
     const card = cardRef.current;
-    if (!card) {
+    if (!card || desktopStage) {
       return;
     }
     const { replyH, fullH } = snapHeights();
     card.style.setProperty("--reply-h", `${Math.round(replyH)}px`);
     card.style.setProperty("--full-h", `${Math.round(fullH)}px`);
+  }
+
+  useEffect(() => {
+    if (dragging || settling || desktopStage || sheet === "out") {
+      return;
+    }
+    paintDetentHeightVars();
+  }, [sheet, dragging, settling, desktopStage, cardRef]);
+
+  useEffect(() => {
+    if (desktopStage) {
+      return;
+    }
+    const refresh = () => {
+      if (dragging || settling || sheet === "out") {
+        return;
+      }
+      paintDetentHeightVars();
+    };
+    window.addEventListener("scroll", refresh, { passive: true });
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", refresh);
+    vv?.addEventListener("scroll", refresh);
+    return () => {
+      window.removeEventListener("scroll", refresh);
+      vv?.removeEventListener("resize", refresh);
+      vv?.removeEventListener("scroll", refresh);
+    };
   }, [sheet, dragging, settling, desktopStage, cardRef]);
 
   useEffect(() => {
