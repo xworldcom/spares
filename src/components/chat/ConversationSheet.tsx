@@ -43,6 +43,7 @@ export function ConversationSheet({
     toggleHandle,
     dragMoved,
     collapseToPeek,
+    closeViaTranslate,
     pointerHandlers,
     threadDocked,
     threadScrollLocked,
@@ -139,7 +140,7 @@ export function ConversationSheet({
               className="conversation-sheet-close"
               onClick={(event) => {
                 event.stopPropagation();
-                collapseToPeek();
+                closeViaTranslate();
               }}
             >
               Close

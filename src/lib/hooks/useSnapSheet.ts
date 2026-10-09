@@ -668,6 +668,29 @@ export function useSnapSheet({
     settleTo("reply");
   }
 
+  /** Toolbar Close — same `--sheet-close-ty` rail as handle drag-down (not height settle). */
+  function closeViaTranslate() {
+    if (desktopStage || sheet === "out") {
+      return;
+    }
+    if (dragging || settling) {
+      return;
+    }
+    if (performance.now() - steppedAtRef.current < 400) {
+      return;
+    }
+    steppedAtRef.current = performance.now();
+    setThreadDockedState(true);
+    if (sheet !== "reply") {
+      setOpen(true);
+      setSheet("reply");
+      clearMotionPaint("reply");
+      clearCloseTranslate("reply");
+      lockCloseOffset();
+    }
+    settleCloseTo("out");
+  }
+
   function settleCloseTo(next: "reply" | "out") {
     cancelSettleAnimation();
     closeSettleRef.current = true;
@@ -1165,6 +1188,7 @@ export function useSnapSheet({
     hide,
     expand,
     collapseToPeek,
+    closeViaTranslate,
     toggleHandle,
     dragMoved: () => drag.current.moved,
     threadDocked,
