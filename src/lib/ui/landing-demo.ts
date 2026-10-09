@@ -1020,7 +1020,12 @@ export function demoLandingScrollStopStepTargetIndex(
   return null;
 }
 
-/** True while scroll is inside the scrub chapter (pre-handoff through confirmed end-hold). */
+/** Scrub chapter only (hero through confirmed end-hold) — block native touch/wheel inertia here. */
+export function demoLandingScrubChapterCapRegion(scrollY: number, scrubEndScrollY: number) {
+  return scrollY >= -8 && scrubEndScrollY > 0 && scrollY <= scrubEndScrollY + 32;
+}
+
+/** Full landing stop rail (through footer) — keyboard/wheel/touch stepping. */
 export function demoLandingWheelCapRegion(
   scrollY: number,
   scrubEndScrollY: number,

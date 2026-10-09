@@ -33,6 +33,7 @@ import {
   demoLandingScrubChapterEndScrollY,
   demoLandingScrollStopStepTargetIndex,
   demoMergeLandingScrollStops,
+  demoLandingScrubChapterCapRegion,
   demoLandingWheelCapRegion,
   type DemoBeatScrollInputKind,
   type DemoLandingScrollStop,
@@ -477,6 +478,11 @@ export function LandingDemoScrub({
       return demoLandingWheelCapRegion(scrollY, scrubChapterEndScrollY(), readFooterScrollY());
     };
 
+    const inScrubChapterTouchCap = () => {
+      const scrollY = readPageScrollY();
+      return demoLandingScrubChapterCapRegion(scrollY, scrubChapterEndScrollY());
+    };
+
     const scrubEndScrollY = () => {
       const hold = collectLandingScrollStops().find((stop) => stop.kind === "confirmedHold");
       return hold?.scrollY ?? scrubChapterEndScrollY();
@@ -542,7 +548,7 @@ export function LandingDemoScrub({
     };
 
     const onTouchMove = (event: TouchEvent) => {
-      if (inLandingWheelCapRegion()) {
+      if (inScrubChapterTouchCap()) {
         event.preventDefault();
       }
       const y = event.touches[0]?.clientY ?? touchLastClientY;
