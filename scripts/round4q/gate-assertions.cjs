@@ -218,7 +218,17 @@ async function assertTopHideReleasesFocus(page) {
     return { ok: false, reason: "top-not-visible-for-focus-test" };
   }
   await page.focus(".landing-back-to-top.is-visible");
-  const trayOpen = await scrollUntilQuoteTray(page);
+  let trayOpen = false;
+  for (let i = 0; i < 28; i += 1) {
+    trayOpen = await page.evaluate(() => {
+      const focus = document.querySelector(".landing-workflow-stage.is-quote-focus");
+      const sheet = document.querySelector(".landing-workflow-quote-sheet");
+      return Boolean(focus) || (sheet?.getBoundingClientRect().height ?? 0) > 24;
+    });
+    if (trayOpen) break;
+    await page.keyboard.press("PageUp");
+    await waitScrubSettle(page, 1400);
+  }
   if (!trayOpen) {
     return { ok: false, reason: "tray-never-opened" };
   }
