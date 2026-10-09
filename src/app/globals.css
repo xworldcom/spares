@@ -470,15 +470,46 @@
   pointer-events: auto;
 }
 
+/* Live drag/settle: one geometry — sheet height only; content rides the top edge (1:1 finger). */
+.conversation-sheet:not(.is-inline).is-dragging .conversation-sheet-body {
+  transform: translate3d(0, var(--motion-ty, 0), 0);
+}
+
+.conversation-sheet:not(.is-inline).is-settling .conversation-sheet-body,
+.conversation-sheet:not(.is-inline)[data-motion-live]:not(.is-dragging) .conversation-sheet-body {
+  transform: none;
+}
+
+.conversation-sheet:not(.is-inline).is-dragging .imsg-card--sheet,
+.conversation-sheet:not(.is-inline).is-settling .imsg-card--sheet,
+.conversation-sheet:not(.is-inline)[data-motion-live] .imsg-card--sheet {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .conversation-sheet:not(.is-inline).is-dragging .imsg-composer,
 .conversation-sheet:not(.is-inline).is-settling .imsg-composer,
 .conversation-sheet:not(.is-inline)[data-motion-live] .imsg-composer {
   transition: none;
-  /* Phase A during drag/settle: collapse layout height only — transform would paint
-     the composer down without moving the thread (same-frame gap on close). */
   transform: none;
-  opacity: var(--phase-a, 0);
-  max-height: calc(var(--phase-a, 0) * 12rem);
+  opacity: 1;
+  max-height: none;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) .imsg-composer,
+.conversation-sheet:not(.is-inline)[data-layout-peek]:not(.is-dragging):not(.is-settling) .imsg-composer,
+.conversation-sheet:not(.is-inline)[data-peek-landing] .imsg-composer {
+  transition: none;
+  max-height: 0;
+  min-height: 0;
+  opacity: 0;
+  transform: translate3d(0, 100%, 0);
   pointer-events: none;
 }
 

@@ -34,6 +34,36 @@ export const CONVERSATION_SHEET_FULL_H =
 
 export const REPLY_DETENT_PX = 32;
 export const PEEK_LAYOUT_BAND_PX = 4;
+/** Minimum height band between reply and full so phase B is a real drag segment. */
+export const MIN_PHASE_B_BAND_PX = 56;
+/** Small flicks from peek must not seat the composer; require a real pull. */
+export const COMPOSER_REVEAL_PULL_PX = 48;
+
+export type ConversationSheetDetents = {
+  peekH: number;
+  replyH: number;
+  fullH: number;
+};
+
+/** Keep reply strictly between peek+composer and full on short viewports. */
+export function resolveConversationSheetDetents(
+  peekH: number,
+  replyH: number,
+  fullH: number,
+  composerH: number,
+): ConversationSheetDetents {
+  const peek = Math.round(peekH);
+  const full = Math.round(fullH);
+  const minReply = Math.round(peek + composerH + 8);
+  const maxReply = Math.max(minReply, full - MIN_PHASE_B_BAND_PX);
+  let reply = Math.round(replyH);
+  reply = Math.max(reply, minReply);
+  reply = Math.min(reply, maxReply);
+  if (reply >= full) {
+    reply = Math.max(minReply, full - MIN_PHASE_B_BAND_PX);
+  }
+  return { peekH: peek, replyH: reply, fullH: full };
+}
 
 export type ConversationSheetMotion = {
   phaseA: number;
