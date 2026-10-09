@@ -443,6 +443,8 @@ html:has(.spares-app-cinematic) {
 /* Mandatory snap: hero, product-story chapter, footer — beats are JS-owned; other marketing is free scroll. */
 .spares-app-cinematic .landing-scroll .landing-hero,
 .spares-app-cinematic .landing-marketing > .landing-section#product-story,
+.spares-app-cinematic .landing-marketing > .landing-section#machine-model,
+.spares-app-cinematic .landing-marketing > .landing-section#cad-ingest,
 .spares-app-cinematic .landing-site-footer {
   scroll-snap-align: start;
   scroll-snap-stop: normal;
@@ -663,6 +665,13 @@ html:has(.spares-app-cinematic) {
   min-width: 0;
   flex: 1;
   flex-direction: column;
+}
+
+@media (max-width: 420px) {
+  .landing-demo-scrub:not([data-reduce-motion]) {
+    --landing-demo-scrub-extra: 480svh;
+    --landing-demo-beat-track: 50svh;
+  }
 }
 
 @media (max-width: 899px) {

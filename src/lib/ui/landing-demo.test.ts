@@ -51,6 +51,9 @@ import {
   demoBeatTrackSnapAlignmentDeltaDirected,
   demoShouldRunBeatAlignOnScrollEnd,
   demoBeatKeyboardStepTargetIndex,
+  demoLandingScrollStopStepTargetIndex,
+  demoLandingScrollStopsDedupe,
+  demoLandingScrollTargetY,
   demoBeatAlignIndexRespectsDirection,
   demoInBeatSnapChapter,
   workflowScrubPreHandoffSnapRenderDeltas,
@@ -233,7 +236,8 @@ describe("demo scroll scrub", () => {
     assert.match(src, /addEventListener\("scrollend"/);
     assert.doesNotMatch(src, /window\.addEventListener\("scroll",\s*tick/);
     assert.match(src, /addEventListener\("touchmove", onTouchMove/);
-    assert.match(src, /visualViewport\?\.addEventListener\("scroll"/);
+    assert.match(src, /visualViewport\?\.addEventListener\("resize"/);
+    assert.doesNotMatch(src, /visualViewport\?\.addEventListener\("scroll", onResize/);
     assert.doesNotMatch(src, /demoPickScrollY\(0,/);
   });
 
@@ -391,11 +395,30 @@ describe("landing scrub layout", () => {
     assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(80, 56, 1, 14), 24);
     assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(40, 56, 1, 14), null);
     assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(40, 56, -1, 14), -16);
-    assert.equal(demoShouldRunBeatAlignOnScrollEnd("wheel"), true);
+    assert.equal(demoShouldRunBeatAlignOnScrollEnd("wheel"), false);
+    assert.equal(demoShouldRunBeatAlignOnScrollEnd("touch"), false);
     assert.equal(demoShouldRunBeatAlignOnScrollEnd("keyboard"), false);
     assert.equal(demoShouldRunBeatAlignOnScrollEnd("click"), false);
     assert.equal(demoBeatKeyboardStepTargetIndex(2, 1, 6), 3);
     assert.equal(demoBeatKeyboardStepTargetIndex(0, -1, 6), null);
+    const landingStops = demoLandingScrollStopsDedupe([
+      { kind: "hero", scrollY: 0 },
+      { kind: "preHandoff", scrollY: 10 },
+      { kind: "beat", scrollY: 400, beatIndex: 0 },
+      { kind: "beat", scrollY: 820, beatIndex: 1 },
+      { kind: "confirmedHold", scrollY: 2800 },
+      { kind: "schematic", scrollY: 2900 },
+      { kind: "assembly", scrollY: 3400 },
+      { kind: "footer", scrollY: 4000 },
+    ]);
+    assert.equal(landingStops.length, 7);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 0, 1), 1);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 400, 1), 2);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 2800, 1), 4);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 4000, 1), null);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 3400, -1), 4);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 820, -1), 1);
+    assert.equal(demoLandingScrollTargetY(500, 120, 56), 564);
     assert.equal(demoBeatAlignIndexRespectsDirection(3, 2, 1), false);
     assert.equal(demoBeatAlignIndexRespectsDirection(3, 4, 1), true);
     assert.equal(demoInBeatSnapChapter(400, 480, 420, beatCount), true);

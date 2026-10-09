@@ -32,9 +32,12 @@ import {
   demoBeatTrackAlignIndexFromScroll,
   demoInBeatSnapChapter,
   demoShouldRunBeatAlignOnScrollEnd,
-  demoBeatKeyboardStepTargetIndex,
   demoBeatAlignIndexRespectsDirection,
+  demoLandingScrollStopStepTargetIndex,
+  demoLandingScrollStopsDedupe,
+  demoLandingWheelCapRegion,
   type DemoBeatScrollInputKind,
+  type DemoLandingScrollStop,
   workflowScrubPreHandoffSnapRenderDeltas,
 } from "@/lib/ui/landing-demo";
 
@@ -230,6 +233,7 @@ export function LandingDemoScrub({
         beatTrackHeight,
         beatCount,
         handoffLinearStart,
+        viewportWidth(),
       );
       const beatTrackIndex = demoBeatTrackIndexFromScroll(
         scrolled,
@@ -308,6 +312,7 @@ export function LandingDemoScrub({
 
     const onResize = () => {
       measureStickyTop();
+      frozenLandingStops = null;
       lastY = Number.NaN;
     };
 
@@ -324,9 +329,13 @@ export function LandingDemoScrub({
     let lastUserScrollDir: -1 | 0 | 1 = 0;
     let lastInputKind: DemoBeatScrollInputKind = "none";
     let skipNextScrollEndAlign = false;
+    let programmaticScrollUntil = 0;
     let touchStartClientY = 0;
     let touchLastClientY = 0;
     let touchNetFingerDelta = 0;
+    let touchStepToken = 0;
+    let touchStepStartScrollY = 0;
+    const viewportWidth = () => window.innerWidth;
 
     const readBeatLayout = () => {
       measureLayout();
@@ -351,6 +360,17 @@ export function LandingDemoScrub({
       };
     };
 
+    const readPageScrollY = () => {
+      const root = findPageScrollRoot(section);
+      const windowY = readWindowScrollY();
+      const rootY = root?.scrollTop ?? 0;
+      const visualPageTop = readVisualPageTop();
+      const parkedRoot = Boolean(root) && demoParkedNestedRoot(windowY, rootY, visualPageTop);
+      return parkedRoot || !root
+        ? demoPickScrollY(windowY, 0, visualPageTop)
+        : Math.max(0, rootY);
+    };
+
     const scrollByBeatDelta = (delta: number) => {
       if (Math.abs(delta) < 0.5) {
         return;
@@ -365,6 +385,7 @@ export function LandingDemoScrub({
         : Math.max(0, rootY);
       lastUserScrollDir = delta > 0 ? 1 : -1;
       skipNextScrollEndAlign = true;
+      programmaticScrollUntil = performance.now() + 520;
       window.scrollTo({ top: Math.max(0, scrollY + delta), left: 0, behavior: "auto" });
       if (root && !parkedRoot) {
         root.scrollTop = Math.max(0, root.scrollTop + delta);
@@ -373,26 +394,127 @@ export function LandingDemoScrub({
       apply();
     };
 
-    const scrollToBeatIndex = (beatTracks: HTMLElement[], index: number) => {
-      const track = beatTracks[index];
-      if (!track) {
+    const scrollToAbsoluteY = (targetY: number) => {
+      const scrollY = readPageScrollY();
+      scrollByBeatDelta(targetY - scrollY);
+    };
+
+    const scrollToLandingStop = (stop: DemoLandingScrollStop) => {
+      if (stop.kind === "schematic") {
+        document.getElementById("machine-model")?.scrollIntoView({ block: "start", behavior: "auto" });
         return;
       }
-      const delta = demoBeatTrackSnapAlignmentDeltaDirected(
-        track.getBoundingClientRect().top,
-        layout.stickyTop,
+      if (stop.kind === "assembly") {
+        document.getElementById("cad-ingest")?.scrollIntoView({ block: "start", behavior: "auto" });
+        return;
+      }
+      scrollToAbsoluteY(stop.scrollY);
+    };
+
+    const scrollStopYFromLayout = (el: HTMLElement) => {
+      return demoOffsetInDocument(el).y - layout.stickyTop;
+    };
+
+    let frozenLandingStops: DemoLandingScrollStop[] | null = null;
+
+    const buildLandingScrollStops = (): DemoLandingScrollStop[] => {
+      measureLayout();
+      const stops: DemoLandingScrollStop[] = [{ kind: "hero", scrollY: 0 }];
+
+      const preSnaps = section.querySelectorAll<HTMLElement>(".landing-demo-scrub-snap");
+      for (const el of preSnaps) {
+        stops.push({
+          kind: "preHandoff",
+          scrollY: scrollStopYFromLayout(el),
+        });
+      }
+
+      const beatTracks = [...section.querySelectorAll<HTMLElement>(".landing-demo-beat-track")];
+      beatTracks.forEach((track, beatIndex) => {
+        stops.push({
+          kind: "beat",
+          beatIndex,
+          scrollY: scrollStopYFromLayout(track),
+        });
+      });
+
+      const pin = pinRef.current;
+      const pinHeight = pin?.offsetHeight ?? layout.pinHeight;
+      const sectionDocY = demoOffsetInDocument(section).y;
+      stops.push({
+        kind: "confirmedHold",
+        scrollY: sectionDocY + Math.max(0, layout.sectionHeight - pinHeight) - layout.stickyTop,
+      });
+
+      const schematic = document.getElementById("machine-model");
+      const assembly = document.getElementById("cad-ingest");
+      const footer = document.querySelector<HTMLElement>(".landing-site-footer");
+      const maxY = Math.max(
         0,
-        20,
+        (document.scrollingElement?.scrollHeight ?? 0) - window.innerHeight,
       );
-      if (delta === null) {
-        return;
+      const clampPost = (y: number) => Math.min(Math.max(0, y), maxY);
+      if (schematic) {
+        stops.push({
+          kind: "schematic",
+          scrollY: clampPost(scrollStopYFromLayout(schematic)),
+        });
       }
-      scrollByBeatDelta(delta);
+      if (assembly) {
+        stops.push({
+          kind: "assembly",
+          scrollY: clampPost(scrollStopYFromLayout(assembly)),
+        });
+      }
+      const merged = demoLandingScrollStopsDedupe(stops);
+      if (footer) {
+        merged.push({ kind: "footer", scrollY: maxY });
+      }
+      const sorted = merged.sort((a, b) => a.scrollY - b.scrollY);
+      section.dataset.landingStopRail = sorted
+        .map((stop) => `${stop.kind}:${Math.round(stop.scrollY)}`)
+        .join("|");
+      return sorted;
+    };
+
+    const collectLandingScrollStops = (): DemoLandingScrollStop[] => {
+      if (!frozenLandingStops) {
+        frozenLandingStops = buildLandingScrollStops();
+      }
+      return frozenLandingStops;
+    };
+
+    const scrubEndScrollY = () => {
+      const hold = collectLandingScrollStops().find((stop) => stop.kind === "confirmedHold");
+      return hold?.scrollY ?? 0;
+    };
+
+    const stepLandingScrollStop = (direction: -1 | 1, inputKind: DemoBeatScrollInputKind) => {
+      const stops = collectLandingScrollStops();
+      if (stops.length < 2) {
+        return false;
+      }
+      const scrollY = readWindowScrollY();
+      const footerY = stops.find((s) => s.kind === "footer")?.scrollY ?? scrollY;
+      if (!demoLandingWheelCapRegion(scrollY, scrubEndScrollY(), footerY)) {
+        return false;
+      }
+      const targetIndex = demoLandingScrollStopStepTargetIndex(stops, scrollY, direction);
+      if (targetIndex === null) {
+        return false;
+      }
+      lastInputKind = inputKind;
+      lastUserScrollDir = direction;
+      scrollToLandingStop(stops[targetIndex]);
+      return true;
     };
 
     const alignBeatSnap = () => {
       if (snapInFlight || document.hidden || skipNextScrollEndAlign) {
         skipNextScrollEndAlign = false;
+        return;
+      }
+      if (performance.now() < programmaticScrollUntil) {
         return;
       }
       if (!demoShouldRunBeatAlignOnScrollEnd(lastInputKind)) {
@@ -475,17 +597,26 @@ export function LandingDemoScrub({
     };
 
     const onWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) >= 0.5) {
-        lastInputKind = "wheel";
-        lastUserScrollDir = event.deltaY > 0 ? 1 : -1;
+      if (Math.abs(event.deltaY) < 0.5) {
+        return;
       }
+      const direction = event.deltaY > 0 ? 1 : -1;
+      if (!stepLandingScrollStop(direction, "wheel")) {
+        lastInputKind = "wheel";
+        lastUserScrollDir = direction;
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
     };
 
     const onTouchStart = (event: TouchEvent) => {
       lastInputKind = "touch";
+      touchStepToken += 1;
       touchStartClientY = event.touches[0]?.clientY ?? 0;
       touchLastClientY = touchStartClientY;
       touchNetFingerDelta = 0;
+      touchStepStartScrollY = readPageScrollY();
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -499,9 +630,44 @@ export function LandingDemoScrub({
     };
 
     const onTouchEnd = () => {
-      if (Math.abs(touchNetFingerDelta) >= 4) {
-        lastUserScrollDir = touchNetFingerDelta < 0 ? 1 : -1;
+      const net = touchNetFingerDelta;
+      touchNetFingerDelta = 0;
+      if (Math.abs(net) < 10) {
+        return;
       }
+      const direction = net < 0 ? 1 : -1;
+      lastUserScrollDir = direction;
+      lastInputKind = "touch";
+      if (viewportWidth() >= 900) {
+        return;
+      }
+      const token = touchStepToken;
+      const startY = touchStepStartScrollY;
+      window.setTimeout(() => {
+        if (token !== touchStepToken || performance.now() < programmaticScrollUntil) {
+          return;
+        }
+        const settledY = readPageScrollY();
+        if (direction > 0 && settledY < startY - 12) {
+          return;
+        }
+        if (direction < 0 && settledY > startY + 12) {
+          return;
+        }
+        const beforeStep = settledY;
+        if (!stepLandingScrollStop(direction, "touch")) {
+          return;
+        }
+        window.setTimeout(() => {
+          const afterStep = readPageScrollY();
+          if (direction > 0 && afterStep < beforeStep - 8) {
+            scrollByBeatDelta(beforeStep - afterStep);
+          }
+          if (direction < 0 && afterStep > beforeStep + 8) {
+            scrollByBeatDelta(beforeStep - afterStep);
+          }
+        }, 60);
+      }, 300);
     };
 
     const onPointerDown = () => {
@@ -512,51 +678,22 @@ export function LandingDemoScrub({
       if (event.key !== "PageDown" && event.key !== "PageUp") {
         return;
       }
-      const {
-        preHandoffHeight,
-        beatTracks,
-        beatTrackHeight,
-        beatCount,
-        scrolled,
-        inBeatChapter,
-      } = readBeatLayout();
-      const activeStatus = section.dataset.activeQuoteStatus ?? "";
-      const statusIndex = HANDOFF_BEAT_STATUSES.indexOf(
-        activeStatus as (typeof HANDOFF_BEAT_STATUSES)[number],
-      );
-      const onHandoffBeat =
-        beatCount > 0 && (inBeatChapter || (statusIndex >= 0 && statusIndex < beatCount));
-      if (!onHandoffBeat) {
-        return;
-      }
       const direction = event.key === "PageDown" ? 1 : -1;
-      lastInputKind = "keyboard";
-      lastUserScrollDir = direction;
-      const currentIndex =
-        statusIndex >= 0
-          ? statusIndex
-          : demoBeatTrackIndexFromScroll(
-              scrolled,
-              preHandoffHeight,
-              beatTrackHeight,
-              beatCount,
-            );
-      const targetIndex = demoBeatKeyboardStepTargetIndex(currentIndex, direction, beatCount);
-      if (targetIndex === null) {
+      if (!stepLandingScrollStop(direction, "keyboard")) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
-      scrollToBeatIndex(beatTracks, targetIndex);
     };
 
     measureStickyTop();
     apply();
+    frozenLandingStops = buildLandingScrollStops();
     frame = window.requestAnimationFrame(tick);
 
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
@@ -565,6 +702,12 @@ export function LandingDemoScrub({
     window.addEventListener("scrollend", onScrollEnd, { passive: true });
     let scrollEndFallback = 0;
     const onScrollForSnap = () => {
+      if (performance.now() < programmaticScrollUntil) {
+        return;
+      }
+      if (!demoShouldRunBeatAlignOnScrollEnd(lastInputKind)) {
+        return;
+      }
       window.clearTimeout(scrollEndFallback);
       scrollEndFallback = window.setTimeout(onScrollEnd, 180);
     };
@@ -573,7 +716,6 @@ export function LandingDemoScrub({
       window.addEventListener("scroll", onScrollForSnap, { passive: true });
     }
     window.visualViewport?.addEventListener("resize", onResize, { passive: true });
-    window.visualViewport?.addEventListener("scroll", onResize, { passive: true });
 
     return () => {
       running = false;
@@ -591,7 +733,6 @@ export function LandingDemoScrub({
       }
       window.clearTimeout(scrollEndFallback);
       window.visualViewport?.removeEventListener("resize", onResize);
-      window.visualViewport?.removeEventListener("scroll", onResize);
       if (snapFrame) {
         window.cancelAnimationFrame(snapFrame);
       }

@@ -27,6 +27,20 @@ export const DEMO_BEAT_TRACK_SVH_PHONE = 56;
 
 export const DEMO_SCRUB_END_HOLD = 0.14;
 
+/** Shorter post-Confirmed hold on narrow viewports so one medium swipe can exit. */
+export function demoScrubEndHoldFraction(viewportWidth: number) {
+  if (viewportWidth <= 360) {
+    return 0.042;
+  }
+  if (viewportWidth <= 420) {
+    return 0.055;
+  }
+  if (viewportWidth <= 640) {
+    return 0.09;
+  }
+  return DEMO_SCRUB_END_HOLD;
+}
+
 export type DemoBeat =
   | {
       at: number;
@@ -264,6 +278,7 @@ export function demoSectionScrollProgress(
   sectionHeight: number,
   pinHeight: number,
   stickyTop = 0,
+  viewportWidth = 1280,
 ) {
   const scrollable = sectionHeight - pinHeight;
   if (scrollable <= 0) {
@@ -271,7 +286,7 @@ export function demoSectionScrollProgress(
   }
   const scrolled = stickyTop - sectionTop;
   const raw = clampDemoScrollProgress(scrolled / scrollable);
-  const active = 1 - DEMO_SCRUB_END_HOLD;
+  const active = 1 - demoScrubEndHoldFraction(viewportWidth);
   if (raw >= active) {
     return 1;
   }
@@ -424,6 +439,16 @@ export function demoOffsetInDocument(el: HTMLElement) {
     y += node.offsetTop;
   }
   return { x, y };
+}
+
+/** Document Y for an element; stable while the window scrolls (unlike offsetParent when pins go fixed). */
+/** Scroll Y that aligns an element's top edge with the sticky pin rail (stable at any page scroll). */
+export function demoLandingScrollTargetY(
+  pageScrollY: number,
+  elementViewportTop: number,
+  stickyTop: number,
+) {
+  return pageScrollY + elementViewportTop - stickyTop;
 }
 
 function firstOemAt(beats: readonly DemoBeat[]) {
@@ -772,9 +797,9 @@ export function demoBeatTrackAlignIndexFromScroll(
  */
 export type DemoBeatScrollInputKind = "wheel" | "touch" | "keyboard" | "click" | "none";
 
-/** Beat-region scrollend aligner runs only for inertial pointer input — not keyboard or focus clicks. */
-export function demoShouldRunBeatAlignOnScrollEnd(kind: DemoBeatScrollInputKind) {
-  return kind === "wheel" || kind === "touch";
+/** Beat-region scrollend aligner (disabled — gesture-step owner handles keyboard/wheel/touch). */
+export function demoShouldRunBeatAlignOnScrollEnd(_kind: DemoBeatScrollInputKind) {
+  return false;
 }
 
 /** Reject align targets that would undo the user's last beat step. */
@@ -805,6 +830,77 @@ export function demoBeatKeyboardStepTargetIndex(
     return null;
   }
   return next;
+}
+
+export type DemoLandingScrollStopKind =
+  | "hero"
+  | "preHandoff"
+  | "beat"
+  | "confirmedHold"
+  | "schematic"
+  | "assembly"
+  | "footer";
+
+export type DemoLandingScrollStop = {
+  kind: DemoLandingScrollStopKind;
+  scrollY: number;
+  beatIndex?: number;
+};
+
+/** Merge stops that land on the same rail within a few pixels (keep the later chapter). */
+export function demoLandingScrollStopsDedupe(
+  stops: readonly DemoLandingScrollStop[],
+  minGapPx = 28,
+): DemoLandingScrollStop[] {
+  if (stops.length === 0) {
+    return [];
+  }
+  const sorted = [...stops].sort((a, b) => a.scrollY - b.scrollY);
+  const out: DemoLandingScrollStop[] = [];
+  for (const stop of sorted) {
+    const prev = out[out.length - 1];
+    if (prev && stop.scrollY - prev.scrollY < minGapPx) {
+      out[out.length - 1] = stop;
+      continue;
+    }
+    out.push(stop);
+  }
+  return out;
+}
+
+/** Next/previous landing stop for keyboard or capped wheel (epsilon avoids re-selecting current). */
+export function demoLandingScrollStopStepTargetIndex(
+  stops: readonly DemoLandingScrollStop[],
+  scrollY: number,
+  direction: -1 | 1,
+  epsilonPx = 24,
+): number | null {
+  if (stops.length === 0) {
+    return null;
+  }
+  if (direction > 0) {
+    for (let i = 0; i < stops.length; i += 1) {
+      if (stops[i].scrollY > scrollY + epsilonPx) {
+        return i;
+      }
+    }
+    return null;
+  }
+  for (let i = stops.length - 1; i >= 0; i -= 1) {
+    if (stops[i].scrollY < scrollY - epsilonPx) {
+      return i;
+    }
+  }
+  return null;
+}
+
+/** True while scroll is inside the scrub chapter (pre-handoff through confirmed end-hold). */
+export function demoLandingWheelCapRegion(
+  scrollY: number,
+  scrubEndScrollY: number,
+  footerScrollY: number,
+) {
+  return scrollY <= footerScrollY + 32 && scrollY >= -8 && scrubEndScrollY > 0;
 }
 
 export function demoBeatTrackSnapAlignmentDeltaDirected(
@@ -863,11 +959,12 @@ export function demoBeatTrackScrubLinear(
   beatTrackHeight: number,
   beatCount: number,
   handoffLinearStart = workflowHandoffLinearStart(),
+  viewportWidth = 1280,
 ) {
   if (scrollable <= 0) {
     return scrolled > 0 ? 1 : 0;
   }
-  const active = 1 - DEMO_SCRUB_END_HOLD;
+  const active = 1 - demoScrubEndHoldFraction(viewportWidth);
   const raw = clampDemoScrollProgress(scrolled / scrollable);
   if (raw >= active) {
     return 1;
