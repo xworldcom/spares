@@ -80,10 +80,22 @@ async function phoneGate(width, label) {
     const heroY = await page.evaluate(() => window.scrollY);
     log(`${label}-hero-escape`, heroY <= 80, `scrollY=${heroY}`);
 
+    const beforeFirst = await page.evaluate(() => window.scrollY);
     await mediumTouchSwipe(page, viewport, 1, null, `${label}-first-swipe`);
     await waitScrubSettle(page, 2000);
     const afterFirst = await page.evaluate(() => window.scrollY);
-    log(`${label}-hero-first-swipe`, afterFirst >= 0 && afterFirst < 400, `scrollY=${afterFirst}`);
+    const rail = await page.evaluate(
+      () => document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "",
+    );
+    const firstY =
+      Number(rail.match(/preHandoff:(\d+)/)?.[1]) ||
+      Number(rail.match(/beat:(\d+)/)?.[1]) ||
+      1200;
+    log(
+      `${label}-hero-first-swipe`,
+      afterFirst > beforeFirst && afterFirst <= firstY + 48,
+      `${beforeFirst}→${afterFirst} (rail≤${firstY})`,
+    );
   } catch (e) {
     log(`${label}-script-error`, false, String(e).split("\n")[0]);
   } finally {
