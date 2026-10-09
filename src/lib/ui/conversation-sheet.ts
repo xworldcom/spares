@@ -16,8 +16,8 @@ export function initialConversationSheetSnap(
   if (openForUnread) {
     return "full";
   }
-  // Chunk 2: resting closed = header + peek of thread; composer below tab bar.
-  return "peek";
+  // Chunk 1: resting closed = Kevin intermediate (composer visible above tabs).
+  return "reply";
 }
 
 /** Sheet heights as CSS lengths — keep in sync with globals.css. */
@@ -34,36 +34,6 @@ export const CONVERSATION_SHEET_FULL_H =
 
 export const REPLY_DETENT_PX = 32;
 export const PEEK_LAYOUT_BAND_PX = 4;
-/** Minimum height band between reply and full so phase B is a real drag segment. */
-export const MIN_PHASE_B_BAND_PX = 56;
-/** Small flicks from peek must not seat the composer; require a real pull. */
-export const COMPOSER_REVEAL_PULL_PX = 48;
-
-export type ConversationSheetDetents = {
-  peekH: number;
-  replyH: number;
-  fullH: number;
-};
-
-/** Keep reply strictly between peek+composer and full on short viewports. */
-export function resolveConversationSheetDetents(
-  peekH: number,
-  replyH: number,
-  fullH: number,
-  composerH: number,
-): ConversationSheetDetents {
-  const peek = Math.round(peekH);
-  const full = Math.round(fullH);
-  const minReply = Math.round(peek + composerH + 8);
-  const maxReply = Math.max(minReply, full - MIN_PHASE_B_BAND_PX);
-  let reply = Math.round(replyH);
-  reply = Math.max(reply, minReply);
-  reply = Math.min(reply, maxReply);
-  if (reply >= full) {
-    reply = Math.max(minReply, full - MIN_PHASE_B_BAND_PX);
-  }
-  return { peekH: peek, replyH: reply, fullH: full };
-}
 
 export type ConversationSheetMotion = {
   phaseA: number;
@@ -72,23 +42,18 @@ export type ConversationSheetMotion = {
 
 export type ConversationSheetGesture = "expanding" | "collapsing";
 
-/** Phase A = composer seat (peek→reply); phase B = history roll-up (reply→full). */
+/** Roll-up progress: intermediate (reply) → full. Composer stays glued (phaseA pinned). */
 export function conversationSheetMotionFromHeight(
   heightPx: number,
-  peekH: number,
+  _peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetMotion {
-  if (heightPx <= peekH) {
-    return { phaseA: 0, phaseB: 0 };
+  if (heightPx <= replyH) {
+    return { phaseA: 1, phaseB: 0 };
   }
   if (heightPx >= fullH) {
     return { phaseA: 1, phaseB: 1 };
-  }
-  if (heightPx <= replyH) {
-    const span = Math.max(replyH - peekH, 1);
-    const phaseA = (heightPx - peekH) / span;
-    return { phaseA: Math.min(1, Math.max(0, phaseA)), phaseB: 0 };
   }
   const span = Math.max(fullH - replyH, 1);
   const phaseB = (heightPx - replyH) / span;
@@ -97,23 +62,18 @@ export function conversationSheetMotionFromHeight(
 
 export function conversationSheetSnapFromHeight(
   heightPx: number,
-  peekH: number,
+  _peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetSnap {
-  const { phaseA, phaseB } = conversationSheetMotionFromHeight(
-    heightPx,
-    peekH,
-    replyH,
-    fullH,
-  );
-  if (phaseA < 1 && phaseB === 0) {
-    return phaseA < 0.35 ? "peek" : "reply";
+  if (heightPx >= fullH - 2) {
+    return "full";
   }
-  if (phaseB < 1) {
+  if (heightPx <= replyH + PEEK_LAYOUT_BAND_PX) {
     return "reply";
   }
-  return "full";
+  const mid = (replyH + fullH) / 2;
+  return heightPx < mid ? "reply" : "full";
 }
 
 export function chromeSnapForHeight(
@@ -123,29 +83,15 @@ export function chromeSnapForHeight(
   fullH: number,
   opts?: { collapsing?: boolean; expanding?: boolean },
 ): ConversationSheetSnap {
-  const peekBand = peekH + PEEK_LAYOUT_BAND_PX;
-  const midPeekReply = (peekH + replyH) / 2;
   const midReplyFull = (replyH + fullH) / 2;
-  if (height <= peekBand) {
-    return "peek";
+  if (height <= replyH + PEEK_LAYOUT_BAND_PX) {
+    return "reply";
   }
   if (opts?.collapsing) {
-    if (height < midReplyFull) {
-      return "reply";
-    }
-    return "full";
+    return height < midReplyFull ? "reply" : "full";
   }
   if (opts?.expanding) {
-    if (height < midPeekReply) {
-      return "peek";
-    }
-    if (height < midReplyFull) {
-      return "reply";
-    }
-    return "full";
-  }
-  if (height < midPeekReply) {
-    return "peek";
+    return height < midReplyFull ? "reply" : "full";
   }
   if (height < midReplyFull) {
     return "reply";
@@ -168,6 +114,6 @@ export function conversationSheetDragHeight({
   replyH: number;
   fullH: number;
 }): number {
-  void from;
-  return Math.max(peekH, Math.min(fullH, startH - dy));
+  const floor = from === "peek" ? peekH : replyH;
+  return Math.max(floor, Math.min(fullH, startH - dy));
 }

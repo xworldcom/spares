@@ -13,7 +13,6 @@ import {
   conversationSheetMotionFromHeight,
   conversationSheetSnapFromHeight,
   initialConversationSheetSnap,
-  resolveConversationSheetDetents,
 } from "./conversation-sheet.ts";
 
 describe("conversation sheet peek band", () => {
@@ -37,8 +36,8 @@ describe("conversation sheet startup snap", () => {
     assert.equal(initialConversationSheetSnap(false, true), "out");
   });
 
-  it("starts at closed peek on phone", () => {
-    assert.equal(initialConversationSheetSnap(true, false), "peek");
+  it("starts at Kevin intermediate (reply) on phone", () => {
+    assert.equal(initialConversationSheetSnap(true, false), "reply");
   });
 
   it("starts at full on phone when the thread is unread", () => {
@@ -50,52 +49,10 @@ describe("conversation sheet startup snap", () => {
   });
 });
 
-const heights = { peekH: 92, replyH: 280, fullH: 700 };
+const heights = { peekH: 280, replyH: 280, fullH: 700 };
 
-describe("conversation sheet detents on short viewports", () => {
-  it("keeps reply below full with a phase-B band", () => {
-    const detents = resolveConversationSheetDetents(190, 469, 502, 67);
-    assert.ok(detents.replyH < detents.fullH);
-    assert.ok(detents.replyH >= 190 + 67 + 8);
-    assert.ok(detents.fullH - detents.replyH >= 56);
-  });
-
-  it("clamps an oversized measured reply onto the short screen", () => {
-    const detents = resolveConversationSheetDetents(144, 438, 438, 67);
-    assert.equal(detents.fullH, 438);
-    assert.ok(detents.replyH < 438);
-    assert.ok(detents.replyH >= 144 + 67);
-  });
-});
-
-describe("conversation sheet two-phase motion", () => {
-  it("phase A seats the composer before roll-up", () => {
-    assert.deepEqual(
-      conversationSheetMotionFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
-      { phaseA: 0, phaseB: 0 },
-    );
-    assert.deepEqual(
-      conversationSheetMotionFromHeight(186, heights.peekH, heights.replyH, heights.fullH),
-      { phaseA: 0.5, phaseB: 0 },
-    );
-    assert.deepEqual(
-      conversationSheetMotionFromHeight(280, heights.peekH, heights.replyH, heights.fullH),
-      { phaseA: 1, phaseB: 0 },
-    );
-  });
-
-  it("phase B rolls history after reply detent", () => {
-    assert.deepEqual(
-      conversationSheetMotionFromHeight(490, heights.peekH, heights.replyH, heights.fullH),
-      { phaseA: 1, phaseB: 0.5 },
-    );
-    assert.deepEqual(
-      conversationSheetMotionFromHeight(700, heights.peekH, heights.replyH, heights.fullH),
-      { phaseA: 1, phaseB: 1 },
-    );
-  });
-
-  it("grows continuously from reply toward full", () => {
+describe("conversation sheet roll-up", () => {
+  it("grows continuously from intermediate toward full", () => {
     assert.equal(
       conversationSheetDragHeight({
         from: "reply",
@@ -107,29 +64,43 @@ describe("conversation sheet two-phase motion", () => {
     );
     assert.equal(
       conversationSheetDragHeight({
-        from: "peek",
-        startH: heights.peekH,
-        dy: -40,
+        from: "reply",
+        startH: heights.replyH,
+        dy: -(heights.fullH - heights.replyH),
         ...heights,
       }),
-      132,
+      heights.fullH,
     );
   });
 
-  it("maps live height to peek / reply / full chrome while dragging", () => {
-    assert.equal(chromeSnapForHeight(92, heights.peekH, heights.replyH, heights.fullH), "peek");
+  it("maps live height to reply / full chrome while dragging", () => {
     assert.equal(chromeSnapForHeight(280, heights.peekH, heights.replyH, heights.fullH), "reply");
     assert.equal(chromeSnapForHeight(500, heights.peekH, heights.replyH, heights.fullH), "full");
   });
 
-  it("derives snap labels from height without drag hysteresis", () => {
-    assert.equal(
-      conversationSheetSnapFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
-      "peek",
+  it("maps height to roll-up motion (composer glued, phaseA pinned)", () => {
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(280, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 1, phaseB: 0 },
     );
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(490, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 1, phaseB: 0.5 },
+    );
+    assert.deepEqual(
+      conversationSheetMotionFromHeight(700, heights.peekH, heights.replyH, heights.fullH),
+      { phaseA: 1, phaseB: 1 },
+    );
+  });
+
+  it("derives snap labels from height without drag hysteresis", () => {
     assert.equal(
       conversationSheetSnapFromHeight(280, heights.peekH, heights.replyH, heights.fullH),
       "reply",
+    );
+    assert.equal(
+      conversationSheetSnapFromHeight(500, heights.peekH, heights.replyH, heights.fullH),
+      "full",
     );
     assert.equal(
       conversationSheetSnapFromHeight(700, heights.peekH, heights.replyH, heights.fullH),
