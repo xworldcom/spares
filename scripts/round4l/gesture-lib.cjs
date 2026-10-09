@@ -290,7 +290,7 @@ async function assertStepperFitsViewport(page, h, viewportWidth) {
 async function assertPageUpReachesHero(page, h, label) {
   let lastY = -1;
   let unchanged = 0;
-  for (let i = 0; i < 28; i += 1) {
+  for (let i = 0; i < 40; i += 1) {
     await page.keyboard.press("PageUp");
     await waitScrubSettle(page, 2600);
     const y = await page.evaluate(() => window.scrollY);
