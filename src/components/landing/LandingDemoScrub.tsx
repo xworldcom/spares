@@ -335,6 +335,8 @@ export function LandingDemoScrub({
     let touchNetFingerDelta = 0;
     let touchStepToken = 0;
     let touchStepStartScrollY = 0;
+    let wheelInertiaAcc = 0;
+    let wheelIdleTimer = 0;
     const viewportWidth = () => window.innerWidth;
 
     const readBeatLayout = () => {
@@ -601,13 +603,28 @@ export function LandingDemoScrub({
         return;
       }
       const direction = event.deltaY > 0 ? 1 : -1;
-      if (!stepLandingScrollStop(direction, "wheel")) {
-        lastInputKind = "wheel";
-        lastUserScrollDir = direction;
+      lastInputKind = "wheel";
+      lastUserScrollDir = direction;
+      const scrollY = readWindowScrollY();
+      const footerY =
+        collectLandingScrollStops().find((stop) => stop.kind === "footer")?.scrollY ?? scrollY;
+      if (!demoLandingWheelCapRegion(scrollY, scrubEndScrollY(), footerY)) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
+      const { beatTrackHeight } = readBeatLayout();
+      const threshold = Math.max(32, beatTrackHeight * 0.38);
+      wheelInertiaAcc += event.deltaY;
+      window.clearTimeout(wheelIdleTimer);
+      wheelIdleTimer = window.setTimeout(() => {
+        wheelInertiaAcc = 0;
+      }, 220);
+      if (Math.abs(wheelInertiaAcc) < threshold) {
+        return;
+      }
+      wheelInertiaAcc = 0;
+      stepLandingScrollStop(direction, "wheel");
     };
 
     const onTouchStart = (event: TouchEvent) => {
