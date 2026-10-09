@@ -78,7 +78,7 @@ export function ConversationSheet({
         "conversation-sheet",
         "snap-sheet",
         stageSnap === "full" ? "is-full" : "",
-        stageSnap === "reply" ? "is-reply" : "",
+        stageSnap === "reply" || (overlayMobile && stageSnap === "out") ? "is-reply" : "",
         stageSnap === "peek" ? "is-peek" : "",
         stageSnap === "out" ? "is-out" : "",
         dragging ? "is-dragging" : "",

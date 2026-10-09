@@ -355,6 +355,7 @@ export function QuoteActivityFeed({
               return (
                 <li
                   key={activity.id}
+                  data-activity-id={activity.id}
                   className={enteringIds.has(activity.id) ? "imsg-system imsg-enter" : "imsg-system"}
                 >
                   <span className="imsg-chip">
@@ -386,6 +387,7 @@ export function QuoteActivityFeed({
             return (
               <li
                 key={activity.id}
+                data-activity-id={activity.id}
                 className={rowClass}
                 data-unread-anchor={index === firstUnreadIndex ? "true" : undefined}
                 data-has-unread-divider={index === firstUnreadIndex ? "true" : undefined}

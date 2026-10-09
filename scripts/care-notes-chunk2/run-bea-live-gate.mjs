@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const beaSd = readFileSync(join(__dirname, "bea-sd.js"), "utf8");
+const beaSd = readFileSync(join(__dirname, "bea-sd6.js"), "utf8");
 
 const baseUrl = (process.argv[2] || "https://oee360.com").replace(/\/$/, "");
 const outDir = process.argv[3] || "/cursor/stores/self/media/care-notes-chunk2";
@@ -35,14 +35,15 @@ function gateFail(parsed, label) {
   return reasons.length ? `${label}: ${reasons.join("; ")}` : null;
 }
 
-function threadSnapshotsEqual(a, b) {
+function threadSnapshotsEqual(a, b, translateDeltaPx = 0) {
   if (!a || !b) return false;
   if (a.scrollTop !== b.scrollTop) return false;
-  const fa = a.first;
-  const fb = b.first;
-  if (!fa && !fb) return true;
-  if (!fa || !fb) return false;
-  return fa.idx === fb.idx && Math.abs(fa.top - fb.top) <= 1;
+  const la = a.latest;
+  const lb = b.latest;
+  if (!la && !lb) return true;
+  if (!la || !lb) return false;
+  if (la.id !== lb.id) return false;
+  return Math.abs(lb.top - la.top - translateDeltaPx) <= 2;
 }
 
 function assertThreadGate(before, afterSettle, afterHold, label, failures) {
@@ -123,21 +124,17 @@ async function prepareQuote(page, quoteId) {
 async function readThreadSnapshot(page) {
   return page.evaluate(() => {
     const body = document.querySelector(".imsg-thread--fill, .imsg-thread");
-    if (!(body instanceof HTMLElement)) {
-      return null;
-    }
-    const clip = body.getBoundingClientRect();
-    const items = [...body.querySelectorAll(":scope > li")];
-    let first = null;
-    for (let i = 0; i < items.length; i += 1) {
-      const row = items[i];
-      const r = row.getBoundingClientRect();
-      if (r.bottom > clip.top + 1 && r.top < clip.bottom - 1) {
-        first = { idx: i, top: Math.round(r.top) };
-        break;
-      }
-    }
-    return { scrollTop: body.scrollTop, first };
+    const rows = body?.querySelectorAll(":scope > li[data-activity-id]");
+    const latest = rows?.length ? rows[rows.length - 1] : null;
+    return {
+      scrollTop: body instanceof HTMLElement ? body.scrollTop : 0,
+      latest: latest
+        ? {
+            id: latest.getAttribute("data-activity-id"),
+            top: Math.round(latest.getBoundingClientRect().top),
+          }
+        : null,
+    };
   });
 }
 
@@ -164,21 +161,17 @@ async function injectCloseFullThreadGate(page, fromY, toY) {
     async ({ fromY, toY }) => {
       const body = document.querySelector(".imsg-thread--fill, .imsg-thread");
       const snap = () => {
-        if (!(body instanceof HTMLElement)) {
-          return null;
-        }
-        const clip = body.getBoundingClientRect();
-        const items = [...body.querySelectorAll(":scope > li")];
-        let first = null;
-        for (let i = 0; i < items.length; i += 1) {
-          const row = items[i];
-          const r = row.getBoundingClientRect();
-          if (r.bottom > clip.top + 1 && r.top < clip.bottom - 1) {
-            first = { idx: i, top: Math.round(r.top) };
-            break;
-          }
-        }
-        return { scrollTop: body.scrollTop, first };
+        const rows = body?.querySelectorAll(":scope > li[data-activity-id]");
+        const latest = rows?.length ? rows[rows.length - 1] : null;
+        return {
+          scrollTop: body instanceof HTMLElement ? body.scrollTop : 0,
+          latest: latest
+            ? {
+                id: latest.getAttribute("data-activity-id"),
+                top: Math.round(latest.getBoundingClientRect().top),
+              }
+            : null,
+        };
       };
       await window.SD(fromY, toY, 5, 80, false);
       const before = snap();
@@ -227,11 +220,21 @@ async function runScenario(page, cdp, quoteId, sc) {
   const meta = await prepareQuote(page, quoteId);
   let fromY = sc.fromY == null ? null : meta.grabY;
   let toY =
-    sc.name === "open-from-closed"
+    sc.name === "open-from-closed" || sc.name === "open-drag-from-closed"
       ? meta.grabY
       : sc.name === "close-full"
         ? meta.grabY + meta.closeMax
         : meta.grabY + Math.round(meta.closeMax * 0.55);
+  if (sc.name === "open-drag-from-closed") {
+    await injectRun(page, meta.grabY, meta.grabY + meta.closeMax, true);
+    await page.evaluate(beaSd);
+    const closedY = await page.evaluate(() => {
+      const h = document.querySelector(".snap-sheet-handle")?.getBoundingClientRect();
+      return h ? Math.round(h.y + h.height / 2) : null;
+    });
+    fromY = closedY;
+    toY = meta.grabY;
+  }
   let openFromY = null;
   if (sc.name === "open-from-closed") {
     await injectRun(page, meta.grabY, meta.grabY + meta.closeMax, true);
@@ -260,14 +263,14 @@ async function runScenario(page, cdp, quoteId, sc) {
     const grabY = box ? Math.round(box.y + box.height / 2) : 400;
     return { grabY, closeMax };
   });
-  let fromY2 = sc.fromY == null ? null : meta2.grabY;
+  let fromY2 = sc.fromY == null || sc.fromY === "closed" ? null : meta2.grabY;
   let toY2 =
-    sc.name === "open-from-closed"
+    sc.name === "open-from-closed" || sc.name === "open-drag-from-closed"
       ? meta2.grabY
       : sc.name === "close-full"
         ? meta2.grabY + meta2.closeMax
         : meta2.grabY + Math.round(meta2.closeMax * 0.55);
-  if (sc.name === "open-from-closed") {
+  if (sc.name === "open-from-closed" || sc.name === "open-drag-from-closed") {
     await injectRun(page, meta2.grabY, meta2.grabY + meta2.closeMax, true);
     await page.evaluate(beaSd);
     fromY2 = await page.evaluate(() => {
@@ -304,6 +307,7 @@ async function runViewport(width, height, label) {
     { name: "close-mid-release", fromY: "grab", release: false },
     { name: "close-full", fromY: "grab", release: true },
     { name: "open-from-closed", fromY: null, release: true },
+    { name: "open-drag-from-closed", fromY: "closed", release: true },
   ];
 
   const failures = [];
@@ -365,6 +369,12 @@ async function runViewport(width, height, label) {
     if (classFail.length) failures.push(`${label}/${sc.name} class: ${classFail.join("; ")}`);
     if (inj.parsed.badSteps.length !== cdpR.parsed.badSteps.length) {
       failures.push(`${label}/${sc.name}: inject/cdp badSteps mismatch`);
+    }
+    if (sc.name === "open-drag-from-closed") {
+      const snap = await page.evaluate(() => document.querySelector(".conversation-sheet")?.className ?? "");
+      if (!snap.includes("is-reply") || snap.includes("is-out")) {
+        failures.push(`${label}/${sc.name}: expected open is-reply without is-out, got ${snap}`);
+      }
     }
     log.runs.push({ scenario: sc.name, injectZ: inj.z, cdpZ: cdpR.z });
     console.log(`\n[${label}] ${sc.name}\nINJECT: ${inj.z}\nCDP: ${cdpR.z}`);

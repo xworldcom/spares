@@ -330,7 +330,8 @@ export function useSnapSheet({
     if (!card) {
       return;
     }
-    const max = drag.current.closeMax || lockCloseOffset();
+    const max = lockCloseOffset();
+    drag.current.closeMax = max;
     const ty = Math.max(0, Math.min(max, tyPx));
     card.setAttribute("data-close-translate", "");
     card.style.setProperty("--sheet-close-ty", `${Math.round(ty)}px`);
@@ -813,7 +814,31 @@ export function useSnapSheet({
     // Handle owns sheet motion immediately (incl. close from maxScroll pin). Body keeps
     // pending slop so thread scroll wins until edges / handle.
     if (sheet === "out") {
-      beginDrag(event, "out", false);
+      const max = lockCloseOffset();
+      setSheet("reply");
+      setOpen(true);
+      paintCloseTy(max);
+      drag.current = {
+        y: event.clientY,
+        on: true,
+        pending: false,
+        from: "reply",
+        startH:
+          cardRef.current?.getBoundingClientRect().height ??
+          heightForSnap("reply", cardRef.current),
+        moved: false,
+        samples: [{ t: performance.now(), y: event.clientY }],
+        gesture: null,
+        liveH: 0,
+        mode: "close",
+        startTy: max,
+        closeMax: max,
+        liveTy: max,
+      };
+      setDragging(true);
+      setDraggingClass(true);
+      cardRef.current?.classList.add("is-dragging");
+      event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
     if (sheet === "reply" && fromHandle) {
@@ -907,7 +932,11 @@ export function useSnapSheet({
     }
     recordSample(event.clientY);
     if (drag.current.mode === "close") {
-      if (dy < -DRAG_SLOP && drag.current.from === "reply") {
+      if (
+        dy < -DRAG_SLOP &&
+        drag.current.from === "reply" &&
+        drag.current.startTy <= 2
+      ) {
         drag.current.mode = "height";
         drag.current.gesture = "expanding";
         prepareThreadForSheetMotion("reply");
@@ -1099,6 +1128,10 @@ export function useSnapSheet({
       hide();
       return;
     }
+    if (sheet === "out") {
+      settleCloseTo("reply");
+      return;
+    }
     if (sheet === "full") {
       settleTo("reply");
     } else {
@@ -1111,7 +1144,11 @@ export function useSnapSheet({
       return;
     }
     steppedAtRef.current = performance.now();
-    settleTo(stepToward(sheet === "out" ? "reply" : sheet, "up"));
+    if (sheet === "out") {
+      settleCloseTo("reply");
+      return;
+    }
+    settleTo(stepToward(sheet, "up"));
   }
 
   const threadScrollLocked =
