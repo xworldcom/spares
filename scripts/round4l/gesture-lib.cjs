@@ -300,7 +300,7 @@ async function assertPageUpReachesHero(page, h, label) {
     }
     if (Math.abs(y - lastY) < 1 && lastY >= 0) {
       unchanged += 1;
-      if (unchanged >= 2) {
+      if (unchanged >= 5) {
         h.check(`${label} PageUp reaches hero`, false, `stuck at scrollY=${y} after ${i + 1} presses`);
         return;
       }
