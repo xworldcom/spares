@@ -62,8 +62,14 @@ async function desktopGate() {
     const monotonic = stops.every((y, i) => i === 0 || y >= stops[i - 1] - 2);
     log("desktop-pagedown-monotonic", monotonic, stops.join("→"));
 
-    for (let i = 0; i < 40; i += 1) {
-      if ((await readActiveQuoteStatus(page)) === "confirmed") break;
+    const rail = await page.evaluate(() => document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "");
+    const holdMatch = rail.match(/confirmedHold:(\d+)/);
+    const schMatch = rail.match(/schematic:(\d+)/);
+    const holdY = holdMatch ? Number(holdMatch[1]) : null;
+    const schY = schMatch ? Number(schMatch[1]) : null;
+    for (let i = 0; i < 48; i += 1) {
+      const y = await page.evaluate(() => window.scrollY);
+      if (holdY !== null && y >= holdY - 4) break;
       await page.keyboard.press("PageDown");
       await waitScrubSettle(page, 1600);
     }
@@ -71,17 +77,22 @@ async function desktopGate() {
     await page.keyboard.press("PageDown");
     await waitScrubSettle(page, 2000);
     const ySch = await page.evaluate(() => window.scrollY);
-    const rail = await page.evaluate(() => document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "");
-    const schMatch = rail.match(/schematic:(\d+)/);
-    const schY = schMatch ? Number(schMatch[1]) : null;
-    log("desktop-pagedown-schematic", schY !== null && ySch === schY && ySch > yHold + 40, {
-      yHold,
-      ySch,
-      schY,
-    });
+    log(
+      "desktop-pagedown-schematic",
+      holdY !== null &&
+        schY !== null &&
+        yHold >= holdY - 4 &&
+        ySch === schY &&
+        ySch > yHold + 40,
+      { yHold, holdY, ySch, schY },
+    );
 
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await waitScrubSettle(page, 1500);
+    for (let i = 0; i < 32; i += 1) {
+      const y = await page.evaluate(() => window.scrollY);
+      if (y <= 4) break;
+      await page.keyboard.press("PageUp");
+      await waitScrubSettle(page, 1800);
+    }
     const railStops = await page.evaluate(() => {
       const rail = document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "";
       return rail
@@ -108,8 +119,12 @@ async function desktopGate() {
     }
     log("desktop-rail-landed-y", railOk, { railStops: railStops.slice(0, 12), landedYs });
 
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await waitScrubSettle(page, 1500);
+    for (let i = 0; i < 32; i += 1) {
+      const y = await page.evaluate(() => window.scrollY);
+      if (y <= 4) break;
+      await page.keyboard.press("PageUp");
+      await waitScrubSettle(page, 1500);
+    }
     for (let i = 0; i < 40; i += 1) {
       if ((await readActiveQuoteStatus(page)) === "requested") break;
       await page.keyboard.press("PageDown");
