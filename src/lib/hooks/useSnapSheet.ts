@@ -179,7 +179,22 @@ function stepToward(
   if (direction === "up") {
     return STAGE_ORDER[Math.min(index + 1, STAGE_ORDER.length - 1)]!;
   }
+  if (from === "reply") {
+    return "out";
+  }
   return STAGE_ORDER[Math.max(index - 1, 0)]!;
+}
+
+function safeAreaBottomPx() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+  const probe = document.createElement("div");
+  probe.style.paddingBottom = "env(safe-area-inset-bottom)";
+  document.body.appendChild(probe);
+  const pb = Number.parseFloat(getComputedStyle(probe).paddingBottom);
+  document.body.removeChild(probe);
+  return Number.isFinite(pb) ? pb : 0;
 }
 
 function isSkipTarget(target: EventTarget | null) {
@@ -227,7 +242,12 @@ export function useSnapSheet({
     samples: [] as { t: number; y: number }[],
     gesture: null as ConversationSheetGesture | null,
     liveH: 0,
+    mode: null as "height" | "close" | null,
+    startTy: 0,
+    closeMax: 0,
+    liveTy: 0,
   });
+  const closeMaxRef = useRef(0);
   const dockedRef = useRef(true);
 
   function setThreadDockedState(docked: boolean) {
@@ -246,6 +266,75 @@ export function useSnapSheet({
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
+  }
+
+  function measureCloseOffsetPx(card: HTMLElement | null) {
+    if (!card) {
+      return remPx(4) + safeAreaBottomPx();
+    }
+    const composer = card.querySelector(".imsg-composer");
+    const composerH =
+      composer instanceof HTMLElement && composer.offsetHeight > 0
+        ? composer.offsetHeight
+        : remPx(4);
+    return Math.ceil(composerH + safeAreaBottomPx());
+  }
+
+  function lockCloseOffset() {
+    const card = cardRef.current;
+    const max = measureCloseOffsetPx(card instanceof HTMLElement ? card : null);
+    closeMaxRef.current = max;
+    drag.current.closeMax = max;
+    return max;
+  }
+
+  function readCloseTyPx(card: HTMLElement) {
+    const inline = card.style.getPropertyValue("--sheet-close-ty").trim();
+    if (inline.endsWith("px")) {
+      const parsed = Number.parseFloat(inline);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    const rest = getComputedStyle(card).getPropertyValue("--sheet-close-rest-ty").trim();
+    if (rest.endsWith("px")) {
+      const parsed = Number.parseFloat(rest);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return sheet === "out" ? closeMaxRef.current || lockCloseOffset() : 0;
+  }
+
+  function paintCloseTy(tyPx: number) {
+    const card = cardRef.current;
+    if (!card) {
+      return;
+    }
+    const max = drag.current.closeMax || lockCloseOffset();
+    const ty = Math.max(0, Math.min(max, tyPx));
+    card.setAttribute("data-close-translate", "");
+    card.style.setProperty("--sheet-close-ty", `${Math.round(ty)}px`);
+    drag.current.liveTy = ty;
+  }
+
+  function clearCloseTranslate(atSnap?: ConversationSheetSnap) {
+    const card = cardRef.current;
+    if (!card) {
+      return;
+    }
+    const snap = atSnap ?? sheet;
+    const max = closeMaxRef.current || lockCloseOffset();
+    card.removeAttribute("data-close-translate");
+    if (snap === "out") {
+      card.style.setProperty("--sheet-close-rest-ty", `${max}px`);
+      card.style.setProperty("--sheet-close-ty", `${max}px`);
+      drag.current.liveTy = max;
+      return;
+    }
+    card.style.removeProperty("--sheet-close-rest-ty");
+    card.style.setProperty("--sheet-close-ty", "0px");
+    drag.current.liveTy = 0;
   }
 
   function snapHeights() {
@@ -284,6 +373,9 @@ export function useSnapSheet({
 
   function prepareThreadForSheetMotion(from: SnapSheetSnap) {
     cardRef.current?.classList.add("is-dragging");
+    if (drag.current.mode === "close") {
+      return;
+    }
     resetThreadScrollForMotion(from);
   }
 
@@ -386,7 +478,8 @@ export function useSnapSheet({
     const inMotion =
       card.classList.contains("is-dragging") ||
       card.classList.contains("is-settling") ||
-      card.hasAttribute("data-motion-live");
+      card.hasAttribute("data-motion-live") ||
+      card.hasAttribute("data-close-translate");
     if (inMotion) {
       if (dockedRef.current) {
         body.scrollTop = 0;
@@ -478,6 +571,19 @@ export function useSnapSheet({
   }, [sheet, open, scrollBodySelector, cardRef]);
 
   useEffect(() => {
+    if (dragging || settling || desktopStage) {
+      return;
+    }
+    if (sheet === "out") {
+      clearCloseTranslate("out");
+      return;
+    }
+    if (sheet === "reply") {
+      clearCloseTranslate("reply");
+    }
+  }, [sheet, dragging, settling, desktopStage]);
+
+  useEffect(() => {
     if (dragging || settling || desktopStage || sheet === "out") {
       return;
     }
@@ -532,18 +638,65 @@ export function useSnapSheet({
     if (sheet === "reply" || sheet === "peek") {
       setOpen(true);
       clearMotionPaint("reply");
+      clearCloseTranslate("reply");
       return;
     }
     if (sheet === "out") {
-      setSheet("reply");
-      setOpen(true);
-      clearMotionPaint("reply");
-      setDragging(false);
-      setDraggingClass(false);
-      clearMotionSnap();
+      settleCloseTo("reply");
       return;
     }
     settleTo("reply");
+  }
+
+  function settleCloseTo(next: "reply" | "out") {
+    cancelSettleAnimation();
+    drag.current.on = false;
+    drag.current.pending = false;
+    drag.current.moved = false;
+    const max = drag.current.closeMax || lockCloseOffset();
+    const targetTy = next === "out" ? max : 0;
+    const live = drag.current.liveTy > 0 ? drag.current.liveTy : readCloseTyPx(cardRef.current!);
+    steppedAtRef.current = performance.now();
+    setDragging(false);
+    setDraggingClass(false);
+    cardRef.current?.classList.remove("is-dragging");
+    setSettling(true);
+    setSettlingClass(true);
+    setOpen(next === "reply");
+    paintCloseTy(live);
+    if (Math.abs(live - targetTy) < 2) {
+      setSettling(false);
+      setSettlingClass(false);
+      setSheet(next);
+      clearMotionSnap(next);
+      clearCloseTranslate(next);
+      return;
+    }
+    const settleStarted = performance.now();
+    const settleDurationMs = 380;
+    const startTy = live;
+    let tyLive = startTy;
+    window.requestAnimationFrame(() => {
+      const tick = () => {
+        const remaining = targetTy - tyLive;
+        if (Math.abs(remaining) <= 2) {
+          tyLive = targetTy;
+          paintCloseTy(tyLive);
+          settleFrameRef.current = 0;
+          setSettling(false);
+          setSettlingClass(false);
+          setSheet(next);
+          clearMotionSnap(next);
+          clearCloseTranslate(next);
+          return;
+        }
+        const step = Math.sign(remaining) * Math.min(4, Math.abs(remaining));
+        tyLive += step;
+        paintCloseTy(tyLive);
+        settleFrameRef.current = window.requestAnimationFrame(tick);
+      };
+      settleFrameRef.current = window.requestAnimationFrame(tick);
+    });
   }
 
   function hide() {
@@ -564,8 +717,12 @@ export function useSnapSheet({
     pending: boolean,
   ) {
     const normalized = from === "peek" ? "reply" : from;
+    const card = cardRef.current;
     const startH =
-      cardRef.current?.getBoundingClientRect().height ?? heightForSnap(normalized, cardRef.current);
+      card?.getBoundingClientRect().height ?? heightForSnap(normalized, card);
+    const closeMax = lockCloseOffset();
+    const startTy =
+      card instanceof HTMLElement ? readCloseTyPx(card) : normalized === "out" ? closeMax : 0;
     lockMotionHeights();
     drag.current = {
       y: event.clientY,
@@ -577,13 +734,21 @@ export function useSnapSheet({
       samples: [{ t: performance.now(), y: event.clientY }],
       gesture: null,
       liveH: startH,
+      mode: normalized === "out" ? "close" : null,
+      startTy,
+      closeMax,
+      liveTy: startTy,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
       setDragging(true);
       setDraggingClass(true);
-      prepareThreadForSheetMotion(normalized);
-      paintMotion(startH);
+      if (drag.current.mode === "close") {
+        paintCloseTy(startTy);
+      } else {
+        prepareThreadForSheetMotion(normalized);
+        paintMotion(startH);
+      }
     }
   }
 
@@ -617,9 +782,28 @@ export function useSnapSheet({
     }
     // Handle owns sheet motion immediately (incl. close from maxScroll pin). Body keeps
     // pending slop so thread scroll wins until edges / handle.
+    if (sheet === "out") {
+      beginDrag(event, "out", false);
+      return;
+    }
+    if (sheet === "reply" && fromHandle) {
+      beginDrag(event, "reply", false);
+      drag.current.mode = "close";
+      drag.current.on = true;
+      setDragging(true);
+      setDraggingClass(true);
+      cardRef.current?.classList.add("is-dragging");
+      const card = cardRef.current;
+      if (card) {
+        card.removeAttribute("data-motion-live");
+        card.style.removeProperty("--sheet-h");
+      }
+      paintCloseTy(drag.current.startTy);
+      return;
+    }
     beginDrag(
       event,
-      sheet === "out" ? "reply" : sheet,
+      sheet,
       !fromHandle && (sheet === "reply" || sheet === "full"),
     );
   }
@@ -644,15 +828,20 @@ export function useSnapSheet({
     return (last.y - first.y) / dt;
   }
 
-  function activateDrag(event: ReactPointerEvent<HTMLElement>) {
+  function activateDrag(event: ReactPointerEvent<HTMLElement>, mode: "height" | "close") {
     drag.current.on = true;
     drag.current.pending = false;
     drag.current.moved = true;
+    drag.current.mode = mode;
     lockMotionHeights();
     setDragging(true);
     setDraggingClass(true);
-    prepareThreadForSheetMotion(drag.current.from);
-    paintMotion(drag.current.startH);
+    if (mode === "close") {
+      paintCloseTy(drag.current.startTy);
+    } else {
+      prepareThreadForSheetMotion(drag.current.from);
+      paintMotion(drag.current.startH);
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -662,7 +851,7 @@ export function useSnapSheet({
       const from = drag.current.from;
       if (from === "reply") {
         if (Math.abs(dy) > DRAG_SLOP) {
-          activateDrag(event);
+          activateDrag(event, dy > 0 ? "close" : "height");
         } else {
           return;
         }
@@ -670,7 +859,7 @@ export function useSnapSheet({
         const body = cardRef.current?.querySelector(scrollBodySelector);
         const atTop = body instanceof HTMLElement ? body.scrollTop <= 1 : true;
         if (dy > DRAG_SLOP && atTop) {
-          activateDrag(event);
+          activateDrag(event, "height");
         } else if (Math.abs(dy) > DRAG_SLOP) {
           drag.current.pending = false;
           return;
@@ -687,6 +876,18 @@ export function useSnapSheet({
       drag.current.moved = true;
     }
     recordSample(event.clientY);
+    if (drag.current.mode === "close") {
+      if (dy < -DRAG_SLOP && drag.current.from === "reply") {
+        drag.current.mode = "height";
+        drag.current.gesture = "expanding";
+        prepareThreadForSheetMotion("reply");
+        paintMotion(drag.current.startH);
+        paintDrag(dy);
+        return;
+      }
+      paintCloseTy(drag.current.startTy + dy);
+      return;
+    }
     if (dy > DRAG_SLOP) {
       if (drag.current.gesture !== "collapsing") {
         cardRef.current?.classList.add("is-dragging");
@@ -700,6 +901,10 @@ export function useSnapSheet({
   }
 
   function settleTo(next: ConversationSheetSnap) {
+    if (next === "out") {
+      settleCloseTo("out");
+      return;
+    }
     cancelSettleAnimation();
     drag.current.on = false;
     drag.current.pending = false;
@@ -828,6 +1033,26 @@ export function useSnapSheet({
       if (from === "reply") {
         settleTo(stepToward(from, "up"));
       }
+      return;
+    }
+    if (drag.current.mode === "close") {
+      const velocity = liveVelocity();
+      const max = drag.current.closeMax || lockCloseOffset();
+      const ty = drag.current.liveTy;
+      const mid = max / 2;
+      if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
+        settleCloseTo(ty < mid ? "reply" : "out");
+        return;
+      }
+      if (velocity > 0.35 || ty > mid + 12) {
+        settleCloseTo("out");
+        return;
+      }
+      if (velocity < -0.35 || ty < mid - 12) {
+        settleCloseTo("reply");
+        return;
+      }
+      settleCloseTo(ty >= mid ? "out" : "reply");
       return;
     }
     settleSheet(dy, drag.current.from);
