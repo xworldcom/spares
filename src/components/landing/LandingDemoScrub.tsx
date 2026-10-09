@@ -560,7 +560,7 @@ export function LandingDemoScrub({
       if (Math.abs(net) < 6) {
         return;
       }
-      const direction = net < 0 ? 1 : -1;
+      const direction = net > 0 ? 1 : -1;
       lastUserScrollDir = direction;
       lastInputKind = "touch";
       if (viewportWidth() >= 900) {
