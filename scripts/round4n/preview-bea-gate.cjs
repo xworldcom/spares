@@ -6,6 +6,7 @@
 const { chromium } = require("playwright");
 const round4l = require("../round4l/gesture-lib.cjs");
 const { mediumTouchSwipe, waitScrubSettle, readActiveQuoteStatus } = round4l;
+const q4 = require("../round4q/gate-assertions.cjs");
 
 const BASE = (process.env.PREVIEW_BASE ?? "").replace(/\/$/, "");
 const OUT = process.env.R4_OUT ?? "/cursor/stores/self/media/round4n";
@@ -159,6 +160,38 @@ async function desktopGate() {
     const order = round4l.ORDERED_STATUSES;
     const skipped = order.indexOf(afterWheel) - order.indexOf(beforeWheel);
     log("desktop-wheel-one-notch", skipped <= 1, `${beforeWheel}→${afterWheel} Δindex=${skipped}`);
+
+    const topDown = await q4.assertTopVisibleScrollDown(page);
+    log("desktop-top-visible-scroll-down", topDown.ok, topDown);
+  });
+}
+
+async function topClickGate(width, label) {
+  const viewport = { width, height: width <= 320 ? 568 : 844 };
+  await withPage(viewport, true, async (page) => {
+    const inner = await page.evaluate(() => window.innerWidth);
+    log(`${label}-inner-width`, inner === width, `innerWidth=${inner}`);
+    const click = await q4.assertTopClickReachesHero(page);
+    log(`${label}-top-click-hero`, click.ok, click);
+  });
+}
+
+async function trayGate(width, label) {
+  const viewport = { width, height: width <= 320 ? 568 : 812 };
+  await withPage(viewport, true, async (page) => {
+    const inner = await page.evaluate(() => window.innerWidth);
+    log(`${label}-tray-inner-width`, inner === width, `innerWidth=${inner}`);
+    const tray = await q4.assertTrayQtyNotUnderTop(page);
+    log(`${label}-tray-qty-not-top`, tray.ok, tray);
+  });
+}
+
+async function wheel390Gate() {
+  await withPage({ width: 390, height: 844 }, false, async (page) => {
+    const inner = await page.evaluate(() => window.innerWidth);
+    log("390-inner-width", inner === 390, `innerWidth=${inner}`);
+    const wheelSch = await q4.assertWheelLandsSchematic(page);
+    log("390-viewport-wheel-schematic", wheelSch.ok, wheelSch);
   });
 }
 
@@ -194,6 +227,10 @@ async function phoneGate(width, label) {
   console.log(`Bea preview gate → ${BASE}`);
   try {
     await desktopGate();
+    await wheel390Gate();
+    await topClickGate(320, "320");
+    await topClickGate(375, "375");
+    await trayGate(375, "375");
     await phoneGate(320, "320");
     await phoneGate(390, "390");
   } catch (e) {

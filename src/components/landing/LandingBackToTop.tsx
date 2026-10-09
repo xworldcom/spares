@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  DEMO_LANDING_RAIL_GO_HERO_EVENT,
   demoLandingBackToTopShown,
+  demoLandingQuoteTrayOpen,
   type DemoLandingBackToTopInput,
 } from "@/lib/ui/landing-demo";
 
@@ -16,7 +18,7 @@ function readScrollY() {
   );
 }
 
-function readBackToTopInput(footerInView: boolean): DemoLandingBackToTopInput | null {
+function readBackToTopInput(): DemoLandingBackToTopInput | null {
   const story = document.getElementById("product-story");
   if (!story) {
     return null;
@@ -37,7 +39,7 @@ function readBackToTopInput(footerInView: boolean): DemoLandingBackToTopInput | 
     scrollY: readScrollY(),
     viewportHeight: window.innerHeight,
     storyViewportTop: story.getBoundingClientRect().top,
-    footerInView,
+    footerInView: false,
     pinPhase: pin?.dataset.pin ?? null,
     scrubProgress: progress,
     quoteStatus: scrub?.dataset.activeQuoteStatus ?? null,
@@ -46,47 +48,18 @@ function readBackToTopInput(footerInView: boolean): DemoLandingBackToTopInput | 
   };
 }
 
-function scrollPageToTop(reduceMotion: boolean) {
-  const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
-  try {
-    window.scrollTo({ top: 0, left: 0, behavior });
-  } catch {
-    const root = document.scrollingElement ?? document.documentElement;
-    root.scrollTop = 0;
-  }
-}
-
-function measureQuoteTrayBottomInset(): string | null {
+function readQuoteTraySheetHeight(): number {
   const sheet = document.querySelector<HTMLElement>(".landing-workflow-quote-sheet");
   if (!sheet) {
-    return null;
+    return 0;
   }
-  const rect = sheet.getBoundingClientRect();
-  if (rect.height < 12 || rect.bottom < window.innerHeight * 0.3) {
-    return null;
-  }
-  const gap = 12;
-  return `${Math.max(0, window.innerHeight - rect.top + gap)}px`;
+  return sheet.getBoundingClientRect().height;
 }
 
 export function LandingBackToTop() {
   const [visible, setVisible] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [footerInView, setFooterInView] = useState(false);
-  const [trayBottom, setTrayBottom] = useState<string | null>(null);
-
-  useEffect(() => {
-    const footer = document.querySelector(".landing-site-footer");
-    if (!footer || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => setFooterInView(entry.isIntersecting),
-      { threshold: 0 },
-    );
-    observer.observe(footer);
-    return () => observer.disconnect();
-  }, []);
+  const [trayHides, setTrayHides] = useState(false);
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -95,11 +68,11 @@ export function LandingBackToTop() {
     motion.addEventListener("change", syncMotion);
 
     const syncChrome = () => {
-      const input = readBackToTopInput(footerInView);
+      const input = readBackToTopInput();
       if (input) {
         setVisible(demoLandingBackToTopShown(input));
       }
-      setTrayBottom(measureQuoteTrayBottomInset());
+      setTrayHides(demoLandingQuoteTrayOpen(readQuoteTraySheetHeight()));
     };
 
     syncChrome();
@@ -115,16 +88,16 @@ export function LandingBackToTop() {
         : null;
     if (storyRoot && storyObserver) {
       storyObserver.observe(storyRoot, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      attributeFilter: [
-        "data-progress",
-        "data-active-quote-status",
-        "data-landing-stop-rail",
-        "data-pin",
-        "class",
-      ],
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: [
+          "data-progress",
+          "data-active-quote-status",
+          "data-landing-stop-rail",
+          "data-pin",
+          "class",
+        ],
       });
     }
 
@@ -136,23 +109,21 @@ export function LandingBackToTop() {
       window.removeEventListener("resize", syncChrome);
       storyObserver?.disconnect();
     };
-  }, [footerInView]);
+  }, []);
 
   const handleClick = useCallback(() => {
-    scrollPageToTop(reduceMotion);
+    window.dispatchEvent(new Event(DEMO_LANDING_RAIL_GO_HERO_EVENT));
+    if (reduceMotion) {
+      return;
+    }
   }, [reduceMotion]);
 
-  const shown = visible && !footerInView;
+  const shown = visible && !trayHides;
 
   return (
     <button
       type="button"
       className={shown ? "landing-back-to-top is-visible" : "landing-back-to-top"}
-      style={
-        trayBottom
-          ? ({ "--landing-btt-bottom": trayBottom } as CSSProperties)
-          : undefined
-      }
       onClick={handleClick}
       aria-label="Back to top — sign in"
       tabIndex={shown ? 0 : -1}

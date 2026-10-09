@@ -34,6 +34,7 @@ import {
   demoLandingScrollStopStepTargetIndex,
   demoMergeLandingScrollStops,
   demoLandingScrollStopsDedupe,
+  DEMO_LANDING_RAIL_GO_HERO_EVENT,
   demoLandingWheelCapRegion,
   type DemoBeatScrollInputKind,
   type DemoLandingScrollStop,
@@ -666,6 +667,27 @@ export function LandingDemoScrub({
       event.stopPropagation();
     };
 
+    const goToHeroRailStop = () => {
+      noteInput();
+      lastInputKind = "keyboard";
+      let guard = 0;
+      while (readPageScrollY() > 4 && guard < 56) {
+        guard += 1;
+        if (!stepLandingScrollStop(-1, "keyboard")) {
+          const hero = collectLandingScrollStops().find((stop) => stop.kind === "hero");
+          if (hero) {
+            scrollToLandingStop(hero);
+          }
+          break;
+        }
+      }
+      railSettledScrollY = readPageScrollY();
+    };
+
+    const onRailGoHero = () => {
+      goToHeroRailStop();
+    };
+
     measureStickyTop();
     apply();
     buildLandingScrollStops();
@@ -683,6 +705,7 @@ export function LandingDemoScrub({
     document.addEventListener("touchend", onTouchEnd, { ...touchOpts, passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("keydown", onKeyDown, { capture: true });
+    window.addEventListener(DEMO_LANDING_RAIL_GO_HERO_EVENT, onRailGoHero);
     window.visualViewport?.addEventListener("resize", onResize, { passive: true });
 
     return () => {
@@ -697,6 +720,7 @@ export function LandingDemoScrub({
       document.removeEventListener("touchend", onTouchEnd, touchOpts);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown, { capture: true });
+      window.removeEventListener(DEMO_LANDING_RAIL_GO_HERO_EVENT, onRailGoHero);
       window.visualViewport?.removeEventListener("resize", onResize);
       if (frame) {
         window.cancelAnimationFrame(frame);

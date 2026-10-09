@@ -1050,6 +1050,17 @@ export function demoFirstLandingRailBeatScrollY(rail: string): number | null {
   return beat?.scrollY ?? null;
 }
 
+/** Dispatched by ↑ Top so scrub rail (not raw scrollTo) owns scrollY. */
+export const DEMO_LANDING_RAIL_GO_HERO_EVENT = "landing-demo-rail-go-hero";
+
+export function demoLandingBackToTopScrollThreshold(
+  stopRail: string | null | undefined,
+  viewportHeight: number,
+): number {
+  const firstBeat = stopRail ? demoFirstLandingRailBeatScrollY(stopRail) : null;
+  return firstBeat ?? Math.max(520, viewportHeight * 0.92);
+}
+
 export type DemoLandingBackToTopInput = {
   scrollY: number;
   viewportHeight: number;
@@ -1095,17 +1106,22 @@ export function demoLandingBackToTopHideForScrub(input: {
 }
 
 export function demoLandingBackToTopShown(input: DemoLandingBackToTopInput): boolean {
-  if (input.footerInView) {
+  const threshold = demoLandingBackToTopScrollThreshold(
+    input.stopRail,
+    input.viewportHeight,
+  );
+  if (input.scrollY < threshold - 32) {
     return false;
   }
-  const threshold = Math.max(520, input.viewportHeight * 0.92);
-  const scrolled = input.scrollY > threshold;
-  const storyDeep =
-    input.storyViewportTop < -Math.round(input.viewportHeight * 0.2);
-  if (!scrolled || !storyDeep) {
+  if (input.hotspotSelectUi) {
     return false;
   }
-  return !demoLandingBackToTopHideForScrub(input);
+  return true;
+}
+
+/** True when the demo quote tray is open enough to hide ↑ Top (qty must stay clickable). */
+export function demoLandingQuoteTrayOpen(sheetViewportHeight: number): boolean {
+  return sheetViewportHeight > 24;
 }
 
 export function demoBeatTrackSnapAlignmentDeltaDirected(

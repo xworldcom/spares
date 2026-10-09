@@ -53,8 +53,9 @@ import {
   demoLandingScrollStopStepTargetIndex,
   demoBuildLandingScrollStops,
   demoLandingScrollStopsDedupe,
-  demoLandingBackToTopHideForScrub,
   demoLandingBackToTopShown,
+  demoLandingQuoteTrayOpen,
+  DEMO_LANDING_RAIL_GO_HERO_EVENT,
   demoLandingStopScrollY,
   demoLandingScrollTargetY,
   demoBeatAlignIndexRespectsDirection,
@@ -621,16 +622,16 @@ describe("landing cell stage", () => {
       true,
     );
     assert.equal(
-      demoLandingBackToTopHideForScrub({
-        scrollY: 2800,
-        pinPhase: "track",
-        scrubProgress: 0.72,
-        quoteStatus: "in_review",
-        stopRail: rail,
-        hotspotSelectUi: false,
+      demoLandingBackToTopShown({
+        ...base,
+        scrollY: 11_362,
+        footerInView: true,
+        storyViewportTop: -4000,
       }),
-      false,
+      true,
     );
+    assert.equal(demoLandingQuoteTrayOpen(48), true);
+    assert.equal(demoLandingQuoteTrayOpen(8), false);
   });
 
   it("offers a back-to-top escape once marketing scroll leaves the hero", () => {
@@ -638,7 +639,7 @@ describe("landing cell stage", () => {
     assert.match(screen, /LandingBackToTop/);
     const control = readFileSync("src/components/landing/LandingBackToTop.tsx", "utf8");
     assert.match(control, /prefers-reduced-motion/);
-    assert.match(control, /scrollTo\(\{ top: 0/);
+    assert.match(control, new RegExp(DEMO_LANDING_RAIL_GO_HERO_EVENT));
     const css = readFileSync("src/components/landing/landing.css", "utf8");
     assert.match(css, /\.landing-back-to-top/);
     assert.match(css, /z-index:\s*50/);
