@@ -176,6 +176,9 @@ export function QuoteActivityFeed({
       return;
     }
     const sheetSnap = sheetChrome?.snap;
+    if (layout === "sheet" && (sheetSnap === "out" || sheetChrome?.threadScrollLocked)) {
+      return;
+    }
     const shouldJumpUnread =
       layout === "sheet" &&
       sheetSnap === "full" &&
@@ -230,6 +233,7 @@ export function QuoteActivityFeed({
     firstUnreadIndex,
     sheetChrome?.snap,
     sheetChrome?.threadDocked,
+    sheetChrome?.threadScrollLocked,
     sheetChrome?.inline,
     selfEmail,
     role,
@@ -351,6 +355,7 @@ export function QuoteActivityFeed({
               return (
                 <li
                   key={activity.id}
+                  data-activity-id={activity.id}
                   className={enteringIds.has(activity.id) ? "imsg-system imsg-enter" : "imsg-system"}
                 >
                   <span className="imsg-chip">
@@ -382,6 +387,7 @@ export function QuoteActivityFeed({
             return (
               <li
                 key={activity.id}
+                data-activity-id={activity.id}
                 className={rowClass}
                 data-unread-anchor={index === firstUnreadIndex ? "true" : undefined}
                 data-has-unread-divider={index === firstUnreadIndex ? "true" : undefined}
