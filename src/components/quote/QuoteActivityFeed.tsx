@@ -88,6 +88,7 @@ export function QuoteActivityFeed({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const seenIdsRef = useRef(new Set<string>());
   const stickToBottomRef = useRef(true);
+  const activityCountRef = useRef(activities.length);
   const bootstrappedRef = useRef(false);
   const unreadJumpedRef = useRef(false);
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
@@ -192,6 +193,8 @@ export function QuoteActivityFeed({
     }
 
     const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
+    const activitiesGrew = activities.length > activityCountRef.current;
+    activityCountRef.current = activities.length;
     if (layout === "sheet" && sheetChrome?.inline) {
       const last = outgoing.at(-1) ?? activities.at(-1);
       const sentByViewer = last ? activityLane(last, { email: selfEmail, role }) === "own" : false;
@@ -210,10 +213,13 @@ export function QuoteActivityFeed({
         return;
       }
       if (sheetSnap === "full") {
-        if (sheetChrome?.threadDocked === false && unreadJumpedRef.current) {
+        if (!activitiesGrew && sheetChrome?.threadDocked === false && unreadJumpedRef.current) {
           return;
         }
-        if (sheetChrome?.threadDocked === false && !nearBottom) {
+        if (!activitiesGrew && sheetChrome?.threadDocked === false && !nearBottom) {
+          return;
+        }
+        if (!activitiesGrew && sheetChrome?.threadDocked === false) {
           return;
         }
         pinThreadScrollerToComposer(root, sheetChrome?.threadDocked !== false);

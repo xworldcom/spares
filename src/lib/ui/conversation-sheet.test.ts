@@ -13,6 +13,7 @@ import {
   conversationSheetMotionFromHeight,
   conversationSheetSnapFromHeight,
   initialConversationSheetSnap,
+  resolveConversationSheetDetents,
 } from "./conversation-sheet.ts";
 
 describe("conversation sheet peek band", () => {
@@ -50,6 +51,22 @@ describe("conversation sheet startup snap", () => {
 });
 
 const heights = { peekH: 92, replyH: 280, fullH: 700 };
+
+describe("conversation sheet detents on short viewports", () => {
+  it("keeps reply below full with a phase-B band", () => {
+    const detents = resolveConversationSheetDetents(190, 469, 502, 67);
+    assert.ok(detents.replyH < detents.fullH);
+    assert.ok(detents.replyH >= 190 + 67 + 8);
+    assert.ok(detents.fullH - detents.replyH >= 56);
+  });
+
+  it("clamps an oversized measured reply onto the short screen", () => {
+    const detents = resolveConversationSheetDetents(144, 438, 438, 67);
+    assert.equal(detents.fullH, 438);
+    assert.ok(detents.replyH < 438);
+    assert.ok(detents.replyH >= 144 + 67);
+  });
+});
 
 describe("conversation sheet two-phase motion", () => {
   it("phase A seats the composer before roll-up", () => {
