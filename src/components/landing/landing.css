@@ -1149,6 +1149,12 @@
 }
 
 @media (max-width: 899px) {
+  .landing-scroll:has(.landing-workflow-stage.is-quote-focus) .landing-back-to-top {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
   .landing-scroll .landing-back-to-top {
     right: max(1rem, env(safe-area-inset-right, 0px));
     bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));

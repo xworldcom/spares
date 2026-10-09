@@ -70,11 +70,12 @@ async function assertTopClickReachesHero(page) {
   return { ok: y <= 4, scrollY: y };
 }
 
-async function scrollUntilQuoteTray(page, maxSteps = 50) {
+async function scrollUntilQuoteTray(page, maxSteps = 72) {
   for (let i = 0; i < maxSteps; i += 1) {
     const open = await page.evaluate(() => {
+      const focus = document.querySelector(".landing-workflow-stage.is-quote-focus");
       const sheet = document.querySelector(".landing-workflow-quote-sheet");
-      return (sheet?.getBoundingClientRect().height ?? 0) > 24;
+      return Boolean(focus) || (sheet?.getBoundingClientRect().height ?? 0) > 24;
     });
     if (open) return true;
     await page.keyboard.press("PageDown");
@@ -217,8 +218,22 @@ async function assertTopHideReleasesFocus(page) {
     return { ok: false, reason: "top-not-visible-for-focus-test" };
   }
   await page.focus(".landing-back-to-top.is-visible");
-  await page.keyboard.press("Tab");
-  await scrollUntilQuoteTray(page);
+  const trayOpen = await scrollUntilQuoteTray(page);
+  if (!trayOpen) {
+    return { ok: false, reason: "tray-never-opened" };
+  }
+  try {
+    await page.waitForFunction(
+      () => {
+        const btn = document.querySelector(".landing-back-to-top");
+        return btn && btn.inert && !btn.classList.contains("is-visible");
+      },
+      undefined,
+      { timeout: 8000 },
+    );
+  } catch {
+    return { ok: false, reason: "top-did-not-hide-for-tray" };
+  }
   const m = await readTopButtonMetrics(page);
   const active = await page.evaluate(() => {
     const btn = document.querySelector(".landing-back-to-top");

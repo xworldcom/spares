@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import {
   DEMO_LANDING_RAIL_GO_HERO_EVENT,
   demoLandingBackToTopShown,
-  demoLandingQuoteTrayOpen,
   type DemoLandingBackToTopInput,
 } from "@/lib/ui/landing-demo";
 
@@ -48,12 +47,15 @@ function readBackToTopInput(): DemoLandingBackToTopInput | null {
   };
 }
 
-function readQuoteTraySheetHeight(): number {
+function quoteTrayObscuresTop(): boolean {
+  if (document.querySelector(".landing-workflow-stage.is-quote-focus")) {
+    return true;
+  }
   const sheet = document.querySelector<HTMLElement>(".landing-workflow-quote-sheet");
   if (!sheet) {
-    return 0;
+    return false;
   }
-  return sheet.getBoundingClientRect().height;
+  return sheet.getBoundingClientRect().height > 24;
 }
 
 export function LandingBackToTop() {
@@ -74,7 +76,7 @@ export function LandingBackToTop() {
       if (input) {
         setVisible(demoLandingBackToTopShown(input));
       }
-      setTrayHides(demoLandingQuoteTrayOpen(readQuoteTraySheetHeight()));
+      setTrayHides(quoteTrayObscuresTop());
     };
 
     syncChrome();

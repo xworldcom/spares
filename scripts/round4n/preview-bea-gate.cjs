@@ -231,14 +231,12 @@ async function phoneGate(width, label) {
     await topClickGate(320, "320");
     await topClickGate(375, "375");
     await trayGate(375, "375");
-    const mid375 = await withPage({ width: 375, height: 812 }, true, async (page) => {
-      return q4.assertTopInteractionConsistent(page, 1175);
+    await withPage({ width: 375, height: 812 }, true, async (page) => {
+      const mid375 = await q4.assertTopInteractionConsistent(page, 1175);
+      log("375-top-opacity-pointer-sync", mid375.ok, mid375);
+      const focus375 = await q4.assertTopHideReleasesFocus(page);
+      log("375-top-inert-on-tray-hide", focus375.ok, focus375);
     });
-    log("375-top-opacity-pointer-sync", mid375.ok, mid375);
-    const focus375 = await withPage({ width: 375, height: 812 }, true, async (page) => {
-      return q4.assertTopHideReleasesFocus(page);
-    });
-    log("375-top-inert-on-tray-hide", focus375.ok, focus375);
     await phoneGate(320, "320");
     await phoneGate(390, "390");
   } catch (e) {
