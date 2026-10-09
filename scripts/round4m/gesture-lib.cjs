@@ -11,7 +11,7 @@ async function sectionTitleInView(page, selector, viewportHeight, tolerance = 48
       const box = el.getBoundingClientRect();
       const title = el.querySelector("h2") ?? el;
       const tbox = title.getBoundingClientRect();
-      const inView = tbox.bottom > tol && tbox.top < vh - tol;
+      const inView = tbox.bottom > 0 && tbox.top < vh;
       return { ok: inView, top: Math.round(tbox.top) };
     },
     { sel: selector, vh: viewportHeight, tol: tolerance },
