@@ -76,13 +76,13 @@ async function wheelNotchesPastConfirmed(page, notches, trackHeight, height, h, 
 
     await assertWheelCannotSkipBeats(page, h, height);
 
-    const trackHeight = await page.evaluate(() => {
-      const track = document.querySelector(".landing-demo-beat-track");
-      return track?.offsetHeight ?? 420;
-    });
-
-    await reachConfirmed(page, h);
     for (const notches of [1, 3, 5]) {
+      await page.goto(`${h.BASE}/`, { waitUntil: "networkidle" });
+      await waitScrubHydrated(page);
+      const trackHeight = await page.evaluate(() => {
+        const track = document.querySelector(".landing-demo-beat-track");
+        return track?.offsetHeight ?? 420;
+      });
       await reachConfirmed(page, h);
       await wheelNotchesPastConfirmed(
         page,
@@ -92,7 +92,6 @@ async function wheelNotchesPastConfirmed(page, notches, trackHeight, height, h, 
         h,
         `${notches}-notch wheel down`,
       );
-      await scrollToTop(page);
     }
 
     await assertNoOppositeScrollTo(page, h, "desktop wheel suite");
