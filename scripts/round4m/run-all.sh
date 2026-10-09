@@ -16,6 +16,8 @@ export R4_TAG="${R4_TAG:-after}"
 export CHROME_BIN="${CHROME_BIN:-/usr/local/bin/google-chrome}"
 export R4_NO_VIDEO=1
 
+fuser -k "${PORT}/tcp" 2>/dev/null || true
+sleep 1
 npm run build
 node "$ROOT/node_modules/next/dist/bin/next" start -p "$PORT" &
 PID=$!

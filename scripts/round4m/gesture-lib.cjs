@@ -103,6 +103,33 @@ async function assertWheelCannotSkipBeats(page, h, viewportHeight) {
   );
 }
 
+/** PageUp only — no scrollTo(0) fallback (real keyboard path must reach hero). */
+async function assertPageUpReachesHero(page, h, label) {
+  let lastY = -1;
+  let unchanged = 0;
+  for (let i = 0; i < 48; i += 1) {
+    await page.keyboard.press("PageUp");
+    await round4l.waitScrubSettle(page, 2600);
+    const y = await page.evaluate(() => window.scrollY);
+    if (y <= 0) {
+      h.check(`${label} PageUp reaches hero`, true, "scrollY=0");
+      return;
+    }
+    if (Math.abs(y - lastY) < 1 && lastY >= 0) {
+      unchanged += 1;
+      if (unchanged >= 2) {
+        h.check(`${label} PageUp reaches hero`, false, `stuck at scrollY=${y} after ${i + 1} presses`);
+        return;
+      }
+    } else {
+      unchanged = 0;
+    }
+    lastY = y;
+  }
+  const finalY = await page.evaluate(() => window.scrollY);
+  h.check(`${label} PageUp reaches hero`, finalY <= 0, `scrollY=${finalY}`);
+}
+
 async function assertSwipeDirectionGuard(page, viewport, direction, h, label) {
   const startY = await page.evaluate(() => window.scrollY);
   await mediumTouchSwipe(page, viewport, direction, null, label);
@@ -130,4 +157,5 @@ module.exports = {
   assertPostHandoffStops,
   assertWheelCannotSkipBeats,
   assertSwipeDirectionGuard,
+  assertPageUpReachesHero,
 };

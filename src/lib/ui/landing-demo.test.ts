@@ -49,7 +49,6 @@ import {
   demoThreadPlayheadAtBeatRest,
   demoBeatTrackSnapAlignmentDelta,
   demoBeatTrackSnapAlignmentDeltaDirected,
-  demoShouldRunBeatAlignOnScrollEnd,
   demoBeatKeyboardStepTargetIndex,
   demoLandingScrollStopStepTargetIndex,
   demoLandingScrollStopsDedupe,
@@ -230,10 +229,11 @@ describe("demo scroll scrub", () => {
     assert.match(src, /data-hydrated/);
     assert.doesNotMatch(src, /flushSync/);
     assert.match(src, /landing-demo-beat-track/);
-    assert.match(src, /alignBeatSnap/);
-    assert.match(src, /demoShouldRunBeatAlignOnScrollEnd/);
+    assert.match(src, /stepLandingScrollStop/);
+    assert.match(src, /frozenLandingStops/);
     assert.match(src, /addEventListener\("keydown", onKeyDown/);
-    assert.match(src, /addEventListener\("scrollend"/);
+    assert.doesNotMatch(src, /alignBeatSnap/);
+    assert.doesNotMatch(src, /addEventListener\("scrollend"/);
     assert.doesNotMatch(src, /window\.addEventListener\("scroll",\s*tick/);
     assert.match(src, /addEventListener\("touchmove", onTouchMove/);
     assert.match(src, /visualViewport\?\.addEventListener\("resize"/);
@@ -395,10 +395,6 @@ describe("landing scrub layout", () => {
     assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(80, 56, 1, 14), 24);
     assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(40, 56, 1, 14), null);
     assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(40, 56, -1, 14), -16);
-    assert.equal(demoShouldRunBeatAlignOnScrollEnd("wheel"), false);
-    assert.equal(demoShouldRunBeatAlignOnScrollEnd("touch"), false);
-    assert.equal(demoShouldRunBeatAlignOnScrollEnd("keyboard"), false);
-    assert.equal(demoShouldRunBeatAlignOnScrollEnd("click"), false);
     assert.equal(demoBeatKeyboardStepTargetIndex(2, 1, 6), 3);
     assert.equal(demoBeatKeyboardStepTargetIndex(0, -1, 6), null);
     const landingStops = demoLandingScrollStopsDedupe([

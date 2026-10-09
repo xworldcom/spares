@@ -797,11 +797,6 @@ export function demoBeatTrackAlignIndexFromScroll(
  */
 export type DemoBeatScrollInputKind = "wheel" | "touch" | "keyboard" | "click" | "none";
 
-/** Beat-region scrollend aligner (disabled — gesture-step owner handles keyboard/wheel/touch). */
-export function demoShouldRunBeatAlignOnScrollEnd(_kind: DemoBeatScrollInputKind) {
-  return false;
-}
-
 /** Reject align targets that would undo the user's last beat step. */
 export function demoBeatAlignIndexRespectsDirection(
   settledIndex: number,
