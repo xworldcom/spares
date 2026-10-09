@@ -114,33 +114,43 @@ async function assertTrayQtyNotUnderTop(page) {
 
 async function assertWheelLandsSchematic(page) {
   await pageUpToHero(page);
-  const rail = await page.evaluate(
-    () => document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "",
-  );
-  const holdY = Number(rail.match(/confirmedHold:(\d+)/)?.[1] ?? NaN);
-  const schY = Number(rail.match(/schematic:(\d+)/)?.[1] ?? NaN);
-  for (let i = 0; i < 48; i += 1) {
+  const stops = await page.evaluate(() => {
+    const rail = document.querySelector(".landing-demo-scrub")?.dataset.landingStopRail ?? "";
+    return rail
+      .split("|")
+      .filter(Boolean)
+      .map((part) => {
+        const idx = part.lastIndexOf(":");
+        return { kind: part.slice(0, idx), scrollY: Number(part.slice(idx + 1)) };
+      });
+  });
+  const holdY = stops.find((s) => s.kind === "confirmedHold")?.scrollY ?? NaN;
+  const schY = stops.find((s) => s.kind === "schematic")?.scrollY ?? NaN;
+  for (let i = 0; i < 56; i += 1) {
     const y = await page.evaluate(() => window.scrollY);
     if (Number.isFinite(holdY) && y >= holdY - 4) break;
     await page.keyboard.press("PageDown");
     await waitScrubSettle(page, 1400);
   }
-  for (let i = 0; i < 48; i += 1) {
-    const y = await page.evaluate(() => window.scrollY);
-    if (Number.isFinite(holdY) && y >= holdY - 4 && y < schY - 4) break;
-    await page.keyboard.press("PageDown");
-    await waitScrubSettle(page, 1400);
-  }
   const before = await page.evaluate(() => window.scrollY);
-  await page.mouse.wheel(0, 48);
-  await page.waitForTimeout(450);
-  await waitScrubSettle(page, 2500);
+  if (!Number.isFinite(holdY) || before < holdY - 48) {
+    return { ok: false, before, after: before, schY, holdY, reason: "not-at-hold" };
+  }
+  const beatTrack = await page.evaluate(
+    () =>
+      document.querySelector(".landing-demo-beat-track")?.offsetHeight ?? 56,
+  );
+  const wheelDelta = Math.max(48, Math.round(beatTrack / 5));
+  await page.mouse.wheel(0, wheelDelta);
+  await page.waitForTimeout(420);
+  await waitScrubSettle(page, 2800);
   const after = await page.evaluate(() => window.scrollY);
   return {
     ok: Number.isFinite(schY) && after === schY && after > before,
     before,
     after,
     schY,
+    holdY,
   };
 }
 
