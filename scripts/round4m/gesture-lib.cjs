@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const round4l = require("../round4l/gesture-lib.cjs");
+const { mediumTouchSwipe } = round4l;
 
 async function sectionTitleInView(page, selector, viewportHeight, tolerance = 48) {
   return page.evaluate(
