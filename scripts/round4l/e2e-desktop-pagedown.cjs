@@ -27,6 +27,11 @@ async function pageDownUntilHandoffBeat(page, h) {
     status = await readActiveQuoteStatus(page);
   }
   h.check("PageDown reached handoff beats from hero", progress >= 0.455, progress.toFixed(3));
+  if (status === "in_review") {
+    await page.keyboard.press("PageUp");
+    await waitScrubSettle(page, 2600);
+    status = await readActiveQuoteStatus(page);
+  }
   h.check("handoff starts on Requested", status === "requested", String(status));
 }
 

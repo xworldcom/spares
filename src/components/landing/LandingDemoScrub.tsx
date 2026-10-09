@@ -520,23 +520,33 @@ export function LandingDemoScrub({
         scrolled,
         inBeatChapter,
       } = readBeatLayout();
-      if (!inBeatChapter || beatCount <= 0) {
+      const activeStatus = section.dataset.activeQuoteStatus ?? "";
+      const statusIndex = HANDOFF_BEAT_STATUSES.indexOf(
+        activeStatus as (typeof HANDOFF_BEAT_STATUSES)[number],
+      );
+      const onHandoffBeat =
+        beatCount > 0 && (inBeatChapter || (statusIndex >= 0 && statusIndex < beatCount));
+      if (!onHandoffBeat) {
         return;
       }
       const direction = event.key === "PageDown" ? 1 : -1;
       lastInputKind = "keyboard";
       lastUserScrollDir = direction;
-      const currentIndex = demoBeatTrackIndexFromScroll(
-        scrolled,
-        preHandoffHeight,
-        beatTrackHeight,
-        beatCount,
-      );
+      const currentIndex =
+        statusIndex >= 0
+          ? statusIndex
+          : demoBeatTrackIndexFromScroll(
+              scrolled,
+              preHandoffHeight,
+              beatTrackHeight,
+              beatCount,
+            );
       const targetIndex = demoBeatKeyboardStepTargetIndex(currentIndex, direction, beatCount);
       if (targetIndex === null) {
         return;
       }
       event.preventDefault();
+      event.stopPropagation();
       scrollToBeatIndex(beatTracks, targetIndex);
     };
 
@@ -551,7 +561,7 @@ export function LandingDemoScrub({
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, { capture: true });
     window.addEventListener("scrollend", onScrollEnd, { passive: true });
     let scrollEndFallback = 0;
     const onScrollForSnap = () => {
@@ -574,7 +584,7 @@ export function LandingDemoScrub({
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
       window.removeEventListener("scrollend", onScrollEnd);
       if (!scrollEndNative) {
         window.removeEventListener("scroll", onScrollForSnap);
