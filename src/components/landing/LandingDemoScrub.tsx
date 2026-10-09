@@ -28,8 +28,11 @@ import {
   workflowHandoffBeatStatusAtIndex,
   workflowHandoffLinearStart,
   demoHandoffLinearProgressAtBeatRest,
+  demoBuildLandingPostChapterStops,
+  demoBuildLandingScrollStops,
+  demoLandingScrubChapterEndScrollY,
   demoLandingScrollStopStepTargetIndex,
-  demoLandingScrollStopsDedupe,
+  demoMergeLandingScrollStops,
   demoLandingWheelCapRegion,
   type DemoBeatScrollInputKind,
   type DemoLandingScrollStop,
@@ -307,7 +310,7 @@ export function LandingDemoScrub({
 
     const onResize = () => {
       measureStickyTop();
-      frozenLandingStops = null;
+      cachedChapterStops = null;
       lastY = Number.NaN;
     };
 
@@ -379,7 +382,14 @@ export function LandingDemoScrub({
         : Math.max(0, rootY);
       lastUserScrollDir = delta > 0 ? 1 : -1;
       programmaticScrollUntil = performance.now() + 520;
-      window.scrollTo({ top: Math.max(0, scrollY + delta), left: 0, behavior: "auto" });
+      const html = document.documentElement;
+      const snapRestore = html.style.scrollSnapType;
+      html.style.scrollSnapType = "none";
+      const targetTop = Math.max(0, scrollY + delta);
+      window.scrollTo({ top: targetTop, left: 0, behavior: "auto" });
+      window.requestAnimationFrame(() => {
+        html.style.scrollSnapType = snapRestore;
+      });
       if (root && !parkedRoot) {
         root.scrollTop = Math.max(0, root.scrollTop + delta);
       }
@@ -393,93 +403,85 @@ export function LandingDemoScrub({
     };
 
     const scrollToLandingStop = (stop: DemoLandingScrollStop) => {
-      if (stop.kind === "schematic") {
-        document.getElementById("machine-model")?.scrollIntoView({ block: "start", behavior: "auto" });
-        return;
-      }
-      if (stop.kind === "assembly") {
-        document.getElementById("cad-ingest")?.scrollIntoView({ block: "start", behavior: "auto" });
-        return;
-      }
       scrollToAbsoluteY(stop.scrollY);
     };
 
-    const scrollStopYFromLayout = (el: HTMLElement) => {
-      return demoOffsetInDocument(el).y - layout.stickyTop;
-    };
-
-    let frozenLandingStops: DemoLandingScrollStop[] | null = null;
+    let cachedChapterStops: DemoLandingScrollStop[] | null = null;
 
     const buildLandingScrollStops = (): DemoLandingScrollStop[] => {
       measureLayout();
-      const stops: DemoLandingScrollStop[] = [{ kind: "hero", scrollY: 0 }];
-
+      measureStickyTop();
+      const pageScrollY = readPageScrollY();
       const preSnaps = section.querySelectorAll<HTMLElement>(".landing-demo-scrub-snap");
-      for (const el of preSnaps) {
-        stops.push({
-          kind: "preHandoff",
-          scrollY: scrollStopYFromLayout(el),
-        });
-      }
-
       const beatTracks = [...section.querySelectorAll<HTMLElement>(".landing-demo-beat-track")];
-      beatTracks.forEach((track, beatIndex) => {
-        stops.push({
-          kind: "beat",
-          beatIndex,
-          scrollY: scrollStopYFromLayout(track),
-        });
-      });
-
-      const pin = pinRef.current;
-      const pinHeight = pin?.offsetHeight ?? layout.pinHeight;
-      const sectionDocY = demoOffsetInDocument(section).y;
-      stops.push({
-        kind: "confirmedHold",
-        scrollY: sectionDocY + Math.max(0, layout.sectionHeight - pinHeight) - layout.stickyTop,
-      });
-
+      const beatTrackHeight = beatTracks[0]?.offsetHeight ?? 0;
       const schematic = document.getElementById("machine-model");
       const assembly = document.getElementById("cad-ingest");
-      const footer = document.querySelector<HTMLElement>(".landing-site-footer");
       const maxY = Math.max(
         0,
         (document.scrollingElement?.scrollHeight ?? 0) - window.innerHeight,
       );
-      const clampPost = (y: number) => Math.min(Math.max(0, y), maxY);
-      if (schematic) {
-        stops.push({
-          kind: "schematic",
-          scrollY: clampPost(scrollStopYFromLayout(schematic)),
-        });
+      const pinEl = pinRef.current;
+      const pinHeight = pinEl?.offsetHeight ?? layout.pinHeight;
+      const sectionDocTop = demoOffsetInDocument(section).y;
+      if (pageScrollY < 16 || !cachedChapterStops) {
+        cachedChapterStops = demoBuildLandingScrollStops({
+          pageScrollY,
+          stickyTop: layout.stickyTop,
+          viewportWidth: window.innerWidth,
+          maxScrollY: maxY,
+          sectionDocTop,
+          sectionHeight: layout.sectionHeight,
+          pinHeight,
+          preHandoffViewportTops: [...preSnaps].map((el) => el.getBoundingClientRect().top),
+          beatViewportTops: beatTracks.map((track) => track.getBoundingClientRect().top),
+          beatTrackHeight,
+          schematicViewportTop: null,
+          assemblyViewportTop: null,
+        }).filter(
+          (stop) =>
+            stop.kind !== "schematic" && stop.kind !== "assembly" && stop.kind !== "footer",
+        );
       }
-      if (assembly) {
-        stops.push({
-          kind: "assembly",
-          scrollY: clampPost(scrollStopYFromLayout(assembly)),
-        });
-      }
-      const merged = demoLandingScrollStopsDedupe(stops);
-      if (footer) {
-        merged.push({ kind: "footer", scrollY: maxY });
-      }
-      const sorted = merged.sort((a, b) => a.scrollY - b.scrollY);
+      const postChapter = demoBuildLandingPostChapterStops(
+        pageScrollY,
+        layout.stickyTop,
+        maxY,
+        schematic?.getBoundingClientRect().top ?? null,
+        assembly?.getBoundingClientRect().top ?? null,
+      );
+      const sorted = demoMergeLandingScrollStops(cachedChapterStops, postChapter);
       section.dataset.landingStopRail = sorted
         .map((stop) => `${stop.kind}:${Math.round(stop.scrollY)}`)
         .join("|");
       return sorted;
     };
 
-    const collectLandingScrollStops = (): DemoLandingScrollStop[] => {
-      if (!frozenLandingStops) {
-        frozenLandingStops = buildLandingScrollStops();
-      }
-      return frozenLandingStops;
+    const collectLandingScrollStops = (): DemoLandingScrollStop[] => buildLandingScrollStops();
+
+    const scrubChapterEndScrollY = () => {
+      measureLayout();
+      measureStickyTop();
+      const pinHeight = pinRef.current?.offsetHeight ?? layout.pinHeight;
+      return demoLandingScrubChapterEndScrollY(
+        demoOffsetInDocument(section).y,
+        layout.sectionHeight,
+        pinHeight,
+        layout.stickyTop,
+      );
+    };
+
+    const readFooterScrollY = () =>
+      Math.max(0, (document.scrollingElement?.scrollHeight ?? 0) - window.innerHeight);
+
+    const inLandingWheelCapRegion = () => {
+      const scrollY = readPageScrollY();
+      return demoLandingWheelCapRegion(scrollY, scrubChapterEndScrollY(), readFooterScrollY());
     };
 
     const scrubEndScrollY = () => {
       const hold = collectLandingScrollStops().find((stop) => stop.kind === "confirmedHold");
-      return hold?.scrollY ?? 0;
+      return hold?.scrollY ?? scrubChapterEndScrollY();
     };
 
     const stepLandingScrollStop = (direction: -1 | 1, inputKind: DemoBeatScrollInputKind) => {
@@ -487,9 +489,7 @@ export function LandingDemoScrub({
       if (stops.length < 2) {
         return false;
       }
-      const scrollY = readPageScrollY();
-      const footerY = stops.find((s) => s.kind === "footer")?.scrollY ?? scrollY;
-      if (!demoLandingWheelCapRegion(scrollY, scrubEndScrollY(), footerY)) {
+      if (!inLandingWheelCapRegion()) {
         return false;
       }
       const targetIndex = demoLandingScrollStopStepTargetIndex(stops, scrollY, direction);
@@ -519,10 +519,7 @@ export function LandingDemoScrub({
       const direction = event.deltaY > 0 ? 1 : -1;
       lastInputKind = "wheel";
       lastUserScrollDir = direction;
-      const scrollY = readPageScrollY();
-      const footerY =
-        collectLandingScrollStops().find((stop) => stop.kind === "footer")?.scrollY ?? scrollY;
-      if (!demoLandingWheelCapRegion(scrollY, scrubEndScrollY(), footerY)) {
+      if (!inLandingWheelCapRegion()) {
         return;
       }
       event.preventDefault();
@@ -549,6 +546,9 @@ export function LandingDemoScrub({
     };
 
     const onTouchMove = (event: TouchEvent) => {
+      if (inLandingWheelCapRegion()) {
+        event.preventDefault();
+      }
       const y = event.touches[0]?.clientY ?? touchLastClientY;
       const step = touchLastClientY - y;
       touchNetFingerDelta += step;
@@ -561,7 +561,7 @@ export function LandingDemoScrub({
     const onTouchEnd = () => {
       const net = touchNetFingerDelta;
       touchNetFingerDelta = 0;
-      if (Math.abs(net) < 10) {
+      if (Math.abs(net) < 6) {
         return;
       }
       const direction = net < 0 ? 1 : -1;
@@ -617,14 +617,14 @@ export function LandingDemoScrub({
 
     measureStickyTop();
     apply();
-    frozenLandingStops = buildLandingScrollStops();
+    buildLandingScrollStops();
     frame = window.requestAnimationFrame(tick);
 
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("keydown", onKeyDown, { capture: true });

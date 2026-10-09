@@ -842,7 +842,123 @@ export type DemoLandingScrollStop = {
   beatIndex?: number;
 };
 
-/** Merge stops that land on the same rail within a few pixels (keep the later chapter). */
+/** Scroll Y to align an element's top with the sticky pin rail (stable at any page scroll). */
+export function demoLandingStopScrollY(
+  pageScrollY: number,
+  elementViewportTop: number,
+  stickyTop: number,
+) {
+  return Math.max(0, Math.round(pageScrollY + elementViewportTop - stickyTop));
+}
+
+/** Page scroll when the scrub chapter runway ends (Confirmed end-hold), matching pin geometry. */
+export function demoLandingScrubChapterEndScrollY(
+  sectionDocTop: number,
+  sectionHeight: number,
+  pinHeight: number,
+  stickyTop: number,
+) {
+  return Math.max(0, Math.round(sectionDocTop + sectionHeight - pinHeight - stickyTop));
+}
+
+export type DemoLandingStopBuildInput = {
+  pageScrollY: number;
+  stickyTop: number;
+  viewportWidth: number;
+  maxScrollY: number;
+  sectionDocTop: number;
+  sectionHeight: number;
+  pinHeight: number;
+  preHandoffViewportTops: readonly number[];
+  beatViewportTops: readonly number[];
+  beatTrackHeight: number;
+  schematicViewportTop: number | null;
+  assemblyViewportTop: number | null;
+};
+
+/** One stop list: hero → pre-handoff → beats → hold (beat-derived) → schematic → assembly → footer. */
+export function demoBuildLandingScrollStops(input: DemoLandingStopBuildInput): DemoLandingScrollStop[] {
+  const { pageScrollY, stickyTop } = input;
+  const y = (viewportTop: number) => demoLandingStopScrollY(pageScrollY, viewportTop, stickyTop);
+  const stops: DemoLandingScrollStop[] = [{ kind: "hero", scrollY: 0 }];
+
+  for (const top of input.preHandoffViewportTops) {
+    stops.push({ kind: "preHandoff", scrollY: y(top) });
+  }
+  input.beatViewportTops.forEach((top, beatIndex) => {
+    stops.push({ kind: "beat", beatIndex, scrollY: y(top) });
+  });
+
+  if (input.beatViewportTops.length > 0 && input.beatTrackHeight > 0) {
+    stops.push({
+      kind: "confirmedHold",
+      scrollY: demoLandingScrubChapterEndScrollY(
+        input.sectionDocTop,
+        input.sectionHeight,
+        input.pinHeight,
+        input.stickyTop,
+      ),
+    });
+  }
+
+  if (input.schematicViewportTop !== null) {
+    stops.push({
+      kind: "schematic",
+      scrollY: Math.min(y(input.schematicViewportTop), input.maxScrollY),
+    });
+  }
+  if (input.assemblyViewportTop !== null) {
+    stops.push({
+      kind: "assembly",
+      scrollY: Math.min(y(input.assemblyViewportTop), input.maxScrollY),
+    });
+  }
+
+  const merged = demoLandingScrollStopsDedupe(stops);
+  merged.push({ kind: "footer", scrollY: input.maxScrollY });
+  return merged.sort((a, b) => a.scrollY - b.scrollY);
+}
+
+/** Post-chapter stops from live viewport (rebuilt every step). */
+export function demoBuildLandingPostChapterStops(
+  pageScrollY: number,
+  stickyTop: number,
+  maxScrollY: number,
+  schematicViewportTop: number | null,
+  assemblyViewportTop: number | null,
+): DemoLandingScrollStop[] {
+  const y = (viewportTop: number) => demoLandingStopScrollY(pageScrollY, viewportTop, stickyTop);
+  const out: DemoLandingScrollStop[] = [];
+  if (schematicViewportTop !== null) {
+    out.push({
+      kind: "schematic",
+      scrollY: Math.min(y(schematicViewportTop), maxScrollY),
+    });
+  }
+  if (assemblyViewportTop !== null) {
+    out.push({
+      kind: "assembly",
+      scrollY: Math.min(y(assemblyViewportTop), maxScrollY),
+    });
+  }
+  out.push({ kind: "footer", scrollY: maxScrollY });
+  return out;
+}
+
+export function demoMergeLandingScrollStops(
+  chapter: readonly DemoLandingScrollStop[],
+  postChapter: readonly DemoLandingScrollStop[],
+): DemoLandingScrollStop[] {
+  const withoutTail = chapter.filter(
+    (stop) =>
+      stop.kind !== "schematic" && stop.kind !== "assembly" && stop.kind !== "footer",
+  );
+  return demoLandingScrollStopsDedupe([...withoutTail, ...postChapter]).sort(
+    (a, b) => a.scrollY - b.scrollY,
+  );
+}
+
+/** Merge only same-kind neighbors within minGap (never collapse beat vs schematic). */
 export function demoLandingScrollStopsDedupe(
   stops: readonly DemoLandingScrollStop[],
   minGapPx = 28,
@@ -854,13 +970,30 @@ export function demoLandingScrollStopsDedupe(
   const out: DemoLandingScrollStop[] = [];
   for (const stop of sorted) {
     const prev = out[out.length - 1];
-    if (prev && stop.scrollY - prev.scrollY < minGapPx) {
+    if (
+      prev &&
+      prev.kind === stop.kind &&
+      stop.scrollY - prev.scrollY < minGapPx
+    ) {
       out[out.length - 1] = stop;
       continue;
     }
     out.push(stop);
   }
   return out;
+}
+
+/** After momentum, snap only to the next/previous stop in the last gesture direction (never backward). */
+export function demoLandingScrollStopSettleTargetIndex(
+  stops: readonly DemoLandingScrollStop[],
+  scrollY: number,
+  scrollDirection: -1 | 0 | 1,
+  epsilonPx = 24,
+): number | null {
+  if (scrollDirection === 0) {
+    return null;
+  }
+  return demoLandingScrollStopStepTargetIndex(stops, scrollY, scrollDirection, epsilonPx);
 }
 
 /** Next/previous landing stop for keyboard or capped wheel (epsilon avoids re-selecting current). */

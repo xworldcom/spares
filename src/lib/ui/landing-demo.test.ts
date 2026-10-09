@@ -51,7 +51,9 @@ import {
   demoBeatTrackSnapAlignmentDeltaDirected,
   demoBeatKeyboardStepTargetIndex,
   demoLandingScrollStopStepTargetIndex,
+  demoBuildLandingScrollStops,
   demoLandingScrollStopsDedupe,
+  demoLandingStopScrollY,
   demoLandingScrollTargetY,
   demoBeatAlignIndexRespectsDirection,
   demoInBeatSnapChapter,
@@ -230,7 +232,7 @@ describe("demo scroll scrub", () => {
     assert.doesNotMatch(src, /flushSync/);
     assert.match(src, /landing-demo-beat-track/);
     assert.match(src, /stepLandingScrollStop/);
-    assert.match(src, /frozenLandingStops/);
+    assert.match(src, /demoBuildLandingScrollStops/);
     assert.match(src, /addEventListener\("keydown", onKeyDown/);
     assert.doesNotMatch(src, /alignBeatSnap/);
     assert.doesNotMatch(src, /addEventListener\("scrollend"/);
@@ -373,6 +375,10 @@ describe("landing scrub layout", () => {
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-align/);
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop/);
     assert.doesNotMatch(css, /\.landing-demo-scrub-snap\s*\{[^}]*scroll-snap-align/);
+    assert.doesNotMatch(
+      css,
+      /\.landing-marketing > \.landing-section#machine-model[\s\S]*scroll-snap-align/,
+    );
     assert.match(css, /--landing-demo-beat-track:\s*56svh/);
     assert.equal(DEMO_BEAT_TRACK_SVH_PHONE, 56);
   });
@@ -399,7 +405,7 @@ describe("landing scrub layout", () => {
     assert.equal(demoBeatKeyboardStepTargetIndex(0, -1, 6), null);
     const landingStops = demoLandingScrollStopsDedupe([
       { kind: "hero", scrollY: 0 },
-      { kind: "preHandoff", scrollY: 10 },
+      { kind: "preHandoff", scrollY: 40 },
       { kind: "beat", scrollY: 400, beatIndex: 0 },
       { kind: "beat", scrollY: 820, beatIndex: 1 },
       { kind: "confirmedHold", scrollY: 2800 },
@@ -407,12 +413,44 @@ describe("landing scrub layout", () => {
       { kind: "assembly", scrollY: 3400 },
       { kind: "footer", scrollY: 4000 },
     ]);
-    assert.equal(landingStops.length, 7);
+    assert.equal(landingStops.length, 8);
+    const beaLike = demoLandingScrollStopsDedupe([
+      { kind: "hero", scrollY: 0 },
+      { kind: "preHandoff", scrollY: 1115 },
+      { kind: "preHandoff", scrollY: 1560 },
+      { kind: "beat", scrollY: 5712, beatIndex: 5 },
+      { kind: "confirmedHold", scrollY: 6290 },
+      { kind: "schematic", scrollY: 6800 },
+      { kind: "assembly", scrollY: 7200 },
+      { kind: "footer", scrollY: 13705 },
+    ]);
+    assert.equal(demoLandingScrollStopStepTargetIndex(beaLike, 1115, -1), 0);
+    assert.equal(demoLandingScrollStopStepTargetIndex(beaLike, 1560, -1), 1);
+    const built = demoBuildLandingScrollStops({
+      pageScrollY: 0,
+      stickyTop: 56,
+      viewportWidth: 1280,
+      maxScrollY: 9000,
+      sectionDocTop: 800,
+      sectionHeight: 3200,
+      pinHeight: 844,
+      preHandoffViewportTops: [1171, 1616],
+      beatViewportTops: [2000, 2500],
+      beatTrackHeight: 420,
+      schematicViewportTop: 7000,
+      assemblyViewportTop: 7500,
+    });
+    assert.ok(built.some((s) => s.kind === "schematic"));
+    assert.ok(built.some((s) => s.kind === "assembly"));
+    assert.ok(
+      built.find((s) => s.kind === "confirmedHold")!.scrollY <
+        built.find((s) => s.kind === "schematic")!.scrollY,
+    );
     assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 0, 1), 1);
-    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 400, 1), 2);
-    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 2800, 1), 4);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 400, 1), 3);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 2800, 1), 5);
     assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 4000, 1), null);
-    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 3400, -1), 4);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 3400, -1), 5);
     assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 820, -1), 1);
     assert.equal(demoLandingScrollTargetY(500, 120, 56), 564);
     assert.equal(demoBeatAlignIndexRespectsDirection(3, 2, 1), false);
