@@ -372,7 +372,7 @@ describe("landing scrub layout", () => {
     assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-align/);
     assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop/);
-    assert.match(css, /\.landing-demo-scrub-snap--handoff-entry[\s\S]*scroll-snap-stop:\s*always/);
+    assert.doesNotMatch(css, /\.landing-demo-scrub-snap\s*\{[^}]*scroll-snap-align/);
     assert.match(css, /--landing-demo-beat-track:\s*56svh/);
     assert.equal(DEMO_BEAT_TRACK_SVH_PHONE, 56);
   });

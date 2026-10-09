@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 OUT="${R4_OUT:-/cursor/stores/self/media/round4m}"
-PORT="${R4M_PORT:-3020}"
+PORT="${R4M_PORT:-3099}"
 DATA_DIR="/tmp/oee360-round4m-${PORT}"
 mkdir -p "$OUT" "$DATA_DIR/files"
 export SPARES_DATA_DIR="$DATA_DIR"
@@ -16,9 +16,19 @@ export R4_TAG="${R4_TAG:-after}"
 export CHROME_BIN="${CHROME_BIN:-/usr/local/bin/google-chrome}"
 export R4_NO_VIDEO=1
 
-fuser -k "${PORT}/tcp" 2>/dev/null || true
-sleep 1
 npm run build
+for _ in $(seq 1 8); do
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -ti:"${PORT}" | xargs -r kill -9 2>/dev/null || true
+  fi
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k "${PORT}/tcp" 2>/dev/null || true
+  fi
+  sleep 1
+  if ! curl -sf "${R4_BASE}/login" >/dev/null 2>&1; then
+    break
+  fi
+done
 node "$ROOT/node_modules/next/dist/bin/next" start -p "$PORT" &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true' EXIT
@@ -27,6 +37,10 @@ for _ in $(seq 1 90); do
   if curl -sf "$R4_BASE/login" >/dev/null; then break; fi
   sleep 1
 done
+if ! curl -sf "$R4_BASE/login" >/dev/null; then
+  echo "FAIL prod server did not start on port ${PORT}"
+  exit 1
+fi
 
 API_CODE="$(curl -s -o /dev/null -w "%{http_code}" "$R4_BASE/api/auth/sign-in-options" || echo 000)"
 if [ "$API_CODE" = "409" ] || [ "$API_CODE" = "500" ]; then

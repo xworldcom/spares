@@ -487,7 +487,7 @@ export function LandingDemoScrub({
       if (stops.length < 2) {
         return false;
       }
-      const scrollY = readWindowScrollY();
+      const scrollY = readPageScrollY();
       const footerY = stops.find((s) => s.kind === "footer")?.scrollY ?? scrollY;
       if (!demoLandingWheelCapRegion(scrollY, scrubEndScrollY(), footerY)) {
         return false;
@@ -504,11 +504,12 @@ export function LandingDemoScrub({
 
     const flushWheelInertiaStep = (threshold: number) => {
       if (Math.abs(wheelInertiaAcc) < threshold) {
-        return;
+        return false;
       }
       const direction = wheelInertiaAcc > 0 ? 1 : -1;
       wheelInertiaAcc = 0;
       stepLandingScrollStop(direction, "wheel");
+      return true;
     };
 
     const onWheel = (event: WheelEvent) => {
@@ -518,7 +519,7 @@ export function LandingDemoScrub({
       const direction = event.deltaY > 0 ? 1 : -1;
       lastInputKind = "wheel";
       lastUserScrollDir = direction;
-      const scrollY = readWindowScrollY();
+      const scrollY = readPageScrollY();
       const footerY =
         collectLandingScrollStops().find((stop) => stop.kind === "footer")?.scrollY ?? scrollY;
       if (!demoLandingWheelCapRegion(scrollY, scrubEndScrollY(), footerY)) {
@@ -527,13 +528,14 @@ export function LandingDemoScrub({
       event.preventDefault();
       event.stopPropagation();
       const { beatTrackHeight } = readBeatLayout();
-      const threshold = Math.max(28, beatTrackHeight * 0.26);
+      const threshold = Math.max(24, beatTrackHeight * 0.22);
       wheelInertiaAcc += event.deltaY;
       window.clearTimeout(wheelIdleTimer);
       wheelIdleTimer = window.setTimeout(() => {
-        flushWheelInertiaStep(threshold);
-        wheelInertiaAcc = 0;
-      }, 260);
+        if (!flushWheelInertiaStep(threshold)) {
+          wheelInertiaAcc = 0;
+        }
+      }, 380);
       flushWheelInertiaStep(threshold);
     };
 

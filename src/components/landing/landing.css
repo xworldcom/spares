@@ -418,15 +418,10 @@
   view-timeline-inset: var(--spares-header) 0.75rem;
 }
 
+/* Pre-handoff scrub spacers are layout-only; stop rail owns scroll in the demo chapter. */
 .landing-demo-scrub-snap {
   flex: 0 0 auto;
-  scroll-snap-align: start;
-  scroll-snap-stop: normal;
   pointer-events: none;
-}
-
-.landing-demo-scrub-snap--handoff-entry {
-  scroll-snap-stop: always;
 }
 
 .landing-demo-beat-track {
