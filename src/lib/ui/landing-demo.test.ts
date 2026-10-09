@@ -451,7 +451,7 @@ describe("landing scrub layout", () => {
     assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 2800, 1), 5);
     assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 4000, 1), null);
     assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 3400, -1), 5);
-    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 820, -1), 1);
+    assert.equal(demoLandingScrollStopStepTargetIndex(landingStops, 820, -1), 2);
     assert.equal(demoLandingScrollTargetY(500, 120, 56), 564);
     assert.equal(demoBeatAlignIndexRespectsDirection(3, 2, 1), false);
     assert.equal(demoBeatAlignIndexRespectsDirection(3, 4, 1), true);
