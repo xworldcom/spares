@@ -381,8 +381,8 @@
   color: var(--spares-on-paper);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.42);
   border-radius: 22px 22px 0 0;
-  transform: translate3d(0, 0, 0);
-  will-change: height;
+  transform: translate3d(0, var(--sheet-close-ty, 0), 0);
+  will-change: transform, height;
   touch-action: none;
 }
 
@@ -418,8 +418,17 @@
 
 .conversation-sheet:not(.is-inline).is-out {
   --sheet-h: var(--reply-h);
-  transform: translate3d(0, 110%, 0);
+  transform: translate3d(0, var(--sheet-close-ty, var(--sheet-close-rest-ty, 0)), 0);
   pointer-events: none;
+}
+
+.conversation-sheet:not(.is-inline).is-out .snap-sheet-handle,
+.conversation-sheet:not(.is-inline).is-out .quote-sheet-handle {
+  pointer-events: auto;
+}
+
+.conversation-sheet:not(.is-inline)[data-close-translate] {
+  transition: none;
 }
 
 .conversation-sheet.is-dragging,
@@ -430,8 +439,8 @@
   max-height: var(--full-h);
 }
 
-.conversation-sheet:not(.is-dragging):not(.is-inline) {
-  /* Height is driven by drag/settle (--sheet-h); only slide-out uses transform transition. */
+.conversation-sheet:not(.is-dragging):not(.is-settling):not(.is-inline):not([data-close-translate]) {
+  /* Height is driven by drag/settle (--sheet-h); close uses --sheet-close-ty. */
   transition: transform var(--sheet-duration) var(--sheet-ease);
 }
 
