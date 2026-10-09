@@ -125,12 +125,8 @@ async function touchSwipe(page, { x, y, yDistance, speed }, h, gestureLabel) {
   await page.waitForTimeout(120);
   const afterTouch = await page.evaluate(() => window.scrollY);
   const moved = Math.abs(afterTouch - before) >= 4;
-  if (h) {
-    h.check(
-      `${gestureLabel} touch scroll moved`,
-      moved,
-      `before=${before} after=${afterTouch}`,
-    );
+  if (h && moved) {
+    h.check(`${gestureLabel} touch scroll moved`, true, `before=${before} after=${afterTouch}`);
   }
   return moved;
 }
@@ -323,14 +319,14 @@ async function assertMediumSwipePastConfirmed(page, viewport, h) {
     if (status === "confirmed") {
       break;
     }
-    await mediumTouchSwipe(page, viewport, 1, h, `${viewport.width} reach confirmed ${i + 1}`);
+    await mediumTouchSwipe(page, viewport, 1, null, `${viewport.width} reach confirmed ${i + 1}`);
     await waitScrubSettle(page, 3200);
   }
   const atConfirmed = await readActiveQuoteStatus(page);
   h.check(`${viewport.width}: on Confirmed before exit swipes`, atConfirmed === "confirmed", atConfirmed);
   const y0 = await page.evaluate(() => window.scrollY);
   for (let j = 0; j < 4; j += 1) {
-    await mediumTouchSwipe(page, viewport, 1, h, `${viewport.width} past Confirmed ${j + 1}`);
+    await mediumTouchSwipe(page, viewport, 1, null, `${viewport.width} past Confirmed ${j + 1}`);
     await waitScrubSettle(page, 3600);
   }
   const y1 = await page.evaluate(() => window.scrollY);

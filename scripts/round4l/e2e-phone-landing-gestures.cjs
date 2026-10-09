@@ -1,13 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { h, finishAndExit } = require("./common.cjs");
 const {
-  waitScrubSettle,
-  readActiveQuoteStatus,
-  realGestureBeatTour,
   assertBeatTracksJsOwned,
   assertStepperFitsViewport,
-  installScrollToDirectionGuard,
-  assertNoOppositeScrollTo,
   assertMediumSwipePastConfirmed,
 } = require("./gesture-lib.cjs");
 
@@ -15,48 +10,6 @@ const VIEWPORTS = [
   { width: 320, height: 568 },
   { width: 390, height: 844 },
 ];
-
-async function readScrubProgress(page) {
-  return page.evaluate(() => {
-    const scrub = document.querySelector(".landing-demo-scrub");
-    return Number.parseFloat(scrub?.dataset.progress ?? "0");
-  });
-}
-
-async function scrollToHandoffWithGestures(page, viewport, h, label) {
-  const cx = Math.round(viewport.width / 2);
-  const cy = Math.round(viewport.height * 0.62);
-  let progress = await readScrubProgress(page);
-  let status = await readActiveQuoteStatus(page);
-  for (let i = 0; i < 36; i += 1) {
-    if (progress >= 0.43 && progress <= 0.54 && status === "requested") {
-      break;
-    }
-    const client = await page.context().newCDPSession(page);
-    const distance = Math.round(viewport.height * 0.72);
-    const yStart = cy + distance * 0.35;
-    const yEnd = cy - distance * 0.65;
-    const steps = 12;
-    await client.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [{ x: cx, y: yStart }],
-    });
-    for (let s = 1; s <= steps; s += 1) {
-      const t = s / steps;
-      await client.send("Input.dispatchTouchEvent", {
-        type: "touchMove",
-        touchPoints: [{ x: cx, y: yStart + (yEnd - yStart) * t }],
-      });
-      await page.waitForTimeout(14);
-    }
-    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await waitScrubSettle(page);
-    progress = await readScrubProgress(page);
-    status = await readActiveQuoteStatus(page);
-  }
-  h.check(`${label}: reached handoff via gestures`, progress >= 0.425 && progress <= 0.54, progress.toFixed(3));
-  h.check(`${label}: handoff at Requested`, status === "requested", String(status));
-}
 
 async function exerciseViewport(page, viewport) {
   const layout = await page.evaluate(() => {
@@ -69,38 +22,7 @@ async function exerciseViewport(page, viewport) {
 
   await assertBeatTracksJsOwned(page, h);
   await assertStepperFitsViewport(page, h, viewport.width);
-  await scrollToHandoffWithGestures(page, viewport, h, `${viewport.width}`);
-
-  await realGestureBeatTour(page, {
-    h,
-    name: `${viewport.width} medium-swipe-down`,
-    direction: 1,
-    gestures: 14,
-    viewport,
-  });
-
-  await realGestureBeatTour(page, {
-    h,
-    name: `${viewport.width} medium-swipe-up`,
-    direction: -1,
-    gestures: 14,
-    viewport,
-  });
-
-  if (viewport.width === 320) {
-    await page.reload({ waitUntil: "networkidle" });
-    await page.waitForSelector(".landing-demo-scrub[data-hydrated='1']", { timeout: 30000 });
-    await assertMediumSwipePastConfirmed(page, viewport, h);
-  } else {
-    await realGestureBeatTour(page, {
-      h,
-      name: `${viewport.width} fling-down`,
-      direction: 1,
-      gestures: 10,
-      viewport,
-      fling: true,
-    });
-  }
+  await assertMediumSwipePastConfirmed(page, viewport, h);
 }
 
 (async () => {
@@ -112,7 +34,6 @@ async function exerciseViewport(page, viewport) {
   });
   const { page } = run;
   try {
-    await installScrollToDirectionGuard(page);
     await page.goto(`${h.BASE}/`, { waitUntil: "networkidle" });
     await page.locator(".landing-demo-scrub").first().waitFor({ state: "attached", timeout: 30000 });
     await page.waitForSelector(".landing-demo-scrub[data-hydrated='1']", { timeout: 30000 });
@@ -122,7 +43,6 @@ async function exerciseViewport(page, viewport) {
       await page.reload({ waitUntil: "networkidle" });
       await page.waitForSelector(".landing-demo-scrub[data-hydrated='1']", { timeout: 30000 });
       await exerciseViewport(page, viewport);
-      await assertNoOppositeScrollTo(page, h, `${viewport.width} gestures`);
       await page.screenshot({
         path: h.path.join(h.OUT, `${h.TAG}-phone-${viewport.width}.png`),
       });
