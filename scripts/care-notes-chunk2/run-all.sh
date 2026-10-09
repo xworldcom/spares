@@ -6,4 +6,6 @@ cd "$ROOT"
 node --experimental-strip-types --test "$ROOT/src/lib/ui/conversation-sheet.test.ts"
 node "$ROOT/scripts/care-notes-chunk2/e2e-phone-sheet-detents.cjs" "$BASE" 390 844
 node "$ROOT/scripts/care-notes-chunk2/e2e-phone-sheet-detents.cjs" "$BASE" 320 568
+node "$ROOT/scripts/care-notes-chunk2/e2e-phone-sheet-close-sync.cjs" "$BASE" 390 844
+node "$ROOT/scripts/care-notes-chunk2/e2e-phone-sheet-close-sync.cjs" "$BASE" 320 568
 node "$ROOT/.cursor/skills/verify-oee360/scripts/sheet-close-probe.mjs" "$BASE"

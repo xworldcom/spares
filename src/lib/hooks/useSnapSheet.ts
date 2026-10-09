@@ -773,8 +773,8 @@ export function useSnapSheet({
     }
     setOpen(true);
     paintMotion(live, settleGesture);
-    setSheet(next);
     if (Math.abs(live - target) < 2) {
+      setSheet(next);
       setSettling(false);
       setSettlingClass(false);
       clearMotionSnap(next);
@@ -784,25 +784,24 @@ export function useSnapSheet({
     const settleStarted = performance.now();
     const settleDurationMs = 440;
     const startLive = live;
-    window.requestAnimationFrame(() => {
-      const tick = () => {
-        const elapsed = performance.now() - settleStarted;
-        const t = Math.min(1, elapsed / settleDurationMs);
-        const eased = 1 - (1 - t) ** 3;
-        const interpolatedLive = startLive + (target - startLive) * eased;
-        paintMotion(interpolatedLive, settleGesture);
-        if (elapsed < settleDurationMs) {
-          settleFrameRef.current = window.requestAnimationFrame(tick);
-          return;
-        }
-        settleFrameRef.current = 0;
-        setSettling(false);
-        setSettlingClass(false);
-        clearMotionSnap(next);
-        clearMotionPaint(next);
-      };
-      settleFrameRef.current = window.requestAnimationFrame(tick);
-    });
+    const tick = () => {
+      const elapsed = performance.now() - settleStarted;
+      const t = Math.min(1, elapsed / settleDurationMs);
+      const eased = 1 - (1 - t) ** 3;
+      const interpolatedLive = startLive + (target - startLive) * eased;
+      paintMotion(interpolatedLive, settleGesture);
+      if (elapsed < settleDurationMs) {
+        settleFrameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      settleFrameRef.current = 0;
+      setSheet(next);
+      setSettling(false);
+      setSettlingClass(false);
+      clearMotionSnap(next);
+      clearMotionPaint(next);
+    };
+    settleFrameRef.current = window.requestAnimationFrame(tick);
   }
 
   function settleSheet(dy: number, from: SnapSheetSnap) {
