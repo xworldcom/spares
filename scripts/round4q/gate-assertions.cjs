@@ -158,6 +158,88 @@ async function assertWheelLandsSchematic(page) {
   };
 }
 
+function readTopButtonMetrics(page) {
+  return page.evaluate(() => {
+    const btn = document.querySelector(".landing-back-to-top");
+    if (!btn) {
+      return null;
+    }
+    const cs = getComputedStyle(btn);
+    return {
+      active: btn.classList.contains("is-visible"),
+      dataActive: btn.getAttribute("data-landing-btt-active") === "1",
+      opacity: Number.parseFloat(cs.opacity),
+      pointerEvents: cs.pointerEvents,
+      visibility: cs.visibility,
+      inert: Boolean(btn.inert),
+      tabIndex: btn.tabIndex,
+      ariaHidden: btn.getAttribute("aria-hidden"),
+    };
+  });
+}
+
+async function assertTopInteractionConsistent(page, targetScrollY) {
+  for (let i = 0; i < 40; i += 1) {
+    const y = await page.evaluate(() => window.scrollY);
+    if (y >= targetScrollY - 24) break;
+    await page.keyboard.press("PageDown");
+    await waitScrubSettle(page, 1400);
+  }
+  const m = await readTopButtonMetrics(page);
+  if (!m) {
+    return { ok: false, reason: "no-button" };
+  }
+  const tappable =
+    m.active &&
+    m.dataActive &&
+    m.opacity >= 0.95 &&
+    m.pointerEvents === "auto" &&
+    m.visibility === "visible" &&
+    !m.inert &&
+    m.tabIndex >= 0;
+  const hiddenOk =
+    !m.active &&
+    m.opacity <= 0.05 &&
+    m.pointerEvents === "none" &&
+    m.inert;
+  return {
+    ok: tappable || hiddenOk,
+    scrollY: await page.evaluate(() => window.scrollY),
+    metrics: m,
+  };
+}
+
+async function assertTopHideReleasesFocus(page) {
+  await pageUpToHero(page);
+  await pageDownPastFirstBeat(page);
+  const visible = await isTopVisible(page);
+  if (!visible) {
+    return { ok: false, reason: "top-not-visible-for-focus-test" };
+  }
+  await page.focus(".landing-back-to-top.is-visible");
+  await page.keyboard.press("Tab");
+  await scrollUntilQuoteTray(page);
+  const m = await readTopButtonMetrics(page);
+  const active = await page.evaluate(() => {
+    const btn = document.querySelector(".landing-back-to-top");
+    return {
+      activeEl: document.activeElement?.className ?? "",
+      isBtn: document.activeElement === btn,
+    };
+  });
+  return {
+    ok:
+      m &&
+      m.inert &&
+      !m.active &&
+      m.pointerEvents === "none" &&
+      !active.isBtn &&
+      m.ariaHidden === null,
+    metrics: m,
+    active,
+  };
+}
+
 module.exports = {
   pageUpToHero,
   pageDownPastFirstBeat,
@@ -165,6 +247,9 @@ module.exports = {
   assertTopClickReachesHero,
   assertTrayQtyNotUnderTop,
   assertWheelLandsSchematic,
+  assertTopInteractionConsistent,
+  assertTopHideReleasesFocus,
+  readTopButtonMetrics,
   waitScrubSettle,
   readActiveQuoteStatus,
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   DEMO_LANDING_RAIL_GO_HERO_EVENT,
   demoLandingBackToTopShown,
@@ -57,9 +57,11 @@ function readQuoteTraySheetHeight(): number {
 }
 
 export function LandingBackToTop() {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [visible, setVisible] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [trayHides, setTrayHides] = useState(false);
+  const interactive = visible && !trayHides;
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -111,6 +113,16 @@ export function LandingBackToTop() {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (interactive) {
+      return;
+    }
+    const btn = buttonRef.current;
+    if (btn && document.activeElement === btn) {
+      btn.blur();
+    }
+  }, [interactive]);
+
   const handleClick = useCallback(() => {
     window.dispatchEvent(new Event(DEMO_LANDING_RAIL_GO_HERO_EVENT));
     if (reduceMotion) {
@@ -118,16 +130,16 @@ export function LandingBackToTop() {
     }
   }, [reduceMotion]);
 
-  const shown = visible && !trayHides;
-
   return (
     <button
+      ref={buttonRef}
       type="button"
-      className={shown ? "landing-back-to-top is-visible" : "landing-back-to-top"}
+      className={interactive ? "landing-back-to-top is-visible" : "landing-back-to-top"}
+      data-landing-btt-active={interactive ? "1" : undefined}
+      inert={interactive ? undefined : true}
       onClick={handleClick}
       aria-label="Back to top — sign in"
-      tabIndex={shown ? 0 : -1}
-      aria-hidden={shown ? undefined : true}
+      tabIndex={interactive ? 0 : -1}
     >
       <span className="landing-back-to-top-icon" aria-hidden="true">
         ↑
