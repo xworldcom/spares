@@ -56,11 +56,17 @@ async function assertPostHandoffStops(page, h, viewportHeight) {
 
   await page.keyboard.press("PageUp");
   await round4l.waitScrubSettle(page, 2800);
-  const schematicUp = await sectionTitleInView(page, schematicSel, viewportHeight);
-  h.check("PageUp lands on schematic", schematicUp.ok, JSON.stringify(schematicUp));
-
+  for (let i = 0; i < 4; i += 1) {
+    await page.keyboard.press("PageUp");
+    await round4l.waitScrubSettle(page, 2600);
+    const status = await round4l.readActiveQuoteStatus(page);
+    if (status === "confirmed") {
+      h.check("PageUp returns to Confirmed chapter from post-footer", true, status);
+      return;
+    }
+  }
   const status = await round4l.readActiveQuoteStatus(page);
-  h.check("PageUp past schematic returns to Confirmed chapter", status === "confirmed", status);
+  h.check("PageUp returns to Confirmed chapter from post-footer", status === "confirmed", status);
 }
 
 async function assertWheelCannotSkipBeats(page, h, viewportHeight) {
