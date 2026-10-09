@@ -85,6 +85,25 @@ async function openFull(page) {
   await page.waitForTimeout(400);
 }
 
+async function fullReachMetrics(page) {
+  return page.evaluate(() => {
+    const header = document.querySelector(".spares-header");
+    const handle = document.querySelector(".snap-sheet-handle");
+    const hr = handle?.getBoundingClientRect();
+    const hb = header?.getBoundingClientRect().bottom ?? 0;
+    const vv = window.visualViewport;
+    return {
+      scrollTop: document.scrollingElement?.scrollTop ?? 0,
+      handleTop: hr ? Math.round(hr.top) : null,
+      headerBottom: Math.round(hb),
+      vvTop: vv ? Math.round(vv.offsetTop) : 0,
+      vvHeight: vv ? Math.round(vv.height) : window.innerHeight,
+      reachable: hr ? hr.top >= hb - 2 : false,
+      sheetFull: document.querySelector(".conversation-sheet")?.classList.contains("is-full"),
+    };
+  });
+}
+
 async function runViewport(width, height, label) {
   const videoDir = join(outDir, "videos");
   mkdirSync(videoDir, { recursive: true });
@@ -98,22 +117,31 @@ async function runViewport(width, height, label) {
   await prepare(page);
 
   const reply = await headerMetrics(page);
-  await page.screenshot({ path: join(outDir, `step-a2-${label}-reply.png`) });
+  await page.screenshot({ path: join(outDir, `step-a2-${label}-reply-scroll0.png`) });
 
-  await openFull(page);
-  const full = await headerMetrics(page);
-  const fullReach = await page.evaluate(() => {
-    const header = document.querySelector(".spares-header");
-    const handle = document.querySelector(".snap-sheet-handle");
-    const hr = handle?.getBoundingClientRect();
-    const hb = header?.getBoundingClientRect().bottom ?? 0;
-    return {
-      handleTop: hr ? Math.round(hr.top) : null,
-      headerBottom: Math.round(hb),
-      reachable: hr ? hr.top >= hb - 2 : false,
-    };
+  await page.evaluate(() => {
+    document.scrollingElement?.scrollTo(0, 0);
   });
-  await page.screenshot({ path: join(outDir, `step-a2-${label}-full.png`) });
+  await page.waitForTimeout(200);
+  await openFull(page);
+  const fullScroll0 = await headerMetrics(page);
+  const fullReachScroll0 = await fullReachMetrics(page);
+  await page.screenshot({ path: join(outDir, `step-a2-${label}-full-scroll0.png`) });
+
+  await page.evaluate(() => {
+    const el = document.scrollingElement;
+    if (el) el.scrollTop = Math.min(280, el.scrollHeight - el.clientHeight);
+  });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => {
+    const btn = document.querySelector(".conversation-sheet-close");
+    btn?.click();
+  });
+  await page.waitForTimeout(300);
+  await openFull(page);
+  const fullScrolled = await headerMetrics(page);
+  const fullReachScrolled = await fullReachMetrics(page);
+  await page.screenshot({ path: join(outDir, `step-a2-${label}-full-scrolled.png`) });
 
   await page.evaluate(() => {
     const btn = document.querySelector(".conversation-sheet-close");
@@ -152,10 +180,26 @@ async function runViewport(width, height, label) {
     }
   }
 
-  if (!full.classes.includes("is-full")) failures.push("full: not is-full");
-  if (!fullReach.reachable) failures.push(`full: grab under header ${JSON.stringify(fullReach)}`);
+  if (!fullReachScroll0.sheetFull) failures.push("full scroll0: not is-full");
+  if (!fullReachScroll0.reachable) {
+    failures.push(`full scroll0: grab under header ${JSON.stringify(fullReachScroll0)}`);
+  }
+  if (!fullReachScrolled.reachable) {
+    failures.push(`full scrolled: grab under header ${JSON.stringify(fullReachScrolled)}`);
+  }
 
-  return { label, reply, reply2, closed, full, fullReach, failures, video };
+  return {
+    label,
+    reply,
+    reply2,
+    closed,
+    fullScroll0,
+    fullReachScroll0,
+    fullScrolled,
+    fullReachScrolled,
+    failures,
+    video,
+  };
 }
 
 const results = [];
