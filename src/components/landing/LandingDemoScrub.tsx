@@ -328,7 +328,6 @@ export function LandingDemoScrub({
     let touchStartClientY = 0;
     let touchLastClientY = 0;
     let touchNetFingerDelta = 0;
-    let touchTrackReady = false;
     let wheelInertiaAcc = 0;
     let wheelIdleTimer = 0;
     const viewportWidth = () => window.innerWidth;
@@ -539,7 +538,6 @@ export function LandingDemoScrub({
       touchStartClientY = event.touches[0]?.clientY ?? 0;
       touchLastClientY = touchStartClientY;
       touchNetFingerDelta = 0;
-      touchTrackReady = true;
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -547,12 +545,6 @@ export function LandingDemoScrub({
         event.preventDefault();
       }
       const y = event.touches[0]?.clientY ?? touchLastClientY;
-      if (!touchTrackReady) {
-        touchTrackReady = true;
-        touchStartClientY = y;
-        touchLastClientY = y;
-        return;
-      }
       const step = touchLastClientY - y;
       touchNetFingerDelta += step;
       touchLastClientY = y;
@@ -607,9 +599,11 @@ export function LandingDemoScrub({
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("wheel", onWheel, { passive: false });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
-    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    const touchOpts: AddEventListenerOptions = { capture: true };
+    const touchMoveOpts: AddEventListenerOptions = { capture: true, passive: false };
+    document.addEventListener("touchstart", onTouchStart, { ...touchOpts, passive: true });
+    document.addEventListener("touchmove", onTouchMove, touchMoveOpts);
+    document.addEventListener("touchend", onTouchEnd, { ...touchOpts, passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("keydown", onKeyDown, { capture: true });
     window.visualViewport?.addEventListener("resize", onResize, { passive: true });
@@ -619,9 +613,9 @@ export function LandingDemoScrub({
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchstart", onTouchStart, touchOpts);
+      document.removeEventListener("touchmove", onTouchMove, touchMoveOpts);
+      document.removeEventListener("touchend", onTouchEnd, touchOpts);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown, { capture: true });
       window.visualViewport?.removeEventListener("resize", onResize);

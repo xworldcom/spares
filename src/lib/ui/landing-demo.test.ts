@@ -238,6 +238,7 @@ describe("demo scroll scrub", () => {
     assert.doesNotMatch(src, /addEventListener\("scrollend"/);
     assert.doesNotMatch(src, /window\.addEventListener\("scroll",\s*tick/);
     assert.match(src, /addEventListener\("touchmove", onTouchMove/);
+    assert.match(src, /document\.addEventListener\("touchstart", onTouchStart/);
     assert.match(src, /visualViewport\?\.addEventListener\("resize"/);
     assert.doesNotMatch(src, /visualViewport\?\.addEventListener\("scroll", onResize/);
     assert.doesNotMatch(src, /demoPickScrollY\(0,/);
