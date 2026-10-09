@@ -42,7 +42,7 @@ async function wheelNotchesPastConfirmed(page, notches, trackHeight, height, h, 
     const el = document.scrollingElement ?? document.documentElement;
     return el.scrollHeight - window.innerHeight;
   });
-  for (let i = 0; i < 320; i += 1) {
+  for (let i = 0; i < 96; i += 1) {
     const box = await page.locator(".landing-site-footer-link").boundingBox();
     if (box && box.y >= 0 && box.y + box.height <= height + 4) {
       break;
