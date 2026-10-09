@@ -48,6 +48,10 @@ import {
   demoHandoffLinearProgressAtBeatRest,
   demoThreadPlayheadAtBeatRest,
   demoBeatTrackSnapAlignmentDelta,
+  demoBeatTrackSnapAlignmentDeltaDirected,
+  demoShouldRunBeatAlignOnScrollEnd,
+  demoBeatKeyboardStepTargetIndex,
+  demoBeatAlignIndexRespectsDirection,
   demoInBeatSnapChapter,
   workflowScrubPreHandoffSnapRenderDeltas,
   workflowScrubPreHandoffSnapLinearPositions,
@@ -223,9 +227,10 @@ describe("demo scroll scrub", () => {
     assert.match(src, /data-hydrated/);
     assert.doesNotMatch(src, /flushSync/);
     assert.match(src, /landing-demo-beat-track/);
-    assert.match(src, /addEventListener\("scrollend"/);
     assert.match(src, /alignBeatSnap/);
-    assert.match(src, /"onscrollend" in window/);
+    assert.match(src, /demoShouldRunBeatAlignOnScrollEnd/);
+    assert.match(src, /addEventListener\("keydown", onKeyDown/);
+    assert.match(src, /addEventListener\("scrollend"/);
     assert.doesNotMatch(src, /window\.addEventListener\("scroll",\s*tick/);
     assert.doesNotMatch(src, /addEventListener\("touchmove"/);
     assert.match(src, /visualViewport\?\.addEventListener\("scroll"/);
@@ -356,9 +361,13 @@ describe("landing scrub layout", () => {
     const holdPct = Math.round((1 - DEMO_SCRUB_END_HOLD) * 100);
     assert.match(css, new RegExp(`animation-range:\\s*contain 0% contain ${holdPct}%`));
     assert.match(css, /scroll-snap-type:\s*y mandatory/);
-    assert.match(css, /\.spares-app-cinematic \.landing-marketing > \.landing-section[\s\S]*scroll-snap-align:\s*start/);
+    assert.match(
+      css,
+      /\.spares-app-cinematic \.landing-marketing > \.landing-section#product-story[\s\S]*scroll-snap-align:\s*start/,
+    );
     assert.match(css, /\.spares-app-cinematic \.landing-site-footer[\s\S]*scroll-snap-align:\s*end/);
-    assert.match(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop:\s*always/);
+    assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-align/);
+    assert.doesNotMatch(css, /\.landing-demo-beat-track\s*\{[^}]*scroll-snap-stop/);
     assert.match(css, /\.landing-demo-scrub-snap--handoff-entry[\s\S]*scroll-snap-stop:\s*always/);
     assert.match(css, /--landing-demo-beat-track:\s*56svh/);
     assert.equal(DEMO_BEAT_TRACK_SVH_PHONE, 56);
@@ -379,11 +388,22 @@ describe("landing scrub layout", () => {
     const beatCount = 6;
     assert.equal(demoBeatTrackSnapAlignmentDelta(80, 56, 14), 24);
     assert.equal(demoBeatTrackSnapAlignmentDelta(60, 56, 14), null);
+    assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(80, 56, 1, 14), 24);
+    assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(40, 56, 1, 14), null);
+    assert.equal(demoBeatTrackSnapAlignmentDeltaDirected(40, 56, -1, 14), -16);
+    assert.equal(demoShouldRunBeatAlignOnScrollEnd("wheel"), true);
+    assert.equal(demoShouldRunBeatAlignOnScrollEnd("keyboard"), false);
+    assert.equal(demoShouldRunBeatAlignOnScrollEnd("click"), false);
+    assert.equal(demoBeatKeyboardStepTargetIndex(2, 1, 6), 3);
+    assert.equal(demoBeatKeyboardStepTargetIndex(0, -1, 6), null);
+    assert.equal(demoBeatAlignIndexRespectsDirection(3, 2, 1), false);
+    assert.equal(demoBeatAlignIndexRespectsDirection(3, 4, 1), true);
     assert.equal(demoInBeatSnapChapter(400, 480, 420, beatCount), true);
     assert.equal(demoInBeatSnapChapter(100, 480, 420, beatCount), false);
     assert.equal(demoInBeatSnapChapter(3000, 480, 420, beatCount), false);
-    assert.equal(demoInBeatSnapChapter(2790, 480, 420, beatCount), true);
-    assert.equal(demoInBeatSnapChapter(2791, 480, 420, beatCount), false);
+    const chapterEnd = 480 + (beatCount - 1) * 420 + 420 * 0.42;
+    assert.equal(demoInBeatSnapChapter(chapterEnd - 1, 480, 420, beatCount), true);
+    assert.equal(demoInBeatSnapChapter(chapterEnd + 1, 480, 420, beatCount), false);
   });
 
   it("maps each beat track index to the matching handoff quote status at rest", () => {

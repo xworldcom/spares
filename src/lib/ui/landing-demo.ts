@@ -736,6 +736,96 @@ export function demoBeatTrackSnapAlignmentDelta(
   return delta;
 }
 
+/**
+ * Scroll-end aligner may only run inside the six beat tracks — not the scrub end-hold past Confirmed.
+ */
+export function demoBeatSnapChapterEnd(
+  preHandoffHeight: number,
+  beatTrackHeight: number,
+  beatCount: number,
+) {
+  if (beatCount <= 0 || beatTrackHeight <= 0) {
+    return preHandoffHeight;
+  }
+  return preHandoffHeight + (beatCount - 1) * beatTrackHeight + beatTrackHeight * 0.42;
+}
+
+/** Beat index to align toward when scroll settles (direction picks floor vs ceil bias). */
+export function demoBeatTrackAlignIndexFromScroll(
+  scrolled: number,
+  preHandoffHeight: number,
+  beatTrackHeight: number,
+  beatCount: number,
+  scrollDirection: -1 | 0 | 1,
+) {
+  if (beatCount <= 0 || beatTrackHeight <= 0) {
+    return 0;
+  }
+  const trackPix = Math.max(0, scrolled - preHandoffHeight);
+  const bias = scrollDirection < 0 ? 0.72 : 0.28;
+  const raw = Math.floor((trackPix + beatTrackHeight * bias) / beatTrackHeight);
+  return Math.min(beatCount - 1, Math.max(0, raw));
+}
+
+/**
+ * Alignment delta unless it would scroll opposite the user's last input (scrollDirection 0 = allow).
+ */
+export type DemoBeatScrollInputKind = "wheel" | "touch" | "keyboard" | "click" | "none";
+
+/** Beat-region scrollend aligner runs only for inertial pointer input — not keyboard or focus clicks. */
+export function demoShouldRunBeatAlignOnScrollEnd(kind: DemoBeatScrollInputKind) {
+  return kind === "wheel" || kind === "touch";
+}
+
+/** Reject align targets that would undo the user's last beat step. */
+export function demoBeatAlignIndexRespectsDirection(
+  settledIndex: number,
+  targetIndex: number,
+  scrollDirection: -1 | 0 | 1,
+) {
+  if (scrollDirection > 0 && targetIndex < settledIndex) {
+    return false;
+  }
+  if (scrollDirection < 0 && targetIndex > settledIndex) {
+    return false;
+  }
+  return true;
+}
+
+export function demoBeatKeyboardStepTargetIndex(
+  currentIndex: number,
+  direction: -1 | 1,
+  beatCount: number,
+): number | null {
+  if (beatCount <= 0) {
+    return null;
+  }
+  const next = currentIndex + direction;
+  if (next < 0 || next >= beatCount) {
+    return null;
+  }
+  return next;
+}
+
+export function demoBeatTrackSnapAlignmentDeltaDirected(
+  trackViewportTop: number,
+  stickyTop: number,
+  scrollDirection: -1 | 0 | 1,
+  tolerancePx = 14,
+): number | null {
+  const delta = demoBeatTrackSnapAlignmentDelta(trackViewportTop, stickyTop, tolerancePx);
+  if (delta === null) {
+    return null;
+  }
+  if (scrollDirection > 0 && delta < 0) {
+    return null;
+  }
+  if (scrollDirection < 0 && delta > 0) {
+    return null;
+  }
+  return delta;
+}
+
 /** Beat track index before clamping to the last track (aligner bail when past chapter). */
 export function demoBeatTrackRawIndexFromScroll(
   scrolled: number,
@@ -759,8 +849,7 @@ export function demoInBeatSnapChapter(
     return false;
   }
   const chapterStart = preHandoffHeight - beatTrackHeight * 0.22;
-  const chapterEnd =
-    preHandoffHeight + (beatCount - 1) * beatTrackHeight + beatTrackHeight * 0.5;
+  const chapterEnd = demoBeatSnapChapterEnd(preHandoffHeight, beatTrackHeight, beatCount);
   return scrolled >= chapterStart && scrolled <= chapterEnd;
 }
 
