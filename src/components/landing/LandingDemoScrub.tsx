@@ -528,7 +528,7 @@ export function LandingDemoScrub({
       event.preventDefault();
       event.stopPropagation();
       const { beatTrackHeight } = readBeatLayout();
-      const threshold = Math.max(24, beatTrackHeight * 0.22);
+      const threshold = Math.max(20, beatTrackHeight / 5.5);
       wheelInertiaAcc += event.deltaY;
       window.clearTimeout(wheelIdleTimer);
       wheelIdleTimer = window.setTimeout(() => {

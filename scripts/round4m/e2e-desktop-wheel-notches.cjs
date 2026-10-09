@@ -71,13 +71,13 @@ async function wheelNotchesPastConfirmed(page, notches, trackHeight, height, h, 
   const { page } = run;
   try {
     await installScrollToDirectionGuard(page);
-    await page.goto(`${h.BASE}/`, { waitUntil: "networkidle" });
+    await page.goto(`${h.BASE}/`, { waitUntil: "domcontentloaded" });
     await waitScrubHydrated(page);
 
     await assertWheelCannotSkipBeats(page, h, height);
 
     for (const notches of [1, 3, 5]) {
-      await page.goto(`${h.BASE}/`, { waitUntil: "networkidle" });
+      await page.goto(`${h.BASE}/`, { waitUntil: "domcontentloaded" });
       await waitScrubHydrated(page);
       const trackHeight = await page.evaluate(() => {
         const track = document.querySelector(".landing-demo-beat-track");
