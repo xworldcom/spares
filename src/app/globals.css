@@ -420,6 +420,15 @@
   --sheet-h: var(--reply-h);
   transform: translate3d(0, var(--sheet-close-ty, var(--sheet-close-rest-ty, 0)), 0);
   pointer-events: none;
+  z-index: 52;
+}
+
+.conversation-sheet:not(.is-inline).is-out:not(.is-dragging):not(.is-settling) .imsg-thread--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  justify-content: flex-end;
 }
 
 .conversation-sheet:not(.is-inline).is-out .snap-sheet-handle,
@@ -428,6 +437,7 @@
 }
 
 .conversation-sheet:not(.is-inline)[data-close-translate] {
+  z-index: 52;
   transition: none;
 }
 

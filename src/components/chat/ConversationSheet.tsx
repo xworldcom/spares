@@ -45,6 +45,7 @@ export function ConversationSheet({
     collapseToPeek,
     pointerHandlers,
     threadDocked,
+    threadScrollLocked,
   } = useSnapSheet({
     cardRef: card,
     open,
@@ -145,6 +146,7 @@ export function ConversationSheet({
           snap: sheet,
           dragging,
           threadDocked,
+          threadScrollLocked,
           inline: layout === "inline",
           collapse: collapseToPeek,
         }}

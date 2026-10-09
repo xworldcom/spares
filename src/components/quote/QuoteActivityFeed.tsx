@@ -176,6 +176,9 @@ export function QuoteActivityFeed({
       return;
     }
     const sheetSnap = sheetChrome?.snap;
+    if (layout === "sheet" && (sheetSnap === "out" || sheetChrome?.threadScrollLocked)) {
+      return;
+    }
     const shouldJumpUnread =
       layout === "sheet" &&
       sheetSnap === "full" &&
@@ -230,6 +233,7 @@ export function QuoteActivityFeed({
     firstUnreadIndex,
     sheetChrome?.snap,
     sheetChrome?.threadDocked,
+    sheetChrome?.threadScrollLocked,
     sheetChrome?.inline,
     selfEmail,
     role,

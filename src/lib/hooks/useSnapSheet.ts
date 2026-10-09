@@ -257,6 +257,7 @@ export function useSnapSheet({
   const steppedAtRef = useRef(0);
   const settleFrameRef = useRef(0);
   const motionHeightsRef = useRef<{ replyH: number; fullH: number } | null>(null);
+  const closeSettleRef = useRef(false);
 
   const controlledOpen = typeof onOpenChange === "function";
   const openForUnreadRef = useRef(openForUnread);
@@ -266,6 +267,24 @@ export function useSnapSheet({
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
+  }
+
+  /** Close translate + resting closed: never re-pin or write scrollTop on the thread. */
+  function isCloseThreadScrollLocked(): boolean {
+    if (sheet === "out") {
+      return true;
+    }
+    const card = cardRef.current;
+    if (card?.hasAttribute("data-close-translate")) {
+      return true;
+    }
+    if (dragging && drag.current.mode === "close") {
+      return true;
+    }
+    if (closeSettleRef.current) {
+      return true;
+    }
+    return false;
   }
 
   function measureCloseOffsetPx(card: HTMLElement | null) {
@@ -467,6 +486,9 @@ export function useSnapSheet({
   }
 
   function syncThreadLayoutFromDom() {
+    if (isCloseThreadScrollLocked()) {
+      return;
+    }
     const card = cardRef.current;
     if (!card) {
       return;
@@ -478,8 +500,7 @@ export function useSnapSheet({
     const inMotion =
       card.classList.contains("is-dragging") ||
       card.classList.contains("is-settling") ||
-      card.hasAttribute("data-motion-live") ||
-      card.hasAttribute("data-close-translate");
+      card.hasAttribute("data-motion-live");
     if (inMotion) {
       if (dockedRef.current) {
         body.scrollTop = 0;
@@ -551,6 +572,9 @@ export function useSnapSheet({
     };
     body.addEventListener("scroll", onScroll, { passive: true });
     const resize = new ResizeObserver(() => {
+      if (isCloseThreadScrollLocked()) {
+        return;
+      }
       const card = cardRef.current;
       if (
         !card ||
@@ -597,7 +621,7 @@ export function useSnapSheet({
   }, [sheet, dragging, settling, desktopStage, cardRef]);
 
   useEffect(() => {
-    if (dragging || settling || sheet === "out" || sheet === "full") {
+    if (dragging || settling || sheet === "out" || sheet === "full" || isCloseThreadScrollLocked()) {
       return;
     }
     setThreadDockedState(true);
@@ -650,9 +674,11 @@ export function useSnapSheet({
 
   function settleCloseTo(next: "reply" | "out") {
     cancelSettleAnimation();
+    closeSettleRef.current = true;
     drag.current.on = false;
     drag.current.pending = false;
     drag.current.moved = false;
+    drag.current.mode = "close";
     const max = drag.current.closeMax || lockCloseOffset();
     const targetTy = next === "out" ? max : 0;
     const live = drag.current.liveTy > 0 ? drag.current.liveTy : readCloseTyPx(cardRef.current!);
@@ -670,6 +696,8 @@ export function useSnapSheet({
       setSheet(next);
       clearMotionSnap(next);
       clearCloseTranslate(next);
+      closeSettleRef.current = next === "out";
+      drag.current.mode = null;
       return;
     }
     const settleStarted = performance.now();
@@ -688,6 +716,8 @@ export function useSnapSheet({
           setSheet(next);
           clearMotionSnap(next);
           clearCloseTranslate(next);
+          closeSettleRef.current = next === "out";
+          drag.current.mode = null;
           return;
         }
         const step = Math.sign(remaining) * Math.min(4, Math.abs(remaining));
@@ -1084,6 +1114,12 @@ export function useSnapSheet({
     settleTo(stepToward(sheet === "out" ? "reply" : sheet, "up"));
   }
 
+  const threadScrollLocked =
+    sheet === "out" ||
+    closeSettleRef.current ||
+    (dragging && drag.current.mode === "close") ||
+    Boolean(cardRef.current?.hasAttribute("data-close-translate"));
+
   return {
     sheet,
     displaySnap,
@@ -1091,6 +1127,7 @@ export function useSnapSheet({
     motionPhaseB: motionPhases.phaseB,
     settling,
     dragging,
+    threadScrollLocked,
     setSheet,
     dismiss,
     hide,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Step A live gate — Bea sd.js inject + repeat run (CDP-touch parity) on oee360.com.
+ * Step A.1 gate — Bea sd.js inject + CDP-touch parity + thread scroll / tab-bar checks.
  * Usage: node scripts/care-notes-chunk2/run-bea-live-gate.mjs [baseUrl] [outDir]
  */
 import { chromium, devices } from "playwright";
@@ -33,6 +33,29 @@ function gateFail(parsed, label) {
   if (parsed.relMaxC > 4) reasons.push(`relMaxC=${parsed.relMaxC}`);
   if (parsed.relMaxS > 4) reasons.push(`relMaxS=${parsed.relMaxS}`);
   return reasons.length ? `${label}: ${reasons.join("; ")}` : null;
+}
+
+function threadSnapshotsEqual(a, b) {
+  if (!a || !b) return false;
+  if (a.scrollTop !== b.scrollTop) return false;
+  const fa = a.first;
+  const fb = b.first;
+  if (!fa && !fb) return true;
+  if (!fa || !fb) return false;
+  return fa.idx === fb.idx && Math.abs(fa.top - fb.top) <= 1;
+}
+
+function assertThreadGate(before, afterSettle, afterHold, label, failures) {
+  if (!threadSnapshotsEqual(before, afterSettle)) {
+    failures.push(
+      `${label}: scroll before-release vs after-settle ${JSON.stringify(before)} → ${JSON.stringify(afterSettle)}`,
+    );
+  }
+  if (!threadSnapshotsEqual(before, afterHold)) {
+    failures.push(
+      `${label}: scroll before-release vs +1s ${JSON.stringify(before)} → ${JSON.stringify(afterHold)}`,
+    );
+  }
 }
 
 function layoutClassSwap(samples) {
@@ -95,6 +118,93 @@ async function prepareQuote(page, quoteId) {
     const m0 = thread ? Math.round(thread.getBoundingClientRect().top) : null;
     return { grabY, closeMax, m0 };
   });
+}
+
+async function readThreadSnapshot(page) {
+  return page.evaluate(() => {
+    const body = document.querySelector(".imsg-thread--fill, .imsg-thread");
+    if (!(body instanceof HTMLElement)) {
+      return null;
+    }
+    const clip = body.getBoundingClientRect();
+    const items = [...body.querySelectorAll(":scope > li")];
+    let first = null;
+    for (let i = 0; i < items.length; i += 1) {
+      const row = items[i];
+      const r = row.getBoundingClientRect();
+      if (r.bottom > clip.top + 1 && r.top < clip.bottom - 1) {
+        first = { idx: i, top: Math.round(r.top) };
+        break;
+      }
+    }
+    return { scrollTop: body.scrollTop, first };
+  });
+}
+
+async function readTabBarHit(page) {
+  return page.evaluate(() => {
+    const composer = document.querySelector(".imsg-composer");
+    if (!(composer instanceof HTMLElement)) {
+      return { hit: false, tag: null };
+    }
+    const r = composer.getBoundingClientRect();
+    const x = Math.round(r.left + r.width / 2);
+    const y = Math.round(r.top + r.height / 2);
+    const el = document.elementFromPoint(x, y);
+    const tab = el?.closest(".spares-tabbar");
+    return { hit: Boolean(tab), tag: el?.tagName ?? null, className: el?.className ?? "" };
+  });
+}
+
+async function injectCloseFullThreadGate(page, fromY, toY) {
+  await page.evaluate(() => {
+    window.S = [];
+  });
+  const beforeRelease = await page.evaluate(
+    async ({ fromY, toY }) => {
+      const body = document.querySelector(".imsg-thread--fill, .imsg-thread");
+      const snap = () => {
+        if (!(body instanceof HTMLElement)) {
+          return null;
+        }
+        const clip = body.getBoundingClientRect();
+        const items = [...body.querySelectorAll(":scope > li")];
+        let first = null;
+        for (let i = 0; i < items.length; i += 1) {
+          const row = items[i];
+          const r = row.getBoundingClientRect();
+          if (r.bottom > clip.top + 1 && r.top < clip.bottom - 1) {
+            first = { idx: i, top: Math.round(r.top) };
+            break;
+          }
+        }
+        return { scrollTop: body.scrollTop, first };
+      };
+      await window.SD(fromY, toY, 5, 80, false);
+      const before = snap();
+      await window.UP();
+      return before;
+    },
+    { fromY, toY },
+  );
+  await page.waitForFunction(
+    () => {
+      const sheet = document.querySelector(".conversation-sheet");
+      return (
+        sheet?.classList.contains("is-out") &&
+        !sheet.classList.contains("is-settling") &&
+        !sheet.classList.contains("is-dragging")
+      );
+    },
+    { timeout: 15_000 },
+  );
+  const afterSettle = await readThreadSnapshot(page);
+  await page.waitForTimeout(1000);
+  const afterHold = await readThreadSnapshot(page);
+  const tabHit = await readTabBarHit(page);
+  const z = await page.evaluate(() => window.Z(0));
+  const samples = await page.evaluate(() => window.S);
+  return { beforeRelease, afterSettle, afterHold, tabHit, z, parsed: parseZ(z), samples };
 }
 
 async function injectRun(page, fromY, toY, release) {
@@ -203,6 +313,50 @@ async function runViewport(width, height, label) {
   for (const sc of scenarios) {
     const { meta, inj, cdpR } = await runScenario(page, cdp, quoteId, sc);
     if (sc.name === "close-mid-release") m0Baseline = meta.m0;
+    if (sc.name === "close-full") {
+      await prepareQuote(page, quoteId);
+      const metaClose = await page.evaluate(() => {
+        const handle = document.querySelector(".snap-sheet-handle");
+        const box = handle?.getBoundingClientRect();
+        const composer = document.querySelector(".imsg-composer");
+        const composerH = composer ? composer.offsetHeight : 64;
+        const probe = document.createElement("div");
+        probe.style.paddingBottom = "env(safe-area-inset-bottom)";
+        document.body.appendChild(probe);
+        const safe = Number.parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+        document.body.removeChild(probe);
+        const closeMax = Math.ceil(composerH + safe);
+        const grabY = box ? Math.round(box.y + box.height / 2) : 400;
+        return { grabY, closeMax };
+      });
+      const threadGate = await injectCloseFullThreadGate(
+        page,
+        metaClose.grabY,
+        metaClose.grabY + metaClose.closeMax,
+      );
+      assertThreadGate(
+        threadGate.beforeRelease,
+        threadGate.afterSettle,
+        threadGate.afterHold,
+        `${label}/close-full-thread`,
+        failures,
+      );
+      if (!threadGate.tabHit.hit) {
+        failures.push(
+          `${label}/close-full-tab: elementFromPoint composer center not tab bar (${JSON.stringify(threadGate.tabHit)})`,
+        );
+      }
+      const threadInjFail = gateFail(threadGate.parsed, "close-full-thread-inject");
+      if (threadInjFail) failures.push(`${label}/close-full-thread: ${threadInjFail}`);
+      log.runs.push({
+        scenario: "close-full-thread-gate",
+        beforeRelease: threadGate.beforeRelease,
+        afterSettle: threadGate.afterSettle,
+        afterHold: threadGate.afterHold,
+        tabHit: threadGate.tabHit,
+        injectZ: threadGate.z,
+      });
+    }
     const injFail = gateFail(inj.parsed, "inject");
     const cdpFail = gateFail(cdpR.parsed, "cdp");
     const classFail = layoutClassSwap(inj.samples);
@@ -241,12 +395,12 @@ for (const [w, h, label] of [
   results.push(await runViewport(w, h, label));
 }
 
-const reportPath = join(outDir, `step-a-bea-gate-${stamp}.json`);
+const reportPath = join(outDir, `step-a1-bea-gate-${stamp}.json`);
 writeFileSync(reportPath, JSON.stringify({ baseUrl, stamp, results }, null, 2));
 
 const allFailures = results.flatMap((r) => r.failures);
 if (allFailures.length) {
-  console.error("\nSTEP A GATE FAIL:\n" + allFailures.join("\n"));
+  console.error("\nSTEP A.1 GATE FAIL:\n" + allFailures.join("\n"));
   process.exit(1);
 }
-console.log("\nSTEP A GATE PASS", reportPath);
+console.log("\nSTEP A.1 GATE PASS", reportPath);

@@ -8,6 +8,8 @@ export type ConversationSheetChrome = {
   dragging: boolean;
   /** Latest row pinned above composer; false when user scrolled history at full. */
   threadDocked: boolean;
+  /** Close translate / closed snap: feed must not pin or write scrollTop. */
+  threadScrollLocked: boolean;
   collapse: () => void;
   /** Desktop split pane: a normal top-down scroller, not the flex-end bottom-glued sheet. */
   inline?: boolean;
