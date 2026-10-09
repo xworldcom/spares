@@ -474,7 +474,9 @@
 .conversation-sheet:not(.is-inline).is-settling .imsg-composer,
 .conversation-sheet:not(.is-inline)[data-motion-live] .imsg-composer {
   transition: none;
-  transform: translate3d(0, calc((1 - var(--phase-a, 0)) * 100%), 0);
+  /* Phase A during drag/settle: collapse layout height only — transform would paint
+     the composer down without moving the thread (same-frame gap on close). */
+  transform: none;
   opacity: var(--phase-a, 0);
   max-height: calc(var(--phase-a, 0) * 12rem);
   pointer-events: none;
