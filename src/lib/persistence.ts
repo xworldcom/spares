@@ -48,8 +48,15 @@ export type ReadMode = "commit" | "snapshot";
 
 export type ConditionalWriteResult = { ok: true; version: string } | { ok: false };
 
+export type CatalogVersionPeek = { database: string | null; care: string | null };
+
 export type Persistence = {
   kind: StoreKind;
+  /**
+   * Cheap catalog version probe (Blob HEAD; full read on disk/memory). Used to reuse a
+   * warm in-process catalog when another instance has not written.
+   */
+  peekCatalogVersions(): Promise<CatalogVersionPeek>;
   /**
    * Read a catalog document together with the version a later conditional write must
    * present. `version` is null exactly when the document does not exist yet.
@@ -107,6 +114,14 @@ export function createMemoryPersistence(): Persistence {
   const current = (doc: CatalogDocument) => docs.get(doc) ?? null;
   return {
     kind: "memory",
+    async peekCatalogVersions() {
+      const database = current("database");
+      const care = current("care");
+      return {
+        database: database === null ? null : contentVersion(database),
+        care: care === null ? null : contentVersion(care),
+      };
+    },
     async readVersioned(doc) {
       const value = current(doc);
       return { json: value, version: value === null ? null : contentVersion(value) };
@@ -214,6 +229,16 @@ function fsPersistence(root: string): Persistence {
     })[doc];
   return {
     kind: "fs",
+    async peekCatalogVersions() {
+      const [database, care] = await Promise.all([
+        readJsonFile(dbFile),
+        readJsonFile(careFile),
+      ]);
+      return {
+        database: database === null ? null : contentVersion(database),
+        care: care === null ? null : contentVersion(care),
+      };
+    },
     async readVersioned(doc) {
       const json = await readJsonFile(fileFor(doc));
       return { json, version: json === null ? null : contentVersion(json) };
@@ -597,6 +622,13 @@ function blobPersistence(client: BlobClient): Persistence {
 
   return {
     kind: "blob",
+    async peekCatalogVersions() {
+      const [database, care] = await Promise.all([
+        headEtag(blobPathFor("database")),
+        headEtag(blobPathFor("care")),
+      ]);
+      return { database, care };
+    },
     readVersioned(doc, mode = "commit") {
       const pathname = blobPathFor(doc);
       return mode === "snapshot" ? readSnapshot(pathname) : readCommitVersion(pathname);

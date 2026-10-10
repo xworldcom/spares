@@ -13,14 +13,15 @@ export type TenantScope = {
 type AuthError = { error: NextResponse };
 
 async function scopeFromStoredUser(user: PublicUser): Promise<AuthError | TenantScope> {
+  if (user.tenantId) {
+    return { user, tenantId: user.tenantId };
+  }
   const stored = await findUserById(user.id);
   const tenantId = stored ? effectiveStaffTenantId(stored) : null;
   if (!stored || !tenantId) {
     return { error: error("Forbidden", 403) };
   }
-  const scopedUser =
-    user.tenantId === tenantId ? user : { ...user, tenantId };
-  return { user: scopedUser, tenantId };
+  return { user: { ...user, tenantId }, tenantId };
 }
 
 export async function requireTenantUser(): Promise<AuthError | TenantScope> {

@@ -51,6 +51,9 @@ function racingStore() {
   const persistence = {
     ...inner,
     kind: "blob",
+    peekCatalogVersions() {
+      return inner.peekCatalogVersions();
+    },
     async writeDatabaseJson(json: string) {
       await fire("database");
       return inner.writeDatabaseJson(json);
