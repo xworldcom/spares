@@ -79,12 +79,11 @@ import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.t
 import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
 import {
   applyDemoTenantB1Migration,
+  applyDemoTenantB2StageQuotesMigration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
 import {
-  DEMO_STAGE_QUOTE_IDS,
-  DEMO_STAGE_QUOTE_KEYS,
-  buildDemoStageQuoteRecord,
+  appendMissingDemoStageQuotes,
   preferredDemoStageMachineId,
 } from "./demo-stage-quote-seed.ts";
 import { migrateOrgTree } from "./org-migration.ts";
@@ -141,6 +140,7 @@ import type {
   QuoteActivity,
   QuoteItem,
   QuoteRecord,
+  PublicUser,
   ActivityActorRole,
   Role,
   CustomerAccount,
@@ -1504,6 +1504,11 @@ async function runDemoTenantMigration(
     next = b1.db;
     changed = true;
   }
+  const b2 = applyDemoTenantB2StageQuotesMigration(next);
+  if (b2.changed) {
+    next = b2.db;
+    changed = true;
+  }
   return { db: next, changed };
 }
 
@@ -1527,7 +1532,8 @@ async function healSnapshot(
     (next.partLifecycle?.length ?? 0) !== (loaded.db.partLifecycle?.length ?? 0);
   const migrationsChanged =
     next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1 ||
-    next.dataMigrations?.demoTenantB1 !== loaded.db.dataMigrations?.demoTenantB1;
+    next.dataMigrations?.demoTenantB1 !== loaded.db.dataMigrations?.demoTenantB1 ||
+    next.dataMigrations?.demoTenantB2 !== loaded.db.dataMigrations?.demoTenantB2;
   const changed =
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
@@ -4083,37 +4089,18 @@ export async function ensureDemoStageQuoteFixtures(tenantId: string): Promise<vo
       );
     const staffEmail = staff?.email ?? "staff@demo.com";
 
-    const missingKeys = DEMO_STAGE_QUOTE_KEYS.filter(
-      (key) =>
-        !db.quotes.some(
-          (row) => row.id === DEMO_STAGE_QUOTE_IDS[key] && belongsToTenant(row, tenantId),
-        ),
-    );
-    if (missingKeys.length === 0) {
+    const appended = appendMissingDemoStageQuotes(db, {
+      tenantId,
+      machineId,
+      customerId: customer.id,
+      customerEmail: customer.email,
+      staffEmail,
+      nextQuoteNumber,
+    });
+    if (appended.added === 0) {
       return;
     }
-
-    const createdAt = new Date().toISOString();
-    let quotes = db.quotes;
-    let numberCursor = nextQuoteNumber(quotes);
-    const additions: QuoteRecord[] = [];
-    for (const key of missingKeys) {
-      const quote = buildDemoStageQuoteRecord({
-        tenantId,
-        quoteId: DEMO_STAGE_QUOTE_IDS[key],
-        number: numberCursor,
-        machineId,
-        customerId: customer.id,
-        customerEmail: customer.email,
-        staffEmail,
-        key,
-        createdAt,
-      });
-      numberCursor += 1;
-      additions.push(quote);
-    }
-    quotes = [...quotes, ...additions];
-    await writeDatabase({ ...db, quotes });
+    await writeDatabase(appended.db);
   });
 }
 
@@ -4175,10 +4162,90 @@ export function appendQuoteActivity(
 }
 
 export function markQuoteRead(idOrNumber: string, tenantId: string, userId: string) {
-  return mutateQuote(idOrNumber, tenantId, (quote) => ({
-    ...quote,
-    lastReadAt: { ...quote.lastReadAt, [userId]: readWatermarkNow(quote.activities) },
-  }));
+  return withLock(async () => {
+    const db = await readDatabase();
+    const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
+    if (!current) {
+      return null;
+    }
+    const watermark = readWatermarkNow(current.activities);
+    const prior = current.lastReadAt?.[userId];
+    if (prior && prior >= watermark) {
+      return current;
+    }
+    const next: QuoteRecord = {
+      ...current,
+      lastReadAt: { ...current.lastReadAt, [userId]: watermark },
+    };
+    await writeDatabase({
+      ...db,
+      quotes: db.quotes.map((quote) => (quote.id === current.id ? next : quote)),
+    });
+    return next;
+  });
+}
+
+/** Lightweight user rows for batch chat actor display (single catalog read). */
+export function withCatalogUsersForActorDisplay() {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    return db.users
+      .filter((user) => !user.deletedAt)
+      .map((user) => ({ email: user.email, name: user.name }));
+  });
+}
+
+export type QuotePublicCatalogBundle = {
+  machineName?: string;
+  customerUsers: PublicUser[];
+  partLifecycle: StoredPartLifecycle[];
+  catalogUsers: Array<{ email: string; name?: string }>;
+};
+
+/** One catalog read for staff quote detail enrichment (machine, customers, lifecycle, actor names). */
+export function loadQuotePublicCatalogBundle(
+  tenantId: string,
+  quote: Pick<QuoteRecord, "machineId" | "customerId">,
+): Promise<QuotePublicCatalogBundle> {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const machine = db.machines.find(
+      (row) => row.id === quote.machineId && belongsToTenant(row, tenantId),
+    );
+    const sites = filterByTenant(db.sites ?? [], tenantId);
+    const customerAccounts = filterByTenant(db.customers ?? [], tenantId);
+    let customerUsers = db.users
+      .filter(
+        (user) =>
+          user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => toPublicUser(user, sites, customerAccounts))
+      .sort((a, b) => a.email.localeCompare(b.email));
+    if (!customerUsers.some((row) => row.id === quote.customerId)) {
+      const stored = db.users.find(
+        (user) => user.id === quote.customerId && !user.deletedAt,
+      );
+      if (
+        stored &&
+        stored.role === "customer" &&
+        belongsToTenant(stored, tenantId)
+      ) {
+        customerUsers = [
+          ...customerUsers,
+          toPublicUser(stored, sites, customerAccounts),
+        ].sort((a, b) => a.email.localeCompare(b.email));
+      }
+    }
+    const catalogUsers = db.users
+      .filter((user) => !user.deletedAt)
+      .map((user) => ({ email: user.email, name: user.name }));
+    return {
+      machineName: machine?.name,
+      customerUsers,
+      partLifecycle: db.partLifecycle ?? [],
+      catalogUsers,
+    };
+  });
 }
 
 export { newActivity as createQuoteActivity };

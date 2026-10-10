@@ -7,10 +7,13 @@ import {
   DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
   DEMO_TENANT_BUYER,
   DEMO_TENANT_DATA_MIGRATION_B1,
+  DEMO_TENANT_DATA_MIGRATION_B2,
   DEMO_TENANT_DATA_MIGRATION_V1,
   applyDemoTenantB1Migration,
+  applyDemoTenantB2StageQuotesMigration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
+import { DEMO_STAGE_QUOTE_IDS } from "./demo-stage-quote-seed.ts";
 import { setPersistenceForTests } from "./persistence.ts";
 import { buildTenantPartCatalog } from "./part-lifecycle.ts";
 import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
@@ -195,6 +198,51 @@ describe("demo tenant v1 migration (auto)", () => {
 
     const second = applyDemoTenantB1Migration(first.db);
     assert.equal(second.changed, false);
+  });
+
+  it("B2 adds four stage quotes on the hardware fixture for demo buyer", () => {
+    process.env.SPARES_ALLOW_SEED = "false";
+    const seed = {
+      users: [
+        {
+          id: "user-demo-buyer",
+          email: DEMO_TENANT_BUYER.email,
+          passwordHash: "x",
+          role: "customer" as const,
+          tenantId: DEFAULT_TENANT_ID,
+        },
+      ],
+      machines: [
+        {
+          id: FIXTURE_MACHINE_IDS.hardware,
+          tenantId: DEFAULT_TENANT_ID,
+          storedFileName: "hardware.glb",
+          name: "Hardware fixture",
+          parts: [
+            {
+              id: DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
+              name: "Bearing",
+              meshName: DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
+              qty: 1,
+            },
+          ],
+          unmatched: [],
+        },
+      ],
+      quotes: [],
+      partLifecycle: [],
+    };
+    const first = applyDemoTenantB2StageQuotesMigration(seed);
+    assert.ok(first.changed);
+    assert.equal(first.quotesAdded, 4);
+    assert.equal(first.db.dataMigrations?.demoTenantB2, DEMO_TENANT_DATA_MIGRATION_B2);
+    for (const id of Object.values(DEMO_STAGE_QUOTE_IDS)) {
+      assert.ok(first.db.quotes?.some((row) => row.id === id));
+    }
+    const second = applyDemoTenantB2StageQuotesMigration(first.db);
+    assert.equal(second.changed, false);
+    assert.equal(second.quotesAdded, 0);
+    delete process.env.SPARES_ALLOW_SEED;
   });
 
   it("heals the Harware fixture machine name typo", async () => {

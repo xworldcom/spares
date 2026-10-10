@@ -1,6 +1,7 @@
 import { DEMO_MULTI_MACHINE_BEARING_PART_NUMBER } from "./demo-tenant-data-migration.ts";
 import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
 import { statusActivityText } from "./quotes.ts";
+import { belongsToTenant } from "./tenant.ts";
 import type { QuoteActivity, QuoteItem, QuoteRecord, QuoteShipment, QuoteStatus } from "../types/index.ts";
 
 export const DEMO_STAGE_QUOTE_IDS = {
@@ -136,4 +137,54 @@ export function preferredDemoStageMachineId(
     machines.find((row) => row.id === FIXTURE_MACHINE_IDS.palletizer) ??
     machines.find((row) => row.parts.length > 0)
   )?.id;
+}
+
+type DemoStageQuoteDb = {
+  quotes: QuoteRecord[];
+};
+
+/** Idempotent: append any missing stable stage quotes (host demo tenant). */
+export function appendMissingDemoStageQuotes<T extends DemoStageQuoteDb>(
+  db: T,
+  input: {
+    tenantId: string;
+    machineId: string;
+    customerId: string;
+    customerEmail: string;
+    staffEmail: string;
+    nextQuoteNumber: (quotes: QuoteRecord[]) => number;
+  },
+): { db: T; added: number } {
+  const missingKeys = DEMO_STAGE_QUOTE_KEYS.filter(
+    (key) =>
+      !db.quotes.some(
+        (row) => row.id === DEMO_STAGE_QUOTE_IDS[key] && belongsToTenant(row, input.tenantId),
+      ),
+  );
+  if (missingKeys.length === 0) {
+    return { db, added: 0 };
+  }
+  const createdAt = new Date().toISOString();
+  let numberCursor = input.nextQuoteNumber(db.quotes);
+  const additions: QuoteRecord[] = [];
+  for (const key of missingKeys) {
+    additions.push(
+      buildDemoStageQuoteRecord({
+        tenantId: input.tenantId,
+        quoteId: DEMO_STAGE_QUOTE_IDS[key],
+        number: numberCursor,
+        machineId: input.machineId,
+        customerId: input.customerId,
+        customerEmail: input.customerEmail,
+        staffEmail: input.staffEmail,
+        key,
+        createdAt,
+      }),
+    );
+    numberCursor += 1;
+  }
+  return {
+    db: { ...db, quotes: [...db.quotes, ...additions] },
+    added: additions.length,
+  };
 }

@@ -1,7 +1,6 @@
 import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
-import { actorDisplayNamesForActivities } from "@/lib/chat-actor-display-server";
+import { actorDisplayNamesFromUsers } from "@/lib/chat-actor-display-server";
 import { getCurrentUser } from "@/lib/auth";
-import { staffCustomerUsersForThread } from "@/lib/care-http";
 import { error } from "@/lib/http";
 import { canViewQuote, toPublicQuote } from "@/lib/quotes";
 import { effectiveTenantId, tenantIdForUser, userTenantId } from "@/lib/tenant";
@@ -9,7 +8,7 @@ import {
   enrichQuoteItemsWithLifecycle,
   lifecycleMapForQuotePartIds,
 } from "@/lib/part-lifecycle";
-import { getMachine, getQuote, listPartLifecycleRows } from "@/lib/store";
+import { getMachine, getQuote, loadQuotePublicCatalogBundle } from "@/lib/store";
 import type { PublicUser, Quote, QuoteRecord } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -57,21 +56,25 @@ export async function publicQuoteForUser(
 ): Promise<Quote> {
   const tenantId = userTenantId(user);
   const partIds = quote.items.map((item) => item.id);
-  const [customerUsers, rows] = await Promise.all([
-    user.role === "staff" && tenantId
-      ? staffCustomerUsersForThread(tenantId, quote)
-      : Promise.resolve(undefined),
-    tenantId ? listPartLifecycleRows() : Promise.resolve([]),
-  ]);
-  const base = toPublicQuote(quote, user, machineName, { customerUsers });
+
   if (!tenantId) {
-    return attachStaffAssistantAvailability(user, base);
+    return attachStaffAssistantAvailability(user, toPublicQuote(quote, user, machineName));
   }
-  const map = lifecycleMapForQuotePartIds(rows, tenantId, partIds);
+
+  const bundle = await loadQuotePublicCatalogBundle(tenantId, quote);
+  const resolvedMachineName = machineName ?? bundle.machineName;
+  const base = toPublicQuote(quote, user, resolvedMachineName, {
+    customerUsers: user.role === "staff" ? bundle.customerUsers : undefined,
+  });
+  const map = lifecycleMapForQuotePartIds(bundle.partLifecycle, tenantId, partIds);
   const items = enrichQuoteItemsWithLifecycle(base.items, map, user.role);
+  const actorDisplayNames = actorDisplayNamesFromUsers(
+    quote.activities,
+    bundle.catalogUsers,
+  );
   return attachStaffAssistantAvailability(user, {
     ...base,
     items,
-    actorDisplayNames: await actorDisplayNamesForActivities(quote.activities),
+    actorDisplayNames,
   });
 }
