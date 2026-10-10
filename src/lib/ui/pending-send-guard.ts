@@ -1,6 +1,9 @@
 export const PENDING_SEND_LEAVE_PROMPT =
   "Your message is still sending. Leave this page anyway?";
 
+export const UNSAVED_LIFECYCLE_LEAVE_PROMPT =
+  "Discard unsaved lifecycle edits on this part?";
+
 export const UNSAVED_QUOTE_LEAVE_PROMPT =
   "You have unsaved quote changes. Leave this page anyway?";
 

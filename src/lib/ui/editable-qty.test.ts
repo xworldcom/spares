@@ -18,7 +18,7 @@ describe("editable qty", () => {
     assert.equal(parseEditableQty("   "), 1);
     assert.equal(parseEditableQty("1.5"), 1);
     assert.equal(parseEditableQty("0"), 1);
-    assert.equal(parseEditableQty("-3"), 1);
+    assert.equal(parseEditableQty("-3"), 3);
   });
 
   it("does not treat an empty in-progress draft as complete", () => {

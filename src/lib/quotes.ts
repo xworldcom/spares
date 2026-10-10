@@ -589,6 +589,24 @@ function readLeadDaysFromRaw(item: Record<string, unknown>): number | undefined 
   return undefined;
 }
 
+const STAFF_PRICE_MAX = 999_999_999;
+
+/** Staff quote line sell price: reject NaN, clamp negatives to 0, cap magnitude. */
+export function parseStaffSellPrice(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+  if (parsed < 0) {
+    return 0;
+  }
+  return Math.min(parsed, STAFF_PRICE_MAX);
+}
+
 export function hasSellPrice(item: QuoteItem) {
   return typeof item.sellPrice === "number" && Number.isFinite(item.sellPrice) && item.sellPrice > 0;
 }

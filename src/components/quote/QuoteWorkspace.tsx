@@ -34,6 +34,7 @@ import {
   QUOTE_STATUS_LABELS,
   invoiceVisible,
   pricesVisibleToCustomer,
+  quoteItemsEqual,
   quotePricingComplete,
   quoteTitle,
 } from "@/lib/quotes";
@@ -149,14 +150,13 @@ export function QuoteWorkspace({
       pendingStatus !== null &&
       pendingStatus !== quote.status;
     const staffItemsDirty =
-      role === "staff" && JSON.stringify(items) !== JSON.stringify(quote.items);
+      role === "staff" && !quoteItemsEqual(items, quote.items);
     if (staffStatusDirty || staffItemsDirty) {
       return;
     }
     const next = await getQuote(quoteRef);
     const { activities, changed } = mergeActivitiesById(quote.activities, next.activities);
-    const itemsChanged =
-      JSON.stringify(quote.items) !== JSON.stringify(next.items);
+    const itemsChanged = !quoteItemsEqual(quote.items, next.items);
     const touched =
       changed ||
       quote.status !== next.status ||
@@ -209,7 +209,7 @@ export function QuoteWorkspace({
   const statusDirtyForGuard =
     pendingStatus !== null && quote != null && pendingStatus !== quote.status;
   const itemsDirtyForGuard =
-    quote != null && JSON.stringify(items) !== JSON.stringify(quote.items);
+    quote != null && !quoteItemsEqual(items, quote.items);
   const unsavedStaffChanges =
     role === "staff" &&
     !busy &&
@@ -302,7 +302,7 @@ export function QuoteWorkspace({
   const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
   const displayStatus = pendingStatus ?? quote.status;
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
-  const itemsDirty = JSON.stringify(items) !== JSON.stringify(quote.items);
+  const itemsDirty = !quoteItemsEqual(items, quote.items);
   const staffApplyDirty = statusDirty || itemsDirty;
   const primaryLabel =
     statusDirty && itemsDirty
