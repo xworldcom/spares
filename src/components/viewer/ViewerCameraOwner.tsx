@@ -150,12 +150,14 @@ export function ViewerCameraOwner({
     if (!isValidOrbitSnapshot(snap)) {
       return false;
     }
-    const size = readSize();
     canonicalPose.current = snap;
-    canonicalReady.current = true;
+    applyOrbitSnapshot(camera, controls.target, snap);
+    controls.update();
+    const size = readSize();
     if (size) {
       capturedLayoutSize.current = { width: size.width, height: size.height };
     }
+    canonicalReady.current = true;
     setCanonicalReadyFlag(true);
     invalidate();
     return true;
@@ -278,22 +280,34 @@ export function ViewerCameraOwner({
   }, [applyCanonical, invalidate, layoutRootRef, readSize, syncViewport]);
 
   useLayoutEffect(() => {
+    let alive = true;
     let frame = 0;
-    frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        if (!syncViewport()) {
-          return;
-        }
-        if (viewerFullscreen) {
-          performRefit();
-          return;
-        }
-        if (canonicalReady.current) {
-          applyCanonical();
-        }
-      });
-    });
-    return () => cancelAnimationFrame(frame);
+    let pass = 0;
+    function step() {
+      if (!alive) {
+        return;
+      }
+      pass += 1;
+      if (pass < 3) {
+        frame = requestAnimationFrame(step);
+        return;
+      }
+      if (!syncViewport()) {
+        return;
+      }
+      if (viewerFullscreen) {
+        performRefit();
+        return;
+      }
+      if (canonicalReady.current) {
+        applyCanonical();
+      }
+    }
+    frame = requestAnimationFrame(step);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(frame);
+    };
   }, [applyCanonical, performRefit, syncViewport, viewerFullscreen]);
 
   useLayoutEffect(() => {
