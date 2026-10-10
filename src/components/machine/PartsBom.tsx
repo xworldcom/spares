@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
-import { createTapGesture, tapActivateHandlers } from "@/lib/ui/tap-gesture";
 
 function PartRowSelectButton({
   part,
@@ -14,16 +13,10 @@ function PartRowSelectButton({
   selected: boolean;
   onSelect: (part: Part) => void;
 }) {
-  const gesture = useRef(createTapGesture());
-  const handlers = useMemo(
-    () => tapActivateHandlers(gesture.current, () => onSelect(part)),
-    [onSelect, part],
-  );
-
   return (
     <button
       type="button"
-      {...handlers}
+      onClick={() => onSelect(part)}
       className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
     >
       <span className="min-w-0">

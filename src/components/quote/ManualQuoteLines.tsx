@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { MAX_QUOTE_ITEM_ID } from "@/lib/quotes";
+import {
+  parseEditableQty,
+  qtyDraftIsComplete,
+  qtyKeyReplacesDraft,
+  sanitizeQtyDraft,
+} from "@/lib/ui/editable-qty";
 import type { PartLifecycleInfo } from "@/types";
 
 export type ManualQuoteLine = {
@@ -14,6 +20,64 @@ export type ManualQuoteLine = {
 
 function lineId(partNumber: string, description: string) {
   return partNumber.trim() || description.trim();
+}
+
+function TrayQtyInput({
+  value,
+  label,
+  onCommit,
+}: {
+  value: number;
+  label: string;
+  onCommit: (qty: number) => void;
+}) {
+  const id = useId();
+  const [draft, setDraft] = useState<string | null>(null);
+  const replaceOnType = useRef(true);
+
+  function commit(raw: string) {
+    onCommit(parseEditableQty(raw));
+    setDraft(null);
+    replaceOnType.current = true;
+  }
+
+  return (
+    <input
+      id={id}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      aria-label={label}
+      value={draft ?? String(value)}
+      onFocus={() => {
+        setDraft(String(value));
+        replaceOnType.current = true;
+      }}
+      onChange={(event) => {
+        const next = sanitizeQtyDraft(event.target.value);
+        setDraft(next);
+        replaceOnType.current = false;
+        if (qtyDraftIsComplete(next)) {
+          onCommit(parseEditableQty(next));
+        }
+      }}
+      onBlur={() => commit(draft ?? String(value))}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.currentTarget.blur();
+          return;
+        }
+        if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
+          event.preventDefault();
+          replaceOnType.current = false;
+          setDraft(event.key);
+          onCommit(parseEditableQty(event.key));
+        }
+      }}
+      className="spares-field h-11 w-14 rounded-2xl border-0 px-2 text-center text-[16px] tabular-nums outline-none"
+    />
+  );
 }
 
 export function ManualQuoteLines({
@@ -81,26 +145,11 @@ export function ManualQuoteLines({
                 <PartLifecycleNotice lifecycle={line.lifecycle} compact />
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  aria-label={`Decrease ${line.name}`}
-                  disabled={line.qty <= 1}
-                  onClick={() => onQty(line.id, Math.max(1, line.qty - 1))}
-                  className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium disabled:opacity-30"
-                >
-                  −
-                </button>
-                <span className="min-w-8 text-center text-[17px] tabular-nums">
-                  {line.qty}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Increase ${line.name}`}
-                  onClick={() => onQty(line.id, line.qty + 1)}
-                  className="spares-surface inline-flex h-11 w-11 items-center justify-center rounded-full text-xl font-medium"
-                >
-                  +
-                </button>
+                <TrayQtyInput
+                  value={line.qty}
+                  label={`Quantity for ${line.name}`}
+                  onCommit={(qty) => onQty(line.id, qty)}
+                />
                 <button
                   type="button"
                   onClick={() => onRemove(line.id)}

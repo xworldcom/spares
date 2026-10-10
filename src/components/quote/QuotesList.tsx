@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -13,10 +13,15 @@ import { formatDay } from "@/components/quote/quote-format";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { listQuotes } from "@/lib/api/quotes";
-import { quoteHref } from "@/lib/quotes";
+import {
+  formatMoney,
+  pricesVisibleToCustomer,
+  quoteHref,
+  quoteSellTotal,
+} from "@/lib/quotes";
 import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
 import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
-import type { Quote, Role } from "@/lib/api/types";
+import type { Quote, QuoteStatus, Role } from "@/lib/api/types";
 
 export function QuotesList({
   role,
@@ -32,6 +37,7 @@ export function QuotesList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +74,29 @@ export function QuotesList({
     }
   }, [quotes, role, router]);
 
+  const visible = useMemo(() => {
+    let rows = machineId
+      ? quotes.filter((quote) => quote.machineId === machineId)
+      : quotes;
+    if (statusFilter !== "all") {
+      rows = rows.filter((quote) => quote.status === statusFilter);
+    }
+    return [...rows].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [quotes, machineId, statusFilter]);
+
+  const statusFilters: Array<{ value: QuoteStatus | "all"; label: string }> = [
+    { value: "all", label: "All" },
+    { value: "requested", label: "Requested" },
+    { value: "pricing", label: "Pricing" },
+    { value: "quoted", label: "Quoted" },
+    { value: "ordered", label: "Ordered" },
+    { value: "shipped", label: "Shipped" },
+    { value: "delivered", label: "Delivered" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
   if (loading) {
     return (
       <div className="px-1 py-2" aria-busy="true" aria-label="Loading quotes">
@@ -88,10 +117,6 @@ export function QuotesList({
       />
     );
   }
-
-  const visible = machineId
-    ? quotes.filter((quote) => quote.machineId === machineId)
-    : quotes;
 
   if (visible.length === 0) {
     return (
@@ -119,10 +144,31 @@ export function QuotesList({
   }
 
   return (
+    <div className="space-y-3">
+      {!machineId ? (
+        <div className="flex flex-wrap gap-1.5">
+          {statusFilters.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={statusFilter === option.value}
+              onClick={() => setStatusFilter(option.value)}
+              className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
+                statusFilter === option.value ? "btn-primary" : "btn-soft"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
       {visible.map((quote) => {
         const lines = quote.items.length;
         const title = quote.machineName ?? "Machine";
+        const showTotal =
+          role === "customer" && pricesVisibleToCustomer(quote.status);
+        const total = showTotal ? quoteSellTotal(quote.items) ?? 0 : 0;
         return (
           <li key={quote.id}>
             <PrefetchLink
@@ -149,6 +195,7 @@ export function QuotesList({
                   {formatDay(quote.createdAt)}
                   {role === "staff" ? ` · ${quote.customerEmail}` : ""}
                   {` · ${lines} ${lines === 1 ? "line" : "lines"}`}
+                  {showTotal && total > 0 ? ` · ${formatMoney(total)}` : ""}
                 </p>
                 <div className="mt-2 sm:hidden">
                   <QuoteStatusChip status={quote.status} current />
@@ -165,5 +212,6 @@ export function QuotesList({
         );
       })}
     </ul>
+    </div>
   );
 }
