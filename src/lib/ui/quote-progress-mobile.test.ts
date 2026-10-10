@@ -7,7 +7,7 @@ describe("quote progress mobile layout", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     assert.match(
       css,
-      /@media \(max-width: 639px\)[\s\S]*\.quote-progress-step[\s\S]*flex: 0 0 5rem[\s\S]*min-width: 5rem/,
+      /@media \(max-width: 639px\)[\s\S]*\.quote-progress-step[\s\S]*flex: 0 0 5\.35rem[\s\S]*min-width: 5\.35rem/,
     );
     assert.match(css, /\.quote-progress-track[\s\S]*touch-action: pan-x/);
     assert.match(css, /\.quote-progress-scroll-wrap[\s\S]*min-width: 0/);

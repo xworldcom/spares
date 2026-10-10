@@ -46,7 +46,7 @@ export function useViewerFullscreen() {
   const enter = useCallback(() => {
     const node = chromeRef.current;
     if (node && preferNativeFullscreen() && node.requestFullscreen) {
-      node
+      void node
         .requestFullscreen()
         .then(() => {
           setNative(true);
