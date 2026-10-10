@@ -32,7 +32,7 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
     }
     try {
       invalidateWarmRead("quotes:list");
-      const data = await listQuotes();
+      const data = await listQuotes({ background: true });
       setUnreadCount(data.unreadCount);
     } catch (cause) {
       console.warn("[spares] quote alerts refresh failed", cause);
@@ -44,7 +44,7 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
       return;
     }
     let cancelled = false;
-    listQuotes()
+    listQuotes({ background: true })
       .then((data) => {
         if (!cancelled) {
           setUnreadCount(data.unreadCount);

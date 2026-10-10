@@ -14,6 +14,7 @@ import {
   applyOrbitSnapshot,
   snapshotOrbit,
   syncRendererViewport,
+  uprightDefaultOrbit,
   type ViewerOrbitSnapshot,
 } from "./viewer-viewport";
 
@@ -22,7 +23,7 @@ type ViewerCameraOwnerProps = {
   fitKey: number;
   resetKey: number;
   assemblyKey: string;
-  containFullscreenGestures: boolean;
+  modelSrc: string;
 };
 
 export function ViewerCameraOwner({
@@ -30,14 +31,15 @@ export function ViewerCameraOwner({
   fitKey,
   resetKey,
   assemblyKey,
-  containFullscreenGestures,
+  modelSrc,
 }: ViewerCameraOwnerProps) {
   const bounds = useBounds();
   const { gl, camera, invalidate } = useThree();
   const controls = useThree((state) => state.controls as OrbitControlsImpl | null);
   const initialPose = useRef<ViewerOrbitSnapshot | null>(null);
+  const initialCaptured = useRef(false);
   const lastResetKey = useRef(0);
-  const pendingCapture = useRef(false);
+  const lastModelSrc = useRef(modelSrc);
 
   const readSize = useCallback(() => {
     const root = layoutRootRef.current;
@@ -65,32 +67,37 @@ export function ViewerCameraOwner({
     return true;
   }, [camera, gl, invalidate, readSize]);
 
-  const fitAssembly = useCallback(() => {
-    if (!syncViewport()) {
-      return;
-    }
-    bounds.refresh().clip().fit();
-    pendingCapture.current = initialPose.current === null;
-    invalidate();
-  }, [bounds, invalidate, syncViewport]);
-
-  const captureInitialPose = useCallback(() => {
-    if (!(camera instanceof PerspectiveCamera) || !controls || initialPose.current) {
-      return;
-    }
-    initialPose.current = snapshotOrbit(camera, controls.target);
-    pendingCapture.current = false;
-  }, [camera, controls]);
-
-  useFrame(() => {
-    if (pendingCapture.current) {
-      captureInitialPose();
-    }
-  });
+  const refitBounds = useCallback(
+    (captureInitial: boolean) => {
+      if (!(camera instanceof PerspectiveCamera) || !controls) {
+        return;
+      }
+      if (!syncViewport()) {
+        return;
+      }
+      bounds.refresh().clip().fit();
+      uprightDefaultOrbit(camera, controls.target);
+      controls.update();
+      if (captureInitial && !initialCaptured.current) {
+        initialPose.current = snapshotOrbit(camera, controls.target);
+        initialCaptured.current = true;
+      }
+      invalidate();
+    },
+    [bounds, camera, controls, invalidate, syncViewport],
+  );
 
   useLayoutEffect(() => {
-    fitAssembly();
-  }, [fitAssembly, fitKey, assemblyKey]);
+    if (lastModelSrc.current !== modelSrc) {
+      lastModelSrc.current = modelSrc;
+      initialPose.current = null;
+      initialCaptured.current = false;
+    }
+  }, [modelSrc]);
+
+  useLayoutEffect(() => {
+    refitBounds(!initialCaptured.current);
+  }, [assemblyKey, fitKey, refitBounds]);
 
   useLayoutEffect(() => {
     if (resetKey === 0 || resetKey === lastResetKey.current) {
@@ -111,23 +118,39 @@ export function ViewerCameraOwner({
     if (!root) {
       return;
     }
+    let frame = 0;
     const onResize = () => {
-      fitAssembly();
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!(camera instanceof PerspectiveCamera) || !controls) {
+          return;
+        }
+        if (!syncViewport()) {
+          return;
+        }
+        bounds.refresh().clip().fit();
+        uprightDefaultOrbit(camera, controls.target);
+        controls.update();
+        invalidate();
+      });
     };
     const observer = new ResizeObserver(onResize);
     observer.observe(root);
-    return () => observer.disconnect();
-  }, [fitAssembly, layoutRootRef]);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [bounds, camera, controls, invalidate, layoutRootRef, syncViewport]);
 
   useLayoutEffect(() => {
     function onFullscreenChange() {
       requestAnimationFrame(() => {
-        fitAssembly();
+        refitBounds(false);
       });
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, [fitAssembly]);
+  }, [refitBounds]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;
@@ -135,19 +158,15 @@ export function ViewerCameraOwner({
       return;
     }
     const blockWheel = (event: WheelEvent) => {
-      if (!containFullscreenGestures) {
-        return;
-      }
       const target = event.target;
       if (!(target instanceof Node) || !root.contains(target)) {
         return;
       }
-      // Keep zoom on the canvas; block browser scroll that drops native fullscreen.
       event.preventDefault();
     };
     root.addEventListener("wheel", blockWheel, { passive: false, capture: true });
     return () => root.removeEventListener("wheel", blockWheel, { capture: true });
-  }, [containFullscreenGestures, layoutRootRef]);
+  }, [layoutRootRef]);
 
   return null;
 }

@@ -1,5 +1,6 @@
 import { ApiError } from "./errors.ts";
 import type { ApiErrorBody } from "./types.ts";
+import { SPARES_BACKGROUND_FETCH } from "./background-fetch.ts";
 import {
   isSessionProbePath,
   notifyUnauthorized,
@@ -71,8 +72,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
 async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
+  const headers = new Headers(init?.headers);
   try {
-    const headers = new Headers(init?.headers);
     const isFormData =
       typeof FormData !== "undefined" && init?.body instanceof FormData;
     if (!isFormData && init?.body != null && !headers.has("Content-Type")) {
@@ -111,7 +112,10 @@ async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401 && !isSessionProbePath(path)) {
-      notifyUnauthorized();
+      const background = headers.get(SPARES_BACKGROUND_FETCH) === "1";
+      if (!background) {
+        notifyUnauthorized();
+      }
       throw new ApiError(SIGNED_OUT_MESSAGE, 401);
     }
     throw new ApiError(

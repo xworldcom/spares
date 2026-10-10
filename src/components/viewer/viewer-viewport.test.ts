@@ -5,6 +5,7 @@ import {
   applyOrbitSnapshot,
   snapshotOrbit,
   syncRendererViewport,
+  uprightDefaultOrbit,
 } from "./viewer-viewport.ts";
 
 describe("viewer viewport", () => {
@@ -21,6 +22,14 @@ describe("viewer viewport", () => {
     };
     syncRendererViewport(gl as never, camera, 1280, 800, 1);
     assert.equal(camera.aspect, 1280 / 800);
+  });
+
+  it("uprightDefaultOrbit lifts the camera above the target", () => {
+    const camera = new PerspectiveCamera(40, 1, 0.1, 100);
+    const target = new Vector3(0, 0, 0);
+    camera.position.set(2, -3, 2);
+    uprightDefaultOrbit(camera, target);
+    assert.ok(camera.position.y > target.y);
   });
 
   it("round-trips orbit snapshots", () => {
