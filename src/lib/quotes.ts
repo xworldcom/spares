@@ -294,26 +294,45 @@ function parseItemRow(
   }
 
   if (allowPricing) {
-    const sellPrice = asMoney(record.sellPrice ?? record.unitPrice);
-    if (sellPrice === null) {
-      return { ok: false, error: "sellPrice must be a number ≥ 0" };
+    if ("sellPrice" in record || "unitPrice" in record) {
+      const rawSell = "sellPrice" in record ? record.sellPrice : record.unitPrice;
+      if (rawSell === null) {
+        // Explicit clear — merge step removes the stored price.
+      } else {
+        const sellPrice = asMoney(rawSell);
+        if (sellPrice === null) {
+          return { ok: false, error: "sellPrice must be a number ≥ 0" };
+        }
+        if (sellPrice !== undefined) {
+          item.sellPrice = sellPrice;
+        }
+      }
     }
-    if (sellPrice !== undefined) {
-      item.sellPrice = sellPrice;
+    if ("supplierCost" in record) {
+      if (record.supplierCost === null) {
+        // Explicit clear
+      } else {
+        const supplierCost = asMoney(record.supplierCost);
+        if (supplierCost === null) {
+          return { ok: false, error: "supplierCost must be a number ≥ 0" };
+        }
+        if (supplierCost !== undefined) {
+          item.supplierCost = supplierCost;
+        }
+      }
     }
-    const supplierCost = asMoney(record.supplierCost);
-    if (supplierCost === null) {
-      return { ok: false, error: "supplierCost must be a number ≥ 0" };
-    }
-    if (supplierCost !== undefined) {
-      item.supplierCost = supplierCost;
-    }
-    const leadTimeDays = asDays(record.leadTimeDays);
-    if (leadTimeDays === null) {
-      return { ok: false, error: "leadTimeDays must be an integer ≥ 0" };
-    }
-    if (leadTimeDays !== undefined) {
-      item.leadTimeDays = leadTimeDays;
+    if ("leadTimeDays" in record) {
+      if (record.leadTimeDays === null) {
+        // Explicit clear
+      } else {
+        const leadTimeDays = asDays(record.leadTimeDays);
+        if (leadTimeDays === null) {
+          return { ok: false, error: "leadTimeDays must be an integer ≥ 0" };
+        }
+        if (leadTimeDays !== undefined) {
+          item.leadTimeDays = leadTimeDays;
+        }
+      }
     }
     const supplier = asOptionalString(record.supplier, 120);
     if (supplier) {
@@ -406,9 +425,23 @@ export function quoteItemsEqual(left: QuoteItem[], right: QuoteItem[]) {
   });
 }
 
+function rawQuoteItemPatchRow(rawPatch: unknown[] | undefined, id: string) {
+  if (!rawPatch) {
+    return undefined;
+  }
+  return rawPatch.find(
+    (row) =>
+      row &&
+      typeof row === "object" &&
+      typeof (row as { id?: unknown }).id === "string" &&
+      (row as { id: string }).id === id,
+  );
+}
+
 export function mergeQuoteItems(
   existing: QuoteItem[],
   patch: QuoteItem[],
+  rawPatch?: unknown[],
 ): ParseQuoteItemsResult {
   const byId = new Map(existing.map((item) => [item.id, item]));
   for (const row of patch) {
@@ -421,13 +454,41 @@ export function mergeQuoteItems(
     if (!overlay) {
       return item;
     }
-    return normalizeItem({
+    const normalized = normalizeItem({
       ...item,
       ...overlay,
       id: item.id,
     });
+    const rawRow = rawQuoteItemPatchRow(rawPatch, item.id);
+    if (rawRow && typeof rawRow === "object") {
+      const record = rawRow as Record<string, unknown>;
+      if ("sellPrice" in record && record.sellPrice === null) {
+        delete normalized.sellPrice;
+      }
+      if ("supplierCost" in record && record.supplierCost === null) {
+        delete normalized.supplierCost;
+      }
+      if ("leadTimeDays" in record && record.leadTimeDays === null) {
+        delete normalized.leadTimeDays;
+      }
+    }
+    return normalized;
   });
   return { ok: true, items: next };
+}
+
+/** JSON body for PATCH quote items — null clears optional pricing fields. */
+export function quoteItemsPatchPayload(items: QuoteItem[]) {
+  return items.map((item) => ({
+    id: item.id,
+    qty: item.qty,
+    ...(item.name ? { name: item.name } : {}),
+    sellPrice: item.sellPrice ?? null,
+    supplierCost: item.supplierCost ?? null,
+    leadTimeDays: item.leadTimeDays ?? null,
+    ...(item.supplier ? { supplier: item.supplier } : {}),
+    ...(item.note ? { note: item.note } : {}),
+  }));
 }
 
 function normalizeItem(item: QuoteItem & Record<string, unknown>): QuoteItem {

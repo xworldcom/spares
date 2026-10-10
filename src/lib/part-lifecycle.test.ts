@@ -5,6 +5,7 @@ import {
   buildTenantPartCatalog,
   enrichPartsWithLifecycle,
   healDemoPartLifecycle,
+  parsePartLifecycleBulk,
   publicLifecycle,
 } from "./part-lifecycle.ts";
 import type { StoredMachine } from "./store.ts";
@@ -120,5 +121,19 @@ describe("healDemoPartLifecycle", () => {
     const healed = healDemoPartLifecycle(db);
     const numbers = (healed.partLifecycle ?? []).map((row) => row.partNumber);
     assert.equal(numbers.filter((n) => n === "6331K32").length, 1);
+  });
+});
+
+describe("parsePartLifecycleBulk", () => {
+  it("accepts flat status fields on each update row", () => {
+    const parsed = parsePartLifecycleBulk({
+      updates: [
+        { partNumber: "PN-1", status: "active" },
+        { partNumber: "PN-2", status: "obsolete" },
+      ],
+    });
+    assert.ok(!("error" in parsed));
+    assert.equal(parsed.updates.length, 2);
+    assert.equal(parsed.updates[0]?.patch.status, "active");
   });
 });

@@ -141,7 +141,11 @@ async function handlePATCH(
     if (!parsed.ok) {
       return error(parsed.error, 400);
     }
-    const merged = mergeQuoteItems(access.quote.items, parsed.items);
+    const merged = mergeQuoteItems(
+      access.quote.items,
+      parsed.items,
+      Array.isArray(body.items) ? body.items : undefined,
+    );
     if (!merged.ok) {
       return error(merged.error, 400);
     }

@@ -414,6 +414,26 @@ export function applyLifecycleUpsert(input: {
   return [...input.rows, next];
 }
 
+export type PartLifecycleStatusCounts = Record<PartLifecycleStatus, number> & {
+  all: number;
+};
+
+export function tallyPartLifecycleStatusCounts(
+  rows: TenantPartCatalogRow[],
+): PartLifecycleStatusCounts {
+  const counts: PartLifecycleStatusCounts = {
+    all: rows.length,
+    active: 0,
+    announced: 0,
+    obsolete: 0,
+    unknown: 0,
+  };
+  for (const row of rows) {
+    counts[row.lifecycle.status] += 1;
+  }
+  return counts;
+}
+
 export function filterCatalogRows(
   rows: TenantPartCatalogRow[],
   filters: {

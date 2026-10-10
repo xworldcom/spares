@@ -1,3 +1,4 @@
+import { quoteItemsPatchPayload } from "@/lib/quotes";
 import { apiFetch } from "./client";
 import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
@@ -68,9 +69,13 @@ export async function updateQuote(
     invoiceNumber?: string;
   },
 ): Promise<Quote> {
+  const body =
+    patch.items != null
+      ? { ...patch, items: quoteItemsPatchPayload(patch.items) }
+      : patch;
   const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`, {
     method: "PATCH",
-    body: JSON.stringify(patch),
+    body: JSON.stringify(body),
   });
   invalidateWarmRead(`quote:${idOrNumber}`);
   invalidateWarmRead("quotes:list");

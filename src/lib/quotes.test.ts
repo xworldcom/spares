@@ -606,6 +606,15 @@ describe("mergeQuoteItems and numbers", () => {
       ok: true,
       items: [{ id: "A", qty: 3, sellPrice: 4 }],
     });
+    const cleared = mergeQuoteItems(
+      [{ id: "A", qty: 1, sellPrice: 10.25, supplierCost: 5 }],
+      [{ id: "A", qty: 1 }],
+      [{ id: "A", qty: 1, sellPrice: null, supplierCost: null }],
+    );
+    assert.deepEqual(cleared, {
+      ok: true,
+      items: [{ id: "A", qty: 1 }],
+    });
     assert.equal(
       mergeQuoteItems([{ id: "A", qty: 1 }], [{ id: "B", qty: 1 }]).ok,
       false,
