@@ -6,6 +6,7 @@ import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
 import { StaffPartsReview } from "@/components/machine/StaffPartsReview";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
 import { QuoteAddToast } from "@/components/quote/QuoteAddToast";
@@ -95,6 +96,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   });
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const desktopStage = useDesktopStage();
+  const hydrated = useHydrated();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
   const [lifecycleById, setLifecycleById] = useState<Record<string, PartLifecycleInfo>>({});
   const lifecycleAsked = useRef(new Set<string>());
@@ -642,8 +644,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         event.preventDefault();
       }}
     >
-      <div ref={viewerLayoutRef} className="relative min-h-0 flex-1">
-        {src ? (
+      <div
+        className="relative min-h-0 flex-1"
+        data-machine-viewer-layout=""
+      >
+        {src && hydrated ? (
           <PartPicker
             src={src}
             parts={joinedParts}

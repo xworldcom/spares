@@ -650,7 +650,7 @@ function ViewerCanvas({
           onPick(null);
         }
       }}
-      style={{ touchAction: "none" }}
+      style={{ display: "block", width: "100%", height: "100%", touchAction: "none" }}
     >
       <color attach="background" args={[VIEWER_BG]} />
       <DisposeRendererOnUnmount />
@@ -670,7 +670,7 @@ function ViewerCanvas({
       <StudioGround />
       {load.status === "ready" ? (
         <Suspense fallback={null}>
-        <Bounds fit clip observe margin={1.3}>
+        <Bounds clip observe margin={1.3}>
           <LoadedModel
             src={src}
             parts={parts}
