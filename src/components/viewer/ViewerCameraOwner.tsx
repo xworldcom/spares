@@ -29,7 +29,8 @@ type ViewerCameraOwnerProps = {
 };
 
 const MIN_LAYOUT_PX = 80;
-const STABLE_FRAMES = 2;
+const STABLE_FRAMES = 3;
+const READY_PAINT_FRAMES = 5;
 const LAYOUT_DRIFT_RATIO = 0.05;
 const MIN_BOUNDS_EXTENT = 0.02;
 
@@ -132,6 +133,44 @@ export function ViewerCameraOwner({
     return true;
   }, [camera, controls, invalidate, syncViewport]);
 
+  const commitCanonicalReady = useCallback(
+    (snap: ViewerOrbitSnapshot) => {
+      if (!(camera instanceof PerspectiveCamera) || !controls) {
+        return;
+      }
+      let alive = true;
+      let pass = 0;
+      function paint() {
+        if (!alive) {
+          return;
+        }
+        if (!syncViewport()) {
+          requestAnimationFrame(paint);
+          return;
+        }
+        applyOrbitSnapshot(camera, controls.target, snap);
+        controls.update();
+        invalidate();
+        pass += 1;
+        if (pass < READY_PAINT_FRAMES) {
+          requestAnimationFrame(paint);
+          return;
+        }
+        const size = readSize();
+        if (size) {
+          capturedLayoutSize.current = { width: size.width, height: size.height };
+        }
+        canonicalReady.current = true;
+        setCanonicalReadyFlag(true);
+      }
+      requestAnimationFrame(paint);
+      return () => {
+        alive = false;
+      };
+    },
+    [camera, controls, invalidate, readSize, setCanonicalReadyFlag, syncViewport],
+  );
+
   const captureCanonical = useCallback(() => {
     if (!(camera instanceof PerspectiveCamera) || !controls) {
       return false;
@@ -151,17 +190,9 @@ export function ViewerCameraOwner({
       return false;
     }
     canonicalPose.current = snap;
-    applyOrbitSnapshot(camera, controls.target, snap);
-    controls.update();
-    const size = readSize();
-    if (size) {
-      capturedLayoutSize.current = { width: size.width, height: size.height };
-    }
-    canonicalReady.current = true;
-    setCanonicalReadyFlag(true);
-    invalidate();
+    commitCanonicalReady(snap);
     return true;
-  }, [bounds, camera, controls, invalidate, readSize, setCanonicalReadyFlag, syncViewport]);
+  }, [bounds, camera, controls, commitCanonicalReady, syncViewport]);
 
   useLayoutEffect(() => {
     if (lastModelSrc.current !== modelSrc) {
@@ -318,7 +349,10 @@ export function ViewerCameraOwner({
             return;
           }
           if (document.fullscreenElement) {
-            performRefit();
+            requestAnimationFrame(() => {
+              performRefit();
+              invalidate();
+            });
             return;
           }
           if (!viewerFullscreen && canonicalReady.current) {
