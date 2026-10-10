@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  canSendChatMessage,
+  EMPTY_CHAT_MESSAGE_ERROR,
+} from "@/lib/ui/chat-composer";
 import { PENDING_SEND_LEAVE_PROMPT, leavesCurrentPage } from "@/lib/ui/pending-send-guard";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useConversationSheetChrome } from "@/components/chat/ConversationSheetContext";
@@ -267,10 +271,14 @@ export function QuoteActivityFeed({
   }
 
   async function submit() {
-    const next = text.trim();
-    if ((!next && pendingFiles.length === 0) || busy || uploading) {
+    if (busy || uploading) {
       return;
     }
+    if (!canSendChatMessage(text, pendingFiles.length)) {
+      setComposerError(EMPTY_CHAT_MESSAGE_ERROR);
+      return;
+    }
+    const next = text.trim();
     setComposerError(null);
     setUploading(true);
     const pendingId = `pending-${Date.now()}`;
@@ -310,8 +318,7 @@ export function QuoteActivityFeed({
     }
   }
 
-  const sendDisabled =
-    busy || uploading || (!text.trim() && pendingFiles.length === 0);
+  const sendDisabled = busy || uploading || !canSendChatMessage(text, pendingFiles.length);
   const showAssistantToggle =
     role === "staff" && Boolean(assistantAvailable && onAssistantPausedChange);
 
@@ -474,6 +481,8 @@ export function QuoteActivityFeed({
         )}
       </ol>
       <form
+        id={`${threadKind}-${threadId}-composer`}
+        name={`${threadKind}Message`}
         className="imsg-composer"
         onSubmit={(event) => {
           event.preventDefault();
@@ -549,10 +558,17 @@ export function QuoteActivityFeed({
           <label className="imsg-composer-field">
             <span className="sr-only">Message</span>
             <textarea
+              id={`${threadKind}-${threadId}-message`}
+              name="message"
               ref={inputRef}
               rows={1}
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                if (composerError === EMPTY_CHAT_MESSAGE_ERROR) {
+                  setComposerError(null);
+                }
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();

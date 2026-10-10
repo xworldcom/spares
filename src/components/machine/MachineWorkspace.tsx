@@ -555,6 +555,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     );
     if (isolatedId === selectedPart.id) {
       setIsolatedId(null);
+      setExplodeFitKey((key) => key + 1);
     }
     if (shouldAutoDismissPartSheet("hide")) {
       setSelectedPart(null);
@@ -567,9 +568,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     if (isolatedId === selectedPart.id) {
       setIsolatedId(null);
+      setExplodeFitKey((key) => key + 1);
     } else {
       setIsolatedId(selectedPart.id);
       setHiddenIds((current) => current.filter((id) => id !== selectedPart.id));
+      setExplodeFitKey((key) => key + 1);
     }
     if (shouldAutoDismissPartSheet("isolate")) {
       setSelectedPart(null);

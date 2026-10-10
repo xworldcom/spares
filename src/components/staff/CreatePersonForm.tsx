@@ -72,6 +72,8 @@ export function CreatePersonForm({
 
   return (
     <form
+      id="create-person-form"
+      name="createPerson"
       onSubmit={(event) => {
         void handleSubmit(event);
       }}
