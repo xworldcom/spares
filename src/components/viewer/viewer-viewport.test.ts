@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { PerspectiveCamera, Vector3 } from "three";
 import {
   applyOrbitSnapshot,
+  fitPerspectiveToBoundsBox,
   snapshotOrbit,
   isValidOrbitSnapshot,
   syncRendererViewport,
@@ -31,6 +32,24 @@ describe("viewer viewport", () => {
     camera.position.set(2, -3, 2);
     uprightDefaultOrbit(camera, target);
     assert.ok(camera.position.y > target.y);
+  });
+
+  it("fitPerspectiveToBoundsBox backs the camera off for narrow aspect", () => {
+    const camera = new PerspectiveCamera(40, 390 / 844, 0.1, 1000);
+    const target = new Vector3(0, 0, 0);
+    camera.position.set(2, 1, 2);
+    const wideBox = { x: 8, y: 1, z: 2 };
+    const center = new Vector3(0, 0, 0);
+    const size = new Vector3(wideBox.x, wideBox.y, wideBox.z);
+    fitPerspectiveToBoundsBox(camera, target, size, center, 1.3);
+    const dist = camera.position.distanceTo(target);
+    camera.aspect = 16 / 9;
+    camera.updateProjectionMatrix();
+    const cameraWide = camera.clone();
+    cameraWide.position.copy(camera.position);
+    fitPerspectiveToBoundsBox(cameraWide, target, size, center, 1.3);
+    const distWide = cameraWide.position.distanceTo(target);
+    assert.ok(dist >= distWide * 0.9);
   });
 
   it("round-trips orbit snapshots", () => {
