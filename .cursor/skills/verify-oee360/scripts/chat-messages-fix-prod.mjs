@@ -35,11 +35,14 @@ for (const [w, h, name, path] of [
   [1440, 900, "1440-staff-quote", `/staff/quotes/${quoteRef}`],
   [1920, 1080, "1920-staff-quote", `/staff/quotes/${quoteRef}`],
   [390, 844, "390-customer-care", "/care/tickets/16"],
+  [1440, 900, "1440-staff-care", "/care/tickets/16"],
 ]) {
   const page = await ctx.newPage();
   await page.setViewportSize({ width: w, height: h });
   if (name.startsWith("390-customer")) {
     await login("user@demo.com", "demo123456");
+  } else if (name.includes("staff")) {
+    await login("staff@demo.com", "demo123456");
   }
   await page.goto(`${baseUrl}${path}`, {
     waitUntil: "domcontentloaded",
@@ -63,14 +66,34 @@ for (const [w, h, name, path] of [
       return textH > 0 && bubbleH / textH > 2.5;
     });
     const headerDup = document.querySelector(".care-ticket-detail")?.textContent?.trim() ?? "";
+    const duplicateBodies = rows
+      .map((row) => row.querySelector(".imsg-text")?.textContent?.trim() ?? "")
+      .filter(Boolean);
+    const consecutiveDup =
+      duplicateBodies.length >= 2 &&
+      duplicateBodies[0] === duplicateBodies[1];
+    const staffMeta = rows
+      .filter((row) => row.classList.contains("imsg-other"))
+      .map((row) => row.querySelector(".imsg-meta")?.textContent?.trim() ?? "")
+      .find(Boolean);
+    const subtitle = document.querySelector(".imsg-header p")?.textContent?.trim() ?? "";
     return {
       rowCount: rows.length,
       bubbleCount: bubbles.length,
       tallBubbleCount: tall.length,
       ticketHeaderBlurb: headerDup,
+      consecutiveDuplicateBodies: consecutiveDup,
+      staffSenderMeta: staffMeta ?? "",
+      messagesSubtitle: subtitle,
     };
   });
-  const pass = metrics.tallBubbleCount === 0 && !metrics.ticketHeaderBlurb;
+  const needsCareSubtitle = name === "1440-staff-care";
+  const pass =
+    metrics.tallBubbleCount === 0 &&
+    !metrics.ticketHeaderBlurb &&
+    !metrics.consecutiveDuplicateBodies &&
+    (name.includes("customer-care") ? metrics.staffSenderMeta.length > 0 : true) &&
+    (!needsCareSubtitle || metrics.messagesSubtitle.includes("·"));
   proof.checks.push({ id: name, metrics, pass });
   if (!pass) proof.ok = false;
   await page.screenshot({ path: join(outDir, `${name}.png`), fullPage: w !== 390 });

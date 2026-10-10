@@ -5,7 +5,7 @@ import {
   parseOptionalCareText,
   toPublicTicket,
 } from "@/lib/care";
-import { actorOf, requireMachineAccess } from "@/lib/care-http";
+import { actorOf, requireMachineAccess, resolveTicketOwnerContact } from "@/lib/care-http";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
@@ -62,11 +62,12 @@ async function handlePOST(
   }
 
   const tenantId = userTenantId(access.user);
+  const owner = await resolveTicketOwnerContact(tenantId, access.machine, access.user);
   const created = await createTicket(tenantId, {
     machineId: access.machine.id,
     title: title.text,
-    customerId: access.user.id,
-    customerEmail: access.user.email,
+    customerId: owner.customerId,
+    customerEmail: owner.customerEmail,
     actor: actorOf(access.user),
     note: note.text,
   });

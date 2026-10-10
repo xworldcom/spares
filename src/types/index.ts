@@ -354,6 +354,8 @@ export type ServiceTicket = {
   status: TicketStatus;
   createdAt: string;
   customerEmail: string;
+  /** Staff-only: plant contact for Messages subtitle (may differ from customerEmail on staff-opened probes). */
+  threadCustomerEmail?: string;
   activities: TicketActivity[];
   unread: boolean;
   /** Viewer read watermark for jumping to the first unread message in chat. */

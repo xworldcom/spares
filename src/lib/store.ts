@@ -21,6 +21,7 @@ import {
   validateLargeModelCompression,
 } from "./gltf-compress.ts";
 import { extractMeshNames, prepareModelBytes } from "./gltf.ts";
+import { wouldDuplicateLatestTicketMessage } from "./ui/chat-activity-dedupe.ts";
 import {
   findMachineByNameAtSite,
   isModelFilename,
@@ -4216,6 +4217,15 @@ export function appendTicketActivity(
   attachments?: TicketActivity["attachments"],
 ) {
   return mutateTicket(idOrNumber, tenantId, (ticket) => {
+    if (
+      wouldDuplicateLatestTicketMessage(
+        ticket.activities,
+        { actorEmail: actor.email, actorRole: actor.role },
+        text,
+      )
+    ) {
+      return ticket;
+    }
     const activity = newTicketActivity(actor, "message", text, undefined, attachments);
     return {
       ...ticket,

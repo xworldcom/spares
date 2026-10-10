@@ -351,6 +351,10 @@ export function toPublicTicket(
   };
   if (user.role === "staff" && options?.customerUsers) {
     base.customerReadReceipts = customerReadReceiptsForTicket(ticket, options.customerUsers);
+    const threadCustomerEmail = ticketThreadCounterpartEmail(ticket, options.customerUsers);
+    if (threadCustomerEmail) {
+      base.threadCustomerEmail = threadCustomerEmail;
+    }
   }
   return base;
 }
@@ -435,6 +439,29 @@ export function ticketHeaderContextLine(
     return null;
   }
   return ticketContextLine(ticket);
+}
+
+/** Plant contact for staff thread chrome — not the staff opener on probe tickets. */
+export function ticketThreadCounterpartEmail(
+  ticket: Pick<ServiceTicketRecord, "activities" | "customerEmail" | "customerId">,
+  customerUsers?: readonly Pick<PublicUser, "id" | "email" | "role">[],
+): string | undefined {
+  for (const activity of ticket.activities) {
+    if (activity.kind === "message" && activity.actorRole === "customer") {
+      return activity.actorEmail;
+    }
+  }
+  const profile = customerUsers?.find(
+    (row) => row.id === ticket.customerId && row.role === "customer",
+  );
+  if (profile?.email) {
+    return profile.email;
+  }
+  const email = ticket.customerEmail?.trim();
+  if (email && !email.includes("staff@")) {
+    return email;
+  }
+  return customerUsers?.find((row) => row.role === "customer")?.email;
 }
 
 export function ticketRefMatches(

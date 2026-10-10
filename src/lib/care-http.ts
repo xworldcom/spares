@@ -4,7 +4,14 @@ import { canAccessCareMachine, canManageCare, customerReadReceiptsForTicket, toP
 import { toPublicUser } from "@/lib/access";
 import { error } from "@/lib/http";
 import { tenantIdForUser, userTenantId } from "@/lib/tenant";
-import { getMachine, getOrgContext, getTicket, listCustomers, findUserById, type StoredMachine } from "@/lib/store";
+import {
+  findUserById,
+  getMachine,
+  getOrgContext,
+  getTicket,
+  listCustomers,
+  type StoredMachine,
+} from "@/lib/store";
 import type { PublicUser, ServiceTicket, ServiceTicketRecord, TicketCustomerReadReceipt } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -71,6 +78,28 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
 
 export function actorOf(user: PublicUser) {
   return { id: user.id, email: user.email, role: user.role };
+}
+
+/** Plant owner on the ticket record — staff-opened tickets should not point at staff@. */
+export async function resolveTicketOwnerContact(
+  tenantId: string,
+  machine: StoredMachine,
+  user: PublicUser,
+): Promise<{ customerId: string; customerEmail: string }> {
+  if (user.role === "customer") {
+    return { customerId: user.id, customerEmail: user.email };
+  }
+  const customers = await listCustomers(tenantId);
+  const onMachine = customers.filter(
+    (row) =>
+      row.machineIds?.includes(machine.id) ||
+      (machine.siteId ? row.siteIds?.includes(machine.siteId) : false),
+  );
+  const plant = onMachine[0] ?? customers.find((row) => row.role === "customer");
+  if (plant) {
+    return { customerId: plant.id, customerEmail: plant.email };
+  }
+  return { customerId: user.id, customerEmail: user.email };
 }
 
 export async function staffCustomerUsers(tenantId: string) {

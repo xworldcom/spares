@@ -24,16 +24,13 @@ if (!login.ok()) {
   process.exit(1);
 }
 const created = await page.request.post(`${baseUrl}/api/machines/palletizer/tickets`, {
-  data: { title: "Short thread pin", note: "probe" },
+  data: { title: "Short thread pin", note: "Only message on a short thread." },
 });
 if (!created.ok()) {
   console.error("create", created.status(), await created.text());
   process.exit(1);
 }
 const ticket = (await created.json()).ticket;
-await page.request.post(`${baseUrl}/api/tickets/${ticket.id}/activity`, {
-  data: { text: "Only message on a short thread." },
-});
 
 await page.goto(`${baseUrl}/machines/palletizer/care/tickets/${ticket.id}`, {
   waitUntil: "domcontentloaded",
