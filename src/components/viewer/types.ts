@@ -20,7 +20,7 @@ export type PartPickerProps = {
   fitKey?: number;
   /** Bump to restore the first-load orbit pose (also clears explode in parent). */
   resetKey?: number;
-  layoutRootRef?: RefObject<HTMLElement | null>;
+  layoutRootRef?: RefObject<HTMLDivElement | null>;
   containFullscreenGestures?: boolean;
   hiddenIds?: readonly string[];
   isolatedId?: string | null;

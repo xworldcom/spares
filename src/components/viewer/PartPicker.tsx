@@ -565,6 +565,8 @@ function ViewerCanvas({
   assemblyKey,
   layoutRootRef,
   containFullscreenGestures,
+  hiddenIds,
+  isolatedId,
   onPick,
   onLongPress,
 }: {
@@ -575,8 +577,10 @@ function ViewerCanvas({
   fitKey: number;
   resetKey: number;
   assemblyKey: string;
-  layoutRootRef: React.RefObject<HTMLElement | null>;
+  layoutRootRef: React.RefObject<HTMLDivElement | null>;
   containFullscreenGestures: boolean;
+  hiddenIds: readonly string[];
+  isolatedId: string | null;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
   onLongPress?: (part: ViewerPart) => void;
 }) {
@@ -786,8 +790,10 @@ export function PartPicker({
         fitKey={fitKey}
         resetKey={resetKey}
         assemblyKey={assemblyKey}
-        layoutRootRef={surfaceRef ?? { current: null }}
+        layoutRootRef={surfaceRef}
         containFullscreenGestures={containFullscreenGestures}
+        hiddenIds={hiddenIds}
+        isolatedId={isolatedId}
         onPick={handlePick}
         onLongPress={onLongPress}
       />

@@ -18,7 +18,7 @@ import {
 } from "./viewer-viewport";
 
 type ViewerCameraOwnerProps = {
-  layoutRootRef: RefObject<HTMLElement | null>;
+  layoutRootRef: RefObject<HTMLDivElement | null>;
   fitKey: number;
   resetKey: number;
   assemblyKey: string;

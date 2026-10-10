@@ -632,9 +632,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       ref={chromeRef}
       className={
         overlay
-          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col top-[var(--spares-header)]"
+          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col overscroll-none top-[var(--spares-header)]"
           : fullscreen
-            ? "flex h-full min-h-0 flex-col"
+            ? "flex h-full min-h-0 flex-col overscroll-none"
             : "machine-viewer overflow-hidden sm:rounded-[28px]"
       }
       style={{ background: VIEWER_STAGE }}
