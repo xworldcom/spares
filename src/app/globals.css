@@ -1756,26 +1756,28 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   }
 
   .quote-progress-step {
-    flex: 0 0 5rem;
-    min-width: 5rem;
+    flex: 0 0 5.35rem;
+    min-width: 5.35rem;
   }
 
-  .quote-progress-label {
-    max-width: 100%;
-    width: 100%;
-    box-sizing: border-box;
-    white-space: nowrap;
-  }
-
-  .quote-progress-step[data-state="current"] .quote-progress-label-short {
+  .quote-progress-label-short {
     display: none;
   }
 
-  .quote-progress-step[data-state="current"] .quote-progress-label-full {
+  .quote-progress-label-full {
     display: block;
-    font-size: 11px;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 10px;
     line-height: 1.15;
     white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .quote-progress-step[data-state="current"] .quote-progress-label-full {
+    font-size: 11px;
   }
 }
 

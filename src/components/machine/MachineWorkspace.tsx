@@ -16,7 +16,6 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { MachineWorkspaceSkeleton } from "./MachineWorkspaceSkeleton";
 import { PartPicker } from "@/components/viewer";
 import type { ViewerPart } from "@/components/viewer";
-import { viewerNeedsShowAll } from "@/components/viewer/assemblyView";
 import Link from "next/link";
 import { getMachine, updateMachinePart } from "@/lib/api/machines";
 import { machineHasModel } from "@/lib/machines";
@@ -115,6 +114,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       : null;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
+  const wasViewerFullscreen = useRef(false);
+
+  useEffect(() => {
+    if (wasViewerFullscreen.current && !fullscreen) {
+      setExplodeFitKey((key) => key + 1);
+    }
+    wasViewerFullscreen.current = fullscreen;
+  }, [fullscreen]);
 
   useEffect(() => {
     if (trayOpen) {
@@ -363,7 +370,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [selectedPart]);
 
-  const needsReset = viewerNeedsShowAll(hiddenIds, isolatedId);
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
@@ -543,6 +549,20 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     setHiddenIds([]);
     setIsolatedId(null);
     // Always refit bounds (phone + desktop) so clearing isolate/hide recenters like web.
+    setExplodeFitKey((key) => key + 1);
+  }
+
+  function fitView() {
+    setExplodeFitKey((key) => key + 1);
+  }
+
+  function resetView() {
+    setExplode(0);
+    showAll();
+  }
+
+  function exitViewerFullscreen() {
+    exit();
     setExplodeFitKey((key) => key + 1);
   }
 
@@ -761,18 +781,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           aria-hidden="true"
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
-        <div
-          className={`absolute top-3 right-3 left-3 z-20 flex min-w-0 gap-2 ${
-            isCustomer && showViewToggle && view === "model"
-              ? "flex-col items-stretch"
-              : "flex-row items-center"
-          }`}
-        >
-          <div
-            className={`flex min-w-0 items-center gap-2 ${
-              isCustomer && showViewToggle && view === "model" ? "w-full" : "flex-1"
-            }`}
-          >
+        <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {showViewToggle && hasModel ? (
               <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
                 <button
@@ -795,27 +805,38 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 </button>
               </div>
             ) : null}
-            {((showViewToggle && view === "model") || staffSplitView) && needsReset ? (
-              <button
-                type="button"
-                data-show-all=""
-                onPointerDown={(event) => {
-                  if (event.button !== 0) {
-                    return;
-                  }
-                  event.preventDefault();
-                  showAll();
-                }}
-                onClick={showAll}
-                className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
-              >
-                Show all
-              </button>
+            {hasModel && ((showViewToggle && view === "model") || staffSplitView) ? (
+              <>
+                <button
+                  type="button"
+                  data-show-all=""
+                  onClick={showAll}
+                  className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
+                >
+                  Show all
+                </button>
+                <button
+                  type="button"
+                  data-fit-view=""
+                  onClick={fitView}
+                  className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
+                >
+                  Fit view
+                </button>
+                <button
+                  type="button"
+                  data-reset-view=""
+                  onClick={resetView}
+                  className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
+                >
+                  Reset view
+                </button>
+              </>
+            ) : showViewToggle ? (
+              <div className="min-w-0 flex-1" />
             ) : null}
-            {hasModel &&
-            ((showViewToggle && view === "model") || staffSplitView) &&
-            !(isCustomer && showViewToggle && view === "model") ? (
-              <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
+            {hasModel && ((showViewToggle && view === "model") || staffSplitView) ? (
+              <label className="viewer-chrome-chip flex min-h-11 min-w-[8.5rem] flex-1 basis-[8.5rem] items-center gap-2 px-3">
                 <span className="chrome-quiet shrink-0 text-[12px] font-medium tracking-wide sm:text-[13px]">
                   Explode
                 </span>
@@ -828,42 +849,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   onPointerUp={fitExploded}
                   onPointerCancel={fitExploded}
                   onKeyUp={fitExploded}
-                  className="explode-slider"
+                  className="explode-slider min-w-0 flex-1"
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(explode * 100)}
                   aria-label="Explode assembly"
                 />
               </label>
-            ) : showViewToggle && !(isCustomer && view === "model") ? (
-              <div className="min-w-0 flex-1" />
             ) : null}
-          </div>
-          {hasModel &&
-          isCustomer &&
-          showViewToggle &&
-          view === "model" ? (
-            <label className="viewer-chrome-chip flex min-h-11 w-full min-w-0 items-center gap-2 px-3">
-              <span className="chrome-quiet shrink-0 text-[12px] font-medium tracking-wide sm:text-[13px]">
-                Explode
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(explode * 100)}
-                onChange={(event) => setExplode(Number(event.target.value) / 100)}
-                onPointerUp={fitExploded}
-                onPointerCancel={fitExploded}
-                onKeyUp={fitExploded}
-                className="explode-slider"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(explode * 100)}
-                aria-label="Explode assembly"
-              />
-            </label>
-          ) : null}
           {isCustomer && fullscreen ? (
             <QuoteTray
               machineId={machine.id}
@@ -904,35 +897,31 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               </span>
             </button>
           ) : null}
-          <button
-            type="button"
-            onPointerDown={(event) => {
-              if (event.button !== 0) {
-                return;
-              }
-              event.preventDefault();
-              if (fullscreen) {
-                exit();
-              } else {
-                enter();
-              }
-            }}
-            onClick={() => {
-              if (fullscreen) {
-                exit();
-              } else {
-                enter();
-              }
-            }}
-            className="viewer-chrome-chip relative z-40 hidden h-11 w-11 shrink-0 items-center justify-center rounded-full lg:inline-flex"
-            aria-label={fullscreen ? "Exit full screen" : "Full screen"}
-          >
-            {fullscreen ? (
-              <span className="text-2xl leading-none">×</span>
-            ) : (
-              <ExpandIcon />
-            )}
-          </button>
+          {hasModel ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (fullscreen) {
+                  exitViewerFullscreen();
+                } else {
+                  enter();
+                }
+              }}
+              className="viewer-chrome-chip relative z-40 inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold"
+              aria-label={fullscreen ? "Exit full screen" : "Enter full screen"}
+            >
+              {fullscreen ? (
+                <span className="text-xl leading-none" aria-hidden="true">×</span>
+              ) : (
+                <ExpandIcon />
+              )}
+              <span className="hidden sm:inline">
+                {fullscreen ? "Exit" : "Full screen"}
+              </span>
+            </button>
+          ) : null}
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   QUOTE_PIPELINE,
   QUOTE_STATUS_LABELS,
@@ -26,6 +26,13 @@ export function QuoteStatusStrip({
 }) {
   const cancelled = status === "cancelled";
   const trackRef = useRef<HTMLOListElement>(null);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (track) {
+      track.scrollLeft = 0;
+    }
+  }, [status]);
 
   useEffect(() => {
     const track = trackRef.current;

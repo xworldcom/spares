@@ -83,7 +83,7 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
 };
 
 export const QUOTE_STATUS_SHORT: Record<QuoteStatus, string> = {
-  requested: "Request",
+  requested: "Requested",
   in_review: "Review",
   pricing: "Pricing",
   quoted: "Quoted",
