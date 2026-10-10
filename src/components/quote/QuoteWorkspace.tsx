@@ -143,14 +143,19 @@ export function QuoteWorkspace({
     if (!quote || pendingStatus !== null) {
       return;
     }
-    if (JSON.stringify(items) !== JSON.stringify(quote.items)) {
+    const staffItemsDirty =
+      role === "staff" && JSON.stringify(items) !== JSON.stringify(quote.items);
+    if (staffItemsDirty) {
       return;
     }
     const next = await getQuote(quoteRef);
     const { activities, changed } = mergeActivitiesById(quote.activities, next.activities);
+    const itemsChanged =
+      JSON.stringify(quote.items) !== JSON.stringify(next.items);
     const touched =
       changed ||
       quote.status !== next.status ||
+      itemsChanged ||
       quote.unread !== next.unread ||
       quote.assistantPaused !== next.assistantPaused ||
       quote.assistantAvailable !== next.assistantAvailable ||
@@ -169,6 +174,7 @@ export function QuoteWorkspace({
       return {
         ...current,
         status: next.status,
+        items: next.items,
         activities,
         unread: next.unread,
         customerReadReceipts: next.customerReadReceipts,
@@ -176,7 +182,10 @@ export function QuoteWorkspace({
         assistantAvailable: next.assistantAvailable,
       };
     });
-  }, [items, pendingStatus, quote, quoteRef, refresh]);
+    if (role === "staff") {
+      setItems(next.items);
+    }
+  }, [items, pendingStatus, quote, quoteRef, refresh, role]);
 
   const threadBump =
     quote?.activities.at(-1)?.at ?? quote?.activities.at(-1)?.id ?? quoteRef;

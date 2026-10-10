@@ -529,7 +529,7 @@ export function QuoteTray({
           }
         }}
       />
-      <QuoteTrayForm {...formProps} onClose={hide} />
+      <QuoteTrayForm {...formProps} onClose={dismiss} />
     </aside>
   );
 }

@@ -1,12 +1,9 @@
 import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { json, withCatalogConflict } from "@/lib/http";
-import { revokeUserSessions } from "@/lib/store";
-
 async function handlePOST() {
   const user = await getCurrentUser();
   if (user) {
-    await revokeUserSessions(user.id);
     if (user.tenantId) {
       await recordAccountActivity({
         tenantId: user.tenantId,

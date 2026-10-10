@@ -61,6 +61,22 @@ const targetLocal = new Vector3();
 
 function emptyRaycast() {}
 
+function DisposeRendererOnUnmount() {
+  const { gl } = useThree();
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+    };
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      gl.dispose();
+    };
+  }, [gl]);
+  return null;
+}
+
 function isMesh(object: Object3D): object is Mesh {
   return "isMesh" in object && Boolean((object as Mesh).isMesh);
 }
@@ -644,6 +660,7 @@ function ViewerCanvas({
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={[VIEWER_BG]} />
+      <DisposeRendererOnUnmount />
       <ViewerGestureTracker
         gestureRef={gestureRef}
         onOrbitEngage={() => setOrbitEnabled(true)}

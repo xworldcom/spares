@@ -105,13 +105,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const showViewToggle = !staffSplitView;
 
   useEffect(() => {
-    if (!isCustomer || typeof window === "undefined") {
-      return;
-    }
-    setTrayOpen(true);
-  }, [isCustomer, machineId]);
-
-  useEffect(() => {
     if (trayOpen) {
       setQuoteChip(false);
       return;
@@ -364,6 +357,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const commitTrayLine = useCallback(
     (part: Part, addQty: number) => {
       const qty = Math.max(1, addQty);
+      if (isCustomer) {
+        setTrayOpen(true);
+      }
       setLines((current) => {
         const existing = current.find((line) => line.part.id === part.id);
         if (existing) {
@@ -376,7 +372,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       playQuoteAddMotion();
       flashAddToast(part.name);
     },
-    [flashAddToast],
+    [flashAddToast, isCustomer],
   );
 
   const tray = useMemo(() => {
@@ -629,7 +625,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   selectedPartId={selectedPart?.id ?? null}
                   onSelect={(part) => {
                     setSelectedPart(part);
-                    setView("model");
                   }}
                   showAdd
                   onAdd={addPart}
@@ -650,7 +645,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             )}
           </section>
         ) : null}
-        {view === "model" ? (
+        {selectedPart && (view === "model" || (isCustomer && view === "list")) ? (
           <SelectedPartSheet
             part={selectedPart}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
