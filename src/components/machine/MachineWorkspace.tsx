@@ -33,6 +33,7 @@ import {
   quoteTrayStorageKey,
   readPersistedTrayLines,
   readPersistedTrayNote,
+  persistedToPart,
   resolveTrayLines,
   trayLineToPersisted,
   writePersistedTrayLines,
@@ -257,23 +258,45 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     trayPersistRef.current = { storageKey: trayStorageKey, linesKey };
   }, [trayStorageKey, linesKey]);
 
-  const persistTrayLinesNow = useCallback((next: TrayLine[]) => {
-    const { storageKey, linesKey: readyKey } = trayPersistRef.current;
-    if (!storageKey || readyKey !== storageKey) {
+  const commitTrayLinesToStorage = useCallback(
+    (next: TrayLine[], force = false) => {
+      if (!trayStorageKey) {
+        return;
+      }
+      const { storageKey, linesKey: readyKey } = trayPersistRef.current;
+      if (!storageKey) {
+        return;
+      }
+      if (!force && readyKey !== storageKey) {
+        return;
+      }
+      writePersistedTrayLines(
+        storageKey,
+        next.map((line) => trayLineToPersisted(line.part, line.qty)),
+      );
+    },
+    [trayStorageKey],
+  );
+
+  const rehydrateTrayLinesFromStorage = useCallback(() => {
+    if (!trayStorageKey || !machine) {
       return;
     }
-    writePersistedTrayLines(
-      storageKey,
-      next.map((line) => trayLineToPersisted(line.part, line.qty)),
+    const persisted = readPersistedTrayLines(trayStorageKey);
+    setLines(
+      persisted.map((row) => ({
+        part: machine.parts.find((item) => item.id === row.id) ?? persistedToPart(row),
+        qty: row.qty,
+      })),
     );
-  }, []);
+  }, [machine, trayStorageKey]);
 
   useEffect(() => {
     if (!trayStorageKey || linesKey !== trayStorageKey) {
       return;
     }
-    persistTrayLinesNow(lines);
-  }, [lines, linesKey, trayStorageKey, persistTrayLinesNow]);
+    commitTrayLinesToStorage(lines);
+  }, [lines, linesKey, trayStorageKey, commitTrayLinesToStorage]);
 
   const hiddenStorageKey = user?.tenantId ? hiddenPartsStorageKey(user.tenantId, machineId) : null;
 
@@ -352,7 +375,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     undoRemoveRef.current = null;
     setUndoRemove(null);
-  }, []);
+    rehydrateTrayLinesFromStorage();
+  }, [rehydrateTrayLinesFromStorage]);
 
   const removeTrayLine = useCallback(
     (partId: string) => {
@@ -367,7 +391,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         if (next.length === 0) {
           setTrayNote("");
         }
-        persistTrayLinesNow(next);
+        commitTrayLinesToStorage(next, true);
         return next;
       });
       if (!removedLine) {
@@ -387,7 +411,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         setTrayOpen(false);
       }
     },
-    [persistTrayLinesNow, isCustomer, customerTrayInViewer],
+    [commitTrayLinesToStorage, isCustomer, customerTrayInViewer],
   );
 
   const undoTrayRemove = useCallback(() => {
@@ -397,15 +421,20 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     setLines((current) => {
       if (current.some((line) => line.part.id === removed.part.id)) {
+        commitTrayLinesToStorage(current, true);
         return current;
       }
       const next = [...current, removed];
-      persistTrayLinesNow(next);
+      commitTrayLinesToStorage(next, true);
       return next;
     });
+    if (undoRemoveTimer.current != null) {
+      window.clearTimeout(undoRemoveTimer.current);
+      undoRemoveTimer.current = null;
+    }
     undoRemoveRef.current = null;
-    clearUndoRemove();
-  }, [undoRemove, clearUndoRemove, persistTrayLinesNow]);
+    setUndoRemove(null);
+  }, [undoRemove, commitTrayLinesToStorage]);
 
   const flashAddToast = useCallback((label: string) => {
     setAddToast(label);
@@ -551,16 +580,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   function addPart(part: Part) {
     commitTrayLine(part, part.qty || 1);
     if (isCustomer && dismissPartSheetAfterQuoteAdd()) {
-      setSelectedPart(null);
-    }
-  }
-
-  function addSelected() {
-    if (!selectedPart) {
-      return;
-    }
-    addPart(selectedPart);
-    if (shouldAutoDismissPartSheet("add")) {
       setSelectedPart(null);
     }
   }
@@ -727,7 +746,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onHide={hideSelected}
             onIsolate={isolateSelected}
             onShowAll={showAll}
-            onAdd={isCustomer ? addSelected : undefined}
+            onAdd={isCustomer ? addPart : undefined}
             onDismiss={() => setSelectedPart(null)}
             showAdd={isCustomer}
             held={held}

@@ -27,7 +27,7 @@ export function SelectedPartSheet({
   onHide: () => void;
   onIsolate: () => void;
   onShowAll: () => void;
-  onAdd?: () => void;
+  onAdd?: (part: Part) => void;
   onDismiss: () => void;
   showAdd?: boolean;
   held?: boolean;
@@ -143,7 +143,7 @@ export function SelectedPartSheet({
           {showAdd && onAdd ? (
             <button
               type="button"
-              {...activate(onAdd)}
+              {...activate(() => onAdd(part))}
               disabled={!canAct}
               className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >

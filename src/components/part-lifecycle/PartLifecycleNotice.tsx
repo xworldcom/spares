@@ -25,9 +25,9 @@ export function PartLifecycleNotice({
         compact ? "text-[11px] leading-snug" : "text-[12px] leading-snug"
       } ${
         status === "obsolete"
-          ? "text-[#f0c4c0]"
+          ? "text-[#ffd6d0]"
           : status === "announced"
-            ? "text-[#f5d0a8]"
+            ? "text-[#ffe4c2]"
             : "chrome-quiet"
       }`}
       role="status"
