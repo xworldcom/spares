@@ -1,4 +1,5 @@
 import type { PerspectiveCamera, Vector3, WebGLRenderer } from "three";
+import { Vector3 as Vector3Impl } from "three";
 
 export type ViewerOrbitSnapshot = {
   position: [number, number, number];
@@ -55,6 +56,38 @@ export function applyOrbitSnapshot(
  * After drei Bounds.fit(), ensure the default orbit is above the target (Y-up world)
  * with a classic above-side 3/4 view instead of an inverted polar angle.
  */
+/**
+ * Fit a perspective camera to an axis-aligned bounds box using its bounding sphere
+ * and the current canvas aspect (tighter wide models on narrow viewports than drei max-edge fit).
+ */
+export function fitPerspectiveToBoundsBox(
+  camera: PerspectiveCamera,
+  target: Vector3,
+  boxSize: Vector3,
+  boxCenter: Vector3,
+  margin = 1.3,
+) {
+  const radius = boxSize.length() * 0.5 * margin;
+  if (!Number.isFinite(radius) || radius < 1e-6) {
+    return false;
+  }
+  const vFovRad = (camera.fov * Math.PI) / 180;
+  const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * camera.aspect);
+  const distV = radius / Math.sin(vFovRad / 2);
+  const distH = radius / Math.sin(hFovRad / 2);
+  const distance = Math.max(distV, distH);
+  const center = boxCenter instanceof Vector3Impl ? boxCenter : new Vector3Impl().copy(boxCenter);
+  const offset = new Vector3Impl().subVectors(camera.position, target);
+  if (offset.lengthSq() < 1e-8) {
+    offset.set(1, 0.75, 1);
+  }
+  offset.normalize().multiplyScalar(distance);
+  camera.position.copy(center).add(offset);
+  target.copy(center);
+  camera.updateProjectionMatrix();
+  return true;
+}
+
 export function uprightDefaultOrbit(camera: PerspectiveCamera, target: Vector3) {
   const offsetX = camera.position.x - target.x;
   const offsetY = camera.position.y - target.y;
