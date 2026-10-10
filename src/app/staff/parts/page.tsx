@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { PartLifecyclePanel } from "@/components/staff/PartLifecyclePanel";
+import { LoadingState } from "@/components/states/LoadingState";
 
 export default function StaffPartLifecyclePage() {
   return (
@@ -13,7 +15,9 @@ export default function StaffPartLifecyclePage() {
             parts or build a quote.
           </p>
         </div>
-        <PartLifecyclePanel />
+        <Suspense fallback={<LoadingState label="Loading parts…" />}>
+          <PartLifecyclePanel />
+        </Suspense>
       </div>
     </RequireAuth>
   );

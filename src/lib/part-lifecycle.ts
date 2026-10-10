@@ -306,6 +306,13 @@ const DEMO_LIFECYCLE: Array<
     lastTimeBuyDate: "2026-09-30",
     sourceNotes: "Demo seed — bearing NRND for Soft Launch.",
   },
+  {
+    partNumber: "PN-MTR-3301",
+    status: "announced",
+    discontinuationDate: "2027-03-31",
+    successorPartNumber: "PN-MTR-3301A",
+    sourceNotes: "Demo seed — Palletizer gearmotor NRND.",
+  },
 ];
 
 /** Part numbers (hardware fixture) that carry demo lifecycle rows. */

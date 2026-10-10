@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { listQuotes } from "@/lib/api/quotes";
+import { invalidateWarmRead } from "@/lib/api/warm-read";
 
 type QuoteAlertsValue = {
   unreadCount: number;
@@ -30,6 +31,7 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
       return;
     }
     try {
+      invalidateWarmRead("quotes:list");
       const data = await listQuotes();
       setUnreadCount(data.unreadCount);
     } catch (cause) {
