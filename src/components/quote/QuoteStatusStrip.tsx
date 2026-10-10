@@ -30,7 +30,7 @@ export function QuoteStatusStrip({
   useLayoutEffect(() => {
     const track = trackRef.current;
     if (track) {
-      track.scrollLeft = 0;
+      scrollCurrentInTrack(track);
     }
   }, [status]);
 

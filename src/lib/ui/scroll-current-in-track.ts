@@ -1,4 +1,15 @@
+function phoneQuoteTrack(track: HTMLElement | null) {
+  if (!track || typeof window === "undefined") {
+    return false;
+  }
+  return window.matchMedia("(max-width: 639px)").matches;
+}
+
 export function scrollCurrentInTrack(track: HTMLElement | null) {
+  if (phoneQuoteTrack(track)) {
+    track!.scrollLeft = 0;
+    return;
+  }
   const current = track?.querySelector<HTMLElement>('[data-state="current"]');
   if (!track || !current) {
     return;
