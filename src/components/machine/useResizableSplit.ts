@@ -18,16 +18,21 @@ function readStoredSplit() {
   return Math.min(MAX_LEFT, Math.max(MIN_LEFT, parsed));
 }
 
+const DEFAULT_SPLIT = 0.62;
+
 export function useResizableSplit(enabled: boolean) {
-  const [split, setSplit] = useState(readStoredSplit);
+  const [split, setSplit] = useState(DEFAULT_SPLIT);
+  const [ready, setReady] = useState(() => !enabled);
   const dragging = useRef(false);
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!enabled) {
+      setReady(true);
       return;
     }
     setSplit(readStoredSplit());
+    setReady(true);
   }, [enabled]);
 
   const onPointerDown = useCallback((event: PointerEvent<HTMLElement>) => {
@@ -60,6 +65,7 @@ export function useResizableSplit(enabled: boolean) {
 
   return {
     split,
+    ready,
     containerRef: container,
     handleProps: {
       onPointerDown,

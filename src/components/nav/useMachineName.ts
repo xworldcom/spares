@@ -9,16 +9,11 @@ import {
   rememberMachineName,
 } from "@/lib/machine-name-cache";
 
-function resolveSeed(
+function bootstrapName(
   machineId: string,
   bootstrap: { id: string; name: string } | null,
 ) {
-  const cached = readMachineNameCache(machineId);
-  if (cached) {
-    return cached;
-  }
   if (bootstrap?.id === machineId && bootstrap.name.trim()) {
-    rememberMachineName(machineId, bootstrap.name);
     return bootstrap.name.trim();
   }
   return null;
@@ -32,7 +27,7 @@ export function useMachineName(machineId: string | null) {
       if (!machineId) {
         return null;
       }
-      const seeded = resolveSeed(machineId, bootstrap);
+      const seeded = bootstrapName(machineId, bootstrap);
       return seeded ? { id: machineId, name: seeded } : null;
     },
   );
@@ -43,9 +38,16 @@ export function useMachineName(machineId: string | null) {
       return;
     }
 
-    const seeded = resolveSeed(machineId, bootstrap);
-    if (seeded) {
-      setResolved({ id: machineId, name: seeded });
+    const fromBootstrap = bootstrapName(machineId, bootstrap);
+    if (fromBootstrap) {
+      rememberMachineName(machineId, fromBootstrap);
+      setResolved({ id: machineId, name: fromBootstrap });
+      return;
+    }
+
+    const cached = readMachineNameCache(machineId);
+    if (cached) {
+      setResolved({ id: machineId, name: cached });
       return;
     }
 

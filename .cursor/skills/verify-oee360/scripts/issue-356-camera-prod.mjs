@@ -98,7 +98,12 @@ for (const [w, h] of widths) {
     await page.getByRole("button", { name: "3D" }).click();
   }
   await page.locator("canvas").first().waitFor({ timeout: 90000 });
-  await page.waitForTimeout(2500);
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-viewer-canonical-ready="true"]') != null,
+    { timeout: 90000 },
+  );
+  await page.waitForTimeout(400);
 
   const first = await measureCanvas(page);
   await snapCanvas(page, join(outDir, `${tag}-first-load.png`));
