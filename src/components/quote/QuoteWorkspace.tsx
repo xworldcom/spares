@@ -208,6 +208,12 @@ export function QuoteWorkspace({
     pollQuote,
   );
 
+  useEffect(() => {
+    return () => {
+      void refresh();
+    };
+  }, [refresh]);
+
   const statusDirtyForGuard =
     pendingStatus !== null && quote != null && pendingStatus !== quote.status;
   const itemsDirtyForGuard =

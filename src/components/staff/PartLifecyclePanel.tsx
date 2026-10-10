@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
@@ -16,6 +17,10 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { UNSAVED_LIFECYCLE_LEAVE_PROMPT } from "@/lib/ui/pending-send-guard";
 import { useLeavePageGuard } from "@/lib/ui/use-leave-page-guard";
+import {
+  partLifecycleFiltersFromSearch,
+  staffPartLifecycleHref,
+} from "@/lib/ui/part-lifecycle-url";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -48,10 +53,16 @@ function draftFromRow(row: StaffPartCatalogRow) {
 }
 
 export function PartLifecyclePanel() {
-  const [status, setStatus] = useState<PartLifecycleStatus | "all">("all");
-  const [machineId, setMachineId] = useState("");
-  const [query, setQuery] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialFilters = partLifecycleFiltersFromSearch(searchParams);
+  const [status, setStatus] = useState<PartLifecycleStatus | "all">(
+    initialFilters.status,
+  );
+  const [machineId, setMachineId] = useState(initialFilters.machineId);
+  const [query, setQuery] = useState(initialFilters.q);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
+  const urlFiltersRef = useRef(initialFilters);
   const [parts, setParts] = useState<StaffPartCatalogRow[]>([]);
   const [statusCounts, setStatusCounts] =
     useState<PartLifecycleStatusCounts>(EMPTY_STATUS_COUNTS);
@@ -113,6 +124,24 @@ export function PartLifecyclePanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const next = {
+      status,
+      machineId,
+      q: debouncedQuery,
+    };
+    const prev = urlFiltersRef.current;
+    if (
+      prev.status === next.status &&
+      prev.machineId === next.machineId &&
+      prev.q === next.q
+    ) {
+      return;
+    }
+    urlFiltersRef.current = next;
+    router.replace(staffPartLifecycleHref(next), { scroll: false });
+  }, [status, machineId, debouncedQuery, router]);
 
   useEffect(() => {
     if (selected) {
