@@ -12,6 +12,7 @@ export function TicketsList({
   emptyMessage,
   showMachine = false,
   selectedId,
+  pinnedOutsideFilterId,
   hrefFor,
 }: {
   tickets: ServiceTicket[];
@@ -19,6 +20,8 @@ export function TicketsList({
   emptyMessage: string;
   showMachine?: boolean;
   selectedId?: string;
+  /** Row pinned at top when search/filter hid the open ticket. */
+  pinnedOutsideFilterId?: string;
   hrefFor?: (ticket: ServiceTicket) => string;
 }) {
   if (tickets.length === 0) {
@@ -29,6 +32,11 @@ export function TicketsList({
     <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
       {tickets.map((ticket) => (
         <li key={ticket.id}>
+          {pinnedOutsideFilterId === ticket.id ? (
+            <p className="care-row-pinned px-4 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--spares-muted)]">
+              Selected
+            </p>
+          ) : null}
           <PrefetchLink
             href={hrefFor ? hrefFor(ticket) : ticketHref(ticket.machineId, ticket.id)}
             warm={() => warmTicketDetail(ticket.id)}

@@ -268,7 +268,10 @@ export function enrichQuoteItemsWithLifecycle<
       return { ...item, lifecycle: fields };
     }
     const publicFields = publicLifecycle(fields);
-    return publicFields ? { ...item, lifecycle: publicFields } : item;
+    return {
+      ...item,
+      lifecycle: publicFields ?? { status: fields.status },
+    };
   });
 }
 
