@@ -545,6 +545,44 @@ export function invoiceVisible(status: QuoteStatus) {
   return quoteHasReached(status, "po_received");
 }
 
+export type QuoteFulfillmentVisibility = {
+  po: boolean;
+  invoice: boolean;
+  tracking: boolean;
+};
+
+function quoteHasPoData(
+  quote: Pick<Quote, "poNumber" | "hasPoFile">,
+): boolean {
+  return Boolean(quote.poNumber?.trim()) || quote.hasPoFile;
+}
+
+function quoteHasInvoiceData(quote: Pick<Quote, "invoiceNumber">): boolean {
+  return Boolean(quote.invoiceNumber?.trim());
+}
+
+function quoteHasTrackingData(quote: Pick<Quote, "shipments">): boolean {
+  return quote.shipments.some((row) => row.trackingNumber.trim());
+}
+
+/**
+ * Stage → PO / invoice / tracking sections (#362). Finished quote opens PO; after PO opens
+ * invoice + tracking. Existing field values stay visible if status moves backward.
+ */
+export function quoteFulfillmentVisibility(
+  quote: Pick<Quote, "status" | "poNumber" | "hasPoFile" | "invoiceNumber" | "shipments">,
+): QuoteFulfillmentVisibility {
+  const hasPo = quoteHasPoData(quote);
+  const hasInvoice = quoteHasInvoiceData(quote);
+  const hasTracking = quoteHasTrackingData(quote);
+
+  return {
+    po: quoteHasReached(quote.status, "quoted") || hasPo,
+    invoice: invoiceVisible(quote.status) || hasInvoice,
+    tracking: quoteHasReached(quote.status, "po_received") || hasTracking,
+  };
+}
+
 export function quotePoNextStep(status: QuoteStatus, role: Role): string | null {
   if (status === "cancelled") {
     return null;
@@ -890,7 +928,7 @@ export function toPublicQuote(
   if (quote.poUploadedAt) {
     publicQuote.poUploadedAt = quote.poUploadedAt;
   }
-  if (quote.invoiceNumber && invoiceVisible(quote.status)) {
+  if (quote.invoiceNumber && (invoiceVisible(quote.status) || quoteHasInvoiceData(quote))) {
     publicQuote.invoiceNumber = quote.invoiceNumber;
   }
   if (quote.assistantPaused) {

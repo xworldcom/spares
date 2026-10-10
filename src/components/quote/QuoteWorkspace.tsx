@@ -33,7 +33,7 @@ import { useQuoteReadWatermark } from "@/lib/hooks/useQuoteReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
   QUOTE_STATUS_LABELS,
-  invoiceVisible,
+  quoteFulfillmentVisibility,
   pricesVisibleToCustomer,
   quoteItemsEqual,
   quotePricingComplete,
@@ -307,6 +307,7 @@ export function QuoteWorkspace({
 
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
+  const fulfillment = quoteFulfillmentVisibility(quote);
   const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
   const displayStatus = pendingStatus ?? quote.status;
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
@@ -504,19 +505,21 @@ export function QuoteWorkspace({
         />
       </section>
 
-      <QuotePoPanel
-        quote={quote}
-        role={role}
-        busy={busy}
-        onSaveNumber={async (poNumber) => {
-          await run(() => updateQuote(String(quote.number), { poNumber }), "PO number saved.");
-        }}
-        onUpload={async (input) => {
-          await run(() => uploadQuotePo(String(quote.number), input), "PO uploaded.");
-        }}
-      />
+      {fulfillment.po ? (
+        <QuotePoPanel
+          quote={quote}
+          role={role}
+          busy={busy}
+          onSaveNumber={async (poNumber) => {
+            await run(() => updateQuote(String(quote.number), { poNumber }), "PO number saved.");
+          }}
+          onUpload={async (input) => {
+            await run(() => uploadQuotePo(String(quote.number), input), "PO uploaded.");
+          }}
+        />
+      ) : null}
 
-      {invoiceVisible(quote.status) ? (
+      {fulfillment.invoice ? (
         <section className="spares-surface rounded-[24px] px-5 py-4">
           <h2 className="text-[19px] font-semibold tracking-tight">Invoice</h2>
           {role === "staff" ? (
@@ -546,37 +549,35 @@ export function QuoteWorkspace({
                 Save
               </button>
             </form>
-          ) : (
-            <p className="mt-2 text-sm">
-              {quote.invoiceNumber ?? "Invoice number appears here when issued."}
-            </p>
-          )}
+          ) : quote.invoiceNumber ? (
+            <p className="mt-2 text-sm">{quote.invoiceNumber}</p>
+          ) : null}
         </section>
-      ) : (
-        <p className="spares-muted text-sm">Invoice opens after PO is received.</p>
-      )}
+      ) : null}
 
-      <QuoteTrackingPanel
-        quote={quote}
-        role={role}
-        drafts={shipments}
-        onDrafts={setShipments}
-        busy={busy}
-        onSave={() => {
-          if (readyShipments.length === 0) {
-            setError("Add a tracking number.");
-            return;
-          }
-          const patch =
-            quote.status === "ordered" || quote.status === "confirmed"
-              ? { status: "shipped" as const, shipments: readyShipments }
-              : { shipments: readyShipments };
-          void run(
-            () => updateQuote(String(quote.number), patch),
-            "Tracking saved.",
-          );
-        }}
-      />
+      {fulfillment.tracking ? (
+        <QuoteTrackingPanel
+          quote={quote}
+          role={role}
+          drafts={shipments}
+          onDrafts={setShipments}
+          busy={busy}
+          onSave={() => {
+            if (readyShipments.length === 0) {
+              setError("Add a tracking number.");
+              return;
+            }
+            const patch =
+              quote.status === "ordered" || quote.status === "confirmed"
+                ? { status: "shipped" as const, shipments: readyShipments }
+                : { shipments: readyShipments };
+            void run(
+              () => updateQuote(String(quote.number), patch),
+              "Tracking saved.",
+            );
+          }}
+        />
+      ) : null}
 
       {role === "staff" && staffApplyDirty ? (
         <div

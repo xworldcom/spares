@@ -6,6 +6,7 @@ import {
   canEditTracking,
   canUploadPo,
   invoiceVisible,
+  quoteFulfillmentVisibility,
   isQuoteUnreadForUser,
   itemsForRole,
   mergeQuoteItems,
@@ -357,6 +358,55 @@ describe("status and visibility", () => {
     assert.equal(invoiceVisible("delivered"), true);
     assert.equal(invoiceVisible("closed"), true);
     assert.equal(invoiceVisible("cancelled"), false);
+  });
+
+  it("maps quote stage to PO, invoice, and tracking sections (#362)", () => {
+    const base = {
+      poNumber: undefined,
+      hasPoFile: false,
+      invoiceNumber: undefined,
+      shipments: [] as { id: string; trackingNumber: string }[],
+    };
+
+    assert.deepEqual(quoteFulfillmentVisibility({ status: "pricing", ...base }), {
+      po: false,
+      invoice: false,
+      tracking: false,
+    });
+    assert.deepEqual(quoteFulfillmentVisibility({ status: "quoted", ...base }), {
+      po: true,
+      invoice: false,
+      tracking: false,
+    });
+    assert.deepEqual(quoteFulfillmentVisibility({ status: "po_received", ...base }), {
+      po: true,
+      invoice: true,
+      tracking: true,
+    });
+    assert.deepEqual(
+      quoteFulfillmentVisibility({
+        status: "pricing",
+        ...base,
+        poNumber: "PO-9",
+      }),
+      { po: true, invoice: false, tracking: false },
+    );
+    assert.deepEqual(
+      quoteFulfillmentVisibility({
+        status: "quoted",
+        ...base,
+        invoiceNumber: "INV-1",
+      }),
+      { po: true, invoice: true, tracking: false },
+    );
+    assert.deepEqual(
+      quoteFulfillmentVisibility({
+        status: "in_review",
+        ...base,
+        shipments: [{ id: "s1", trackingNumber: "1Z999" }],
+      }),
+      { po: false, invoice: false, tracking: true },
+    );
   });
 
   it("names the PO as the next step while invoice is still closed", () => {
