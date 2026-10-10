@@ -98,20 +98,29 @@ export function ManualQuoteLines({
   const [description, setDescription] = useState("");
   const [qty, setQty] = useState("1");
   const [error, setError] = useState<string | null>(null);
+  const prevPickSeedId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!pickSeed?.id) {
+    const seedId = pickSeed?.id ?? null;
+    if (prevPickSeedId.current && !seedId) {
+      setPartNumber("");
+      setDescription("");
+      setQty("1");
+      setError(null);
+    }
+    prevPickSeedId.current = seedId;
+    if (!seedId) {
       return;
     }
-    if (lines.some((line) => line.id === pickSeed.id)) {
+    if (lines.some((line) => line.id === seedId)) {
       setPartNumber("");
       setDescription("");
       setQty("1");
       setError(null);
       return;
     }
-    setPartNumber(pickSeed.id);
-    setDescription(pickSeed.name.trim() || pickSeed.id);
+    setPartNumber(seedId);
+    setDescription(pickSeed!.name.trim() || seedId);
     setQty("1");
     setError(null);
   }, [pickSeed?.id, pickSeed?.name, lines]);

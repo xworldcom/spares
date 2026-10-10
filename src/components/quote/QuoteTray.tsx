@@ -232,6 +232,7 @@ export function QuoteTray({
     moved: false,
     samples: [] as { t: number; y: number }[],
   });
+  const suppressClickUntil = useRef(0);
 
   const unitCount = lines.reduce((sum, line) => sum + line.qty, 0);
   const prevCount = useRef(unitCount);
@@ -267,6 +268,26 @@ export function QuoteTray({
   function setDraggingClass(on: boolean) {
     card.current?.classList.toggle("is-dragging", on);
   }
+
+  useEffect(() => {
+    const node = card.current;
+    if (!node) {
+      return;
+    }
+    function blockMisclick(event: MouseEvent) {
+      if (performance.now() >= suppressClickUntil.current) {
+        return;
+      }
+      const root = card.current;
+      if (!root || !root.contains(event.target as Node)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    node.addEventListener("click", blockMisclick, true);
+    return () => node.removeEventListener("click", blockMisclick, true);
+  }, [open, sheet]);
 
   useEffect(() => {
     if (open) {
@@ -491,6 +512,9 @@ export function QuoteTray({
       }
       return;
     }
+    if (drag.current.moved) {
+      suppressClickUntil.current = performance.now() + 360;
+    }
     settleSheet(dy, drag.current.from);
   }
 
@@ -532,6 +556,12 @@ export function QuoteTray({
         className="quote-sheet-handle"
         data-quote-target="handle"
         aria-label={sheet === "full" ? "Hide quote" : "Show quote"}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        onPointerMove={(event) => {
+          event.stopPropagation();
+        }}
         onClick={() => {
           if (drag.current.moved) {
             return;
