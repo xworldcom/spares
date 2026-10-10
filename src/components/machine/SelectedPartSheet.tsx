@@ -18,6 +18,7 @@ export function SelectedPartSheet({
   onDismiss,
   showAdd,
   held,
+  listView,
 }: {
   part: Part | null;
   isolated?: boolean;
@@ -29,6 +30,8 @@ export function SelectedPartSheet({
   onDismiss: () => void;
   showAdd?: boolean;
   held?: boolean;
+  /** List view: dock the chip above the tab bar so search/title stay visible. */
+  listView?: boolean;
 }) {
   const ready = useHydrated();
   const open = partSheetVisible(part?.id);
@@ -83,7 +86,11 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
-      className="pointer-events-none absolute top-[4.35rem] left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
+      className={
+        listView
+          ? "pointer-events-none absolute inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 max-w-none"
+          : "pointer-events-none absolute top-[4.35rem] left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
+      }
     >
       <div
         className={`viewer-chrome-chip pointer-events-auto rounded-2xl px-3 py-2.5 ${

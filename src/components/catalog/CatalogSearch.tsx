@@ -22,6 +22,10 @@ export function CatalogSearch({
         <input
           id={id}
           type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}

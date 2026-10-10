@@ -680,6 +680,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onDismiss={() => setSelectedPart(null)}
             showAdd={isCustomer}
             held={held}
+            listView={isCustomer && view === "list"}
           />
         ) : null}
         {customerTrayInViewer ? tray : null}

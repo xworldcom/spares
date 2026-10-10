@@ -109,6 +109,19 @@ export function ManualQuoteLines({
     setError(null);
   }, [pickSeed?.id, pickSeed?.name]);
 
+  useEffect(() => {
+    if (lines.length > 0) {
+      return;
+    }
+    if (pickSeed?.id) {
+      return;
+    }
+    setPartNumber("");
+    setDescription("");
+    setQty("1");
+    setError(null);
+  }, [lines.length, pickSeed?.id]);
+
   function addLine() {
     const id = lineId(partNumber, description);
     const name = description.trim() || partNumber.trim();

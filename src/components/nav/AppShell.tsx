@@ -20,6 +20,7 @@ import { isMachineStagePath, machineIdFromPath } from "@/lib/machine-context";
 import { isNavActive } from "@/lib/nav-active";
 import { useSignedInTabPrefetch } from "@/components/nav/useSignedInTabPrefetch";
 import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 
 const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes"] as const;
 const STAFF_NAV_HREFS = [
@@ -100,6 +101,8 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
   const machineId = machineIdFromPath(pathname);
   const machineStage = isMachineStagePath(pathname);
   const machineName = useMachineName(machineId);
@@ -133,17 +136,16 @@ export function AppShell({
   useSignedInTabPrefetch(signedIn ? user?.role : undefined);
 
   async function handleLogout() {
-    if (
-      !window.confirm("Sign out of OEE360 on this device? Other tabs will need to sign in again.")
-    ) {
-      return;
-    }
     setLogoutError(null);
+    setLogoutBusy(true);
     try {
       await logout();
+      setLogoutConfirmOpen(false);
       router.push("/login");
     } catch (cause) {
       setLogoutError(errorMessage(cause, "Could not sign out."));
+    } finally {
+      setLogoutBusy(false);
     }
   }
 
@@ -303,9 +305,7 @@ export function AppShell({
             {signedIn ? (
               <button
                 type="button"
-                onClick={() => {
-                  void handleLogout();
-                }}
+                onClick={() => setLogoutConfirmOpen(true)}
                 className="spares-muted inline-flex h-11 items-center px-3 text-sm font-medium transition-colors duration-200 hover:text-[var(--spares-ink)]"
               >
                 Sign out
@@ -347,6 +347,23 @@ export function AppShell({
         {children}
       </main>
       {showTabs ? <MobileTabBar /> : null}
+      <ConfirmSheet
+        open={logoutConfirmOpen}
+        title="Sign out?"
+        message="You will need to sign in again on this device. Other open tabs will also lose their session."
+        confirmLabel="Sign out"
+        cancelLabel="Cancel"
+        destructive
+        busy={logoutBusy}
+        onCancel={() => {
+          if (!logoutBusy) {
+            setLogoutConfirmOpen(false);
+          }
+        }}
+        onConfirm={() => {
+          void handleLogout();
+        }}
+      />
     </div>
     </MachineRouteProvider>
   );
