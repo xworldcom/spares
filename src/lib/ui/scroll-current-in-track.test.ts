@@ -13,11 +13,13 @@ afterEach(() => {
 
 test("scrollCurrentInTrack centers the current step on the track", () => {
   const calls: Array<{ left: number; behavior: string }> = [];
+  const first = { offsetLeft: 0, offsetWidth: 40 };
   const current = { offsetLeft: 200, offsetWidth: 40 };
   const track = {
     clientWidth: 120,
     scrollWidth: 400,
     querySelector: () => current,
+    querySelectorAll: () => [first, current],
     scrollTo: (opts: { left: number; behavior: string }) => {
       calls.push(opts);
     },
@@ -31,6 +33,28 @@ test("scrollCurrentInTrack centers the current step on the track", () => {
   scrollCurrentInTrack(track as unknown as HTMLElement);
 
   assert.deepEqual(calls, [{ left: 160, behavior: "auto" }]);
+});
+
+test("scrollCurrentInTrack pins the first step to scrollLeft 0", () => {
+  const calls: Array<{ left: number; behavior: string }> = [];
+  const current = { offsetLeft: 0, offsetWidth: 40 };
+  const track = {
+    clientWidth: 120,
+    scrollWidth: 400,
+    querySelector: () => current,
+    querySelectorAll: () => [current],
+    scrollTo: (opts: { left: number; behavior: string }) => {
+      calls.push(opts);
+    },
+  };
+
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { matchMedia: () => ({ matches: true }) },
+  });
+
+  scrollCurrentInTrack(track as unknown as HTMLElement);
+  assert.deepEqual(calls, [{ left: 0, behavior: "auto" }]);
 });
 
 test("scrollCurrentInTrack no-ops without a current step", () => {

@@ -130,8 +130,7 @@ export function AppShell({
     pathname === "/login" || pathname === "/" || pathname === "/inquire";
   const signedIn = status === "signed-in" && user;
   const resolvingSession = status === "loading";
-  const cinematic =
-    (pathname === "/" || pathname === "/inquire" || pathname === "/login") && !signedIn;
+  const cinematic = (pathname === "/" || pathname === "/inquire") && !signedIn;
   const showTabs = Boolean(signedIn && !machineStage && !onLogin);
   const navHrefs = user?.role === "staff" ? STAFF_NAV_HREFS : CUSTOMER_NAV_HREFS;
   useSignedInTabPrefetch(signedIn ? user?.role : undefined);
