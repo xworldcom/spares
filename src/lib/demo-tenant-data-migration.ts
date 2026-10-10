@@ -135,9 +135,6 @@ function machineListsPartNumber(machine: DemoMigrationMachine, partNumber: strin
 export function applyDemoTenantB1Migration<T extends DemoMigrationDb>(
   db: T,
 ): { db: T; changed: boolean; bearingAddedOnPalletizer: boolean } {
-  if (isSeedAllowed()) {
-    return { db, changed: false, bearingAddedOnPalletizer: false };
-  }
   const palletizerId = FIXTURE_MACHINE_IDS.palletizer;
   const index = db.machines.findIndex(
     (machine) =>
