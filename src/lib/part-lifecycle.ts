@@ -240,6 +240,25 @@ export function buildTenantPartCatalog(
     .sort((a, b) => a.partNumber.localeCompare(b.partNumber));
 }
 
+export function lifecycleMapForQuotePartIds(
+  lifecycleRows: readonly StoredPartLifecycle[],
+  tenantId: string,
+  partIds: readonly string[],
+): Map<string, StoredPartLifecycle> {
+  const need = new Set(partIds.map((id) => normalizePartNumber(id)));
+  const map = new Map<string, StoredPartLifecycle>();
+  for (const row of lifecycleRows) {
+    if (row.tenantId !== tenantId) {
+      continue;
+    }
+    const key = normalizePartNumber(row.partNumber);
+    if (need.has(key)) {
+      map.set(key, row);
+    }
+  }
+  return map;
+}
+
 export function lifecycleMapForTenant(
   lifecycleRows: readonly StoredPartLifecycle[],
   tenantId: string,

@@ -542,9 +542,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   function showAll() {
     setHiddenIds([]);
     setIsolatedId(null);
-    if (explode > 0) {
-      fitExploded();
-    }
+    // Always refit bounds (phone + desktop) so clearing isolate/hide recenters like web.
+    setExplodeFitKey((key) => key + 1);
   }
 
   function hideSelected() {

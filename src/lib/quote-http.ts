@@ -6,9 +6,9 @@ import { canViewQuote, toPublicQuote } from "@/lib/quotes";
 import { effectiveTenantId, tenantIdForUser, userTenantId } from "@/lib/tenant";
 import {
   enrichQuoteItemsWithLifecycle,
-  lifecycleMapForTenant,
+  lifecycleMapForQuotePartIds,
 } from "@/lib/part-lifecycle";
-import { getQuote, listMachines, listPartLifecycleRows } from "@/lib/store";
+import { getMachine, getQuote, listPartLifecycleRows } from "@/lib/store";
 import type { PublicUser, Quote, QuoteRecord } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -41,8 +41,8 @@ export async function requireQuoteAccess(
 
 export async function machineNameFor(quote: QuoteRecord) {
   const tenantId = effectiveTenantId(quote);
-  const machines = await listMachines(tenantId);
-  return machines.find((machine) => machine.id === quote.machineId)?.name;
+  const machine = await getMachine(quote.machineId, tenantId);
+  return machine?.name;
 }
 
 export function actorOf(user: PublicUser) {
@@ -63,8 +63,9 @@ export async function publicQuoteForUser(
   if (!tenantId) {
     return attachStaffAssistantAvailability(user, base);
   }
-  const rows = (await listPartLifecycleRows()).filter((row) => row.tenantId === tenantId);
-  const map = lifecycleMapForTenant(rows, tenantId);
+  const partIds = base.items.map((item) => item.id);
+  const rows = await listPartLifecycleRows();
+  const map = lifecycleMapForQuotePartIds(rows, tenantId, partIds);
   const items = enrichQuoteItemsWithLifecycle(base.items, map, user.role);
   return attachStaffAssistantAvailability(user, { ...base, items });
 }

@@ -1527,6 +1527,40 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   gap: 0.7rem;
 }
 
+.quote-progress-scroll-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.quote-progress-scroll-wrap::before,
+.quote-progress-scroll-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0.85rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.quote-progress-scroll-wrap::before {
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    var(--spares-paper, #0c0d0f) 0%,
+    transparent 100%
+  );
+}
+
+.quote-progress-scroll-wrap::after {
+  right: 0;
+  background: linear-gradient(
+    270deg,
+    var(--spares-paper, #0c0d0f) 0%,
+    transparent 100%
+  );
+}
+
 .quote-progress-track {
   display: flex;
   align-items: flex-start;
@@ -1673,6 +1707,21 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 }
 
 @media (max-width: 639px) {
+  .quote-progress-scroll-wrap .quote-progress-track {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(236, 234, 228, 0.35) transparent;
+  }
+
+  .quote-progress-scroll-wrap .quote-progress-track::-webkit-scrollbar {
+    display: block;
+    height: 4px;
+  }
+
+  .quote-progress-scroll-wrap .quote-progress-track::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(236, 234, 228, 0.35);
+  }
+
   .quote-progress-step {
     flex: 0 0 5rem;
     min-width: 5rem;
@@ -4017,6 +4066,47 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.02em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tenant-directory-table-wrap {
+  -webkit-overflow-scrolling: touch;
+}
+
+.tenant-directory-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staff-lifecycle-bulk-bar {
+  position: sticky;
+  top: calc(var(--spares-header) + 0.5rem);
+  z-index: 25;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+@media (max-width: 639px) {
+  .catalog-person-name,
+  .catalog-person-email-mobile,
+  .catalog-person-plant-mobile {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .directory-accounts-list .catalog-table {
+    min-width: min(100%, 22rem);
+  }
+
+  .directory-accounts-list .catalog-table td:first-child {
+    max-width: 11rem;
+  }
+
+  .directory-accounts-list .catalog-table td:first-child input {
+    min-width: 0;
+  }
 }
 
 .care-machine-chips {

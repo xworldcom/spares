@@ -17,9 +17,17 @@ import { catalogQueryMatch } from "@/lib/ui/catalog-query";
 
 type AccountRow = CustomerAccount & { siteCount: number };
 
-export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
+export function AccountsList({
+  reloadKey = 0,
+  searchQuery,
+}: {
+  reloadKey?: number;
+  /** When set, filters with the parent directory search (no duplicate field). */
+  searchQuery?: string;
+}) {
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
-  const [query, setQuery] = useState("");
+  const [localQuery, setLocalQuery] = useState("");
+  const query = searchQuery ?? localQuery;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -121,15 +129,17 @@ export function AccountsList({ reloadKey = 0 }: { reloadKey?: number }) {
   }
 
   return (
-    <section className="catalog-stack">
+    <section className="catalog-stack directory-accounts-list">
       <div className="catalog-toolbar">
-        <CatalogSearch
-          id="account-search"
-          label="Search customers"
-          value={query}
-          onChange={setQuery}
-          placeholder="Search customer name"
-        />
+        {searchQuery === undefined ? (
+          <CatalogSearch
+            id="account-search"
+            label="Search customers"
+            value={localQuery}
+            onChange={setLocalQuery}
+            placeholder="Search customer name"
+          />
+        ) : null}
         <button
           type="button"
           className="btn-primary catalog-toolbar-action"

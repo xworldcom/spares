@@ -35,11 +35,20 @@ export function QuoteStatusStrip({
     const run = () => scrollCurrentInTrack(track);
     run();
     const id = requestAnimationFrame(run);
-    return () => cancelAnimationFrame(id);
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => run())
+        : null;
+    observer?.observe(track);
+    return () => {
+      cancelAnimationFrame(id);
+      observer?.disconnect();
+    };
   }, [status]);
 
   return (
     <div className="quote-progress" data-cancelled={cancelled || undefined}>
+      <div className="quote-progress-scroll-wrap">
       <ol
         ref={trackRef}
         className="quote-progress-track"
@@ -92,6 +101,7 @@ export function QuoteStatusStrip({
           );
         })}
       </ol>
+      </div>
       <p className="quote-progress-caption">{quoteStatusCaption(status, role)}</p>
       {editable && onChange ? (
         <button

@@ -192,19 +192,19 @@ export function HostTenantDirectory() {
             </button>
             .
           </p>
-          <AccountsList reloadKey={reloadKey} />
+          <AccountsList reloadKey={reloadKey} searchQuery={query} />
         </>
       ) : type === "staff" ? (
         <StaffTeamPanel onCreated={refresh} />
       ) : type === "person" ? (
-        <PeopleList reloadKey={reloadKey} />
+        <PeopleList reloadKey={reloadKey} searchQuery={query} />
       ) : loading ? (
         <p className="text-muted">Loading directory…</p>
       ) : error ? (
         <p className="text-danger" role="alert">{error}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-left text-sm">
+        <div className="tenant-directory-table-wrap overflow-x-auto">
+          <table className="tenant-directory-table w-full min-w-0 text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-muted">
                 <th className="py-2 pr-4 font-medium">Name</th>
@@ -214,10 +214,11 @@ export function HostTenantDirectory() {
             <tbody>
               {visible.map((row) => (
                 <tr key={`${row.type}:${row.id}`} className="border-b border-white/5">
-                  <td className="py-2.5 pr-4">
+                  <td className="tenant-directory-name py-2.5 pr-4 min-w-0 max-w-[min(100%,20rem)]">
                     {row.type === "customer" ? (
                       <Link
-                        className="font-medium hover:underline"
+                        className="font-medium hover:underline truncate block"
+                        title={row.name}
                         href={`/staff/accounts/${encodeURIComponent(row.id)}`}
                       >
                         {row.name}
