@@ -5,6 +5,7 @@ import {
   buildTenantPartCatalog,
   enrichPartsWithLifecycle,
   healDemoPartLifecycle,
+  lifecycleMapForQuotePartIds,
   parsePartLifecycleBulk,
   publicLifecycle,
 } from "./part-lifecycle.ts";
@@ -45,7 +46,37 @@ describe("part lifecycle catalog", () => {
     assert.equal(pump.lifecycle.status, "unknown");
   });
 
-  it("enriches customer parts only when announced or obsolete", () => {
+  it("maps lifecycle rows only for quote line part ids in tenant", () => {
+    const rows = [
+      {
+        id: "tenant-a::PN-1",
+        tenantId: "tenant-a",
+        partNumber: "PN-1",
+        status: "obsolete" as const,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "tenant-a::PN-2",
+        tenantId: "tenant-a",
+        partNumber: "PN-2",
+        status: "active" as const,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "tenant-b::PN-1",
+        tenantId: "tenant-b",
+        partNumber: "PN-1",
+        status: "announced" as const,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+    const map = lifecycleMapForQuotePartIds(rows, "tenant-a", ["PN-1", "PN-99"]);
+    assert.equal(map.size, 1);
+    assert.equal(map.get("PN-1")?.status, "obsolete");
+    assert.equal(map.get("PN-2"), undefined);
+  });
+
+  it("enriches customer parts with status always; public slice only for announced/obsolete", () => {
     const rows = [
       {
         id: "tenant-a::PN-1",
@@ -72,7 +103,7 @@ describe("part lifecycle catalog", () => {
       "customer",
     );
     assert.equal(enriched[0]?.lifecycle?.status, "obsolete");
-    assert.equal(enriched[1]?.lifecycle, undefined);
+    assert.equal(enriched[1]?.lifecycle?.status, "active");
     assert.deepEqual(publicLifecycle({ status: "active" }), undefined);
   });
 

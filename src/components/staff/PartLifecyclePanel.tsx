@@ -27,7 +27,7 @@ const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string 
   { value: "unknown", label: "Unknown" },
   { value: "active", label: "Active" },
   { value: "announced", label: "Announced" },
-  { value: "obsolete", label: "Obsolete" },
+  { value: "obsolete", label: "Discontinued" },
 ];
 
 const EMPTY_STATUS_COUNTS: PartLifecycleStatusCounts = {
@@ -319,7 +319,7 @@ export function PartLifecyclePanel() {
       </div>
 
       {selectedNumbers.size > 0 ? (
-        <div className="spares-surface flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 text-[13px]">
+        <div className="staff-lifecycle-bulk-bar spares-surface flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 text-[13px]">
           <span>{selectedNumbers.size} selected</span>
           <button
             type="button"
@@ -343,7 +343,7 @@ export function PartLifecyclePanel() {
             onClick={() => void bulkSetStatus("obsolete")}
             className="btn-soft inline-flex h-8 items-center rounded-full px-3 font-medium disabled:opacity-40"
           >
-            Mark obsolete
+            Mark discontinued
           </button>
           <button
             type="button"

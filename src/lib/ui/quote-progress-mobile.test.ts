@@ -10,6 +10,7 @@ describe("quote progress mobile layout", () => {
       /@media \(max-width: 639px\)[\s\S]*\.quote-progress-step[\s\S]*flex: 0 0 5rem[\s\S]*min-width: 5rem/,
     );
     assert.match(css, /\.quote-progress-track[\s\S]*touch-action: pan-x/);
+    assert.match(css, /\.quote-progress-scroll-wrap[\s\S]*min-width: 0/);
   });
 
   it("does not crush landing workflow quote steps to flex-grow zero", () => {

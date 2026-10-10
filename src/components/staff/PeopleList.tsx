@@ -54,12 +54,19 @@ function profilesEqual(left: PersonProfile, right: PersonProfile) {
   return left.name.trim() === right.name.trim() && left.email.trim() === right.email.trim();
 }
 
-export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
+export function PeopleList({
+  reloadKey = 0,
+  searchQuery,
+}: {
+  reloadKey?: number;
+  searchQuery?: string;
+}) {
   const [people, setPeople] = useState<PublicUser[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
   const [machines, setMachines] = useState<MachineSummary[]>([]);
-  const [query, setQuery] = useState("");
+  const [localQuery, setLocalQuery] = useState("");
+  const query = searchQuery ?? localQuery;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -209,13 +216,15 @@ export function PeopleList({ reloadKey = 0 }: { reloadKey?: number }) {
   return (
     <section className="catalog-stack">
       <div className="catalog-toolbar">
-        <CatalogSearch
-          id="people-search"
-          label="Search people"
-          value={query}
-          onChange={setQuery}
-          placeholder="Search name, email, or access"
-        />
+        {searchQuery === undefined ? (
+          <CatalogSearch
+            id="people-search"
+            label="Search people"
+            value={localQuery}
+            onChange={setLocalQuery}
+            placeholder="Search name, email, or access"
+          />
+        ) : null}
         <p className="catalog-count">
           {filtered.length} {filtered.length === 1 ? "person" : "people"}
         </p>
