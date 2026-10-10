@@ -113,17 +113,22 @@ export function ViewerCameraOwner({
     }
     canonicalPose.current = snap;
     canonicalReady.current = true;
+    const root = layoutRootRef.current;
+    root?.setAttribute("data-viewer-canonical-ready", "true");
     invalidate();
+    requestAnimationFrame(() => invalidate());
+    requestAnimationFrame(() => invalidate());
     return true;
-  }, [bounds, camera, controls, invalidate, syncViewport]);
+  }, [bounds, camera, controls, invalidate, layoutRootRef, syncViewport]);
 
   useLayoutEffect(() => {
     if (lastModelSrc.current !== modelSrc) {
       lastModelSrc.current = modelSrc;
       canonicalPose.current = null;
       canonicalReady.current = false;
+      layoutRootRef.current?.removeAttribute("data-viewer-canonical-ready");
     }
-  }, [modelSrc]);
+  }, [modelSrc, layoutRootRef]);
 
   useLayoutEffect(() => {
     let alive = true;
