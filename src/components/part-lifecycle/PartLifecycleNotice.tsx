@@ -8,9 +8,12 @@ import type { PartLifecycleInfo } from "@/types";
 export function PartLifecycleNotice({
   lifecycle,
   compact,
+  onLightBackground = false,
 }: {
   lifecycle?: PartLifecycleInfo;
   compact?: boolean;
+  /** Selected BOM row (`row-on-ink`) — use dark at-risk colors for ≥4.5:1 contrast. */
+  onLightBackground?: boolean;
 }) {
   const status = lifecycle?.status ?? "unknown";
   const atRisk = status === "obsolete" || status === "announced";
@@ -25,9 +28,13 @@ export function PartLifecycleNotice({
         compact ? "text-[11px] leading-snug" : "text-[12px] leading-snug"
       } ${
         status === "obsolete"
-          ? "text-[#ffd6d0]"
+          ? onLightBackground
+            ? "text-[#8b2e28]"
+            : "text-[#ffd6d0]"
           : status === "announced"
-            ? "text-[#ffe4c2]"
+            ? onLightBackground
+              ? "text-[#7a4a12]"
+              : "text-[#ffe4c2]"
             : "chrome-quiet"
       }`}
       role="status"
