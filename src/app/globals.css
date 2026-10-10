@@ -3832,14 +3832,44 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 }
 
 @media (min-width: 1024px) {
+  /* Care tickets desktop: fill main column to quote-matched viewport inset (not 100dvh-14rem). */
+  .care-tickets-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--spares-header) - 4.5rem);
+    margin-bottom: -2rem;
+  }
+
+  .care-tickets-shell.catalog-page {
+    gap: 1rem;
+  }
+
+  .care-tickets-shell .catalog-page-intro {
+    flex-shrink: 0;
+  }
+
+  .care-tickets-shell .care-body {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    flex-direction: column;
+  }
+
   .tickets-workspace[data-tickets-layout="split"] {
     display: grid;
     grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
     gap: 1rem;
     align-items: stretch;
-    height: calc(100dvh - 14rem);
-    max-height: calc(100dvh - 14rem);
+    flex: 1 1 0;
     min-height: 0;
+    height: 100%;
+    max-height: none;
+  }
+
+  .care-tickets-shell .tickets-workspace[data-tickets-layout="split"] {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-list {
@@ -3883,19 +3913,6 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     height: auto;
     max-height: none;
     align-self: stretch;
-  }
-}
-
-@media (min-width: 1024px) {
-  .catalog-page.care-page-wide .care-body {
-    display: flex;
-    min-height: 0;
-    flex: 1 1 auto;
-    flex-direction: column;
-  }
-
-  .catalog-page.care-page-wide {
-    min-height: calc(100dvh - var(--spares-header) - 3rem);
   }
 }
 

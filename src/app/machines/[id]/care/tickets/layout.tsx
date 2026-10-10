@@ -7,5 +7,9 @@ export default function MachineCareTicketsLayout() {
   const params = useParams();
   const machineId = typeof params.id === "string" ? params.id : "";
   const ticketId = typeof params.ticketId === "string" ? params.ticketId : undefined;
-  return <TicketsWorkspace scope="machine" machineId={machineId} ticketId={ticketId} />;
+  return (
+    <div className="care-tickets-shell">
+      <TicketsWorkspace scope="machine" machineId={machineId} ticketId={ticketId} />
+    </div>
+  );
 }
