@@ -72,7 +72,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
       <head>
-        <style dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
+        <style
+          dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }}
+          suppressHydrationWarning
+        />
       </head>
       <body className="min-h-screen antialiased">
         <Providers initialUser={initialUser}>

@@ -103,11 +103,18 @@ export function ManualQuoteLines({
     if (!pickSeed?.id) {
       return;
     }
+    if (lines.some((line) => line.id === pickSeed.id)) {
+      setPartNumber("");
+      setDescription("");
+      setQty("1");
+      setError(null);
+      return;
+    }
     setPartNumber(pickSeed.id);
     setDescription(pickSeed.name.trim() || pickSeed.id);
     setQty("1");
     setError(null);
-  }, [pickSeed?.id, pickSeed?.name]);
+  }, [pickSeed?.id, pickSeed?.name, lines]);
 
   useEffect(() => {
     if (lines.length > 0) {

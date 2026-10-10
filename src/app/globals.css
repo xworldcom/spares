@@ -214,6 +214,8 @@
   position: relative;
   touch-action: none;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .quote-sheet-handle:before {
@@ -223,6 +225,8 @@
 }
 
 .quote-sheet-grab {
+  user-select: none;
+  -webkit-user-select: none;
   touch-action: none;
   cursor: grab;
 }
@@ -3086,9 +3090,16 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   }
 }
 
+.spares-app-tabs .quote-undo-toast {
+  z-index: 80;
+  bottom: calc(
+    var(--peek-h, 8.65rem) + var(--spares-tabbar) + env(safe-area-inset-bottom, 0px) + 0.35rem
+  );
+}
+
 .quote-undo-toast {
   position: fixed;
-  z-index: 61;
+  z-index: 80;
   left: 50%;
   bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   display: flex;
@@ -3231,6 +3242,17 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 .manual-quote-lines {
   container-type: inline-size;
   container-name: manual-quote;
+}
+
+[data-parts-bom] li {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+[data-parts-bom] input,
+[data-parts-bom] textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 @container manual-quote (max-width: 23rem) {

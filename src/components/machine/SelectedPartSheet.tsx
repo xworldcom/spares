@@ -82,7 +82,7 @@ export function SelectedPartSheet({
     };
   }
 
-  if (!open || !part) {
+  if (!ready || !open || !part) {
     return null;
   }
 

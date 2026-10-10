@@ -618,6 +618,12 @@ function ViewerCanvas({
 
   useEffect(() => {
     let cancelled = false;
+    if (!src.trim()) {
+      setLoad({ status: "error", message: "No 3D model is available for this machine." });
+      return () => {
+        cancelled = true;
+      };
+    }
     setLoad({ status: "loading" });
     loadGltfWithCredentials(src)
       .then(() => {
