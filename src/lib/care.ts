@@ -327,6 +327,34 @@ export function customerReadReceiptsForTicket(
   );
 }
 
+/** Slim row for ticket list endpoints — no message thread. */
+export function toPublicTicketListRow(
+  ticket: ServiceTicketRecord,
+  user: Pick<PublicUser, "id" | "email" | "role">,
+  machineName?: string,
+  options?: { assistantAvailable?: boolean },
+): ServiceTicket {
+  const base: ServiceTicket = {
+    id: ticket.id,
+    number: ticket.number,
+    machineId: ticket.machineId,
+    machineName,
+    title: ticket.title,
+    status: ticket.status,
+    createdAt: ticket.createdAt,
+    customerEmail: ticket.customerEmail,
+    activities: [],
+    unread: isTicketUnreadForUser(ticket, user),
+    viewerReadAt: ticket.lastReadAt[user.id],
+    assistantPaused: ticket.assistantPaused,
+    assistantEscalatedAt: ticket.assistantEscalatedAt,
+  };
+  if (options?.assistantAvailable !== undefined && user.role === "staff") {
+    base.assistantAvailable = options.assistantAvailable;
+  }
+  return base;
+}
+
 export function toPublicTicket(
   ticket: ServiceTicketRecord,
   user: Pick<PublicUser, "id" | "email" | "role">,

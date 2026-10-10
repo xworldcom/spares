@@ -41,7 +41,11 @@ export function QuotesList({
 
   useEffect(() => {
     let cancelled = false;
-    listQuotes()
+    const background = reloadKey > 0;
+    if (!background) {
+      setLoading(true);
+    }
+    listQuotes({ background })
       .then((data) => {
         if (cancelled) {
           return;
@@ -174,11 +178,13 @@ export function QuotesList({
       ) : null}
     <ul className="spares-surface divide-y divide-white/8 overflow-hidden rounded-[24px]">
       {visible.map((quote) => {
-        const lines = quote.items.length;
+        const lines = quote.lineCount ?? quote.items.length;
         const title = quote.machineName ?? "Machine";
         const showTotal =
           role === "customer" && pricesVisibleToCustomer(quote.status);
-        const total = showTotal ? quoteSellTotal(quote.items) ?? 0 : 0;
+        const total = showTotal
+          ? (quote.listSellTotal ?? quoteSellTotal(quote.items) ?? 0)
+          : 0;
         return (
           <li key={quote.id}>
             <PrefetchLink

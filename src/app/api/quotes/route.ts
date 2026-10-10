@@ -1,19 +1,22 @@
-import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
+import { staffAssistantEnabled } from "@/lib/assistant/public";
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
-import { staffCustomerUsers } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
+import { respondDerivedList } from "@/lib/derived-list-cache";
+import { error, isErrorResponse, readJson, withCatalogConflict } from "@/lib/http";
+import { listScopeKey } from "@/lib/list-scope";
 import {
   hydrateQuoteItems,
   parseQuoteItems,
   quoteOwnerIdForCreate,
   staffQuoteAccountMatch,
-  toPublicQuote,
+  toPublicQuoteListRow,
 } from "@/lib/quotes";
 import { canAccessMachine, customerIdFromGrant, grantFromUser } from "@/lib/access";
 import { publicQuoteForUser } from "@/lib/quote-http";
 import { isSeedAllowed } from "@/lib/production-env";
 import { belongsToTenant } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
+import type { NextRequest } from "next/server";
+import { json } from "@/lib/http";
 import {
   createQuote,
   ensureDemoStageQuoteFixtures,
@@ -23,7 +26,7 @@ import {
   getOrgContext,
   grantCustomerMachine,
   listMachines,
-  listQuotes,
+  readTenantWorkListSnapshot,
 } from "@/lib/store";
 
 type CreateQuoteBody = {
@@ -33,41 +36,39 @@ type CreateQuoteBody = {
   customerId?: unknown;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
   }
 
-  if (auth.user.role === "staff" && isSeedAllowed()) {
-    await ensurePreviewQaQuoteFixture(auth.tenantId);
-    await ensureDemoStageQuoteFixtures(auth.tenantId);
-  }
+  const scope = listScopeKey("quotes", auth.tenantId, auth.user);
+  return respondDerivedList(request, scope, async () => {
+    if (auth.user.role === "staff" && isSeedAllowed()) {
+      await ensurePreviewQaQuoteFixture(auth.tenantId);
+      await ensureDemoStageQuoteFixtures(auth.tenantId);
+    }
 
-  const [quotes, machines] = await Promise.all([
-    listQuotes(auth.tenantId),
-    listMachines(auth.tenantId),
-  ]);
-  const names = new Map(machines.map((machine) => [machine.id, machine.name]));
-  const visible =
-    auth.user.role === "staff"
-      ? quotes
-      : quotes.filter((quote) => quote.customerId === auth.user.id);
+    const snapshot = await readTenantWorkListSnapshot(auth.tenantId);
+    const names = new Map(snapshot.machines.map((machine) => [machine.id, machine.name]));
+    const visible =
+      auth.user.role === "staff"
+        ? snapshot.quotes
+        : snapshot.quotes.filter((quote) => quote.customerId === auth.user.id);
 
-  const customerUsers =
-    auth.user.role === "staff" ? await staffCustomerUsers(auth.tenantId) : undefined;
-  const publicQuotes = await Promise.all(
-    visible.map((quote) =>
-      attachStaffAssistantAvailability(
-        auth.user,
-        toPublicQuote(quote, auth.user, names.get(quote.machineId), { customerUsers }),
-      ),
-    ),
-  );
+    const assistantAvailable =
+      auth.user.role === "staff" ? await staffAssistantEnabled() : false;
 
-  return json({
-    quotes: publicQuotes,
-    unreadCount: publicQuotes.filter((quote) => quote.unread).length,
+    const publicQuotes = visible.map((quote) =>
+      toPublicQuoteListRow(quote, auth.user, names.get(quote.machineId), {
+        assistantAvailable: auth.user.role === "staff" ? assistantAvailable : undefined,
+      }),
+    );
+
+    return {
+      quotes: publicQuotes,
+      unreadCount: publicQuotes.filter((quote) => quote.unread).length,
+    };
   });
 }
 

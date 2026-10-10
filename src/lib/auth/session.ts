@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { PublicUser, Role } from "@/types";
 import { error } from "@/lib/http";
@@ -83,14 +84,13 @@ async function resolveSessionUser({
   return toPublicUser(user, [], [], { platformOwner, tenantId });
 }
 
-export function getCurrentUser(): Promise<PublicUser | null> {
-  return resolveSessionUser({ refreshCookie: true });
-}
+/** One session resolution per request (API routes may call auth many times). */
+export const getCurrentUser = cache(() => resolveSessionUser({ refreshCookie: true }));
 
 /** Server Components cannot set cookies — same lookup, no cookie refresh. */
-export function getCurrentUserReadOnly(): Promise<PublicUser | null> {
-  return resolveSessionUser({ refreshCookie: false });
-}
+export const getCurrentUserReadOnly = cache(() =>
+  resolveSessionUser({ refreshCookie: false }),
+);
 
 export async function requireUser() {
   const user = await getCurrentUser();

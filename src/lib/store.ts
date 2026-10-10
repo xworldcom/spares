@@ -2980,11 +2980,64 @@ export function listSites(tenantId: string, customerId?: string) {
 export function getOrgContext(tenantId: string) {
   return withLock(async () => {
     const db = await ensureCatalog();
+    return orgContextFromDb(db, tenantId);
+  });
+}
+
+function orgContextFromDb(db: Database, tenantId: string) {
+  return {
+    sites: activeSites(filterByTenant(db.sites ?? [], tenantId)),
+    customers: filterByTenant(db.customers ?? [], tenantId).filter((row) => !row.deletedAt),
+  };
+}
+
+function machineRowsForTenantListing(db: Database, tenantId: string) {
+  return machinesForTenantListing(db, tenantId).map((machine) => ({
+    id: machine.id,
+    name: machine.name,
+    siteId: machine.siteId,
+    tenantId: machine.tenantId,
+    version: machine.version ?? 1,
+    storedFileName: machine.storedFileName,
+    oem: machine.oem,
+    notes: machine.notes,
+  }));
+}
+
+function quoteRowsForTenant(db: Database, tenantId: string) {
+  return filterByTenant(db.quotes, tenantId)
+    .map((quote) => normalizeStoredQuote(quote))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+function ticketRowsForTenant(db: Database, tenantId: string) {
+  return filterByTenant(careCollections(db).tickets, tenantId).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
+}
+
+/** One catalog read for quotes/tickets list APIs (avoids queued double reads). */
+export function readTenantWorkListSnapshot(tenantId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
     return {
-      sites: activeSites(filterByTenant(db.sites ?? [], tenantId)),
-      customers: filterByTenant(db.customers ?? [], tenantId).filter(
-        (row) => !row.deletedAt,
-      ),
+      machines: machineRowsForTenantListing(db, tenantId),
+      quotes: quoteRowsForTenant(db, tenantId),
+      tickets: ticketRowsForTenant(db, tenantId),
+      ...orgContextFromDb(db, tenantId),
+    };
+  });
+}
+
+export function readTenantMachinesListSnapshot(tenantId: string, options?: { heal?: boolean }) {
+  return withLock(async () => {
+    if (options?.heal) {
+      clearCatalogMemory();
+    }
+    const db = await ensureCatalog({ restoreFiles: options?.heal });
+    return {
+      machines: machineRowsForTenantListing(db, tenantId),
+      ...orgContextFromDb(db, tenantId),
     };
   });
 }
@@ -3387,22 +3440,7 @@ function machinesForTenantListing(db: Database, tenantId: string) {
 }
 
 export function listMachines(tenantId: string, options?: { heal?: boolean }) {
-  return withLock(async () => {
-    if (options?.heal) {
-      clearCatalogMemory();
-    }
-    const db = await ensureCatalog({ restoreFiles: options?.heal });
-    return machinesForTenantListing(db, tenantId).map((machine) => ({
-      id: machine.id,
-      name: machine.name,
-      siteId: machine.siteId,
-      tenantId: machine.tenantId,
-      version: machine.version ?? 1,
-      storedFileName: machine.storedFileName,
-      oem: machine.oem,
-      notes: machine.notes,
-    }));
-  });
+  return readTenantMachinesListSnapshot(tenantId, options).then((row) => row.machines);
 }
 
 export function getMachine(id: string, tenantId: string) {

@@ -6,6 +6,7 @@ import {
 } from "../care.ts";
 import { ApiError } from "./errors";
 import { apiFetch } from "./client";
+import { apiFetchList } from "./list-fetch";
 import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm } from "./warm-read";
 import type {
@@ -114,7 +115,10 @@ export async function listMachineTickets(machineId: string) {
 }
 
 export async function listStaffTickets() {
-  const data = await apiFetch<TicketsListResponse>("/api/staff/tickets");
+  const data = await apiFetchList<TicketsListResponse>(
+    "/api/staff/tickets",
+    "tickets:staff",
+  );
   return {
     tickets: data.tickets ?? [],
     unreadCount: data.unreadCount ?? 0,
@@ -122,13 +126,11 @@ export async function listStaffTickets() {
 }
 
 export async function listAccessibleTickets() {
-  return readIfWarm("tickets:accessible", async () => {
-    const data = await apiFetch<TicketsListResponse>("/api/tickets");
-    return {
-      tickets: data.tickets ?? [],
-      unreadCount: data.unreadCount ?? 0,
-    };
-  });
+  const data = await apiFetchList<TicketsListResponse>("/api/tickets", "tickets:accessible");
+  return {
+    tickets: data.tickets ?? [],
+    unreadCount: data.unreadCount ?? 0,
+  };
 }
 
 export async function createTicket(

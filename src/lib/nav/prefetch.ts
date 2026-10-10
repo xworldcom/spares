@@ -3,8 +3,8 @@ type AppRouter = {
 };
 import {
   getCareOverview,
-  warmTicketDetailFetch,
   listAccessibleTickets,
+  warmTicketDetailFetch,
 } from "@/lib/api/care";
 import { listMachines, warmMachineName } from "@/lib/api/machines";
 import { listQuotes, warmQuoteDetailFetch } from "@/lib/api/quotes";
@@ -42,7 +42,11 @@ export function warmCareHubLists() {
 }
 
 export function warmQuotesList() {
-  warmRead("quotes:list", () => listQuotes());
+  warmRead("quotes:list", () => listQuotes({ background: true }));
+}
+
+export function warmTicketsList() {
+  warmRead("tickets:accessible", () => listAccessibleTickets());
 }
 
 export function warmMachineCareTabs(machineId: string) {

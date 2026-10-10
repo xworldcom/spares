@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { prefetchAppRoute, warmCareHubLists, warmQuotesList } from "@/lib/nav/prefetch";
+import {
+  prefetchAppRoute,
+  warmCareHubLists,
+  warmQuotesList,
+  warmTicketsList,
+} from "@/lib/nav/prefetch";
 
 const CUSTOMER_TAB_ROUTES = ["/machines", "/care", "/quotes"] as const;
 const STAFF_TAB_ROUTES = [
@@ -26,5 +31,6 @@ export function useSignedInTabPrefetch(role?: string) {
     }
     warmCareHubLists();
     warmQuotesList();
+    warmTicketsList();
   }, [role, router]);
 }

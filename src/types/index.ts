@@ -201,6 +201,10 @@ export type Quote = {
   number: number;
   machineId: string;
   items: QuoteItem[];
+  /** Populated on list endpoints when items are omitted. */
+  lineCount?: number;
+  /** Customer list total when items are omitted. */
+  listSellTotal?: number;
   note?: string;
   createdAt: string;
   customerEmail: string;
