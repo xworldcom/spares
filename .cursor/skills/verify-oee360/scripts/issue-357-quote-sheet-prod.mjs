@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Staff quote conversation sheet @390 — slow drag + intermediate seating (Kevin #357).
+ * Staff quote conversation sheet @390 — intermediate + slow pull-down (Kevin #357).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -40,16 +40,32 @@ async function geom() {
     const tabBox = tab?.getBoundingClientRect();
     const compBox = composer?.getBoundingClientRect();
     const cardBox = card?.getBoundingClientRect();
+    const vh = window.innerHeight;
     return {
       snap: card?.getAttribute("data-snap"),
       sheetH: cardBox ? Math.round(cardBox.height) : 0,
+      sheetRatio: cardBox ? cardBox.height / vh : 0,
       composerAboveTabs: !!(tabBox && compBox && compBox.bottom <= tabBox.top + 2),
     };
   });
 }
 
 const rest = await geom();
-proof.checks.push({ id: "rest-intermediate", ...rest, pass: rest.snap === "reply" && rest.composerAboveTabs });
+proof.checks.push({
+  id: "rest-intermediate",
+  ...rest,
+  pass: rest.snap === "reply" && rest.composerAboveTabs,
+});
+if (!proof.checks.at(-1).pass) proof.ok = false;
+
+await page.locator(".snap-sheet-handle").first().click({ force: true });
+await page.waitForTimeout(700);
+const full = await geom();
+proof.checks.push({
+  id: "opened-full",
+  ...full,
+  pass: full.snap === "full",
+});
 if (!proof.checks.at(-1).pass) proof.ok = false;
 
 const handle = page.locator(".snap-sheet-handle").first();
@@ -57,8 +73,22 @@ const box = await handle.boundingBox();
 if (box) {
   const x = box.x + box.width / 2;
   let y = box.y + box.height / 2;
-  await page.touchscreen.tap(x, y);
-  for (let i = 0; i < 40; i += 1) {
+  await page.evaluate(
+    ({ x, y }) => {
+      const el = document.querySelector(".snap-sheet-handle");
+      el?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          clientX: x,
+          clientY: y,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    },
+    { x, y },
+  );
+  for (let i = 1; i <= 48; i += 1) {
     y += 5;
     await page.evaluate(
       ({ x, y }) => {
@@ -97,9 +127,11 @@ if (box) {
 
 const afterDrag = await geom();
 proof.checks.push({
-  id: "after-slow-drag-down",
+  id: "after-slow-drag-down-from-full",
   ...afterDrag,
-  pass: afterDrag.sheetH > 120 && afterDrag.sheetH < 700,
+  pass:
+    (afterDrag.snap === "reply" || afterDrag.snap === "peek") &&
+    afterDrag.sheetRatio < full.sheetRatio - 0.05,
 });
 if (!proof.checks.at(-1).pass) proof.ok = false;
 

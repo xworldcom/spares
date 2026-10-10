@@ -101,7 +101,15 @@ function measureDetentHeights(card: HTMLElement | null) {
     chrome + measureThreadContextBandPx(card, 2) + composerH + stackGap,
   );
   // Resting intermediate height only — never tie replyH to the live sheet height during drag.
-  const replyH = Math.max(replyFallback, stackReply);
+  let replyH = Math.max(replyFallback, stackReply);
+  const fullCap = openHeightPx(card);
+  const minGap = remPx(2.75);
+  if (replyH >= fullCap - minGap) {
+    replyH = Math.max(replyFallback, Math.min(stackReply, fullCap * 0.52));
+  }
+  if (replyH >= fullCap - minGap) {
+    replyH = Math.max(replyFallback, fullCap - minGap);
+  }
   return { replyH, composerH };
 }
 
