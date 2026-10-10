@@ -67,7 +67,7 @@ export async function GET(
     });
   }
   return json({
-    quote: await publicQuoteForUser(marked, access.user, await machineNameFor(marked)),
+    quote: await publicQuoteForUser(marked, access.user),
   });
 }
 

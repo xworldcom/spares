@@ -3,9 +3,15 @@ import {
   normalizePartNumber,
   type StoredPartLifecycle,
 } from "./part-lifecycle.ts";
+import {
+  appendMissingDemoStageQuotes,
+  preferredDemoStageMachineId,
+} from "./demo-stage-quote-seed.ts";
 import { isSeedAllowed } from "./production-env.ts";
 import { FIXTURE_MACHINE_IDS, buildFixtureMachineById } from "./seed-fixtures.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
+import { nextQuoteNumber } from "./quotes.ts";
+import type { QuoteRecord } from "../types/index.ts";
 import type { Part, UnmatchedPart } from "../types/index.ts";
 
 function normalizeEmail(email: string) {
@@ -17,6 +23,9 @@ export const DEMO_TENANT_DATA_MIGRATION_V1 = 1;
 
 /** B1: shared bearing PN on hardware fixture + palletizer for multi-machine demo. */
 export const DEMO_TENANT_DATA_MIGRATION_B1 = 1;
+
+/** B2: stage-gated demo quotes on hardware fixture (PO received → shipped). */
+export const DEMO_TENANT_DATA_MIGRATION_B2 = 1;
 
 /** List-sourced bearing already on the hardware fixture; duplicated on palletizer via migration only. */
 export const DEMO_MULTI_MACHINE_BEARING_PART_NUMBER = "5972K325";
@@ -49,6 +58,7 @@ export const DEMO_TENANT_STAFF = {
 export type DataMigrations = {
   demoTenantV1?: number;
   demoTenantB1?: number;
+  demoTenantB2?: number;
 };
 
 type DemoMigrationUser = {
@@ -78,6 +88,7 @@ type DemoMigrationDb = {
   users: DemoMigrationUser[];
   machines: DemoMigrationMachine[];
   partLifecycle?: StoredPartLifecycle[];
+  quotes?: QuoteRecord[];
 };
 
 export type DemoTenantV1ApplyResult = {
@@ -96,6 +107,20 @@ function migrationMarker(db: DemoMigrationDb) {
 
 function b1MigrationMarker(db: DemoMigrationDb) {
   return db.dataMigrations?.demoTenantB1 === DEMO_TENANT_DATA_MIGRATION_B1;
+}
+
+function b2MigrationMarker(db: DemoMigrationDb) {
+  return db.dataMigrations?.demoTenantB2 === DEMO_TENANT_DATA_MIGRATION_B2;
+}
+
+function withB2Marker<T extends DemoMigrationDb>(db: T): T {
+  return {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoTenantB2: DEMO_TENANT_DATA_MIGRATION_B2,
+    },
+  };
 }
 
 function withMarker<T extends DemoMigrationDb>(db: T): T {
@@ -195,6 +220,72 @@ function grantHardwareFixture(user: DemoMigrationUser, machineId: string): DemoM
  * checks the real state and applies only the pieces that are missing, because a concurrent or
  * stale catalog write can lose any of them while the marker survives.
  */
+/**
+ * Idempotent B2: four stable pipeline-stage quotes on the hardware fixture for demo-tenant
+ * verification (#367). Production demo host only (`SPARES_ALLOW_SEED` off).
+ */
+export function applyDemoTenantB2StageQuotesMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean; quotesAdded: number } {
+  if (isSeedAllowed()) {
+    return { db, changed: false, quotesAdded: 0 };
+  }
+  const tenantId = DEFAULT_TENANT_ID;
+  const machineId = preferredDemoStageMachineId(
+    db.machines.map((machine) => ({
+      id: machine.id,
+      parts: machine.parts ?? [],
+    })),
+  );
+  if (!machineId) {
+    if (b2MigrationMarker(db)) {
+      return { db, changed: false, quotesAdded: 0 };
+    }
+    return { db: withB2Marker(db) as T, changed: true, quotesAdded: 0 };
+  }
+  const buyerEmail = normalizeEmail(DEMO_TENANT_BUYER.email);
+  const customer = db.users.find(
+    (user) => normalizeEmail(user.email) === buyerEmail && !user.deletedAt,
+  );
+  if (!customer || customer.role !== "customer") {
+    if (b2MigrationMarker(db)) {
+      return { db, changed: false, quotesAdded: 0 };
+    }
+    return { db: withB2Marker(db) as T, changed: true, quotesAdded: 0 };
+  }
+  const staff =
+    db.users.find(
+      (user) => user.role === "staff" && !user.deletedAt && user.tenantId === tenantId,
+    ) ?? db.users.find((user) => user.role === "staff" && !user.deletedAt);
+  const staffEmail = staff?.email ?? "staff@demo.com";
+  const quotes = db.quotes ?? [];
+  const appended = appendMissingDemoStageQuotes(
+    { quotes },
+    {
+      tenantId,
+      machineId,
+      customerId: customer.id,
+      customerEmail: customer.email,
+      staffEmail,
+      nextQuoteNumber,
+    },
+  );
+  const quotesAdded = appended.added;
+  const nextQuotes = appended.db.quotes;
+  const changed =
+    quotesAdded > 0 ||
+    nextQuotes.length !== quotes.length ||
+    !b2MigrationMarker(db);
+  if (!changed) {
+    return { db, changed: false, quotesAdded: 0 };
+  }
+  return {
+    db: withB2Marker({ ...db, quotes: nextQuotes }) as T,
+    changed: true,
+    quotesAdded,
+  };
+}
+
 export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
   db: T,
   actorEmail: string,
