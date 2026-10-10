@@ -25,6 +25,7 @@ import {
   ticketHref,
   ticketRefMatches,
   ticketHeaderContextLine,
+  ticketThreadCounterpartEmail,
   ticketIsOpen,
   ticketStepState,
   toPublicTicket,

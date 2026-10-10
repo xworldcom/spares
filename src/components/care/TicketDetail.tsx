@@ -252,7 +252,8 @@ export function TicketDetail({
   const threadSubtitle =
     threadReady && user.role === "staff"
       ? conversationThreadSubtitle(user.role, {
-          customerEmail: ticket.customerEmail,
+          customerEmail: ticket.threadCustomerEmail ?? ticket.customerEmail,
+          machineName: ticket.machineName,
         })
       : user.role === "customer"
         ? conversationThreadSubtitle(user.role, {})

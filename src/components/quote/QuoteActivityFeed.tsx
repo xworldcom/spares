@@ -22,6 +22,7 @@ import { isAssistantActivity } from "@/lib/assistant/actor";
 import { messageActorLabel } from "@/lib/ui/message-actor-label";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import { displayChatMessageText } from "@/lib/ui/chat-message-text";
+import { dedupeConsecutiveChatActivities } from "@/lib/ui/chat-activity-dedupe";
 import { expandActivitiesForChatDisplay } from "@/lib/ui/chat-message-segments";
 import { firstUnreadActivityIndex } from "@/lib/ui/conversation-unread";
 import { pinThreadScrollerToComposer } from "@/lib/ui/conversation-sheet-thread-pin";
@@ -55,7 +56,6 @@ export function QuoteActivityFeed({
   subtitle,
   layout = "card",
   customerReadReceipts,
-  actorNames,
   assistantAvailable,
   assistantPaused,
   onAssistantPausedChange,
@@ -74,8 +74,6 @@ export function QuoteActivityFeed({
   layout?: "card" | "sheet";
   /** Staff-only thread read receipts (customers on thread). */
   customerReadReceipts?: TicketCustomerReadReceipt[];
-  /** Optional display names for counterpart senders (e.g. customer profile names). */
-  actorNames?: Readonly<Record<string, string>>;
   assistantAvailable?: boolean;
   assistantPaused?: boolean;
   onAssistantPausedChange?: (paused: boolean) => Promise<void>;
@@ -346,13 +344,9 @@ export function QuoteActivityFeed({
     layout === "sheet" ? "imsg-card imsg-card--sheet" : "imsg-card";
   const threadClass =
     layout === "sheet" ? "imsg-thread imsg-thread--fill" : "imsg-thread";
-  const labelNames: Record<string, string> = { ...actorNames };
-  for (const row of customerReadReceipts ?? []) {
-    if (!labelNames[row.email]) {
-      labelNames[row.email] = row.name?.trim() || displayNameFromEmail(row.email);
-    }
-  }
-  const threadActivities = expandActivitiesForChatDisplay([...activities, ...outgoing]);
+  const threadActivities = expandActivitiesForChatDisplay(
+    dedupeConsecutiveChatActivities([...activities, ...outgoing]),
+  );
 
   return (
     <section className={cardClass}>
@@ -390,7 +384,13 @@ export function QuoteActivityFeed({
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
             const assistant = isAssistantActivity(activity);
-            const label = messageActorLabel(activity, self, labelNames);
+            const label =
+              activity.actorRole === "staff" && !assistant
+                ? displayNameFromEmail(activity.actorEmail)
+                : messageActorLabel(activity, self);
+            const showSenderMeta =
+              !stacked &&
+              (!own || (role === "staff" && activity.actorRole === "staff" && !assistant));
             const attachments = activity.attachments ?? [];
 
             const rowClass = [
@@ -461,9 +461,7 @@ export function QuoteActivityFeed({
                   )
                 ) : null}
                 <div className="imsg-stack">
-                  {!own && !stacked ? (
-                    <p className="imsg-meta">{label}</p>
-                  ) : null}
+                  {showSenderMeta ? <p className="imsg-meta">{label}</p> : null}
                   <div className="imsg-bubble">
                     {activity.text ? (
                       <p className="imsg-text">{displayChatMessageText(activity.text)}</p>
