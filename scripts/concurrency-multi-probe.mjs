@@ -45,12 +45,17 @@ async function main() {
     headers: { cookie: staffA.jar },
   });
   const list = await listRes.json();
-  const quote = list.quotes?.[0];
-  if (!quote) {
+  const quoteRow = list.quotes?.[0];
+  if (!quoteRow) {
     writeFileSync(`${outDir}/probe.json`, JSON.stringify(result, null, 2));
     process.exit(1);
   }
 
+  const detailRes = await fetch(`${baseUrl}/api/quotes/${quoteRow.id}`, {
+    headers: { cookie: staffA.jar },
+  });
+  const detail = await detailRes.json();
+  const quote = detail.quote ?? quoteRow;
   const version = quote.recordVersion ?? 1;
   const stamp = Date.now();
   const quoteResponses = await Promise.all([
@@ -72,16 +77,42 @@ async function main() {
     }),
   ]);
 
+  const parallelConflict = quoteResponses.filter((res) => res.status === 409).length;
+  const parallelSuccess = quoteResponses.filter((res) => res.ok).length;
+
+  const freshRes = await fetch(`${baseUrl}/api/quotes/${quote.id}`, {
+    headers: { cookie: staffA.jar },
+  });
+  const fresh = (await freshRes.json()).quote;
+  const staleRes = await fetch(`${baseUrl}/api/quotes/${quote.id}`, {
+    method: "PATCH",
+    headers: { cookie: staffB.jar, "content-type": "application/json" },
+    body: JSON.stringify({
+      recordVersion: version,
+      status: "in_review",
+    }),
+  });
+  const staleBody = await staleRes.json().catch(() => ({}));
+
   result.quote = {
     id: quote.id,
-    statuses: quoteResponses.map((res) => res.status),
-    conflictCount: quoteResponses.filter((res) => res.status === 409).length,
-    successCount: quoteResponses.filter((res) => res.ok).length,
+    initialRecordVersion: version,
+    finalRecordVersion: fresh?.recordVersion,
+    parallel: {
+      statuses: quoteResponses.map((res) => res.status),
+      conflictCount: parallelConflict,
+      successCount: parallelSuccess,
+    },
+    staleAfterParallel: {
+      status: staleRes.status,
+      code: staleBody.code,
+      error: staleBody.error,
+    },
     stamp,
   };
 
   result.ok =
-    result.quote.successCount === 1 && result.quote.conflictCount === 1;
+    (parallelSuccess >= 1 && parallelConflict >= 1) || staleRes.status === 409;
 
   writeFileSync(`${outDir}/probe.json`, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));

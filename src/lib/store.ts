@@ -4251,7 +4251,13 @@ export function mutateQuote(
       if (options?.lock) {
         const liveVersion = readRecordVersion(current);
         if (liveVersion !== options.lock.expectedVersion) {
-          const serverFields = quoteChangedFields(options.lock.base, current);
+          let serverFields = quoteChangedFields(options.lock.base, current);
+          if (
+            serverFields.length === 0 &&
+            readRecordVersion(options.lock.base) > options.lock.expectedVersion
+          ) {
+            serverFields = [...options.lock.touchedFields];
+          }
           if (fieldsOverlap(serverFields, options.lock.touchedFields)) {
             throw new RecordWriteConflictError(recordMetaFromRow(current));
           }
@@ -4659,7 +4665,13 @@ function mutateTicket(
       if (options?.lock) {
         const liveVersion = readRecordVersion(current);
         if (liveVersion !== options.lock.expectedVersion) {
-          const serverFields = ticketChangedFields(options.lock.base, current);
+          let serverFields = ticketChangedFields(options.lock.base, current);
+          if (
+            serverFields.length === 0 &&
+            readRecordVersion(options.lock.base) > options.lock.expectedVersion
+          ) {
+            serverFields = [...options.lock.touchedFields];
+          }
           if (fieldsOverlap(serverFields, options.lock.touchedFields)) {
             throw new RecordWriteConflictError(recordMetaFromRow(current));
           }

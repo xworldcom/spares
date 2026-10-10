@@ -9,7 +9,12 @@ import {
   withRecordConflict,
 } from "@/lib/http";
 import { etagMatches, quoteRecordEtag } from "@/lib/record-etag";
-import { quoteTouchedFieldsFromPatch, readRecordVersion } from "@/lib/record-meta";
+import {
+  quoteTouchedFieldsFromPatch,
+  readRecordVersion,
+  recordMetaFromRow,
+} from "@/lib/record-meta";
+import { recordConflictResponse } from "@/lib/record-conflict";
 import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
 import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
 import {
@@ -122,11 +127,18 @@ async function handlePATCH(
     email: access.user.email,
     name: access.user.name,
   };
+  const touchedFields = quoteTouchedFieldsFromPatch(body);
   const quoteLock = {
     base: access.quote,
     expectedVersion,
-    touchedFields: quoteTouchedFieldsFromPatch(body),
+    touchedFields,
   };
+  if (
+    expectedVersion < readRecordVersion(access.quote) &&
+    touchedFields.length > 0
+  ) {
+    return recordConflictResponse("quote", recordMetaFromRow(access.quote));
+  }
 
   if (access.user.role === "customer") {
     const poNumber =
