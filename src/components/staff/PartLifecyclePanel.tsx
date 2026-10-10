@@ -433,6 +433,8 @@ export function PartLifecyclePanel() {
 
       {selected ? (
         <form
+          id="part-lifecycle-detail-form"
+          name="partLifecycleDetail"
           className="spares-surface space-y-3 rounded-[22px] px-4 py-4"
           onSubmit={(event) => {
             event.preventDefault();
@@ -442,9 +444,11 @@ export function PartLifecyclePanel() {
           <p className="text-[15px] font-semibold tracking-tight">
             {selected.partNumber}
           </p>
-          <label className="spares-muted block text-xs font-medium">
+          <label htmlFor="part-lifecycle-status" className="spares-muted block text-xs font-medium">
             Status
             <select
+              id="part-lifecycle-status"
+              name="lifecycleStatus"
               value={draft.status}
               onChange={(event) =>
                 setDraft((current) => ({

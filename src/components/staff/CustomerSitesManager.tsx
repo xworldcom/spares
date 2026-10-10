@@ -276,17 +276,25 @@ export function CustomerSitesManager({ customerId }: { customerId: string }) {
           </div>
         </label>
       </div>
-      <form onSubmit={(event) => void addSite(event)} className="catalog-create">
+      <form
+        id="customer-site-create-form"
+        name="createCustomerSite"
+        onSubmit={(event) => void addSite(event)}
+        className="catalog-create"
+      >
         <div className="catalog-create-copy">
           <h2>Add site</h2>
         </div>
         <div className="catalog-create-grid">
-          <label className="block text-sm font-medium md:col-span-2">
+          <label htmlFor="customer-site-name" className="block text-sm font-medium md:col-span-2">
             Site name
             <input
+              id="customer-site-name"
+              name="siteName"
               value={newSiteName}
               onChange={(event) => setNewSiteName(event.target.value)}
               required
+              autoComplete="off"
               placeholder="Fort Worth"
               className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             />

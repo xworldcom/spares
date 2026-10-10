@@ -124,7 +124,12 @@ export function StaffTeamPanel({
   }
 
   const createForm = creating ? (
-        <form onSubmit={(event) => void handleCreate(event)} className="catalog-create">
+        <form
+          id="staff-team-create-form"
+          name="createStaffMember"
+          onSubmit={(event) => void handleCreate(event)}
+          className="catalog-create"
+        >
           <div className="catalog-create-grid">
             {showTenantPicker ? (
               <div className="md:col-span-2">
@@ -151,6 +156,7 @@ export function StaffTeamPanel({
               </label>
               <input
                 id="staff-email"
+                name="email"
                 type="email"
                 required
                 autoComplete="off"
@@ -165,6 +171,7 @@ export function StaffTeamPanel({
               </label>
               <input
                 id="staff-password"
+                name="password"
                 type="password"
                 required
                 minLength={10}

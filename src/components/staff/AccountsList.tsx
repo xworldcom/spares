@@ -150,17 +150,25 @@ export function AccountsList({
         </button>
       </div>
       {creating ? (
-        <form onSubmit={(event) => void handleCreate(event)} className="catalog-create">
+        <form
+          id="account-create-form"
+          name="createCustomerAccount"
+          onSubmit={(event) => void handleCreate(event)}
+          className="catalog-create"
+        >
           <div className="catalog-create-copy">
             <h2>New customer account</h2>
           </div>
           <div className="catalog-create-grid">
-            <label className="block text-sm font-medium md:col-span-2">
+            <label htmlFor="account-create-name" className="block text-sm font-medium md:col-span-2">
               Customer name
               <input
+                id="account-create-name"
+                name="customerName"
                 value={newName}
                 onChange={(event) => setNewName(event.target.value)}
                 required
+                autoComplete="organization"
                 placeholder="Cargill"
                 className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
               />

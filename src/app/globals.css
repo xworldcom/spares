@@ -32,6 +32,10 @@
   color-scheme: dark;
 }
 
+html:has(.spares-app-stage):not(:has(.spares-app-cinematic)) {
+  scrollbar-gutter: stable;
+}
+
 html,
 body {
   margin: 0;
@@ -1847,6 +1851,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   flex-direction: column;
   gap: 0.7rem;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   margin: 0;
   padding: 0.35rem 0.9rem 0.85rem;
   list-style: none;
