@@ -562,6 +562,7 @@ function ViewerCanvas({
   explode,
   fitKey,
   resetKey,
+  viewerFullscreen,
   assemblyKey,
   layoutRootRef,
   hiddenIds,
@@ -575,6 +576,7 @@ function ViewerCanvas({
   explode: number;
   fitKey: number;
   resetKey: number;
+  viewerFullscreen: boolean;
   assemblyKey: string;
   layoutRootRef: React.RefObject<HTMLDivElement | null>;
   hiddenIds: readonly string[];
@@ -692,6 +694,7 @@ function ViewerCanvas({
             layoutRootRef={layoutRootRef}
             fitKey={fitKey}
             resetKey={resetKey}
+            viewerFullscreen={viewerFullscreen}
             assemblyKey={assemblyKey}
             modelSrc={src}
           />
@@ -718,6 +721,7 @@ export function PartPicker({
   explode = 0,
   fitKey = 0,
   resetKey = 0,
+  viewerFullscreen = false,
   layoutRootRef,
   hiddenIds = [],
   isolatedId = null,
@@ -786,6 +790,7 @@ export function PartPicker({
         explode={explode}
         fitKey={fitKey}
         resetKey={resetKey}
+        viewerFullscreen={viewerFullscreen}
         assemblyKey={assemblyKey}
         layoutRootRef={surfaceRef}
         hiddenIds={hiddenIds}

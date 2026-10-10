@@ -23,6 +23,7 @@ type ViewerCameraOwnerProps = {
   layoutRootRef: RefObject<HTMLDivElement | null>;
   fitKey: number;
   resetKey: number;
+  viewerFullscreen: boolean;
   assemblyKey: string;
   modelSrc: string;
 };
@@ -41,6 +42,7 @@ export function ViewerCameraOwner({
   layoutRootRef,
   fitKey,
   resetKey,
+  viewerFullscreen,
   assemblyKey,
   modelSrc,
 }: ViewerCameraOwnerProps) {
@@ -276,6 +278,25 @@ export function ViewerCameraOwner({
   }, [applyCanonical, invalidate, layoutRootRef, readSize, syncViewport]);
 
   useLayoutEffect(() => {
+    let frame = 0;
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (!syncViewport()) {
+          return;
+        }
+        if (viewerFullscreen) {
+          performRefit();
+          return;
+        }
+        if (canonicalReady.current) {
+          applyCanonical();
+        }
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [applyCanonical, performRefit, syncViewport, viewerFullscreen]);
+
+  useLayoutEffect(() => {
     function onFullscreenChange() {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -286,17 +307,15 @@ export function ViewerCameraOwner({
             performRefit();
             return;
           }
-          if (canonicalReady.current) {
+          if (!viewerFullscreen && canonicalReady.current) {
             applyCanonical();
-            return;
           }
-          captureCanonical();
         });
       });
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, [applyCanonical, captureCanonical, performRefit, syncViewport]);
+  }, [applyCanonical, performRefit, syncViewport, viewerFullscreen]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;
