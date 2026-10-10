@@ -157,9 +157,8 @@ export function PartsBom({
                         event.stopPropagation();
                         onAdd(part);
                       }}
-                      className={`${
-                        selected ? "btn-primary" : "btn-accent"
-                      } inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold`}
+                      className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+                      data-selected={selected ? "" : undefined}
                     >
                       Add
                     </button>

@@ -46,8 +46,11 @@ function isSkipTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
     return false;
   }
-  if (target.closest(".quote-sheet-handle, .quote-sheet-grab")) {
+  if (target.closest(".quote-sheet-handle")) {
     return false;
+  }
+  if (target.closest(".quote-sheet-close, [data-no-drag]")) {
+    return true;
   }
   return Boolean(target.closest("button, a, input, textarea, select, label"));
 }
@@ -102,11 +105,17 @@ function QuoteTrayForm({
           <button
             type="button"
             data-no-drag=""
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full"
+            className="quote-sheet-close inline-flex h-11 w-11 items-center justify-center rounded-full touch-manipulation"
             aria-label="Hide quote"
-            onClick={onClose}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onClose();
+            }}
           >
-            <span className="text-2xl leading-none">×</span>
+            <span className="text-2xl leading-none" aria-hidden="true">×</span>
           </button>
         ) : null}
       </div>
