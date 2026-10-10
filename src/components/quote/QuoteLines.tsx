@@ -15,6 +15,7 @@ import {
   sanitizeQtyDraft,
 } from "@/lib/ui/editable-qty";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { StaffQuoteLineLifecycle } from "@/components/quote/StaffQuoteLineLifecycle";
 import type { QuoteItem, Role } from "@/types";
 
 function Field({
@@ -182,7 +183,15 @@ export function QuoteLines({
             {item.note ? (
               <p className="spares-muted mt-1 text-sm leading-snug">{item.note}</p>
             ) : null}
-            <PartLifecycleNotice lifecycle={item.lifecycle} compact />
+            {editable && role === "staff" ? (
+              <StaffQuoteLineLifecycle
+                partNumber={item.id}
+                lifecycle={item.lifecycle}
+                onSaved={(next) => patch(index, { lifecycle: next })}
+              />
+            ) : (
+              <PartLifecycleNotice lifecycle={item.lifecycle} compact />
+            )}
 
             {editable ? (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
