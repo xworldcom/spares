@@ -1,4 +1,5 @@
 import { customerReadReceiptsForThread } from "./care.ts";
+import { readRecordVersion } from "./record-meta.ts";
 import { normalizeChatAttachments } from "./chat-attachments.ts";
 import type {
   Part,
@@ -948,6 +949,13 @@ export function toPublicQuote(
       options.customerUsers,
     );
   }
+  publicQuote.recordVersion = readRecordVersion(quote);
+  if (quote.lastModifiedAt) {
+    publicQuote.lastModifiedAt = quote.lastModifiedAt;
+  }
+  if (quote.lastModifiedByName) {
+    publicQuote.lastModifiedByName = quote.lastModifiedByName;
+  }
   return publicQuote;
 }
 
@@ -1164,6 +1172,18 @@ export function normalizeStoredQuote(
   }
   if (typeof record.assistantEscalatedAt === "string" && record.assistantEscalatedAt) {
     next.assistantEscalatedAt = record.assistantEscalatedAt;
+  }
+  if (typeof record.recordVersion === "number" && record.recordVersion >= 1) {
+    next.recordVersion = record.recordVersion;
+  }
+  if (typeof record.lastModifiedAt === "string" && record.lastModifiedAt) {
+    next.lastModifiedAt = record.lastModifiedAt;
+  }
+  if (typeof record.lastModifiedByUserId === "string" && record.lastModifiedByUserId) {
+    next.lastModifiedByUserId = record.lastModifiedByUserId;
+  }
+  if (typeof record.lastModifiedByName === "string" && record.lastModifiedByName) {
+    next.lastModifiedByName = record.lastModifiedByName;
   }
 
   return next;

@@ -1,4 +1,5 @@
 import type { Part, UnmatchedPart } from "@/types/index.ts";
+import { stampLifecycleRow } from "./record-meta.ts";
 import type { StoredMachine } from "./store.ts";
 import { isManagedRuntime, isSeedAllowed } from "./production-env.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
@@ -21,6 +22,10 @@ export type StoredPartLifecycle = PartLifecycleFields & {
   partNumber: string;
   updatedAt: string;
   updatedByEmail?: string;
+  recordVersion?: number;
+  lastModifiedAt?: string;
+  lastModifiedByUserId?: string;
+  lastModifiedByName?: string;
 };
 
 /** Customer-visible slice (no internal notes). */
@@ -438,12 +443,16 @@ export function applyLifecycleUpsert(input: {
     updatedAt: input.at,
     updatedByEmail: input.actorEmail,
   };
+  const stamped = stampLifecycleRow(previous, next, {
+    id: input.actorEmail,
+    email: input.actorEmail,
+  });
   if (index >= 0) {
     const copy = input.rows.slice();
-    copy[index] = next;
+    copy[index] = stamped;
     return copy;
   }
-  return [...input.rows, next];
+  return [...input.rows, stamped];
 }
 
 export type PartLifecycleStatusCounts = Record<PartLifecycleStatus, number> & {

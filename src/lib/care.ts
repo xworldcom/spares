@@ -13,6 +13,7 @@ import type {
   UsageHistoryEntry,
 } from "../types/index.ts";
 import { displayChatMessageText } from "./ui/chat-message-text.ts";
+import { readRecordVersion } from "./record-meta.ts";
 
 export const MANUAL_CATEGORIES = [
   "operator",
@@ -355,6 +356,13 @@ export function toPublicTicket(
     if (threadCustomerEmail) {
       base.threadCustomerEmail = threadCustomerEmail;
     }
+  }
+  base.recordVersion = readRecordVersion(ticket);
+  if (ticket.lastModifiedAt) {
+    base.lastModifiedAt = ticket.lastModifiedAt;
+  }
+  if (ticket.lastModifiedByName) {
+    base.lastModifiedByName = ticket.lastModifiedByName;
   }
   return base;
 }

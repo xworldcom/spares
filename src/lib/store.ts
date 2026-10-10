@@ -40,6 +40,7 @@ import {
   healDemoPartLifecycle,
   parsePartLifecycleBulk,
   parsePartLifecyclePatch,
+  partLifecycleRowId,
   type PartLifecycleStatus,
   type StoredPartLifecycle,
 } from "./part-lifecycle.ts";
@@ -56,6 +57,26 @@ import {
 } from "./persistence.ts";
 import { CatalogWriteConflictError } from "./catalog-conflict.ts";
 import { rebaseCatalog } from "./catalog-rebase.ts";
+import {
+  entityShardsEnabled,
+  writeLifecycleShard,
+  writeQuoteShard,
+  writeTicketShard,
+} from "./entity-record-store.ts";
+import { RecordWriteConflictError } from "./record-conflict.ts";
+import {
+  fieldsOverlap,
+  quoteChangedFields,
+  readRecordVersion,
+  recordMetaFromRow,
+  stampLifecycleRow,
+  stampQuoteRecord,
+  stampTicketRecord,
+  ticketChangedFields,
+  type QuoteConflictField,
+  type RecordMutationActor,
+  type TicketConflictField,
+} from "./record-meta.ts";
 import {
   bumpChatWatch,
   chatWatchChannel,
@@ -163,6 +184,7 @@ import { resolveAssistantModel } from "./assistant/models.ts";
 
 export { filesDir, getDataDir } from "./persistence.ts";
 export { CatalogWriteConflictError } from "./catalog-conflict.ts";
+export { RecordWriteConflictError } from "./record-conflict.ts";
 export type { PlatformSignInSettings, PlatformSettingsDocument };
 
 export const SEED_STAFF = {
@@ -1624,6 +1646,10 @@ async function healLoadedDatabase(
 ): Promise<Database> {
   const first = await healSnapshot(loaded);
   if (!first.changed) {
+    rememberCatalogMemory(first.db, versions, loaded.base);
+    return memory!;
+  }
+  if (loaded.db.dataMigrations?.catalogHealDeferredV1) {
     rememberCatalogMemory(first.db, versions, loaded.base);
     return memory!;
   }
@@ -3464,11 +3490,20 @@ export function upsertTenantPartLifecycle(
       transitions,
       at,
     });
-    await writeDatabase({
+    const committed = await writeDatabase({
       ...db,
       partLifecycle: rows,
       partLifecycleNotifications: notifications,
     });
+    if (entityShardsEnabled(committed)) {
+      for (const update of updates) {
+        const id = partLifecycleRowId(tenantId, update.partNumber);
+        const row = rows.find((entry) => entry.id === id);
+        if (row) {
+          await writeLifecycleShard(tenantId, row);
+        }
+      }
+    }
     return { ok: true as const };
   });
 }
@@ -4185,26 +4220,64 @@ export function getQuote(idOrNumber: string, tenantId: string) {
   });
 }
 
+export type QuoteMutationOptions = {
+  actor?: RecordMutationActor;
+  lock?: {
+    base: QuoteRecord;
+    expectedVersion: number;
+    touchedFields: readonly QuoteConflictField[];
+  };
+};
+
 export function mutateQuote(
   idOrNumber: string,
   tenantId: string,
   fn: (quote: QuoteRecord) => QuoteRecord,
+  options?: QuoteMutationOptions,
 ) {
   return withLock(async () => {
-    const db = await readDatabase();
-    const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
-    if (!current) {
+    let result: QuoteRecord | null = null;
+    let prior: QuoteRecord | null = null;
+    const committedDb = await commitCatalog(async (latest) => {
+      if (!latest.db) {
+        return { db: null, write: false };
+      }
+      const current = findQuoteInList(filterByTenant(latest.db.quotes, tenantId), idOrNumber);
+      if (!current) {
+        return { db: latest.db, write: false };
+      }
+      prior = current;
+      const working = current;
+      if (options?.lock) {
+        const liveVersion = readRecordVersion(current);
+        if (liveVersion !== options.lock.expectedVersion) {
+          const serverFields = quoteChangedFields(options.lock.base, current);
+          if (fieldsOverlap(serverFields, options.lock.touchedFields)) {
+            throw new RecordWriteConflictError(recordMetaFromRow(current));
+          }
+        }
+      }
+      const rawNext = fn(working);
+      const next = stampQuoteRecord(working, rawNext, options?.actor);
+      result = next;
+      return {
+        db: {
+          ...latest.db,
+          quotes: latest.db.quotes.map((quote) => (quote.id === next.id ? next : quote)),
+        },
+        write: true,
+      };
+    });
+    if (!result || !prior) {
       return null;
     }
-    const next = fn(current);
-    await writeDatabase({
-      ...db,
-      quotes: db.quotes.map((quote) => (quote.id === current.id ? next : quote)),
-    });
-    if (conversationWatchChanged(current, next)) {
-      await bumpChatWatch(chatWatchChannel("quote", next.id));
+    if (entityShardsEnabled(committedDb)) {
+      await writeQuoteShard(tenantId, result);
     }
-    return next;
+    if (conversationWatchChanged(prior, result)) {
+      await bumpChatWatch(chatWatchChannel("quote", result.id));
+    }
+    return result;
   });
 }
 
@@ -4553,29 +4626,62 @@ export function createTicket(
   });
 }
 
+export type TicketMutationOptions = {
+  actor?: RecordMutationActor;
+  lock?: {
+    base: StoredTicket;
+    expectedVersion: number;
+    touchedFields: readonly TicketConflictField[];
+  };
+};
+
 function mutateTicket(
   idOrNumber: string,
   tenantId: string,
   fn: (ticket: StoredTicket) => StoredTicket,
+  options?: TicketMutationOptions,
 ) {
   return withLock(async () => {
-    const db = await readDatabase();
-    const current = findTicketInList(
-      filterByTenant(careCollections(db).tickets, tenantId),
-      idOrNumber,
-    );
-    if (!current) {
+    let result: StoredTicket | null = null;
+    let prior: StoredTicket | null = null;
+    const committedDb = await commitCatalog(async (latest) => {
+      if (!latest.db) {
+        return { db: null, write: false };
+      }
+      const care = careCollections(latest.db);
+      const current = findTicketInList(filterByTenant(care.tickets, tenantId), idOrNumber);
+      if (!current) {
+        return { db: latest.db, write: false };
+      }
+      prior = current;
+      if (options?.lock) {
+        const liveVersion = readRecordVersion(current);
+        if (liveVersion !== options.lock.expectedVersion) {
+          const serverFields = ticketChangedFields(options.lock.base, current);
+          if (fieldsOverlap(serverFields, options.lock.touchedFields)) {
+            throw new RecordWriteConflictError(recordMetaFromRow(current));
+          }
+        }
+      }
+      const rawNext = fn(current);
+      const next = stampTicketRecord(current, rawNext, options?.actor);
+      result = next;
+      const tickets = care.tickets.map((ticket) => (ticket.id === next.id ? next : ticket));
+      return {
+        db: { ...latest.db, ...care, tickets },
+        write: true,
+      };
+    });
+    if (!result || !prior) {
       return null;
     }
-    const next = fn(current);
-    const tickets = careCollections(db).tickets.map((ticket) =>
-      ticket.id === current.id ? next : ticket,
-    );
-    await writeDatabase({ ...db, ...careCollections(db), tickets });
-    if (conversationWatchChanged(current, next)) {
-      await bumpChatWatch(chatWatchChannel("ticket", next.id));
+    if (entityShardsEnabled(committedDb)) {
+      await writeTicketShard(tenantId, result);
     }
-    return next;
+    if (conversationWatchChanged(prior, result)) {
+      await bumpChatWatch(chatWatchChannel("ticket", result.id));
+    }
+    return result;
   });
 }
 
@@ -4584,6 +4690,7 @@ export function updateTicketStatus(
   tenantId: string,
   status: TicketStatus,
   actor: { email: string; role: ActivityActorRole; id: string },
+  options?: TicketMutationOptions,
 ) {
   return mutateTicket(idOrNumber, tenantId, (ticket) => {
     if (ticket.status === status) {
@@ -4596,7 +4703,7 @@ export function updateTicketStatus(
       activities: [...ticket.activities, activity],
       lastReadAt: { ...ticket.lastReadAt, [actor.id]: activity.at },
     };
-  });
+  }, options);
 }
 
 export function appendTicketActivity(
@@ -4891,5 +4998,37 @@ export async function readStoredFile(storedFileName: string): Promise<Buffer> {
 export function saveMachineFile(storedFileName: string, bytes: Buffer) {
   return withLock(async () => {
     await persistFile(storedFileName, bytes);
+  });
+}
+
+/** Background/offline: dual-write hot rows to per-record shards and defer heal-on-read. */
+export function runEntityShardsMigration(tenantId: string) {
+  return withLock(async () => {
+    const db = await readDatabase();
+    const quotes = filterByTenant(db.quotes, tenantId);
+    const tickets = filterByTenant(careCollections(db).tickets, tenantId);
+    const lifecycle = filterByTenant(db.partLifecycle ?? [], tenantId);
+    for (const quote of quotes) {
+      await writeQuoteShard(tenantId, normalizeStoredQuote(quote));
+    }
+    for (const ticket of tickets) {
+      await writeTicketShard(tenantId, ticket);
+    }
+    for (const row of lifecycle) {
+      await writeLifecycleShard(tenantId, row);
+    }
+    await writeDatabase({
+      ...db,
+      dataMigrations: {
+        ...db.dataMigrations,
+        entityShardsV1: 1,
+        catalogHealDeferredV1: 1,
+      },
+    });
+    return {
+      quotes: quotes.length,
+      tickets: tickets.length,
+      lifecycle: lifecycle.length,
+    };
   });
 }

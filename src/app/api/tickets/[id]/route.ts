@@ -1,6 +1,16 @@
 import { isTicketStatus } from "@/lib/care";
 import { actorOf, publicTicketForUser, requireTicketAccess } from "@/lib/care-http";
-import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
+import { NextResponse } from "next/server";
+import {
+  error,
+  isErrorResponse,
+  json,
+  readJson,
+  withCatalogConflict,
+  withRecordConflict,
+} from "@/lib/http";
+import { etagMatches, ticketRecordEtag } from "@/lib/record-etag";
+import { readRecordVersion } from "@/lib/record-meta";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";
@@ -8,6 +18,7 @@ import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
   status?: unknown;
+  recordVersion?: unknown;
 };
 
 export async function GET(
@@ -33,9 +44,18 @@ export async function GET(
       });
     }
   }
-  return json({
-    ticket: await publicTicketForUser(ticket, access.user, access.machine.name),
-  });
+  const publicTicket = await publicTicketForUser(ticket, access.user, access.machine.name);
+  const etag = ticketRecordEtag(ticket);
+  if (etagMatches(_request, etag)) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: { ETag: etag, "Cache-Control": "private, no-store" },
+    });
+  }
+  return NextResponse.json(
+    { ticket: publicTicket },
+    { status: 200, headers: { ETag: etag, "Cache-Control": "private, no-store" } },
+  );
 }
 
 async function handlePATCH(
@@ -60,12 +80,19 @@ async function handlePATCH(
   }
 
   const tenantId = userTenantId(access.user);
-  const next = await updateTicketStatus(
-    access.ticket.id,
-    tenantId,
-    body.status,
-    actorOf(access.user),
-  );
+  const actor = actorOf(access.user);
+  const expectedVersion =
+    typeof body.recordVersion === "number" && body.recordVersion >= 1
+      ? body.recordVersion
+      : readRecordVersion(access.ticket);
+  const next = await updateTicketStatus(access.ticket.id, tenantId, body.status, actor, {
+    actor: { id: actor.id, email: actor.email, name: access.user.name },
+    lock: {
+      base: access.ticket,
+      expectedVersion,
+      touchedFields: ["status"],
+    },
+  });
   if (!next) {
     return error("Ticket not found", 404);
   }
@@ -82,4 +109,4 @@ async function handlePATCH(
   });
 }
 
-export const PATCH = withCatalogConflict(handlePATCH);
+export const PATCH = withCatalogConflict(withRecordConflict("ticket", handlePATCH));

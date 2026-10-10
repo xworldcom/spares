@@ -71,6 +71,13 @@ export type Persistence = {
     json: string,
     expected: string | null,
   ): Promise<ConditionalWriteResult>;
+  /** Per-record JSON shards (quotes, tickets, lifecycle rows). */
+  readVersionedPath(pathname: string, mode?: ReadMode): Promise<VersionedJson>;
+  writeIfVersionPath(
+    pathname: string,
+    json: string,
+    expected: string | null,
+  ): Promise<ConditionalWriteResult>;
   readDatabaseJson(): Promise<string | null>;
   writeDatabaseJson(json: string): Promise<void>;
   readCareJson(): Promise<string | null>;
@@ -110,6 +117,7 @@ export function filesDir() {
 
 export function createMemoryPersistence(): Persistence {
   const docs = new Map<CatalogDocument, string>();
+  const pathDocs = new Map<string, string>();
   const files = new Map<string, Buffer>();
   const current = (doc: CatalogDocument) => docs.get(doc) ?? null;
   return {
@@ -132,6 +140,18 @@ export function createMemoryPersistence(): Persistence {
         return { ok: false };
       }
       docs.set(doc, next);
+      return { ok: true, version: contentVersion(next) };
+    },
+    async readVersionedPath(pathname) {
+      const value = pathDocs.get(pathname) ?? null;
+      return { json: value, version: value === null ? null : contentVersion(value) };
+    },
+    async writeIfVersionPath(pathname, next, expected) {
+      const value = pathDocs.get(pathname) ?? null;
+      if ((value === null ? null : contentVersion(value)) !== expected) {
+        return { ok: false };
+      }
+      pathDocs.set(pathname, next);
       return { ok: true, version: contentVersion(next) };
     },
     async readDatabaseJson() {
@@ -214,6 +234,11 @@ function selectPersistence(): Persistence {
   return fsPersistence(getDataDir());
 }
 
+function fsRecordPath(root: string, pathname: string) {
+  const relative = pathname.replace(/^spares\//, "").replace(/\.\./g, "_");
+  return path.join(root, "records", relative);
+}
+
 function fsPersistence(root: string): Persistence {
   const dbFile = path.join(root, "db.json");
   const careFile = path.join(root, "care.json");
@@ -246,6 +271,23 @@ function fsPersistence(root: string): Persistence {
     async writeIfVersion(doc, json, expected) {
       const file = fileFor(doc);
       await mkdir(filesRoot, { recursive: true });
+      return withFileLock(`${file}.lock`, async () => {
+        const stored = await readJsonFile(file);
+        if ((stored === null ? null : contentVersion(stored)) !== expected) {
+          return { ok: false } as const;
+        }
+        await writeFileAtomic(file, json);
+        return { ok: true, version: contentVersion(json) } as const;
+      });
+    },
+    async readVersionedPath(pathname) {
+      const file = fsRecordPath(root, pathname);
+      const json = await readJsonFile(file);
+      return { json, version: json === null ? null : contentVersion(json) };
+    },
+    async writeIfVersionPath(pathname, json, expected) {
+      const file = fsRecordPath(root, pathname);
+      await mkdir(path.dirname(file), { recursive: true });
       return withFileLock(`${file}.lock`, async () => {
         const stored = await readJsonFile(file);
         if ((stored === null ? null : contentVersion(stored)) !== expected) {
@@ -574,12 +616,11 @@ function blobPersistence(client: BlobClient): Persistence {
     return { ok: true, version: written.etag };
   }
 
-  async function putIfVersion(
-    doc: CatalogDocument,
+  async function putIfVersionAt(
+    pathname: string,
     json: string,
     expected: string | null,
   ): Promise<ConditionalWriteResult> {
-    const pathname = blobPathFor(doc);
     try {
       if (expected === null) {
         const created = await client.put(pathname, json, { ...putOptions, allowOverwrite: false });
@@ -616,6 +657,14 @@ function blobPersistence(client: BlobClient): Persistence {
     }
   }
 
+  async function putIfVersion(
+    doc: CatalogDocument,
+    json: string,
+    expected: string | null,
+  ): Promise<ConditionalWriteResult> {
+    return putIfVersionAt(blobPathFor(doc), json, expected);
+  }
+
   async function putUnconditional(pathname: string, json: string) {
     await client.put(pathname, json, { ...putOptions, allowOverwrite: true });
   }
@@ -634,6 +683,10 @@ function blobPersistence(client: BlobClient): Persistence {
       return mode === "snapshot" ? readSnapshot(pathname) : readCommitVersion(pathname);
     },
     writeIfVersion: putIfVersion,
+    readVersionedPath(pathname, mode = "commit") {
+      return mode === "snapshot" ? readSnapshot(pathname) : readCommitVersion(pathname);
+    },
+    writeIfVersionPath: putIfVersionAt,
     async readDatabaseJson() {
       const bytes = await readJsonBuffer(blobDbPath());
       return bytes ? bytes.toString("utf8") : null;

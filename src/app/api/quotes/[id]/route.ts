@@ -1,5 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
+import { NextResponse } from "next/server";
+import {
+  error,
+  isErrorResponse,
+  json,
+  readJson,
+  withCatalogConflict,
+  withRecordConflict,
+} from "@/lib/http";
+import { etagMatches, quoteRecordEtag } from "@/lib/record-etag";
+import { quoteTouchedFieldsFromPatch, readRecordVersion } from "@/lib/record-meta";
 import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
 import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
 import {
@@ -27,6 +37,7 @@ type PatchBody = {
   shipments?: unknown;
   poNumber?: unknown;
   invoiceNumber?: unknown;
+  recordVersion?: unknown;
 };
 
 export async function GET(
@@ -70,9 +81,18 @@ export async function GET(
       target: { type: "quote", id: marked.id, label: `#${marked.number}` },
     });
   }
-  return json({
-    quote: await publicQuoteForUser(marked, access.user, undefined, detail.bundle),
-  });
+  const publicQuote = await publicQuoteForUser(marked, access.user, undefined, detail.bundle);
+  const etag = quoteRecordEtag(marked);
+  if (etagMatches(_request, etag)) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: { ETag: etag, "Cache-Control": "private, no-store" },
+    });
+  }
+  return NextResponse.json(
+    { quote: publicQuote },
+    { status: 200, headers: { ETag: etag, "Cache-Control": "private, no-store" } },
+  );
 }
 
 async function handlePATCH(
@@ -93,6 +113,20 @@ async function handlePATCH(
   const actor = actorOf(access.user);
   const tenantId = userTenantId(access.user);
   const now = () => new Date().toISOString();
+  const expectedVersion =
+    typeof body.recordVersion === "number" && body.recordVersion >= 1
+      ? body.recordVersion
+      : readRecordVersion(access.quote);
+  const mutationActor = {
+    id: access.user.id,
+    email: access.user.email,
+    name: access.user.name,
+  };
+  const quoteLock = {
+    base: access.quote,
+    expectedVersion,
+    touchedFields: quoteTouchedFieldsFromPatch(body),
+  };
 
   if (access.user.role === "customer") {
     const poNumber =
@@ -103,20 +137,25 @@ async function handlePATCH(
     if (!canUploadPo(access.quote.status)) {
       return error("PO number can be added after the quote is issued", 403);
     }
-    const next = await mutateQuote(access.quote.id, tenantId, (quote) => {
-      if (quote.poNumber === poNumber) {
-        return quote;
-      }
-      return {
-        ...quote,
-        poNumber,
-        activities: [
-          ...quote.activities,
-          createQuoteActivity(actor, "po", `PO number set to ${poNumber}`, now()),
-        ],
-        lastReadAt: { ...quote.lastReadAt, [actor.id]: now() },
-      };
-    });
+    const next = await mutateQuote(
+      access.quote.id,
+      tenantId,
+      (quote) => {
+        if (quote.poNumber === poNumber) {
+          return quote;
+        }
+        return {
+          ...quote,
+          poNumber,
+          activities: [
+            ...quote.activities,
+            createQuoteActivity(actor, "po", `PO number set to ${poNumber}`, now()),
+          ],
+          lastReadAt: { ...quote.lastReadAt, [actor.id]: now() },
+        };
+      },
+      { actor: mutationActor, lock: quoteLock },
+    );
     if (!next) {
       return error("Quote not found", 404);
     }
@@ -188,7 +227,10 @@ async function handlePATCH(
     }
   }
 
-  const next = await mutateQuote(access.quote.id, tenantId, (quote) => {
+  const next = await mutateQuote(
+    access.quote.id,
+    tenantId,
+    (quote) => {
     let updated: QuoteRecord = { ...quote, items, shipments };
     const invoiceNumber =
       typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : quote.invoiceNumber;
@@ -219,7 +261,9 @@ async function handlePATCH(
       activities,
       lastReadAt: { ...quote.lastReadAt, [actor.id]: stamp },
     };
-  });
+  },
+    { actor: mutationActor, lock: quoteLock },
+  );
 
   if (!next) {
     return error("Quote not found", 404);
@@ -241,4 +285,4 @@ async function handlePATCH(
   return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
 }
 
-export const PATCH = withCatalogConflict(handlePATCH);
+export const PATCH = withCatalogConflict(withRecordConflict("quote", handlePATCH));

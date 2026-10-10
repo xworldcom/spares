@@ -71,6 +71,7 @@ export async function updateQuote(
     shipments?: Array<Omit<QuoteShipment, "id"> & { id?: string }>;
     poNumber?: string;
     invoiceNumber?: string;
+    recordVersion?: number;
   },
 ): Promise<Quote> {
   const body =

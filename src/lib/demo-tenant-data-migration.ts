@@ -59,6 +59,10 @@ export type DataMigrations = {
   demoTenantV1?: number;
   demoTenantB1?: number;
   demoTenantB2?: number;
+  /** When set, catalog heal runs in memory on read; use scripts/run-catalog-heal-once.mjs to persist. */
+  catalogHealDeferredV1?: number;
+  /** Hot rows (quotes/tickets/lifecycle) also CAS-write per-record JSON shards. */
+  entityShardsV1?: number;
 };
 
 type DemoMigrationUser = {
