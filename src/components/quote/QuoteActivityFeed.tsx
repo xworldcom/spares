@@ -195,7 +195,7 @@ export function QuoteActivityFeed({
     }
 
     const nearBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 96;
-    if (layout === "sheet" && sheetChrome?.inline) {
+    if ((layout === "sheet" || layout === "card") && sheetChrome?.inline) {
       const last = outgoing.at(-1) ?? activities.at(-1);
       const sentByViewer = last ? activityLane(last, { email: selfEmail, role }) === "own" : false;
       if (stickToBottomRef.current || sentByViewer) {
