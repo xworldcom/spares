@@ -422,7 +422,8 @@ export function quoteItemsEqual(left: QuoteItem[], right: QuoteItem[]) {
       item.leadTimeDays === other.leadTimeDays &&
       item.note === other.note &&
       item.lifecycle?.status === other.lifecycle?.status &&
-      item.lifecycle?.message === other.lifecycle?.message
+      item.lifecycle?.successorPartNumber === other.lifecycle?.successorPartNumber &&
+      item.lifecycle?.discontinuationDate === other.lifecycle?.discontinuationDate
     );
   });
 }

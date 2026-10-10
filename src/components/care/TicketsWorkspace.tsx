@@ -283,12 +283,13 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
         <>
           <div className="tickets-workspace-filters">
             <CatalogSearch
+              id="care-tickets-search"
+              label="Search tickets"
               value={searchQuery}
               onChange={(value) =>
                 replaceListQuery({ [CARE_TICKETS_Q_QUERY]: value })
               }
               placeholder="Search tickets"
-              ariaLabel="Search tickets"
             />
             <div className="tickets-workspace-filter-row">
               {(
