@@ -101,6 +101,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       : null;
   const [trayNote, setTrayNote] = useState("");
   const customerTrayInViewer = isCustomer && !desktopStage;
+  const trayPickSeed =
+    isCustomer && selectedPart
+      ? { id: selectedPart.id, name: selectedPart.name }
+      : null;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
 
@@ -385,6 +389,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         lines={trayLines}
         note={trayNote}
         onNote={setTrayNote}
+        pickSeed={trayPickSeed}
         onAdd={(part, qty) => {
           commitTrayLine(part, qty);
         }}
@@ -410,6 +415,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     trayNote,
     machineId,
     trayOpen,
+    trayPickSeed,
     commitTrayLine,
     removeTrayLine,
   ]);

@@ -59,6 +59,7 @@ function QuoteTrayForm({
   onQty,
   onRemove,
   onAdd,
+  pickSeed,
   onSubmit,
   submitting,
   error,
@@ -70,6 +71,7 @@ function QuoteTrayForm({
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
   onAdd?: (part: Part, qty: number) => void;
+  pickSeed?: { id: string; name: string } | null;
   onSubmit: () => void;
   submitting: boolean;
   error: string | null;
@@ -131,6 +133,7 @@ function QuoteTrayForm({
                 }
                 onQty={onQty}
                 onRemove={onRemove}
+                pickSeed={pickSeed}
               />
             ) : null}
 
@@ -180,6 +183,7 @@ export function QuoteTray({
   onQty,
   onRemove,
   onAdd,
+  pickSeed = null,
   onClear,
   fullscreen,
   onExitToTray,
@@ -193,6 +197,7 @@ export function QuoteTray({
   onQty: (partId: string, qty: number) => void;
   onRemove: (partId: string) => void;
   onAdd?: (part: Part, qty: number) => void;
+  pickSeed?: { id: string; name: string } | null;
   onClear: () => void;
   fullscreen?: boolean;
   onExitToTray?: () => void;
@@ -309,6 +314,7 @@ export function QuoteTray({
     onQty,
     onRemove,
     onAdd,
+    pickSeed,
       onSubmit: () => {
       void handleSubmit();
     },

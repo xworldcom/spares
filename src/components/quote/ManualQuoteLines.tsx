@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { MAX_QUOTE_ITEM_ID } from "@/lib/quotes";
 import {
@@ -85,16 +85,29 @@ export function ManualQuoteLines({
   onAdd,
   onQty,
   onRemove,
+  pickSeed,
 }: {
   lines: ManualQuoteLine[];
   onAdd: (line: ManualQuoteLine) => void;
   onQty: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
+  /** When the user picks a part in 3D, prefill the add row (not placeholder text). */
+  pickSeed?: { id: string; name: string } | null;
 }) {
   const [partNumber, setPartNumber] = useState("");
   const [description, setDescription] = useState("");
   const [qty, setQty] = useState("1");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pickSeed?.id) {
+      return;
+    }
+    setPartNumber(pickSeed.id);
+    setDescription(pickSeed.name.trim() || pickSeed.id);
+    setQty("1");
+    setError(null);
+  }, [pickSeed?.id, pickSeed?.name]);
 
   function addLine() {
     const id = lineId(partNumber, description);

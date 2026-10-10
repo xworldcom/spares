@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 
@@ -97,16 +98,13 @@ export function PartsBom({
     <div className="space-y-3">
       {searchable ? (
         <div className="space-y-2">
-          <label className="block">
-            <span className="sr-only">Search parts</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name, number, vendor"
-              className="spares-field h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
-            />
-          </label>
+          <CatalogSearch
+            id="parts-bom-search"
+            label="Search parts"
+            value={query}
+            onChange={setQuery}
+            placeholder="Search name, number, vendor"
+          />
           {categories.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               <button

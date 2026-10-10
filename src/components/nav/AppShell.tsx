@@ -133,6 +133,11 @@ export function AppShell({
   useSignedInTabPrefetch(signedIn ? user?.role : undefined);
 
   async function handleLogout() {
+    if (
+      !window.confirm("Sign out of OEE360 on this device? Other tabs will need to sign in again.")
+    ) {
+      return;
+    }
     setLogoutError(null);
     try {
       await logout();
@@ -288,9 +293,12 @@ export function AppShell({
           )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-            <p className="spares-muted hidden text-[11px] font-medium tracking-[0.2em] uppercase sm:block">
+            <span
+              className="spares-muted hidden select-none text-[11px] font-medium tracking-[0.2em] uppercase sm:inline"
+              aria-hidden="true"
+            >
               Private
-            </p>
+            </span>
             <BugReportControl />
             {signedIn ? (
               <button
