@@ -44,6 +44,7 @@ import {
   readPersistedHiddenParts,
   writePersistedHiddenParts,
 } from "@/lib/ui/hidden-parts-persist";
+import { dismissPartSheetAfterQuoteAdd } from "@/lib/ui/quote-tray-open-policy";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 
 const VIEWER_STAGE = "#12161c";
@@ -163,6 +164,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     setLinesKey(null);
     setHiddenIds([]);
     setHiddenKey(null);
+    setTrayOpen(false);
   }, [machineId]);
 
   // Read storage as soon as the key exists (not after the machine loads), and only let the
@@ -502,6 +504,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   function addPart(part: Part) {
     commitTrayLine(part, part.qty || 1);
+    if (isCustomer && dismissPartSheetAfterQuoteAdd()) {
+      setSelectedPart(null);
+    }
   }
 
   function addSelected() {
@@ -681,6 +686,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             showAdd={isCustomer}
             held={held}
             listView={isCustomer && view === "list"}
+            quoteTrayPeek={isCustomer && view === "list" && trayOpen}
           />
         ) : null}
         {customerTrayInViewer ? tray : null}

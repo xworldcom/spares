@@ -348,8 +348,13 @@
       opacity var(--sheet-duration) var(--sheet-ease);
   }
 
+  .machine-stage-grid[data-customer-desktop="true"] {
+    --spares-tray: 24.5rem;
+  }
+
   .quote-tray-dock.is-open {
     width: var(--spares-tray);
+    min-width: 20rem;
     opacity: 1;
     pointer-events: auto;
     transition:
@@ -3226,6 +3231,17 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 .manual-quote-lines {
   container-type: inline-size;
   container-name: manual-quote;
+}
+
+@container manual-quote (max-width: 21rem) {
+  .manual-quote-row {
+    align-items: flex-start;
+  }
+
+  .manual-quote-row > .flex.items-center.gap-2 {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .manual-quote-add {
