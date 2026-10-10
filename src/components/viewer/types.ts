@@ -21,7 +21,6 @@ export type PartPickerProps = {
   /** Bump to restore the first-load orbit pose (also clears explode in parent). */
   resetKey?: number;
   layoutRootRef?: RefObject<HTMLDivElement | null>;
-  containFullscreenGestures?: boolean;
   hiddenIds?: readonly string[];
   isolatedId?: string | null;
   onSelect?: (part: ViewerPart | null) => void;

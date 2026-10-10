@@ -1938,6 +1938,11 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     display: block;
     height: calc(var(--reply-h, 17.5rem) + 2.25rem);
   }
+
+  .quote-workspace[data-quote-layout="stack"] {
+    padding-bottom: calc(var(--peek-h, 5.75rem) + 1rem);
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 
 .quote-workspace[data-quote-layout="split"] {

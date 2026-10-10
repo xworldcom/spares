@@ -578,8 +578,6 @@ export function QuoteWorkspace({
         }}
       />
 
-      <div className="conversation-sheet-spacer" aria-hidden="true" />
-
       {role === "staff" && staffApplyDirty ? (
         <div
           className="quote-staff-apply sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
@@ -607,11 +605,13 @@ export function QuoteWorkspace({
       ) : null}
       </div>
 
+      <div className="conversation-sheet-spacer" aria-hidden="true" />
+
       <ConversationSheet
         title="Messages"
         peekLine={peek.text}
         unread={quote.unread}
-        threadKey={quote.id}
+        threadKey={loadedRef === quoteRef ? quote.id : quoteRef}
         layout={desktop ? "inline" : "overlay"}
       >
         <QuoteActivityFeed

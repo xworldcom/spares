@@ -72,7 +72,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [explode, setExplode] = useState(0);
   const [viewerFitKey, setViewerFitKey] = useState(0);
   const [viewerResetKey, setViewerResetKey] = useState(0);
-  const viewerSurfaceRef = useRef<HTMLDivElement>(null);
+  const viewerLayoutRef = useRef<HTMLDivElement>(null);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [isolatedId, setIsolatedId] = useState<string | null>(null);
   const [lines, setLines] = useState<TrayLine[]>([]);
@@ -642,7 +642,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         event.preventDefault();
       }}
     >
-      <div className="relative min-h-0 flex-1">
+      <div ref={viewerLayoutRef} className="relative min-h-0 flex-1">
         {src ? (
           <PartPicker
             src={src}
@@ -651,8 +651,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             explode={explode}
             fitKey={viewerFitKey}
             resetKey={viewerResetKey}
-            layoutRootRef={viewerSurfaceRef}
-            containFullscreenGestures={fullscreen}
+            layoutRootRef={viewerLayoutRef}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
             onSelect={setSelectedPart}

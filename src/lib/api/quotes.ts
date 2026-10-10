@@ -1,4 +1,5 @@
 import { quoteItemsPatchPayload } from "@/lib/quotes";
+import { backgroundFetchHeaders } from "./background-fetch";
 import { apiFetch } from "./client";
 import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
@@ -33,9 +34,11 @@ export async function createQuote(input: {
   return data.quote;
 }
 
-export async function listQuotes(): Promise<QuotesListResponse> {
+export async function listQuotes(options?: { background?: boolean }): Promise<QuotesListResponse> {
   return readIfWarm("quotes:list", async () => {
-    const data = await apiFetch<QuotesListResponse>("/api/quotes");
+    const data = await apiFetch<QuotesListResponse>("/api/quotes", {
+      headers: options?.background ? backgroundFetchHeaders() : undefined,
+    });
     return {
       quotes: data.quotes ?? [],
       unreadCount: data.unreadCount ?? 0,
