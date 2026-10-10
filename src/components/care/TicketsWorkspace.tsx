@@ -168,6 +168,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
         <WorkListScopeBar
           kind="tickets"
           machineId={scope === "machine" ? machineId : undefined}
+          hubMachineId={hubMachineFilter}
           headingLevel="h2"
           action={
             <button
