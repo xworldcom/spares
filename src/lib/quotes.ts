@@ -554,7 +554,7 @@ export type QuoteFulfillmentVisibility = {
 function quoteHasPoData(
   quote: Pick<Quote, "poNumber" | "hasPoFile">,
 ): boolean {
-  return Boolean(quote.poNumber?.trim()) || quote.hasPoFile;
+  return Boolean(quote.poNumber?.trim()) || Boolean(quote.hasPoFile);
 }
 
 function quoteHasInvoiceData(quote: Pick<Quote, "invoiceNumber">): boolean {
