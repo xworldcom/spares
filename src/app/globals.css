@@ -3836,22 +3836,22 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     display: grid;
     grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
     gap: 1rem;
-    align-items: start;
-  }
-
-  .tickets-workspace[data-tickets-layout="split"] {
+    align-items: stretch;
+    height: calc(100dvh - 14rem);
     max-height: calc(100dvh - 14rem);
     min-height: 0;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-list {
-    max-height: calc(100dvh - 14rem);
+    max-height: 100%;
+    min-height: 0;
     overflow: auto;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-detail {
     display: flex;
-    max-height: calc(100dvh - 14rem);
+    height: 100%;
+    max-height: 100%;
     min-height: 0;
     flex-direction: column;
     overflow: hidden;
@@ -3860,14 +3860,42 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   }
 
   .tickets-workspace[data-tickets-layout="split"] .care-stack {
+    display: flex;
     min-height: 0;
-    flex: 1;
+    flex: 1 1 auto;
     height: 100%;
+    flex-direction: column;
   }
 
+  .tickets-workspace[data-tickets-layout="split"] .care-stack-head {
+    flex-shrink: 0;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .care-stack .care-back {
+    flex-shrink: 0;
+  }
+
+  /* Care ticket Messages: bounded column so D1 thread flex (height:0) can fill */
   .tickets-workspace[data-tickets-layout="split"] .conversation-sheet.is-inline {
+    display: flex;
+    flex: 1 1 0;
     min-height: 0;
-    flex: 1;
+    height: auto;
+    max-height: none;
+    align-self: stretch;
+  }
+}
+
+@media (min-width: 1024px) {
+  .catalog-page.care-page-wide .care-body {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  .catalog-page.care-page-wide {
+    min-height: calc(100dvh - var(--spares-header) - 3rem);
   }
 }
 
