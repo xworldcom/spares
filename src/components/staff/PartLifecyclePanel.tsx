@@ -281,7 +281,9 @@ export function PartLifecyclePanel() {
           >
             {option.label}
             <span className="spares-muted ml-1.5 tabular-nums">
-              {statusCounts[option.value === "all" ? "all" : option.value]}
+              {loading
+                ? "—"
+                : statusCounts[option.value === "all" ? "all" : option.value]}
             </span>
           </button>
         ))}

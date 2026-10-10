@@ -21,6 +21,7 @@ import {
   initialQuoteSheetSnap,
   type QuoteSheetSnap,
 } from "@/lib/ui/quote-sheet";
+import { quoteTraySnapAfterLineAdded } from "@/lib/ui/quote-tray-open-policy";
 import { ManualQuoteLines } from "@/components/quote/ManualQuoteLines";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { trayCountLabel } from "@/lib/ui/tray-count-label";
@@ -241,6 +242,9 @@ export function QuoteTray({
     if (!increased) {
       return;
     }
+    if (open && !isDesktopStage()) {
+      setSheet(quoteTraySnapAfterLineAdded(false));
+    }
     const node = card.current?.querySelector<HTMLElement>(
       '[data-quote-target="count"]',
     );
@@ -250,7 +254,7 @@ export function QuoteTray({
     afterNextPaint(() => {
       bounceQuoteCount(node);
     });
-  }, [unitCount]);
+  }, [unitCount, open]);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);

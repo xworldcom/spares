@@ -398,29 +398,42 @@ export function QuoteWorkspace({
           onChange={(status: QuoteStatus) => {
             setError(null);
             setNotice(null);
+            if (
+              role === "staff" &&
+              status === "cancelled" &&
+              quote.status !== "cancelled"
+            ) {
+              void run(
+                () => updateQuote(String(quote.number), { status: "cancelled" }),
+                "Quote cancelled.",
+              );
+              return;
+            }
             setPendingStatus(status === quote.status ? null : status);
           }}
         />
       </div>
       {role === "staff" && staffApplyDirty ? (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => applyStaffAction()}
-          className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30"
+        <div
+          className="quote-staff-apply hidden flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e8c27a]/25 bg-[color-mix(in_srgb,var(--spares-paper)_92%,#e8c27a_8%)] px-4 py-3 sm:flex"
+          role="status"
         >
-          {primaryLabel}
-        </button>
-      ) : null}
-
-      {role === "staff" && staffApplyDirty ? (
-        <p className="text-sm text-[#e8c27a]" role="status">
-          {statusDirty && pendingStatus
-            ? `Staged as ${QUOTE_STATUS_LABELS[pendingStatus]}. Tap Apply to save${
-                itemsDirty ? " pricing and status" : ""
-              }.`
-            : "Unsaved pricing. Tap Apply to save."}
-        </p>
+          <p className="text-sm text-[#e8c27a]">
+            {statusDirty && itemsDirty
+              ? "Unsaved status and pricing."
+              : statusDirty && pendingStatus
+                ? `Unsaved status (${QUOTE_STATUS_LABELS[pendingStatus]}).`
+                : "Unsaved pricing."}
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => applyStaffAction()}
+            className="btn-primary inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30"
+          >
+            {primaryLabel}
+          </button>
+        </div>
       ) : null}
 
       {role === "staff" && statusDirty && pendingStatus === "quoted" && !quotePricingComplete(items) ? (
@@ -447,21 +460,6 @@ export function QuoteWorkspace({
       <section>
         <div className="mb-3 flex items-end justify-between gap-3">
           <h2 className="text-[19px] font-semibold tracking-tight">Lines</h2>
-          {role === "staff" ? (
-            <button
-              type="button"
-              disabled={busy || !itemsDirty}
-              onClick={() =>
-                void run(
-                  () => updateQuote(String(quote.number), { items }),
-                  "Pricing saved.",
-                )
-              }
-              className="btn-primary hidden h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30 sm:inline-flex"
-            >
-              Save pricing
-            </button>
-          ) : null}
         </div>
         <QuoteLines
           items={role === "staff" ? items : quote.items}
@@ -557,7 +555,15 @@ export function QuoteWorkspace({
           style={{
             bottom: "calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px))",
           }}
+          role="status"
         >
+          <p className="mb-2 text-center text-sm text-[#e8c27a]">
+            {statusDirty && itemsDirty
+              ? "Unsaved status and pricing."
+              : statusDirty && pendingStatus
+                ? `Unsaved status (${QUOTE_STATUS_LABELS[pendingStatus]}).`
+                : "Unsaved pricing."}
+          </p>
           <button
             type="button"
             disabled={busy}

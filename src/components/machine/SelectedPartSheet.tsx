@@ -19,6 +19,7 @@ export function SelectedPartSheet({
   showAdd,
   held,
   listView,
+  quoteTrayPeek,
 }: {
   part: Part | null;
   isolated?: boolean;
@@ -32,6 +33,8 @@ export function SelectedPartSheet({
   held?: boolean;
   /** List view: dock the chip above the tab bar so search/title stay visible. */
   listView?: boolean;
+  /** List + quote peek: lift the chip above the tray so the next row stays tappable. */
+  quoteTrayPeek?: boolean;
 }) {
   const ready = useHydrated();
   const open = partSheetVisible(part?.id);
@@ -88,8 +91,12 @@ export function SelectedPartSheet({
       data-part-sheet=""
       className={
         listView
-          ? "pointer-events-none absolute inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 max-w-none"
-          : "pointer-events-none absolute top-[4.35rem] left-3 z-30 max-w-[min(20rem,calc(100%-5.5rem))]"
+          ? `pointer-events-none absolute inset-x-3 z-[70] max-w-none ${
+              quoteTrayPeek
+                ? "bottom-[calc(var(--peek-h,8.65rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
+                : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
+            }`
+          : "pointer-events-none absolute top-[4.35rem] left-3 z-[70] max-w-[min(20rem,calc(100%-5.5rem))]"
       }
     >
       <div
@@ -143,6 +150,16 @@ export function SelectedPartSheet({
               Add
             </button>
           ) : null}
+          <button
+            type="button"
+            data-part-sheet-control=""
+            aria-label="Close part details"
+            {...activate(onDismiss)}
+            disabled={!canAct}
+            className="chrome-quiet inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none hover:text-[var(--spares-on-chip)] disabled:opacity-30"
+          >
+            ×
+          </button>
           <button
             type="button"
             data-part-sheet-control=""
