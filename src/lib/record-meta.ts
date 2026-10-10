@@ -156,15 +156,13 @@ export function stampQuoteRecord(
   ) {
     return after;
   }
-  return bumpRecordMeta(
-    {
-      ...after,
-      recordVersion: readRecordVersion(before),
-      lastModifiedAt: before.lastModifiedAt,
-    },
-    actor,
-    at,
-  );
+  return {
+    ...after,
+    recordVersion: readRecordVersion(before) + 1,
+    lastModifiedAt: at,
+    lastModifiedByUserId: actor?.id,
+    lastModifiedByName: actor?.name?.trim() || actor?.email,
+  };
 }
 
 export type TicketConflictField = "status" | "title";
@@ -197,15 +195,13 @@ export function stampTicketRecord(
   ) {
     return after;
   }
-  return bumpRecordMeta(
-    {
-      ...after,
-      recordVersion: readRecordVersion(before),
-      lastModifiedAt: before.lastModifiedAt,
-    },
-    actor,
-    at,
-  );
+  return {
+    ...after,
+    recordVersion: readRecordVersion(before) + 1,
+    lastModifiedAt: at,
+    lastModifiedByUserId: actor?.id,
+    lastModifiedByName: actor?.name?.trim() || actor?.email,
+  };
 }
 
 export function lifecycleChangedFields(

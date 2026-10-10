@@ -4234,13 +4234,13 @@ export function mutateQuote(
   tenantId: string,
   fn: (quote: QuoteRecord) => QuoteRecord,
   options?: QuoteMutationOptions,
-) {
-  return withLock(async () => {
+): Promise<QuoteRecord | null> {
+  return withLock(async (): Promise<QuoteRecord | null> => {
     let result: QuoteRecord | null = null;
     let prior: QuoteRecord | null = null;
     const committedDb = await commitCatalog(async (latest) => {
       if (!latest.db) {
-        return { db: null, write: false };
+        throw new Error("Catalog missing during quote mutation");
       }
       const current = findQuoteInList(filterByTenant(latest.db.quotes, tenantId), idOrNumber);
       if (!current) {
@@ -4268,16 +4268,18 @@ export function mutateQuote(
         write: true,
       };
     });
-    if (!result || !prior) {
+    if (result === null || prior === null) {
       return null;
     }
+    const savedQuote: QuoteRecord = result;
+    const priorQuote: QuoteRecord = prior;
     if (entityShardsEnabled(committedDb)) {
-      await writeQuoteShard(tenantId, result);
+      await writeQuoteShard(tenantId, savedQuote);
     }
-    if (conversationWatchChanged(prior, result)) {
-      await bumpChatWatch(chatWatchChannel("quote", result.id));
+    if (conversationWatchChanged(priorQuote, savedQuote)) {
+      await bumpChatWatch(chatWatchChannel("quote", savedQuote.id));
     }
-    return result;
+    return savedQuote;
   });
 }
 
@@ -4640,13 +4642,13 @@ function mutateTicket(
   tenantId: string,
   fn: (ticket: StoredTicket) => StoredTicket,
   options?: TicketMutationOptions,
-) {
-  return withLock(async () => {
+): Promise<StoredTicket | null> {
+  return withLock(async (): Promise<StoredTicket | null> => {
     let result: StoredTicket | null = null;
     let prior: StoredTicket | null = null;
     const committedDb = await commitCatalog(async (latest) => {
       if (!latest.db) {
-        return { db: null, write: false };
+        throw new Error("Catalog missing during ticket mutation");
       }
       const care = careCollections(latest.db);
       const current = findTicketInList(filterByTenant(care.tickets, tenantId), idOrNumber);
@@ -4672,16 +4674,18 @@ function mutateTicket(
         write: true,
       };
     });
-    if (!result || !prior) {
+    if (result === null || prior === null) {
       return null;
     }
+    const savedTicket: StoredTicket = result;
+    const priorTicket: StoredTicket = prior;
     if (entityShardsEnabled(committedDb)) {
-      await writeTicketShard(tenantId, result);
+      await writeTicketShard(tenantId, savedTicket);
     }
-    if (conversationWatchChanged(prior, result)) {
-      await bumpChatWatch(chatWatchChannel("ticket", result.id));
+    if (conversationWatchChanged(priorTicket, savedTicket)) {
+      await bumpChatWatch(chatWatchChannel("ticket", savedTicket.id));
     }
-    return result;
+    return savedTicket;
   });
 }
 

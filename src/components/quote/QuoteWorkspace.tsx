@@ -349,8 +349,9 @@ export function QuoteWorkspace({
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
   const itemsDirty = !quoteItemsEqual(items, quote.items);
   const staffApplyDirty = statusDirty || itemsDirty;
+  const quoteRecordVersion = quote.recordVersion ?? 1;
   function withQuoteVersion<T extends object>(patch: T) {
-    return { ...patch, recordVersion: quote.recordVersion ?? 1 };
+    return { ...patch, recordVersion: quoteRecordVersion };
   }
 
   const primaryLabel =
