@@ -15,6 +15,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Staff part lifecycle catalog (one row per part number per tenant).
+ *
+ * GET `parts[]` items include `machineIds` and `machineNames` (union of every machine BOM
+ * listing that PN). Filters apply to the list only; `statusCounts` reflect the machine
+ * filter universe when `machineId` is set.
+ */
+
 function parseStatus(value: string | null): PartLifecycleStatus | "all" {
   if (!value || value === "all") {
     return "all";
