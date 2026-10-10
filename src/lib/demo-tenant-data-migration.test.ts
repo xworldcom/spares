@@ -4,11 +4,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
 import {
+  DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
   DEMO_TENANT_BUYER,
+  DEMO_TENANT_DATA_MIGRATION_B1,
   DEMO_TENANT_DATA_MIGRATION_V1,
+  applyDemoTenantB1Migration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
 import { setPersistenceForTests } from "./persistence.ts";
+import { buildTenantPartCatalog } from "./part-lifecycle.ts";
 import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
 import {
   findUserByEmail,
@@ -17,6 +21,7 @@ import {
   listTenantPartLifecycleCatalog,
   resetStoreMemoryForTests,
 } from "./store.ts";
+import type { StoredMachine } from "./store.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 const T = DEFAULT_TENANT_ID;
@@ -139,7 +144,61 @@ describe("demo tenant v1 migration (auto)", () => {
     assert.equal(buyer.passwordHash, "preexisting-hash");
   });
 
+  it("adds the shared bearing to palletizer for multi-machine catalog rows", async () => {
+    const noopPersist = async () => undefined;
+    const seed = {
+      users: [],
+      machines: [
+        {
+          id: FIXTURE_MACHINE_IDS.hardware,
+          tenantId: DEFAULT_TENANT_ID,
+          storedFileName: "hardware.glb",
+          name: "Hardware fixture",
+          parts: [
+            {
+              id: DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
+              name: "Bearing",
+              meshName: DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
+              qty: 1,
+            },
+          ],
+          unmatched: [],
+        },
+        {
+          id: FIXTURE_MACHINE_IDS.palletizer,
+          tenantId: DEFAULT_TENANT_ID,
+          storedFileName: "palletizer.glb",
+          name: "Palletizer",
+          parts: [{ id: "PN-MTR-3301", name: "Gearmotor", meshName: "PN-MTR-3301", qty: 1 }],
+          unmatched: [],
+        },
+      ],
+      partLifecycle: [],
+    };
+    const first = applyDemoTenantB1Migration(seed);
+    assert.ok(first.changed);
+    assert.ok(first.bearingAddedOnPalletizer);
+    assert.equal(first.db.dataMigrations?.demoTenantB1, DEMO_TENANT_DATA_MIGRATION_B1);
+    const palletizer = first.db.machines.find((row) => row.id === FIXTURE_MACHINE_IDS.palletizer);
+    assert.ok(palletizer?.unmatched?.some((row) => row.id === DEMO_MULTI_MACHINE_BEARING_PART_NUMBER));
+
+    const rows = buildTenantPartCatalog(
+      first.db.machines as StoredMachine[],
+      [],
+      T,
+    );
+    const bearing = rows.find((row) => row.partNumber === DEMO_MULTI_MACHINE_BEARING_PART_NUMBER);
+    assert.ok(bearing);
+    assert.equal(bearing.machineIds.length, 2);
+    assert.ok(bearing.machineNames.includes("Hardware fixture"));
+    assert.ok(bearing.machineNames.includes("Palletizer"));
+
+    const second = applyDemoTenantB1Migration(first.db);
+    assert.equal(second.changed, false);
+  });
+
   it("heals the Harware fixture machine name typo", async () => {
+    const noopPersist = async () => undefined;
     const seed = {
       users: [],
       machines: [

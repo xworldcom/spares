@@ -21,6 +21,7 @@ import {
   partLifecycleFiltersFromSearch,
   staffPartLifecycleHref,
 } from "@/lib/ui/part-lifecycle-url";
+import { PartLifecycleMachinesUsed } from "@/components/staff/PartLifecycleMachinesUsed";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -413,13 +414,20 @@ export function PartLifecyclePanel() {
                     >
                       {row.partNumber}
                     </span>
-                    <span
-                      className={`mt-0.5 block truncate text-[12px] ${
-                        active ? "row-on-ink-muted" : "spares-muted"
-                      }`}
-                    >
-                      {row.machineNames.join(" · ")}
-                    </span>
+                    <PartLifecycleMachinesUsed
+                      machineIds={row.machineIds}
+                      machineNames={row.machineNames}
+                      status={status}
+                      query={debouncedQuery}
+                      className={active ? "row-on-ink-muted" : undefined}
+                      mutedClassName={active ? "row-on-ink-muted" : "spares-muted"}
+                      onFilterMachine={(nextMachineId) => {
+                        if (!confirmDiscard()) {
+                          return;
+                        }
+                        setMachineId(nextMachineId);
+                      }}
+                    />
                   </button>
                   <span className="shrink-0 text-right text-[12px] font-medium">
                     {statusLabel(row.lifecycle.status)}
@@ -444,6 +452,18 @@ export function PartLifecyclePanel() {
           <p className="text-[15px] font-semibold tracking-tight">
             {selected.partNumber}
           </p>
+          <PartLifecycleMachinesUsed
+            machineIds={selected.machineIds}
+            machineNames={selected.machineNames}
+            status={status}
+            query={debouncedQuery}
+            onFilterMachine={(nextMachineId) => {
+              if (!confirmDiscard()) {
+                return;
+              }
+              setMachineId(nextMachineId);
+            }}
+          />
           <label htmlFor="part-lifecycle-status" className="spares-muted block text-xs font-medium">
             Status
             <select

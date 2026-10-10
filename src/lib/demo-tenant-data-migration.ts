@@ -1,10 +1,12 @@
 import {
   missingDemoLifecycleRows,
+  normalizePartNumber,
   type StoredPartLifecycle,
 } from "./part-lifecycle.ts";
 import { isSeedAllowed } from "./production-env.ts";
 import { FIXTURE_MACHINE_IDS, buildFixtureMachineById } from "./seed-fixtures.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
+import type { Part, UnmatchedPart } from "../types/index.ts";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -12,6 +14,19 @@ function normalizeEmail(email: string) {
 
 /** Recorded in catalog `dataMigrations` once v1 has completed successfully. */
 export const DEMO_TENANT_DATA_MIGRATION_V1 = 1;
+
+/** B1: shared bearing PN on hardware fixture + palletizer for multi-machine demo. */
+export const DEMO_TENANT_DATA_MIGRATION_B1 = 1;
+
+/** List-sourced bearing already on the hardware fixture; duplicated on palletizer via migration only. */
+export const DEMO_MULTI_MACHINE_BEARING_PART_NUMBER = "5972K325";
+
+const DEMO_MULTI_MACHINE_BEARING_UNMATCHED: UnmatchedPart = {
+  source: "list",
+  id: DEMO_MULTI_MACHINE_BEARING_PART_NUMBER,
+  name: "Shielded ball bearing, 8 mm ID x 22 mm OD x 7 mm W",
+  qty: 1,
+};
 
 /** Env var for optional demo-buyer creation outside this migration (never read here). */
 export const SPARES_DEMO_BUYER_PASSWORD_ENV = "SPARES_DEMO_BUYER_PASSWORD";
@@ -28,6 +43,7 @@ export const DEMO_TENANT_BUYER = {
 
 export type DataMigrations = {
   demoTenantV1?: number;
+  demoTenantB1?: number;
 };
 
 type DemoMigrationUser = {
@@ -43,10 +59,19 @@ type DemoMigrationUser = {
   sessionStamp?: number;
 };
 
+type DemoMigrationMachine = {
+  id: string;
+  tenantId?: string;
+  storedFileName: string;
+  name?: string;
+  parts?: Part[];
+  unmatched?: UnmatchedPart[];
+};
+
 type DemoMigrationDb = {
   dataMigrations?: DataMigrations;
   users: DemoMigrationUser[];
-  machines: Array<{ id: string; tenantId?: string; storedFileName: string; name?: string }>;
+  machines: DemoMigrationMachine[];
   partLifecycle?: StoredPartLifecycle[];
 };
 
@@ -64,6 +89,10 @@ function migrationMarker(db: DemoMigrationDb) {
   return db.dataMigrations?.demoTenantV1 === DEMO_TENANT_DATA_MIGRATION_V1;
 }
 
+function b1MigrationMarker(db: DemoMigrationDb) {
+  return db.dataMigrations?.demoTenantB1 === DEMO_TENANT_DATA_MIGRATION_B1;
+}
+
 function withMarker<T extends DemoMigrationDb>(db: T): T {
   return {
     ...db,
@@ -71,6 +100,78 @@ function withMarker<T extends DemoMigrationDb>(db: T): T {
       ...db.dataMigrations,
       demoTenantV1: DEMO_TENANT_DATA_MIGRATION_V1,
     },
+  };
+}
+
+function withB1Marker<T extends DemoMigrationDb>(db: T): T {
+  return {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoTenantB1: DEMO_TENANT_DATA_MIGRATION_B1,
+    },
+  };
+}
+
+function machineListsPartNumber(machine: DemoMigrationMachine, partNumber: string) {
+  const target = normalizePartNumber(partNumber);
+  for (const part of machine.parts ?? []) {
+    if (normalizePartNumber(part.id) === target) {
+      return true;
+    }
+  }
+  for (const row of machine.unmatched ?? []) {
+    if (row.id && normalizePartNumber(row.id) === target) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Idempotent B1 demo content: place the hardware-fixture bearing on palletizer too so staff
+ * catalog rows show two machines for one PN. Never removes or edits existing BOM lines.
+ */
+export function applyDemoTenantB1Migration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean; bearingAddedOnPalletizer: boolean } {
+  if (isSeedAllowed()) {
+    return { db, changed: false, bearingAddedOnPalletizer: false };
+  }
+  const palletizerId = FIXTURE_MACHINE_IDS.palletizer;
+  const index = db.machines.findIndex(
+    (machine) =>
+      machine.id === palletizerId &&
+      (machine.tenantId === undefined || machine.tenantId === DEFAULT_TENANT_ID),
+  );
+  if (index < 0) {
+    if (b1MigrationMarker(db)) {
+      return { db, changed: false, bearingAddedOnPalletizer: false };
+    }
+    return {
+      db: withB1Marker(db) as T,
+      changed: true,
+      bearingAddedOnPalletizer: false,
+    };
+  }
+  const palletizer = db.machines[index];
+  if (machineListsPartNumber(palletizer, DEMO_MULTI_MACHINE_BEARING_PART_NUMBER)) {
+    if (b1MigrationMarker(db)) {
+      return { db, changed: false, bearingAddedOnPalletizer: false };
+    }
+    return {
+      db: withB1Marker(db) as T,
+      changed: true,
+      bearingAddedOnPalletizer: false,
+    };
+  }
+  const unmatched = [...(palletizer.unmatched ?? []), DEMO_MULTI_MACHINE_BEARING_UNMATCHED];
+  const machines = db.machines.slice();
+  machines[index] = { ...palletizer, unmatched };
+  return {
+    db: withB1Marker({ ...db, machines }) as T,
+    changed: true,
+    bearingAddedOnPalletizer: true,
   };
 }
 
@@ -188,3 +289,4 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
     },
   };
 }
+

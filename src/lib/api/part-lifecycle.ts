@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 import type { PartLifecycleInfo, PartLifecycleStatus } from "@/types";
 import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
 
+/** One catalog row per PN; machines are the union of BOM references for that PN. */
 export type StaffPartCatalogRow = {
   partNumber: string;
   name: string;

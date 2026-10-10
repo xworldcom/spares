@@ -76,7 +76,10 @@ import {
 } from "./seed-fixtures.ts";
 import { canAccessMachine, normalizeAccessGrant, toPublicUser } from "./access.ts";
 import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
-import { applyDemoTenantV1Migration } from "./demo-tenant-data-migration.ts";
+import {
+  applyDemoTenantB1Migration,
+  applyDemoTenantV1Migration,
+} from "./demo-tenant-data-migration.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -1483,7 +1486,14 @@ async function runDemoTenantMigration(
   db: Database,
 ): Promise<{ db: Database; changed: boolean }> {
   const migrated = await applyDemoTenantV1Migration(db, "migration@oee360.com", persistModelBytes);
-  return migrated.changed ? { db: migrated.db, changed: true } : { db, changed: false };
+  let next = migrated.changed ? migrated.db : db;
+  let changed = migrated.changed;
+  const b1 = applyDemoTenantB1Migration(next);
+  if (b1.changed) {
+    next = b1.db;
+    changed = true;
+  }
+  return { db: next, changed };
 }
 
 /** One heal pass over a snapshot. Pure with respect to storage: callers decide whether to write. */
@@ -1505,7 +1515,8 @@ async function healSnapshot(
   const lifecycleChanged =
     (next.partLifecycle?.length ?? 0) !== (loaded.db.partLifecycle?.length ?? 0);
   const migrationsChanged =
-    next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1;
+    next.dataMigrations?.demoTenantV1 !== loaded.db.dataMigrations?.demoTenantV1 ||
+    next.dataMigrations?.demoTenantB1 !== loaded.db.dataMigrations?.demoTenantB1;
   const changed =
     next.machines.length !== loaded.db.machines.length ||
     loaded.numbersAssigned ||
@@ -3352,14 +3363,29 @@ export function ensureLifecycleDemoFixtures(
     }
     const db = await ensureCatalog();
     const migrated = await applyDemoTenantV1Migration(db, actorEmail, persistModelBytes);
-    if (migrated.changed && migrated.result) {
-      await writeDatabase(migrated.db);
+    let nextDb = migrated.changed ? migrated.db : db;
+    const b1 = applyDemoTenantB1Migration(nextDb);
+    if (b1.changed) {
+      nextDb = b1.db;
+    }
+    if ((migrated.changed || b1.changed) && migrated.result) {
+      await writeDatabase(nextDb);
       const { machineId, machineCreated, lifecycleAdded } = migrated.result;
       return {
         status: "ok",
         machineId,
         machineCreated,
         lifecycleAdded,
+      } as const;
+    }
+    if (b1.changed) {
+      await writeDatabase(nextDb);
+      const machineId = FIXTURE_MACHINE_IDS.hardware;
+      return {
+        status: "ok",
+        machineId,
+        machineCreated: false,
+        lifecycleAdded: [],
       } as const;
     }
     const machineId = FIXTURE_MACHINE_IDS.hardware;
