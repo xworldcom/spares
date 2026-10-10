@@ -23,9 +23,7 @@ export type Tenant = {
   /** When true, unknown Microsoft work emails at `ssoDomains` from an enrolled `ssoTenantIds`
    *  tenant are created as staff. Off by default. */
   ssoAutoroute?: boolean;
-  /** Host-facing Care address, for example cases@shape.com. */
   ticketEmailDisplay?: string;
-  /** Unique generated local-part for the inbound forward address. */
   ticketInboundLocalPart?: string;
 };
 
