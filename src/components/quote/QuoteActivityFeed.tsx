@@ -22,6 +22,7 @@ import { isAssistantActivity } from "@/lib/assistant/actor";
 import { messageActorLabel } from "@/lib/ui/message-actor-label";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import { displayChatMessageText } from "@/lib/ui/chat-message-text";
+import { expandActivitiesForChatDisplay } from "@/lib/ui/chat-message-segments";
 import { firstUnreadActivityIndex } from "@/lib/ui/conversation-unread";
 import { pinThreadScrollerToComposer } from "@/lib/ui/conversation-sheet-thread-pin";
 import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
@@ -54,6 +55,7 @@ export function QuoteActivityFeed({
   subtitle,
   layout = "card",
   customerReadReceipts,
+  actorNames,
   assistantAvailable,
   assistantPaused,
   onAssistantPausedChange,
@@ -72,6 +74,8 @@ export function QuoteActivityFeed({
   layout?: "card" | "sheet";
   /** Staff-only thread read receipts (customers on thread). */
   customerReadReceipts?: TicketCustomerReadReceipt[];
+  /** Optional display names for counterpart senders (e.g. customer profile names). */
+  actorNames?: Readonly<Record<string, string>>;
   assistantAvailable?: boolean;
   assistantPaused?: boolean;
   onAssistantPausedChange?: (paused: boolean) => Promise<void>;
@@ -130,11 +134,11 @@ export function QuoteActivityFeed({
     };
   }, [hasPendingSend]);
   const firstUnreadIndex = firstUnreadActivityIndex(activities, self, viewerReadAt);
-  const lastOwnIndex = activities.reduce(
-    (found, activity, index) =>
-      activityLane(activity, self) === "own" ? index : found,
-    -1,
-  );
+  const firstUnreadActivityId =
+    firstUnreadIndex !== null ? activities[firstUnreadIndex]?.id : null;
+  const lastOwnActivityId = [...activities]
+    .reverse()
+    .find((activity) => activityLane(activity, self) === "own")?.id;
 
   useEffect(() => {
     if (!bootstrappedRef.current) {
@@ -342,7 +346,13 @@ export function QuoteActivityFeed({
     layout === "sheet" ? "imsg-card imsg-card--sheet" : "imsg-card";
   const threadClass =
     layout === "sheet" ? "imsg-thread imsg-thread--fill" : "imsg-thread";
-  const threadActivities = [...activities, ...outgoing];
+  const labelNames: Record<string, string> = { ...actorNames };
+  for (const row of customerReadReceipts ?? []) {
+    if (!labelNames[row.email]) {
+      labelNames[row.email] = row.name?.trim() || displayNameFromEmail(row.email);
+    }
+  }
+  const threadActivities = expandActivitiesForChatDisplay([...activities, ...outgoing]);
 
   return (
     <section className={cardClass}>
@@ -357,7 +367,7 @@ export function QuoteActivityFeed({
           <li className="imsg-empty">No messages yet.</li>
         ) : (
           threadActivities.map((activity, index) => {
-            const pending = activity.id.startsWith("pending-");
+            const pending = activity.displayKey.startsWith("pending-");
             const lane = activityLane(activity, self);
             if (lane === "system") {
               return (
@@ -380,9 +390,8 @@ export function QuoteActivityFeed({
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
             const assistant = isAssistantActivity(activity);
-            const label = messageActorLabel(activity, self);
+            const label = messageActorLabel(activity, self, labelNames);
             const attachments = activity.attachments ?? [];
-            const bodyText = activity.text ? displayChatMessageText(activity.text) : "";
 
             const rowClass = [
               own ? "imsg-row imsg-own" : "imsg-row imsg-other",
@@ -395,11 +404,19 @@ export function QuoteActivityFeed({
 
             return (
               <li
-                key={activity.id}
+                key={activity.displayKey}
                 data-activity-id={activity.id}
                 className={rowClass}
-                data-unread-anchor={index === firstUnreadIndex ? "true" : undefined}
-                data-has-unread-divider={index === firstUnreadIndex ? "true" : undefined}
+                data-unread-anchor={
+                  firstUnreadActivityId && activity.id === firstUnreadActivityId && activity.segmentIndex === 0
+                    ? "true"
+                    : undefined
+                }
+                data-has-unread-divider={
+                  firstUnreadActivityId && activity.id === firstUnreadActivityId && activity.segmentIndex === 0
+                    ? "true"
+                    : undefined
+                }
                 data-stacked={stacked ? "true" : "false"}
                 data-end={lastInStack ? "true" : "false"}
                 onAnimationEnd={() => {
@@ -421,7 +438,9 @@ export function QuoteActivityFeed({
                     : undefined
                 }
               >
-                {index === firstUnreadIndex ? (
+                {firstUnreadActivityId &&
+                activity.id === firstUnreadActivityId &&
+                activity.segmentIndex === 0 ? (
                   <div
                     className="imsg-unread-divider"
                     role="status"
@@ -462,10 +481,12 @@ export function QuoteActivityFeed({
                       </div>
                     ) : null}
                   </div>
-                  {lastInStack ? (
-                    <p className="imsg-when">
+                  <p className="imsg-when">
                       {pending ? "Sending…" : formatWhen(activity.at)}
-                      {customerReadReceipts?.length && index === lastOwnIndex
+                      {customerReadReceipts?.length &&
+                      lastOwnActivityId &&
+                      activity.id === lastOwnActivityId &&
+                      activity.segmentIndex === activity.segmentCount - 1
                         ? (
                             <span className="imsg-when-read">
                               {" · "}
@@ -477,7 +498,6 @@ export function QuoteActivityFeed({
                           )
                         : null}
                     </p>
-                  ) : null}
                 </div>
               </li>
             );
