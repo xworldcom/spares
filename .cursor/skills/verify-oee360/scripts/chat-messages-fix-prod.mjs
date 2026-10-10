@@ -92,7 +92,9 @@ for (const [w, h, name, path] of [
     metrics.tallBubbleCount === 0 &&
     !metrics.ticketHeaderBlurb &&
     !metrics.consecutiveDuplicateBodies &&
-    (name.includes("customer-care") ? metrics.staffSenderMeta.length > 0 : true) &&
+    (name.includes("customer-care")
+      ? metrics.staffSenderMeta.length > 0 && metrics.staffSenderMeta !== "Staff"
+      : true) &&
     (!needsCareSubtitle || metrics.messagesSubtitle.includes("·"));
   proof.checks.push({ id: name, metrics, pass });
   if (!pass) proof.ok = false;

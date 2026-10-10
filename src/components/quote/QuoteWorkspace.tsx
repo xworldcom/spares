@@ -636,6 +636,7 @@ export function QuoteWorkspace({
           title="Messages"
           subtitle={desktop ? threadSubtitle ?? undefined : undefined}
           customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
+          actorDisplayNames={quote.actorDisplayNames}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
           assistantPaused={quote.assistantPaused}
           onAssistantPausedChange={role === "staff" ? onAssistantPaused : undefined}

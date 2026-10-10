@@ -210,6 +210,8 @@ export type Quote = {
   hasPoFile?: boolean;
   shipments: QuoteShipment[];
   activities: QuoteActivity[];
+  /** Display names for message senders (email → label). */
+  actorDisplayNames?: Record<string, string>;
   unread: boolean;
   /** Viewer read watermark for jumping to the first unread message in chat. */
   viewerReadAt?: string;
@@ -356,6 +358,8 @@ export type ServiceTicket = {
   customerEmail: string;
   /** Staff-only: plant contact for Messages subtitle (may differ from customerEmail on staff-opened probes). */
   threadCustomerEmail?: string;
+  /** Display names for message senders (email → label). */
+  actorDisplayNames?: Record<string, string>;
   activities: TicketActivity[];
   unread: boolean;
   /** Viewer read watermark for jumping to the first unread message in chat. */
