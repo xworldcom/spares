@@ -1,4 +1,4 @@
-import { hubTicketsHref, machineTicketsHref } from "./care.ts";
+import { hubTicketHref, hubTicketsHref, machineTicketsHref } from "./care.ts";
 import { machineQuotesHref } from "./machine-context.ts";
 import type { Role } from "../types/index.ts";
 
@@ -13,7 +13,24 @@ export function workListMachineIdFromSearchParam(
   return id ? id : undefined;
 }
 
-export function workListHubHref(kind: WorkListKind, role: Role, machineId?: string) {
+export type WorkListHubHrefOptions = {
+  /** Hub Care ticket detail — keep route when changing machine filter. */
+  hubTicketId?: string;
+};
+
+export function workListHubHref(
+  kind: WorkListKind,
+  role: Role,
+  machineId?: string,
+  options?: WorkListHubHrefOptions,
+) {
+  if (kind === "tickets" && options?.hubTicketId) {
+    const detail = hubTicketHref(options.hubTicketId);
+    if (!machineId) {
+      return detail;
+    }
+    return `${detail}?${WORK_LIST_MACHINE_QUERY}=${encodeURIComponent(machineId)}`;
+  }
   const base = workListAllHref(kind, role);
   if (!machineId) {
     return base;

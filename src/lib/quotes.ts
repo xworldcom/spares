@@ -420,7 +420,9 @@ export function quoteItemsEqual(left: QuoteItem[], right: QuoteItem[]) {
       item.supplierCost === other.supplierCost &&
       item.supplier === other.supplier &&
       item.leadTimeDays === other.leadTimeDays &&
-      item.note === other.note
+      item.note === other.note &&
+      item.lifecycle?.status === other.lifecycle?.status &&
+      item.lifecycle?.message === other.lifecycle?.message
     );
   });
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { NewTicketForm } from "@/components/care/NewTicketForm";
 import { TicketDetail } from "@/components/care/TicketDetail";
@@ -23,6 +24,16 @@ import {
 import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
 import { useMachineName } from "@/components/nav/useMachineName";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
+import {
+  careTicketsSortFromParam,
+  careTicketsStatusFromParam,
+  CARE_TICKETS_Q_QUERY,
+  CARE_TICKETS_SORT_QUERY,
+  CARE_TICKETS_STATUS_QUERY,
+  filterAndSortCareTickets,
+  type CareTicketsSort,
+  type CareTicketsStatusFilter,
+} from "@/lib/care-tickets-filter";
 import {
   workListMachineIdFromSearchParam,
   WORK_LIST_MACHINE_QUERY,
@@ -152,15 +163,64 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
 
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
-  const visibleTickets = hubMachineFilter
+  const machineScopedTickets = hubMachineFilter
     ? tickets.filter((ticket) => ticket.machineId === hubMachineFilter)
     : tickets;
 
+  const statusFilter = careTicketsStatusFromParam(
+    searchParams.get(CARE_TICKETS_STATUS_QUERY),
+  );
+  const sortKey = careTicketsSortFromParam(
+    searchParams.get(CARE_TICKETS_SORT_QUERY),
+  );
+  const searchQuery = searchParams.get(CARE_TICKETS_Q_QUERY) ?? "";
+
+  const replaceListQuery = useCallback(
+    (patch: Record<string, string | undefined>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(patch)) {
+        const trimmed = value?.trim();
+        if (!trimmed) {
+          next.delete(key);
+        } else {
+          next.set(key, trimmed);
+        }
+      }
+      const qs = next.toString();
+      const path =
+        ticketId && scope === "hub"
+          ? `${hubTicketHref(ticketId)}${qs ? `?${qs}` : ""}`
+          : `${listHref}${qs ? `?${qs}` : ""}`;
+      router.replace(path, { scroll: false });
+    },
+    [listHref, router, scope, searchParams, ticketId],
+  );
+
+  const visibleTickets = useMemo(
+    () =>
+      filterAndSortCareTickets(machineScopedTickets, {
+        query: searchQuery,
+        status: statusFilter,
+        sort: sortKey,
+      }),
+    [machineScopedTickets, searchQuery, sortKey, statusFilter],
+  );
+
   const selected = ticketId
-    ? visibleTickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ??
+    ? machineScopedTickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ??
       tickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ??
       null
     : null;
+
+  const listTickets = useMemo(() => {
+    if (!selected) {
+      return visibleTickets;
+    }
+    if (visibleTickets.some((ticket) => ticketRefMatches(ticket, selected.id))) {
+      return visibleTickets;
+    }
+    return [selected, ...visibleTickets];
+  }, [selected, visibleTickets]);
 
   const listPanel = (
     <div className="tickets-workspace-list">
@@ -169,6 +229,8 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           kind="tickets"
           machineId={scope === "machine" ? machineId : undefined}
           hubMachineId={hubMachineFilter}
+          hubTicketId={scope === "hub" ? ticketId : undefined}
+          hubTicketMachineId={selected?.machineId}
           headingLevel="h2"
           action={
             <button
@@ -204,7 +266,9 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
             refresh();
           }}
         />
-      ) : visibleTickets.length === 0 ? (
+      ) : machineScopedTickets.length === 0 &&
+        !searchQuery.trim() &&
+        statusFilter === "all" ? (
         <EmptyState
           title="No tickets yet"
           message={
@@ -216,14 +280,94 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           }
         />
       ) : (
-        <TicketsList
-          tickets={visibleTickets}
-          showMachine={showMachine}
-          selectedId={ticketId}
-          hrefFor={(ticket) => ticketHrefFor(scope, ticket)}
-          emptyTitle="No tickets yet"
-          emptyMessage="Open one when something needs service."
-        />
+        <>
+          <div className="tickets-workspace-filters">
+            <CatalogSearch
+              value={searchQuery}
+              onChange={(value) =>
+                replaceListQuery({ [CARE_TICKETS_Q_QUERY]: value })
+              }
+              placeholder="Search tickets"
+              ariaLabel="Search tickets"
+            />
+            <div className="tickets-workspace-filter-row">
+              {(
+                [
+                  { value: "all" as CareTicketsStatusFilter, label: "All" },
+                  { value: "open" as CareTicketsStatusFilter, label: "Open" },
+                  { value: "closed" as CareTicketsStatusFilter, label: "Closed" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={statusFilter === option.value}
+                  className={
+                    statusFilter === option.value ? "btn-primary" : "btn-soft"
+                  }
+                  onClick={() =>
+                    replaceListQuery({
+                      [CARE_TICKETS_STATUS_QUERY]:
+                        option.value === "all" ? undefined : option.value,
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+              <label className="tickets-workspace-sort">
+                <span className="sr-only">Sort tickets</span>
+                <select
+                  className="spares-field tickets-workspace-sort-select"
+                  value={sortKey}
+                  onChange={(event) =>
+                    replaceListQuery({
+                      [CARE_TICKETS_SORT_QUERY]:
+                        event.target.value === "recent"
+                          ? undefined
+                          : event.target.value,
+                    })
+                  }
+                  aria-label="Sort tickets"
+                >
+                  <option value="recent">Newest first</option>
+                  <option value="updated">Recently updated</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          {listTickets.length === 0 ? (
+            <EmptyState
+              title="No matching tickets"
+              message={
+                searchQuery || statusFilter !== "all"
+                  ? "Try a different search or filter."
+                  : hubMachineFilter
+                    ? "No tickets for this machine yet."
+                    : scope === "hub"
+                      ? "Open one when a machine needs service."
+                      : "Open one when this machine needs service."
+              }
+            />
+          ) : (
+            <TicketsList
+              tickets={listTickets}
+              showMachine={showMachine}
+              selectedId={ticketId}
+              pinnedOutsideFilterId={
+                selected &&
+                !visibleTickets.some((ticket) =>
+                  ticketRefMatches(ticket, selected.id),
+                )
+                  ? selected.id
+                  : undefined
+              }
+              hrefFor={(ticket) => ticketHrefFor(scope, ticket)}
+              emptyTitle="No tickets yet"
+              emptyMessage="Open one when something needs service."
+            />
+          )}
+        </>
       )}
     </div>
   );

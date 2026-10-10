@@ -3852,6 +3852,42 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   margin-bottom: 0.75rem;
 }
 
+.tickets-workspace-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.tickets-workspace-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tickets-workspace-filter-row .btn-primary,
+.tickets-workspace-filter-row .btn-soft {
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 0.75rem;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tickets-workspace-sort {
+  margin-left: auto;
+}
+
+.tickets-workspace-sort-select {
+  height: 2.25rem;
+  border-radius: 999px;
+  padding: 0 0.75rem;
+  font-size: 13px;
+}
+
 .tickets-workspace-new {
   display: inline-flex;
   height: 2.75rem;

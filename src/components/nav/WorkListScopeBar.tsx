@@ -22,6 +22,8 @@ export function WorkListScopeBar({
   kind,
   machineId,
   hubMachineId: hubMachineIdProp,
+  hubTicketId,
+  hubTicketMachineId,
   role = "customer",
   headingLevel = "h2",
   lede,
@@ -32,6 +34,9 @@ export function WorkListScopeBar({
   machineId?: string;
   /** Hub list `?machine=` filter from the parent route. */
   hubMachineId?: string;
+  /** Open hub ticket detail — preserved when changing machine filter. */
+  hubTicketId?: string;
+  hubTicketMachineId?: string;
   role?: Role;
   headingLevel?: "h1" | "h2";
   lede?: string;
@@ -93,6 +98,18 @@ export function WorkListScopeBar({
       }
       router.push(workListMachineHref(kind, nextId));
       return;
+    }
+    if (kind === "tickets" && hubTicketId) {
+      const keepDetail =
+        !nextId || (hubTicketMachineId && hubTicketMachineId === nextId);
+      if (keepDetail) {
+        router.push(
+          workListHubHref(kind, role, nextId || undefined, {
+            hubTicketId,
+          }),
+        );
+        return;
+      }
     }
     router.push(workListHubHref(kind, role, nextId || undefined));
   }
