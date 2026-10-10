@@ -112,11 +112,20 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
         if (!ticketRefMatches(row, patch.id)) {
           return row;
         }
-        if (row.unread === patch.unread && row.viewerReadAt === patch.viewerReadAt) {
+        if (
+          row.unread === patch.unread &&
+          row.viewerReadAt === patch.viewerReadAt &&
+          row.status === patch.status
+        ) {
           return row;
         }
         changed = true;
-        return { ...row, unread: patch.unread, viewerReadAt: patch.viewerReadAt };
+        return {
+          ...row,
+          unread: patch.unread,
+          viewerReadAt: patch.viewerReadAt,
+          status: patch.status,
+        };
       });
       return changed ? next : rows;
     });

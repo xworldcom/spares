@@ -171,7 +171,9 @@ export function TicketDetail({
     setBusy(true);
     setError(null);
     try {
-      setTicket(await updateTicketStatus(ticket.id, status));
+      const next = await updateTicketStatus(ticket.id, status);
+      setTicket(next);
+      onTicketListPatch?.(next);
       onUpdated?.();
     } catch (cause) {
       setError(errorMessage(cause, "Could not update status."));

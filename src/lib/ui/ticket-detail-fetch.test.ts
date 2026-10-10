@@ -23,5 +23,6 @@ describe("TicketDetail fetch loop guards", () => {
       "utf8",
     );
     assert.match(src, /return changed \? next : rows/);
+    assert.match(src, /row\.status === patch\.status/);
   });
 });
