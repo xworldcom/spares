@@ -21,13 +21,17 @@ import type { Role } from "@/types";
 export function WorkListScopeBar({
   kind,
   machineId,
+  hubMachineId: hubMachineIdProp,
   role = "customer",
   headingLevel = "h2",
   lede,
   action,
 }: {
   kind: WorkListKind;
+  /** Machine-scoped route (e.g. /machines/:id/quotes). */
   machineId?: string;
+  /** Hub list `?machine=` filter from the parent route. */
+  hubMachineId?: string;
   role?: Role;
   headingLevel?: "h1" | "h2";
   lede?: string;
@@ -35,8 +39,10 @@ export function WorkListScopeBar({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const routeScoped = Boolean(machineId);
   const hubMachineId =
     machineId ??
+    hubMachineIdProp ??
     workListMachineIdFromSearchParam(searchParams.get(WORK_LIST_MACHINE_QUERY));
   const machineName = useMachineName(hubMachineId ?? null);
   const [machineOptions, setMachineOptions] = useState<{ id: string; name: string }[]>(
@@ -44,8 +50,7 @@ export function WorkListScopeBar({
   );
   const allHref = workListAllHref(kind, role);
   const allLabel = workListAllLabel(kind);
-  const routeScoped = Boolean(machineId);
-  const hubFiltered = Boolean(hubMachineId);
+  const hubFiltered = Boolean(hubMachineId) && !routeScoped;
   const title = workListTitle(kind, hubFiltered ? machineName : null, hubFiltered);
   const Heading = headingLevel;
 

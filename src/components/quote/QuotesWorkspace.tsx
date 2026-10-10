@@ -42,6 +42,7 @@ export function QuotesWorkspace({
         <WorkListScopeBar
           kind="quotes"
           machineId={machineId}
+          hubMachineId={scoped ? undefined : hubMachineId}
           role={role}
           headingLevel={scoped ? "h2" : "h1"}
           action={
