@@ -231,7 +231,12 @@ export function applyDemoTenantB2StageQuotesMigration<T extends DemoMigrationDb>
     return { db, changed: false, quotesAdded: 0 };
   }
   const tenantId = DEFAULT_TENANT_ID;
-  const machineId = preferredDemoStageMachineId(db.machines);
+  const machineId = preferredDemoStageMachineId(
+    db.machines.map((machine) => ({
+      id: machine.id,
+      parts: machine.parts ?? [],
+    })),
+  );
   if (!machineId) {
     if (b2MigrationMarker(db)) {
       return { db, changed: false, quotesAdded: 0 };
