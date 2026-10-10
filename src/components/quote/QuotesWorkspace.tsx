@@ -1,10 +1,12 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
 import { QuotesList } from "@/components/quote/QuotesList";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
+import { workListMachineIdFromSearchParam, WORK_LIST_MACHINE_QUERY } from "@/lib/work-list-scope";
 import type { Role } from "@/types";
 
 export function MachineQuotesWorkspace({ machineId }: { machineId: string }) {
@@ -27,8 +29,12 @@ export function QuotesWorkspace({
   role?: Role;
   machineId?: string;
 }) {
+  const searchParams = useSearchParams();
   const [creating, setCreating] = useState(false);
   const scoped = Boolean(machineId);
+  const hubMachineId =
+    machineId ??
+    workListMachineIdFromSearchParam(searchParams.get(WORK_LIST_MACHINE_QUERY));
 
   return (
     <div className={scoped ? "space-y-4" : "catalog-page"}>
@@ -60,7 +66,7 @@ export function QuotesWorkspace({
           onCancel={() => setCreating(false)}
         />
       ) : null}
-      <QuotesList role={role} machineId={machineId} />
+      <QuotesList role={role} machineId={hubMachineId} />
     </div>
   );
 }

@@ -47,6 +47,7 @@ export async function getQuote(idOrNumber: string): Promise<Quote> {
   return readIfWarm(`quote:${idOrNumber}:view`, async () => {
     const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`);
     const quote = data.quote;
+    invalidateWarmRead("quotes:list");
     warmRead(`quote:${quote.id}:view`, () => Promise.resolve(quote));
     warmRead(`quote:${String(quote.number)}:view`, () => Promise.resolve(quote));
     return quote;

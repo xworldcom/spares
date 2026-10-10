@@ -89,8 +89,12 @@ async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
     if (init?.signal?.aborted) {
       throw cause;
     }
+    const offline =
+      typeof navigator !== "undefined" && navigator.onLine === false;
     throw new ApiError(
-      "Could not reach the API. It may not be available on this preview yet.",
+      offline
+        ? "You appear to be offline. Check your connection and try again."
+        : "Could not reach OEE360. Check your network or VPN, or try again in a moment.",
       0,
     );
   }

@@ -193,9 +193,21 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }, [trayNote, trayNoteStorageKey, linesKey, trayStorageKey]);
 
   const lineIdsKey = lines.map((line) => line.part.id).join("\n");
+  const lifecycleIdsKey = [lineIdsKey, selectedPart?.id ?? ""].filter(Boolean).join("\n");
+
+  const selectedPartForSheet = useMemo(() => {
+    if (!selectedPart) {
+      return null;
+    }
+    const lookedUp = lifecycleById[selectedPart.id];
+    if (!lookedUp) {
+      return selectedPart;
+    }
+    return { ...selectedPart, lifecycle: lookedUp };
+  }, [selectedPart, lifecycleById]);
 
   useEffect(() => {
-    const ids = lineIdsKey ? lineIdsKey.split("\n") : [];
+    const ids = lifecycleIdsKey ? lifecycleIdsKey.split("\n").filter(Boolean) : [];
     const missing = ids.filter((id) => !lifecycleAsked.current.has(id));
     if (missing.length === 0) {
       return;
@@ -214,7 +226,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           lifecycleAsked.current.delete(id);
         }
       });
-  }, [lineIdsKey]);
+  }, [lifecycleIdsKey]);
 
   const trayLines = useMemo(
     () => resolveTrayLines(lines, machine?.parts, lifecycleById),
@@ -651,14 +663,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             )}
           </section>
         ) : null}
-        {selectedPart && (view === "model" || (isCustomer && view === "list")) ? (
+        {selectedPartForSheet && (view === "model" || (isCustomer && view === "list")) ? (
           <SelectedPartSheet
-            part={selectedPart}
+            part={selectedPartForSheet}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
             isolatedViewPart={
               isolatedId
                 ? (joinedParts.find((item) => item.id === isolatedId) ??
-                  (selectedPart?.id === isolatedId ? selectedPart : null))
+                  (selectedPartForSheet?.id === isolatedId ? selectedPartForSheet : null))
                 : null
             }
             onHide={hideSelected}

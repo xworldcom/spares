@@ -212,6 +212,10 @@ export function BugReportControl() {
               <p id={titleId} className="text-sm font-medium">
                 Report bug
               </p>
+              <p className="spares-muted mt-1 text-xs leading-snug">
+                Send includes a screenshot of this page and recent app logs. Describe
+                what you expected instead.
+              </p>
               <label htmlFor="bug-report-description" className="sr-only">
                 What is going on?
               </label>

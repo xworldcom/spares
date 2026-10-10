@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { NewTicketForm } from "@/components/care/NewTicketForm";
@@ -23,6 +23,10 @@ import {
 import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
 import { useMachineName } from "@/components/nav/useMachineName";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
+import {
+  workListMachineIdFromSearchParam,
+  WORK_LIST_MACHINE_QUERY,
+} from "@/lib/work-list-scope";
 import type { ServiceTicket } from "@/types";
 
 type TicketsWorkspaceProps = {
@@ -47,6 +51,11 @@ function listHrefFor(scope: TicketsWorkspaceProps["scope"], machineId?: string) 
 
 export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspaceProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const hubMachineFilter =
+    scope === "hub"
+      ? workListMachineIdFromSearchParam(searchParams.get(WORK_LIST_MACHINE_QUERY))
+      : undefined;
   const desktop = useDesktopStage();
   const { refresh: refreshCareAlerts } = useCareAlerts();
   const [tickets, setTickets] = useState<ServiceTicket[]>([]);
@@ -55,7 +64,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
   const listHref = listHrefFor(scope, machineId);
-  const showMachine = scope === "hub";
+  const showMachine = scope === "hub" && !hubMachineFilter;
   const machineName = useMachineName(
     scope === "machine" ? (machineId ?? null) : null,
   );
@@ -143,8 +152,14 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
 
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
+  const visibleTickets = hubMachineFilter
+    ? tickets.filter((ticket) => ticket.machineId === hubMachineFilter)
+    : tickets;
+
   const selected = ticketId
-    ? tickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ?? null
+    ? visibleTickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ??
+      tickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ??
+      null
     : null;
 
   const listPanel = (
@@ -188,18 +203,20 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
             refresh();
           }}
         />
-      ) : tickets.length === 0 ? (
+      ) : visibleTickets.length === 0 ? (
         <EmptyState
           title="No tickets yet"
           message={
-            scope === "hub"
-              ? "Open one when a machine needs service."
-              : "Open one when this machine needs service."
+            hubMachineFilter
+              ? "No tickets for this machine yet."
+              : scope === "hub"
+                ? "Open one when a machine needs service."
+                : "Open one when this machine needs service."
           }
         />
       ) : (
         <TicketsList
-          tickets={tickets}
+          tickets={visibleTickets}
           showMachine={showMachine}
           selectedId={ticketId}
           hrefFor={(ticket) => ticketHrefFor(scope, ticket)}

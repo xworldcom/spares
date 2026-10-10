@@ -216,7 +216,20 @@ export function QuoteLines({
                     }
                     className={inputClass}
                     placeholder="0.00"
+                    aria-invalid={!hasSellPrice(item)}
+                    aria-describedby={
+                      !hasSellPrice(item) ? `sell-hint-${item.id}` : undefined
+                    }
                   />
+                  {!hasSellPrice(item) ? (
+                    <p
+                      id={`sell-hint-${item.id}`}
+                      className="mt-1 text-xs text-[#e8c27a]"
+                      role="status"
+                    >
+                      Enter a sell price above zero before quoting.
+                    </p>
+                  ) : null}
                 </Field>
                 <Field label="Lead time (days)">
                   <input
