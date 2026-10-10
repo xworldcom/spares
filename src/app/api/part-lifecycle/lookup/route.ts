@@ -36,12 +36,10 @@ export async function GET(request: Request) {
   const parts: Record<string, ReturnType<typeof publicLifecycle>> = {};
   for (const partNumber of unique) {
     const fields = effectiveLifecycle(map.get(partNumber));
-    const publicFields =
-      auth.user.role === "staff"
-        ? fields
-        : publicLifecycle(fields);
-    if (publicFields) {
-      parts[partNumber] = publicFields;
+    if (auth.user.role === "staff") {
+      parts[partNumber] = fields;
+    } else {
+      parts[partNumber] = publicLifecycle(fields) ?? { status: fields.status };
     }
   }
   return json({ parts });

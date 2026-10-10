@@ -130,7 +130,11 @@ export function resolveTrayLines<T extends { part: Part; qty: number }>(
   return lines.map((line) => {
     const full = byId.get(line.part.id);
     const base = full ?? line.part;
-    const lifecycle = lookup[line.part.id] ?? full?.lifecycle ?? line.part.lifecycle;
-    return { ...line, part: lifecycle ? { ...base, lifecycle } : base };
+    const lifecycle =
+      lookup[line.part.id] ??
+      full?.lifecycle ??
+      line.part.lifecycle ??
+      ({ status: "unknown" } as const);
+    return { ...line, part: { ...base, lifecycle } };
   });
 }

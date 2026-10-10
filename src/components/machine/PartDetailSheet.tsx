@@ -2,11 +2,14 @@
 
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
 import { partSheetRows } from "@/lib/ui/part-sheet";
+import type { PartLifecycleInfo } from "@/types";
 
 /** Customer part sheet: only fields present on the part record, never invented ones. */
 export function PartDetailSheet({ part }: { part: Part }) {
   const { rows, extra } = partSheetRows(part);
+  const lifecycle: PartLifecycleInfo = part.lifecycle ?? { status: "unknown" };
 
   return (
     <div className="space-y-2" data-part-detail="">
@@ -19,18 +22,17 @@ export function PartDetailSheet({ part }: { part: Part }) {
             <dd className="text-[13px] leading-snug break-words">{row.value}</dd>
           </div>
         ))}
-        {part.lifecycle ? (
-          <div>
-            <dt className="chrome-quiet text-[11px] font-medium tracking-wide uppercase">
-              Lifecycle
-            </dt>
-            <dd>
-              <PartLifecycleNotice lifecycle={part.lifecycle} />
-            </dd>
-          </div>
-        ) : null}
+        <div data-part-lifecycle="">
+          <dt className="chrome-quiet text-[11px] font-medium tracking-wide uppercase">
+            Lifecycle
+          </dt>
+          <dd className="text-[13px] leading-snug">
+            <span className="sr-only">{partLifecycleStatusLabel(lifecycle.status)}</span>
+            <PartLifecycleNotice lifecycle={lifecycle} />
+          </dd>
+        </div>
       </dl>
-      {!extra && !part.lifecycle ? (
+      {!extra ? (
         <p className="chrome-quiet text-[12px]" data-part-detail-empty="">
           No other details on file for this part.
         </p>

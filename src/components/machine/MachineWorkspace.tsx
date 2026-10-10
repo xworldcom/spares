@@ -85,6 +85,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [undoRemove, setUndoRemove] = useState<TrayLine | null>(null);
   const addToastTimer = useRef<number | null>(null);
   const undoRemoveTimer = useRef<number | null>(null);
+  const UNDO_REMOVE_MS = 12_000;
+  const trayPersistRef = useRef({
+    storageKey: null as string | null,
+    linesKey: null as string | null,
+  });
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
   const desktopStage = useDesktopStage();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -219,9 +224,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     void lookupPartLifecycle(missing)
       .then((map) => {
-        if (Object.keys(map).length > 0) {
-          setLifecycleById((current) => ({ ...current, ...map }));
-        }
+        setLifecycleById((current) => {
+          const next = { ...current, ...map };
+          for (const id of missing) {
+            if (!next[id]) {
+              next[id] = { status: "unknown" };
+            }
+          }
+          return next;
+        });
       })
       .catch(() => {
         for (const id of missing) {
@@ -236,14 +247,26 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   );
 
   useEffect(() => {
-    if (!trayStorageKey || linesKey !== trayStorageKey) {
+    trayPersistRef.current = { storageKey: trayStorageKey, linesKey };
+  }, [trayStorageKey, linesKey]);
+
+  const persistTrayLinesNow = useCallback((next: TrayLine[]) => {
+    const { storageKey, linesKey: readyKey } = trayPersistRef.current;
+    if (!storageKey || readyKey !== storageKey) {
       return;
     }
     writePersistedTrayLines(
-      trayStorageKey,
-      lines.map((line) => trayLineToPersisted(line.part, line.qty)),
+      storageKey,
+      next.map((line) => trayLineToPersisted(line.part, line.qty)),
     );
-  }, [lines, linesKey, trayStorageKey]);
+  }, []);
+
+  useEffect(() => {
+    if (!trayStorageKey || linesKey !== trayStorageKey) {
+      return;
+    }
+    persistTrayLinesNow(lines);
+  }, [lines, linesKey, trayStorageKey, persistTrayLinesNow]);
 
   const hiddenStorageKey = user?.tenantId ? hiddenPartsStorageKey(user.tenantId, machineId) : null;
 
@@ -337,15 +360,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         undoRemoveTimer.current = window.setTimeout(() => {
           setUndoRemove(null);
           undoRemoveTimer.current = null;
-        }, 8000);
+        }, UNDO_REMOVE_MS);
         const next = current.filter((line) => line.part.id !== partId);
         if (next.length === 0) {
           setTrayNote("");
         }
+        persistTrayLinesNow(next);
         return next;
       });
     },
-    [],
+    [persistTrayLinesNow],
   );
 
   const undoTrayRemove = useCallback(() => {
@@ -356,10 +380,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       if (current.some((line) => line.part.id === undoRemove.part.id)) {
         return current;
       }
-      return [...current, undoRemove];
+      const next = [...current, undoRemove];
+      persistTrayLinesNow(next);
+      return next;
     });
     clearUndoRemove();
-  }, [undoRemove, clearUndoRemove]);
+  }, [undoRemove, clearUndoRemove, persistTrayLinesNow]);
 
   const flashAddToast = useCallback((label: string) => {
     setAddToast(label);

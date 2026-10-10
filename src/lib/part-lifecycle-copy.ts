@@ -1,12 +1,23 @@
 import { formatCalendarDay } from "./format-calendar-day.ts";
 import type { PartLifecycleInfo } from "@/types";
 
-export function partLifecycleStatusHeadline(status: PartLifecycleInfo["status"]) {
+/** Customer-facing status label for every lifecycle state (never blank). */
+export function partLifecycleStatusLabel(status: PartLifecycleInfo["status"]) {
   if (status === "obsolete") {
     return "Discontinued";
   }
   if (status === "announced") {
     return "Discontinuation announced";
+  }
+  if (status === "active") {
+    return "Active";
+  }
+  return "Unknown";
+}
+
+export function partLifecycleStatusHeadline(status: PartLifecycleInfo["status"]) {
+  if (status === "obsolete" || status === "announced") {
+    return partLifecycleStatusLabel(status);
   }
   return null;
 }

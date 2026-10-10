@@ -113,14 +113,11 @@ export function ManualQuoteLines({
     if (lines.length > 0) {
       return;
     }
-    if (pickSeed?.id) {
-      return;
-    }
     setPartNumber("");
     setDescription("");
     setQty("1");
     setError(null);
-  }, [lines.length, pickSeed?.id]);
+  }, [lines.length]);
 
   function addLine() {
     const id = lineId(partNumber, description);
@@ -179,7 +176,7 @@ export function ManualQuoteLines({
                 <button
                   type="button"
                   onClick={() => onRemove(line.id)}
-                  className="spares-muted inline-flex h-11 items-center rounded-full px-3 text-sm font-medium"
+                  className="manual-quote-remove spares-muted inline-flex h-11 shrink-0 items-center rounded-full px-3 text-sm font-medium"
                 >
                   Remove
                 </button>

@@ -63,7 +63,7 @@ export function PartsBom({
   }, [parts]);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return parts.filter((part) => {
+    const base = parts.filter((part) => {
       if (category && (part.category ?? "") !== category) {
         return false;
       }
@@ -84,7 +84,15 @@ export function PartsBom({
         .toLowerCase();
       return hay.includes(needle);
     });
-  }, [parts, query, category]);
+    if (!selectedPartId) {
+      return base;
+    }
+    const selected = parts.find((part) => part.id === selectedPartId);
+    if (selected && !base.some((part) => part.id === selectedPartId)) {
+      return [selected, ...base];
+    }
+    return base;
+  }, [parts, query, category, selectedPartId]);
 
   if (parts.length === 0) {
     return (

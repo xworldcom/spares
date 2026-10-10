@@ -284,7 +284,10 @@ export function enrichPartsWithLifecycle(
       return { ...part, lifecycle: fields };
     }
     const publicFields = publicLifecycle(fields);
-    return publicFields ? { ...part, lifecycle: publicFields } : part;
+    return {
+      ...part,
+      lifecycle: publicFields ?? { status: fields.status },
+    };
   });
 }
 
