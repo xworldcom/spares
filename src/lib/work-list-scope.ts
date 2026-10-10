@@ -4,6 +4,23 @@ import type { Role } from "../types/index.ts";
 
 export type WorkListKind = "quotes" | "tickets";
 
+export const WORK_LIST_MACHINE_QUERY = "machine";
+
+export function workListMachineIdFromSearchParam(
+  value: string | null | undefined,
+): string | undefined {
+  const id = value?.trim();
+  return id ? id : undefined;
+}
+
+export function workListHubHref(kind: WorkListKind, role: Role, machineId?: string) {
+  const base = workListAllHref(kind, role);
+  if (!machineId) {
+    return base;
+  }
+  return `${base}?${WORK_LIST_MACHINE_QUERY}=${encodeURIComponent(machineId)}`;
+}
+
 export function workListNoun(kind: WorkListKind) {
   return kind === "quotes" ? "quotes" : "tickets";
 }

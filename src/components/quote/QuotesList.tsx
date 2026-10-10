@@ -64,6 +64,16 @@ export function QuotesList({
   }, [reloadKey, refresh]);
 
   useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        setReloadKey((key) => key + 1);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  useEffect(() => {
     if (quotes.length === 0) {
       return;
     }

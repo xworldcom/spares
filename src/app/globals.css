@@ -2168,6 +2168,30 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   .imsg-card:has(+ .quote-staff-apply) {
     margin-bottom: 5.5rem;
   }
+
+  .quote-workspace .conversation-sheet-spacer {
+    height: calc(var(--reply-h, 17.5rem) + 5.75rem);
+  }
+
+  .quote-workspace .quote-progress-track {
+    scroll-padding-inline: 0.5rem;
+  }
+
+  .quote-workspace .quote-progress-step {
+    flex: 0 0 3.65rem;
+    min-width: 3.65rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .quote-workspace .quote-progress-step {
+    flex: 0 0 3.35rem;
+    min-width: 3.35rem;
+  }
+
+  .quote-workspace .quote-progress-label-short {
+    font-size: 9px;
+  }
 }
 
 .catalog-page {

@@ -179,7 +179,21 @@ export function HostTenantDirectory() {
       ) : null}
 
       {type === "customer" ? (
-        <AccountsList reloadKey={reloadKey} />
+        <>
+          <p className="spares-muted mb-3 max-w-2xl text-sm leading-relaxed">
+            <span className="font-medium text-[var(--spares-ink)]">Customers</span>{" "}
+            are companies (sites and machines). Plant sign-ins live under{" "}
+            <button
+              type="button"
+              className="font-medium text-[var(--spares-ink)] underline-offset-2 hover:underline"
+              onClick={() => setType("person")}
+            >
+              People
+            </button>
+            .
+          </p>
+          <AccountsList reloadKey={reloadKey} />
+        </>
       ) : type === "staff" ? (
         <StaffTeamPanel onCreated={refresh} />
       ) : type === "person" ? (

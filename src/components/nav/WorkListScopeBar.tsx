@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useMachineName } from "@/components/nav/useMachineName";
@@ -9,8 +9,11 @@ import { listMachines } from "@/lib/api/machines";
 import {
   workListAllHref,
   workListAllLabel,
+  workListHubHref,
   workListMachineHref,
+  workListMachineIdFromSearchParam,
   workListTitle,
+  WORK_LIST_MACHINE_QUERY,
   type WorkListKind,
 } from "@/lib/work-list-scope";
 import type { Role } from "@/types";
@@ -31,18 +34,23 @@ export function WorkListScopeBar({
   action?: ReactNode;
 }) {
   const router = useRouter();
-  const machineName = useMachineName(machineId ?? null);
+  const searchParams = useSearchParams();
+  const hubMachineId =
+    machineId ??
+    workListMachineIdFromSearchParam(searchParams.get(WORK_LIST_MACHINE_QUERY));
+  const machineName = useMachineName(hubMachineId ?? null);
   const [machineOptions, setMachineOptions] = useState<{ id: string; name: string }[]>(
     [],
   );
   const allHref = workListAllHref(kind, role);
   const allLabel = workListAllLabel(kind);
-  const scoped = Boolean(machineId);
-  const title = workListTitle(kind, scoped ? machineName : null, scoped);
+  const routeScoped = Boolean(machineId);
+  const hubFiltered = Boolean(hubMachineId);
+  const title = workListTitle(kind, hubFiltered ? machineName : null, hubFiltered);
   const Heading = headingLevel;
 
   useEffect(() => {
-    if (scoped) {
+    if (routeScoped) {
       return;
     }
     let cancelled = false;
@@ -63,9 +71,9 @@ export function WorkListScopeBar({
     return () => {
       cancelled = true;
     };
-  }, [scoped]);
+  }, [routeScoped]);
 
-  if (scoped && !machineName) {
+  if (routeScoped && !machineName) {
     return (
       <div className="work-list-scope">
         <LoadingState label="Loading…" />
@@ -74,16 +82,22 @@ export function WorkListScopeBar({
   }
 
   function onPickMachine(nextId: string) {
-    if (!nextId) {
+    if (routeScoped) {
+      if (!nextId) {
+        return;
+      }
+      router.push(workListMachineHref(kind, nextId));
       return;
     }
-    router.push(workListMachineHref(kind, nextId));
+    router.push(workListHubHref(kind, role, nextId || undefined));
   }
+
+  const backHref = routeScoped ? allHref : workListHubHref(kind, role);
 
   return (
     <div className="work-list-scope">
-      {scoped ? (
-        <PrefetchLink href={allHref} className="work-list-scope-back">
+      {routeScoped || hubFiltered ? (
+        <PrefetchLink href={backHref} className="work-list-scope-back">
           <span aria-hidden="true">‹</span> {allLabel}
         </PrefetchLink>
       ) : null}
@@ -91,17 +105,15 @@ export function WorkListScopeBar({
         <div className="work-list-scope-copy">
           <Heading>{title}</Heading>
           {lede ? <p className="work-list-scope-lede">{lede}</p> : null}
-          {!scoped ? (
+          {!routeScoped ? (
             <label className="work-list-scope-filter">
               <select
                 className="work-list-scope-filter-select"
-                value=""
+                value={hubMachineId ?? ""}
                 onChange={(event) => onPickMachine(event.target.value)}
                 aria-label="Filter by machine"
               >
-                <option value="" disabled>
-                  All machines
-                </option>
+                <option value="">All machines</option>
                 {machineOptions.map((machine) => (
                   <option key={machine.id} value={machine.id}>
                     {machine.name}

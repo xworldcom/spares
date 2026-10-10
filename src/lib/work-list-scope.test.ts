@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   workListAllHref,
   workListAllLabel,
+  workListHubHref,
   workListMachineHref,
   workListTitle,
 } from "./work-list-scope.ts";
@@ -49,6 +50,16 @@ describe("workListTitle", () => {
   it("uses the bare noun while a scoped name is loading", () => {
     assert.equal(workListTitle("quotes", null, true), "Quotes");
     assert.equal(workListTitle("tickets", undefined, true), "Tickets");
+  });
+});
+
+describe("workListHubHref", () => {
+  it("adds a machine filter query on hub lists", () => {
+    assert.equal(
+      workListHubHref("tickets", "staff", "palletizer"),
+      "/care/tickets?machine=palletizer",
+    );
+    assert.equal(workListHubHref("quotes", "staff"), "/staff/quotes");
   });
 });
 
