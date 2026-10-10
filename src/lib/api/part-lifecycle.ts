@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { PartLifecycleInfo, PartLifecycleStatus } from "@/types";
+import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
 
 export type StaffPartCatalogRow = {
   partNumber: string;
@@ -12,16 +13,20 @@ export type StaffPartCatalogRow = {
 export type StaffPartLifecycleResponse = {
   tenantId: string;
   parts: StaffPartCatalogRow[];
+  statusCounts: PartLifecycleStatusCounts;
   machines: Array<{ id: string; name: string; siteId?: string }>;
   generatedAt: string;
 };
 
-export async function fetchStaffPartLifecycle(filters?: {
-  status?: PartLifecycleStatus | "all";
-  machineId?: string;
-  q?: string;
-  tenantId?: string;
-}) {
+export async function fetchStaffPartLifecycle(
+  filters?: {
+    status?: PartLifecycleStatus | "all";
+    machineId?: string;
+    q?: string;
+    tenantId?: string;
+  },
+  init?: Pick<RequestInit, "signal">,
+) {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== "all") {
     params.set("status", filters.status);
@@ -38,6 +43,7 @@ export async function fetchStaffPartLifecycle(filters?: {
   const query = params.toString();
   return apiFetch<StaffPartLifecycleResponse>(
     `/api/staff/part-lifecycle${query ? `?${query}` : ""}`,
+    init,
   );
 }
 
@@ -68,7 +74,12 @@ export async function bulkSaveStaffPartLifecycle(input: {
     `/api/staff/part-lifecycle${query}`,
     {
       method: "PATCH",
-      body: JSON.stringify({ updates: input.updates }),
+      body: JSON.stringify({
+        updates: input.updates.map(({ partNumber, patch }) => ({
+          partNumber,
+          ...patch,
+        })),
+      }),
     },
   );
 }

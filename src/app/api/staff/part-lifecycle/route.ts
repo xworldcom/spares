@@ -2,8 +2,10 @@ import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import type { PartLifecycleStatus } from "@/lib/part-lifecycle";
 import {
+  filterCatalogRows,
   parsePartLifecycleBulk,
   parsePartLifecyclePatch,
+  tallyPartLifecycleStatusCounts,
 } from "@/lib/part-lifecycle";
 import {
   listMachines,
@@ -48,14 +50,17 @@ export async function GET(request: Request) {
   const machineId = url.searchParams.get("machineId")?.trim() || undefined;
   const query = url.searchParams.get("q")?.trim() || undefined;
 
-  const [rows, machines] = await Promise.all([
-    listTenantPartLifecycleCatalog(tenantId, { status, machineId, query }),
+  const [catalogRows, machines] = await Promise.all([
+    listTenantPartLifecycleCatalog(tenantId, { machineId, query }),
     listMachines(tenantId),
   ]);
+  const statusCounts = tallyPartLifecycleStatusCounts(catalogRows);
+  const parts = filterCatalogRows(catalogRows, { status, machineId, query });
 
   return json({
     tenantId,
-    parts: rows,
+    parts,
+    statusCounts,
     machines: machines.map((machine) => ({
       id: machine.id,
       name: machine.name,

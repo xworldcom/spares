@@ -1,6 +1,9 @@
 export const PENDING_SEND_LEAVE_PROMPT =
   "Your message is still sending. Leave this page anyway?";
 
+export const UNSAVED_QUOTE_LEAVE_PROMPT =
+  "You have unsaved quote changes. Leave this page anyway?";
+
 /** True when following `anchor` would client-navigate to a different in-app page. */
 export function leavesCurrentPage(
   anchor: { href: string; target?: string; hasAttribute?: (name: string) => boolean },

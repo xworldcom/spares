@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import type { PartLifecycleStatus } from "@/types";
 import {
@@ -15,12 +16,20 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
-  { value: "all", label: "All statuses" },
+  { value: "all", label: "All" },
   { value: "unknown", label: "Unknown" },
   { value: "active", label: "Active" },
   { value: "announced", label: "Announced" },
   { value: "obsolete", label: "Obsolete" },
 ];
+
+const EMPTY_STATUS_COUNTS: PartLifecycleStatusCounts = {
+  all: 0,
+  active: 0,
+  announced: 0,
+  obsolete: 0,
+  unknown: 0,
+};
 
 function statusLabel(status: PartLifecycleStatus) {
   return STATUS_OPTIONS.find((row) => row.value === status)?.label ?? status;
@@ -42,10 +51,14 @@ export function PartLifecyclePanel() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const [parts, setParts] = useState<StaffPartCatalogRow[]>([]);
+  const [statusCounts, setStatusCounts] =
+    useState<PartLifecycleStatusCounts>(EMPTY_STATUS_COUNTS);
   const [machines, setMachines] = useState<
     Array<{ id: string; name: string; siteId?: string }>
   >([]);
   const [loading, setLoading] = useState(true);
+  const loadGenerationRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<StaffPartCatalogRow | null>(null);
   const [draft, setDraft] = useState(draftFromRow({ partNumber: "", name: "", machineIds: [], machineNames: [], lifecycle: { status: "unknown" } }));
@@ -53,22 +66,45 @@ export function PartLifecyclePanel() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [selectedNumbers, setSelectedNumbers] = useState<Set<string>>(new Set());
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<StaffPartCatalogRow[] | null> => {
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchStaffPartLifecycle({
-        status,
-        machineId: machineId || undefined,
-        q: debouncedQuery || undefined,
-      });
+      const data = await fetchStaffPartLifecycle(
+        {
+          status,
+          machineId: machineId || undefined,
+          q: debouncedQuery || undefined,
+        },
+        { signal: controller.signal },
+      );
+      if (loadGenerationRef.current !== generation) {
+        return null;
+      }
       setParts(data.parts);
+      setStatusCounts(data.statusCounts ?? EMPTY_STATUS_COUNTS);
       setMachines(data.machines);
+      return data.parts;
     } catch (cause) {
+      if (controller.signal.aborted) {
+        return null;
+      }
+      if (loadGenerationRef.current !== generation) {
+        return null;
+      }
       setError(errorMessage(cause, "Could not load parts."));
       setParts([]);
+      setStatusCounts(EMPTY_STATUS_COUNTS);
+      return null;
     } finally {
-      setLoading(false);
+      if (loadGenerationRef.current === generation) {
+        setLoading(false);
+      }
     }
   }, [status, machineId, debouncedQuery]);
 
@@ -81,19 +117,6 @@ export function PartLifecyclePanel() {
       setDraft(draftFromRow(selected));
     }
   }, [selected]);
-
-  const counts = useMemo(() => {
-    const tally: Record<PartLifecycleStatus, number> = {
-      active: 0,
-      announced: 0,
-      obsolete: 0,
-      unknown: 0,
-    };
-    for (const row of parts) {
-      tally[row.lifecycle.status] += 1;
-    }
-    return tally;
-  }, [parts]);
 
   const dirty =
     selected &&
@@ -120,9 +143,13 @@ export function PartLifecyclePanel() {
           sourceNotes: draft.sourceNotes || undefined,
         },
       });
-      setParts(result.parts);
-      const refreshed = result.parts.find((row) => row.partNumber === selected.partNumber);
-      setSelected(refreshed ?? null);
+      const refreshedRows = await load();
+      if (refreshedRows && selected) {
+        const refreshed = refreshedRows.find(
+          (row) => row.partNumber === selected.partNumber,
+        );
+        setSelected(refreshed ?? null);
+      }
     } catch (cause) {
       setError(errorMessage(cause, "Could not save."));
     } finally {
@@ -143,7 +170,7 @@ export function PartLifecyclePanel() {
           patch: { status: next },
         })),
       });
-      setParts(result.parts);
+      await load();
       setSelectedNumbers(new Set());
     } catch (cause) {
       setError(errorMessage(cause, "Could not update those parts."));
@@ -170,7 +197,7 @@ export function PartLifecyclePanel() {
         <span className="spares-muted">
           {parts.length} parts shown
           {status === "all"
-            ? ` · ${counts.announced + counts.obsolete} at risk`
+            ? ` · ${statusCounts.announced + statusCounts.obsolete} at risk`
             : ""}
         </span>
       </div>
@@ -215,6 +242,9 @@ export function PartLifecyclePanel() {
             }`}
           >
             {option.label}
+            <span className="spares-muted ml-1.5 tabular-nums">
+              {statusCounts[option.value === "all" ? "all" : option.value]}
+            </span>
           </button>
         ))}
       </div>

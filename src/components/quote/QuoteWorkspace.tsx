@@ -41,6 +41,8 @@ import {
   QUOTE_REQUESTED_QUERY,
   quoteRequestedBannerText,
 } from "@/lib/ui/quote-requested-banner";
+import { UNSAVED_QUOTE_LEAVE_PROMPT } from "@/lib/ui/pending-send-guard";
+import { useLeavePageGuard } from "@/lib/ui/use-leave-page-guard";
 import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role, TicketCustomerReadReceipt } from "@/types";
 
 function sameReadReceipts(
@@ -189,6 +191,18 @@ export function QuoteWorkspace({
     quote ? { kind: "quote", id: quote.id } : null,
     pollQuote,
   );
+
+  const statusDirtyForGuard =
+    pendingStatus !== null && quote != null && pendingStatus !== quote.status;
+  const itemsDirtyForGuard =
+    quote != null && JSON.stringify(items) !== JSON.stringify(quote.items);
+  const unsavedStaffChanges =
+    role === "staff" &&
+    !busy &&
+    quote != null &&
+    loadedRef === quoteRef &&
+    (itemsDirtyForGuard || statusDirtyForGuard);
+  useLeavePageGuard(unsavedStaffChanges, UNSAVED_QUOTE_LEAVE_PROMPT);
 
   async function run(action: () => Promise<Quote>, success?: string) {
     let release: () => void = () => {};
