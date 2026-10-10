@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
 import { saveStaffPartLifecycle } from "@/lib/api/part-lifecycle";
 import { errorMessage } from "@/lib/api/errors";
 import type { PartLifecycleInfo, PartLifecycleStatus } from "@/types";
@@ -24,6 +25,18 @@ function draftFrom(lifecycle?: PartLifecycleInfo) {
   };
 }
 
+function lifecycleSummaryLine(lifecycle?: PartLifecycleInfo) {
+  const status = lifecycle?.status ?? "unknown";
+  const parts = [partLifecycleStatusLabel(status)];
+  if (lifecycle?.discontinuationDate) {
+    parts.push(`Ends ${lifecycle.discontinuationDate}`);
+  }
+  if (lifecycle?.successorPartNumber?.trim()) {
+    parts.push(`→ ${lifecycle.successorPartNumber.trim()}`);
+  }
+  return parts.join(" · ");
+}
+
 export function StaffQuoteLineLifecycle({
   partNumber,
   lifecycle,
@@ -33,6 +46,7 @@ export function StaffQuoteLineLifecycle({
   lifecycle?: PartLifecycleInfo;
   onSaved: (next: PartLifecycleInfo) => void;
 }) {
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => draftFrom(lifecycle));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +54,9 @@ export function StaffQuoteLineLifecycle({
 
   useEffect(() => {
     setDraft(draftFrom(lifecycle));
+    setEditing(false);
+    setError(null);
+    setNotice(null);
   }, [
     partNumber,
     lifecycle?.status,
@@ -55,6 +72,13 @@ export function StaffQuoteLineLifecycle({
       draft.successorPartNumber !== base.successorPartNumber
     );
   }, [draft, lifecycle]);
+
+  function cancelEdit() {
+    setDraft(draftFrom(lifecycle));
+    setError(null);
+    setNotice(null);
+    setEditing(false);
+  }
 
   async function save() {
     setSaving(true);
@@ -74,6 +98,7 @@ export function StaffQuoteLineLifecycle({
         onSaved(row.lifecycle);
       }
       setNotice("Lifecycle saved to part catalog.");
+      setEditing(false);
     } catch (cause) {
       setError(errorMessage(cause, "Could not save lifecycle."));
     } finally {
@@ -81,10 +106,34 @@ export function StaffQuoteLineLifecycle({
     }
   }
 
+  if (!editing) {
+    return (
+      <div
+        className="mt-3 space-y-1.5 rounded-2xl border border-white/8 bg-black/10 px-3 py-2.5"
+        data-staff-quote-line-lifecycle=""
+        data-staff-quote-line-lifecycle-mode="summary"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-xs font-semibold tracking-tight">Part lifecycle (catalog)</p>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="btn-soft inline-flex h-8 shrink-0 items-center rounded-full px-3 text-[12px] font-medium"
+          >
+            Edit
+          </button>
+        </div>
+        <PartLifecycleNotice lifecycle={lifecycle} compact />
+        <p className="spares-muted text-[11px] leading-snug">{lifecycleSummaryLine(lifecycle)}</p>
+      </div>
+    );
+  }
+
   return (
     <div
       className="mt-3 space-y-2 rounded-2xl border border-white/8 bg-black/10 px-3 py-3"
       data-staff-quote-line-lifecycle=""
+      data-staff-quote-line-lifecycle-mode="edit"
     >
       <p className="text-xs font-semibold tracking-tight">Part lifecycle (catalog)</p>
       <PartLifecycleNotice lifecycle={lifecycle} compact />
@@ -157,8 +206,8 @@ export function StaffQuoteLineLifecycle({
         </button>
         <button
           type="button"
-          disabled={saving || !dirty}
-          onClick={() => setDraft(draftFrom(lifecycle))}
+          disabled={saving}
+          onClick={cancelEdit}
           className="btn-soft inline-flex h-9 items-center rounded-full px-4 text-[13px] font-medium disabled:opacity-40"
         >
           Cancel

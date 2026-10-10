@@ -19,6 +19,7 @@ import {
   quotePricingComplete,
   quoteHasReached,
   quoteIsOpen,
+  quoteStaffMayCancel,
   quoteOwnerIdForCreate,
   staffQuoteAccountMatch,
   quotePoNextStep,
@@ -742,6 +743,17 @@ describe("quoteIsOpen", () => {
     assert.equal(quoteIsOpen("delivered"), true);
     assert.equal(quoteIsOpen("closed"), false);
     assert.equal(quoteIsOpen("cancelled"), false);
+  });
+});
+
+describe("quoteStaffMayCancel", () => {
+  it("allows cancel before shipped and blocks terminal or shipped states", () => {
+    assert.equal(quoteStaffMayCancel("quoted"), true);
+    assert.equal(quoteStaffMayCancel("ordered"), true);
+    assert.equal(quoteStaffMayCancel("shipped"), false);
+    assert.equal(quoteStaffMayCancel("delivered"), false);
+    assert.equal(quoteStaffMayCancel("closed"), false);
+    assert.equal(quoteStaffMayCancel("cancelled"), false);
   });
 });
 

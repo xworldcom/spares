@@ -81,6 +81,12 @@ import {
   applyDemoTenantB1Migration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
+import {
+  DEMO_STAGE_QUOTE_IDS,
+  DEMO_STAGE_QUOTE_KEYS,
+  buildDemoStageQuoteRecord,
+  preferredDemoStageMachineId,
+} from "./demo-stage-quote-seed.ts";
 import { migrateOrgTree } from "./org-migration.ts";
 import { activeSites } from "./org.ts";
 import {
@@ -3907,6 +3913,83 @@ export function ensurePreviewQaQuoteFixture(tenantId: string): Promise<EnsurePre
       status: "created",
       quote: committed.quotes.find((row) => row.id === quote.id) ?? quote,
     };
+  });
+}
+
+/** Preview / Soft Launch (`SPARES_ALLOW_SEED`): stable quotes at post-PO pipeline stages for #367 verify. */
+export async function ensureDemoStageQuoteFixtures(tenantId: string): Promise<void> {
+  if (!isSeedAllowed()) {
+    return;
+  }
+  await withLock(async () => {
+    const db = await readDatabase();
+    const machines = filterByTenant(db.machines, tenantId);
+    const machineId = preferredDemoStageMachineId(machines);
+    if (!machineId) {
+      return;
+    }
+
+    const customer =
+      db.users.find(
+        (user) =>
+          user.id === SEED_CUSTOMER.id &&
+          user.role === "customer" &&
+          !user.deletedAt &&
+          belongsToTenant(user, tenantId),
+      ) ??
+      db.users.find(
+        (user) =>
+          user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
+      );
+    if (!customer) {
+      return;
+    }
+
+    const staff =
+      db.users.find(
+        (user) =>
+          user.id === SEED_STAFF.id &&
+          user.role === "staff" &&
+          !user.deletedAt &&
+          belongsToTenant(user, tenantId),
+      ) ??
+      db.users.find(
+        (user) =>
+          user.role === "staff" && !user.deletedAt && belongsToTenant(user, tenantId),
+      );
+    const staffEmail = staff?.email ?? "staff@demo.com";
+
+    const missingKeys = DEMO_STAGE_QUOTE_KEYS.filter(
+      (key) =>
+        !db.quotes.some(
+          (row) => row.id === DEMO_STAGE_QUOTE_IDS[key] && belongsToTenant(row, tenantId),
+        ),
+    );
+    if (missingKeys.length === 0) {
+      return;
+    }
+
+    const createdAt = new Date().toISOString();
+    let quotes = db.quotes;
+    let numberCursor = nextQuoteNumber(quotes);
+    const additions: QuoteRecord[] = [];
+    for (const key of missingKeys) {
+      const quote = buildDemoStageQuoteRecord({
+        tenantId,
+        quoteId: DEMO_STAGE_QUOTE_IDS[key],
+        number: numberCursor,
+        machineId,
+        customerId: customer.id,
+        customerEmail: customer.email,
+        staffEmail,
+        key,
+        createdAt,
+      });
+      numberCursor += 1;
+      additions.push(quote);
+    }
+    quotes = [...quotes, ...additions];
+    await writeDatabase({ ...db, quotes });
   });
 }
 

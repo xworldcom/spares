@@ -16,6 +16,7 @@ import { belongsToTenant } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   createQuote,
+  ensureDemoStageQuoteFixtures,
   ensurePreviewQaQuoteFixture,
   findUserById,
   getMachine,
@@ -40,6 +41,7 @@ export async function GET() {
 
   if (auth.user.role === "staff" && isSeedAllowed()) {
     await ensurePreviewQaQuoteFixture(auth.tenantId);
+    await ensureDemoStageQuoteFixtures(auth.tenantId);
   }
 
   const [quotes, machines] = await Promise.all([
