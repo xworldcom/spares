@@ -9,10 +9,9 @@ import {
   type RefObject,
 } from "react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { PerspectiveCamera } from "three";
+import { PerspectiveCamera, Vector3 } from "three";
 import {
   applyOrbitSnapshot,
-  fitPerspectiveToBoundsBox,
   isValidOrbitSnapshot,
   snapshotOrbit,
   syncRendererViewport,
@@ -111,10 +110,21 @@ export function ViewerCameraOwner({
     if (!boundsHasGeometry(bounds)) {
       return false;
     }
-    const { size, center } = bounds.getSize();
-    if (!fitPerspectiveToBoundsBox(camera, controls.target, size, center, FIT_MARGIN)) {
-      return false;
+    const { center, distance, size } = bounds.getSize();
+    const sphereRadius = size.length() * 0.5;
+    const vFovRad = (camera.fov * Math.PI) / 180;
+    const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * camera.aspect);
+    const sphereDistV = sphereRadius / Math.sin(vFovRad / 2);
+    const sphereDistH = sphereRadius / Math.sin(hFovRad / 2);
+    const sphereDistance = Math.max(sphereDistV, sphereDistH) * FIT_MARGIN;
+    const fitDistance = Math.max(distance, sphereDistance);
+    const direction = new Vector3().subVectors(camera.position, controls.target);
+    if (direction.lengthSq() < 1e-8) {
+      direction.set(1, 0.75, 1);
     }
+    direction.normalize();
+    controls.target.copy(center);
+    camera.position.copy(center).addScaledVector(direction, fitDistance);
     uprightDefaultOrbit(camera, controls.target);
     controls.update();
     return true;
@@ -137,10 +147,14 @@ export function ViewerCameraOwner({
     if (!syncViewport()) {
       return false;
     }
+    const damping = controls.enableDamping;
+    controls.enableDamping = false;
     if (!applyOrbitSnapshot(camera, controls.target, canonicalPose.current)) {
+      controls.enableDamping = damping;
       return false;
     }
     controls.update();
+    controls.enableDamping = damping;
     invalidate();
     return true;
   }, [camera, controls, invalidate, syncViewport]);
