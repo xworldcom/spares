@@ -21,6 +21,7 @@ import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
 import { isAssistantActivity } from "@/lib/assistant/actor";
 import { messageActorLabel } from "@/lib/ui/message-actor-label";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
+import { displayChatMessageText } from "@/lib/ui/chat-message-text";
 import { firstUnreadActivityIndex } from "@/lib/ui/conversation-unread";
 import { pinThreadScrollerToComposer } from "@/lib/ui/conversation-sheet-thread-pin";
 import type { ChatAttachment, QuoteActivity, Role, TicketCustomerReadReceipt } from "@/types";
@@ -381,6 +382,7 @@ export function QuoteActivityFeed({
             const assistant = isAssistantActivity(activity);
             const label = messageActorLabel(activity, self);
             const attachments = activity.attachments ?? [];
+            const bodyText = activity.text ? displayChatMessageText(activity.text) : "";
 
             const rowClass = [
               own ? "imsg-row imsg-own" : "imsg-row imsg-other",
@@ -444,7 +446,9 @@ export function QuoteActivityFeed({
                     <p className="imsg-meta">{label}</p>
                   ) : null}
                   <div className="imsg-bubble">
-                    {activity.text ? <p className="imsg-text">{activity.text}</p> : null}
+                    {activity.text ? (
+                      <p className="imsg-text">{displayChatMessageText(activity.text)}</p>
+                    ) : null}
                     {attachments.length > 0 ? (
                       <div className="imsg-attachments">
                         {attachments.map((attachment) => (

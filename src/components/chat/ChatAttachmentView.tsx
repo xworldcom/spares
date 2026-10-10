@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   chatAttachmentUrl,
   formatChatBytes,
@@ -12,6 +13,34 @@ function storedNameFromKey(r2Key: string) {
   return r2Key.startsWith("chat/") ? r2Key.slice("chat/".length) : r2Key;
 }
 
+function DownloadAttachment({
+  attachment,
+  href,
+  note,
+}: {
+  attachment: ChatAttachment;
+  href: string;
+  note?: string;
+}) {
+  const meta = `${formatChatBytes(attachment.sizeBytes)} · ${attachment.filename}`;
+  return (
+    <a
+      className="imsg-attachment imsg-attachment-download"
+      href={href}
+      download={attachment.filename}
+    >
+      <span className="imsg-attachment-icon" aria-hidden="true">↓</span>
+      <span className="imsg-attachment-copy">
+        <span className="imsg-attachment-name">{attachment.filename}</span>
+        <span className="imsg-attachment-meta">
+          {note ? `${note} · ` : ""}
+          {meta}
+        </span>
+      </span>
+    </a>
+  );
+}
+
 export function ChatAttachmentView({
   attachment,
   threadKind,
@@ -21,6 +50,7 @@ export function ChatAttachmentView({
   threadKind: ChatThreadKind;
   threadId: string;
 }) {
+  const [inlineFailed, setInlineFailed] = useState(false);
   const display = chatAttachmentDisplay(attachment.filename, attachment.contentType);
   const href = chatAttachmentUrl(
     threadKind,
@@ -29,11 +59,26 @@ export function ChatAttachmentView({
   );
   const meta = `${formatChatBytes(attachment.sizeBytes)} · ${attachment.filename}`;
 
+  if (inlineFailed || display === "download") {
+    return (
+      <DownloadAttachment
+        attachment={attachment}
+        href={href}
+        note={inlineFailed ? "Preview unavailable" : undefined}
+      />
+    );
+  }
+
   if (display === "inline-image") {
     return (
       <figure className="imsg-attachment imsg-attachment-image">
         <a href={href} target="_blank" rel="noopener noreferrer">
-          <img src={href} alt={attachment.filename} loading="lazy" />
+          <img
+            src={href}
+            alt={attachment.filename}
+            loading="lazy"
+            onError={() => setInlineFailed(true)}
+          />
         </a>
         <figcaption>{meta}</figcaption>
       </figure>
@@ -43,7 +88,12 @@ export function ChatAttachmentView({
   if (display === "inline-video") {
     return (
       <figure className="imsg-attachment imsg-attachment-video">
-        <video controls preload="metadata" src={href}>
+        <video
+          controls
+          preload="metadata"
+          src={href}
+          onError={() => setInlineFailed(true)}
+        >
           <a href={href}>Download video</a>
         </video>
         <figcaption>{meta}</figcaption>
@@ -51,13 +101,5 @@ export function ChatAttachmentView({
     );
   }
 
-  return (
-    <a className="imsg-attachment imsg-attachment-download" href={href} download={attachment.filename}>
-      <span className="imsg-attachment-icon" aria-hidden="true">↓</span>
-      <span className="imsg-attachment-copy">
-        <span className="imsg-attachment-name">{attachment.filename}</span>
-        <span className="imsg-attachment-meta">{formatChatBytes(attachment.sizeBytes)} · Download</span>
-      </span>
-    </a>
-  );
+  return <DownloadAttachment attachment={attachment} href={href} />;
 }
