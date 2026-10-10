@@ -19,6 +19,7 @@ import {
 } from "@/components/quote/QuoteTrackingPanel";
 import { formatDay } from "@/components/quote/quote-format";
 import { ErrorState } from "@/components/states/ErrorState";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { errorMessage } from "@/lib/api/errors";
 import {
   getQuote,
@@ -83,6 +84,7 @@ export function QuoteWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const runLock = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -403,15 +405,38 @@ export function QuoteWorkspace({
               status === "cancelled" &&
               quote.status !== "cancelled"
             ) {
-              void run(
-                () => updateQuote(String(quote.number), { status: "cancelled" }),
-                "Quote cancelled.",
-              );
+              setCancelConfirmOpen(true);
               return;
             }
             setPendingStatus(status === quote.status ? null : status);
           }}
         />
+        {role === "staff" ? (
+          <ConfirmSheet
+            open={cancelConfirmOpen}
+            title="Cancel this quote?"
+            message="The customer will see this quote as cancelled. Only continue if you mean to cancel it."
+            confirmLabel="Cancel quote"
+            cancelLabel="Keep quote"
+            destructive
+            busy={busy}
+            onCancel={() => {
+              if (!busy) {
+                setCancelConfirmOpen(false);
+              }
+            }}
+            onConfirm={() => {
+              void run(
+                () => updateQuote(String(quote.number), { status: "cancelled" }),
+                "Quote cancelled.",
+              ).then((ok) => {
+                if (ok) {
+                  setCancelConfirmOpen(false);
+                }
+              });
+            }}
+          />
+        ) : null}
       </div>
       {role === "staff" && staffApplyDirty ? (
         <div
