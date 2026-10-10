@@ -62,6 +62,8 @@ export type PublicUser = {
   emailDomain?: string;
   sites?: Site[];
   deletedAt?: string;
+  /** B5: obsolete part in-app + email alerts (default on when unset). */
+  lifecycleNotifyObsolete?: boolean;
 };
 
 export type PartLifecycleStatus = "active" | "announced" | "obsolete" | "unknown";

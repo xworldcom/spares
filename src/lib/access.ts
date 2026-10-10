@@ -566,6 +566,7 @@ export function toPublicUser(
     machineIds?: string[];
     emailDomain?: string;
     deletedAt?: string;
+    lifecycleNotifyObsolete?: boolean;
   },
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
@@ -580,6 +581,9 @@ export function toPublicUser(
       role: user.role,
       ...(tenantId ? { tenantId } : {}),
       ...(platformOwner ? { platformOwner: true } : {}),
+      ...(user.lifecycleNotifyObsolete !== undefined
+        ? { lifecycleNotifyObsolete: user.lifecycleNotifyObsolete }
+        : {}),
     };
   }
   const siteIds = user.siteIds ?? [];
@@ -603,6 +607,9 @@ export function toPublicUser(
     ...(domain ? { emailDomain: domain } : {}),
     ...(resolved && resolved.length > 0 ? { sites: resolved } : {}),
     ...(user.deletedAt ? { deletedAt: user.deletedAt } : {}),
+    ...(user.lifecycleNotifyObsolete !== undefined
+      ? { lifecycleNotifyObsolete: user.lifecycleNotifyObsolete }
+      : {}),
   };
 }
 

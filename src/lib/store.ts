@@ -296,6 +296,8 @@ export type StoredUser = {
   deletedAt?: string;
   /** Bumped on logout so prior session cookies stop working. */
   sessionStamp?: number;
+  /** B5: in-app + email obsolete part alerts (default on when unset). */
+  lifecycleNotifyObsolete?: boolean;
 };
 
 export type StoredMachine = {
@@ -376,6 +378,7 @@ type Database = {
   machineUsage?: StoredUsage[];
   /** Per-tenant part number lifecycle (staff-maintained; hook for future manufacturer feeds). */
   partLifecycle?: StoredPartLifecycle[];
+  partLifecycleNotifications?: import("./lifecycle-notifications.ts").StoredPartLifecycleNotification[];
   orgTombstones?: OrgTombstones;
   /** Legacy; sign-in policy lives in platform-settings.json. */
   platformSettings?: PlatformSignInSettings;
@@ -1588,6 +1591,10 @@ function mergeIdentityWithLatest(next: Database, latest: Database): Database {
     sites: mergeRowsForWrite(latest.sites ?? [], next.sites ?? []),
     orgTombstones: mergeOrgTombstones(latest.orgTombstones, next.orgTombstones),
     partLifecycle: mergeRowsForWrite(latest.partLifecycle ?? [], next.partLifecycle ?? []),
+    partLifecycleNotifications: mergeRowsForWrite(
+      latest.partLifecycleNotifications ?? [],
+      next.partLifecycleNotifications ?? [],
+    ),
     platformSettings: next.platformSettings ?? latest.platformSettings,
   };
 }
@@ -2722,7 +2729,7 @@ export function deleteStaffUser(userId: string, tenantId: string) {
 export function updateStaffProfile(
   userId: string,
   tenantId: string,
-  patch: { name?: string | null; email?: string },
+  patch: { name?: string | null; email?: string; lifecycleNotifyObsolete?: boolean },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -2767,6 +2774,10 @@ export function updateStaffProfile(
       }
     }
 
+    if (patch.lifecycleNotifyObsolete !== undefined) {
+      next = { ...next, lifecycleNotifyObsolete: patch.lifecycleNotifyObsolete };
+    }
+
     const users = db.users.slice();
     users[index] = next;
     const written = await writeDatabaseWithLogin({ ...db, users }, {
@@ -2808,6 +2819,7 @@ export async function mutatePlatformDirectoryUser(
     email?: string;
     siteIds?: string[];
     machineIds?: string[];
+    lifecycleNotifyObsolete?: boolean;
   },
 ) {
   const located = await getPlatformDirectoryUser(userId);
@@ -2822,6 +2834,9 @@ export async function mutatePlatformDirectoryUser(
     return updateStaffProfile(userId, tenantId, {
       ...(patch.name !== undefined ? { name: patch.name } : {}),
       ...(patch.email !== undefined ? { email: patch.email } : {}),
+      ...(patch.lifecycleNotifyObsolete !== undefined
+        ? { lifecycleNotifyObsolete: patch.lifecycleNotifyObsolete }
+        : {}),
     });
   }
   return updatePerson(userId, tenantId, {
@@ -2829,6 +2844,9 @@ export async function mutatePlatformDirectoryUser(
     ...(patch.email !== undefined ? { email: patch.email } : {}),
     ...(patch.siteIds !== undefined ? { siteIds: patch.siteIds } : {}),
     ...(patch.machineIds !== undefined ? { machineIds: patch.machineIds } : {}),
+    ...(patch.lifecycleNotifyObsolete !== undefined
+      ? { lifecycleNotifyObsolete: patch.lifecycleNotifyObsolete }
+      : {}),
   });
 }
 
@@ -3011,6 +3029,7 @@ export function updatePerson(
     siteIds?: string[];
     companyAccess?: string[];
     machineIds?: string[];
+    lifecycleNotifyObsolete?: boolean;
   },
 ) {
   return withLock(async () => {
@@ -3064,6 +3083,10 @@ export function updatePerson(
         ...next,
         companyAccess: companies.length > 0 ? companies : undefined,
       };
+    }
+
+    if (patch.lifecycleNotifyObsolete !== undefined) {
+      next = { ...next, lifecycleNotifyObsolete: patch.lifecycleNotifyObsolete };
     }
 
     if (patch.siteIds !== undefined || patch.machineIds !== undefined) {
@@ -3324,7 +3347,8 @@ export function upsertTenantPartLifecycle(
   return withLock(async () => {
     const db = await ensureCatalog();
     const at = new Date().toISOString();
-    let rows = db.partLifecycle ?? [];
+    const rowsBefore = db.partLifecycle ?? [];
+    let rows = rowsBefore;
     for (const update of updates) {
       rows = applyLifecycleUpsert({
         rows,
@@ -3335,8 +3359,107 @@ export function upsertTenantPartLifecycle(
         at,
       });
     }
-    await writeDatabase({ ...db, partLifecycle: rows });
+    const catalog = buildTenantPartCatalog(
+      machinesForTenantListing(db, tenantId),
+      rows,
+      tenantId,
+    );
+    const catalogByPart = new Map(
+      catalog.map((row) => [
+        row.partNumber,
+        { name: row.name, machineIds: row.machineIds, machineNames: row.machineNames },
+      ]),
+    );
+    const { detectObsoleteTransitions, applyObsoleteLifecycleNotifications } = await import(
+      "./lifecycle-notify.ts"
+    );
+    const transitions = detectObsoleteTransitions({
+      tenantId,
+      updates,
+      rowsBefore,
+      rowsAfter: rows,
+      catalogByPart,
+    });
+    const { notifications } = await applyObsoleteLifecycleNotifications({
+      db: { ...db, partLifecycle: rows },
+      tenantId,
+      transitions,
+      at,
+    });
+    await writeDatabase({
+      ...db,
+      partLifecycle: rows,
+      partLifecycleNotifications: notifications,
+    });
     return { ok: true as const };
+  });
+}
+
+export function listUserLifecycleNotifications(
+  tenantId: string,
+  userId: string,
+  filter?: { unreadOnly?: boolean },
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const { listLifecycleNotificationsForUser } = await import("./lifecycle-notifications.ts");
+    return listLifecycleNotificationsForUser(
+      db.partLifecycleNotifications,
+      tenantId,
+      userId,
+      filter,
+    );
+  });
+}
+
+export function countUserLifecycleNotificationsUnread(tenantId: string, userId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const { countUnreadLifecycleNotifications } = await import("./lifecycle-notifications.ts");
+    return countUnreadLifecycleNotifications(db.partLifecycleNotifications, tenantId, userId);
+  });
+}
+
+export function markUserLifecycleNotificationRead(
+  tenantId: string,
+  userId: string,
+  notificationId: string,
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const { markLifecycleNotificationRead } = await import("./lifecycle-notifications.ts");
+    const at = new Date().toISOString();
+    const result = markLifecycleNotificationRead(
+      db.partLifecycleNotifications ?? [],
+      tenantId,
+      userId,
+      notificationId,
+      at,
+    );
+    if (!result.changed) {
+      return { ok: false as const };
+    }
+    await writeDatabase({ ...db, partLifecycleNotifications: result.rows });
+    return { ok: true as const };
+  });
+}
+
+export function markAllUserLifecycleNotificationsRead(tenantId: string, userId: string) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const { markAllLifecycleNotificationsRead } = await import("./lifecycle-notifications.ts");
+    const at = new Date().toISOString();
+    const result = markAllLifecycleNotificationsRead(
+      db.partLifecycleNotifications ?? [],
+      tenantId,
+      userId,
+      at,
+    );
+    if (!result.changed) {
+      return { ok: true as const, marked: 0 };
+    }
+    await writeDatabase({ ...db, partLifecycleNotifications: result.rows });
+    return { ok: true as const, marked: 1 };
   });
 }
 

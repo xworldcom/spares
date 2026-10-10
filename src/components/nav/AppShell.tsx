@@ -15,6 +15,7 @@ import type { MachineNameSeed } from "@/lib/machine-name-cache";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
+import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 import { errorMessage } from "@/lib/api/errors";
 import { isMachineStagePath, machineIdFromPath } from "@/lib/machine-context";
 import { isNavActive } from "@/lib/nav-active";
@@ -22,13 +23,14 @@ import { useSignedInTabPrefetch } from "@/components/nav/useSignedInTabPrefetch"
 import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 
-const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes"] as const;
+const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes", "/notifications"] as const;
 const STAFF_NAV_HREFS = [
   "/machines",
   "/machines/new",
   "/care",
   "/staff/directory",
   "/staff/parts",
+  "/staff/notifications",
   "/staff/activity",
   "/staff/quotes",
   "/staff/bugs",
@@ -97,6 +99,7 @@ export function AppShell({
   const { status, user, logout } = useAuth();
   const { unreadCount: careUnreadCount } = useCareAlerts();
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
+  const { unreadCount: lifecycleUnreadCount } = useLifecycleAlerts();
   const { newCount: inquiryNewCount } = usePlatformInquiryAlerts();
   const pathname = usePathname();
   const router = useRouter();
@@ -235,6 +238,12 @@ export function AppShell({
                 hrefs={navHrefs}
                 label="Care"
                 unreadCount={careUnreadCount}
+              />
+              <NavLinkWithBadge
+                href={user.role === "staff" ? "/staff/notifications" : "/notifications"}
+                hrefs={navHrefs}
+                label="Notifications"
+                unreadCount={lifecycleUnreadCount}
               />
               {user.role === "staff" ? (
                 <>

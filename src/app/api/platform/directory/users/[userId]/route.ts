@@ -19,6 +19,7 @@ type PatchBody = {
   email?: unknown;
   siteIds?: unknown;
   machineIds?: unknown;
+  lifecycleNotifyObsolete?: unknown;
 };
 
 export async function GET(
@@ -97,13 +98,19 @@ async function handlePATCH(
     ? body.machineIds.filter((value): value is string => typeof value === "string")
     : undefined;
 
+  const lifecycleNotifyObsolete =
+    typeof body.lifecycleNotifyObsolete === "boolean"
+      ? body.lifecycleNotifyObsolete
+      : undefined;
+
   if (
     name === undefined &&
     email === undefined &&
     siteIds === undefined &&
-    machineIds === undefined
+    machineIds === undefined &&
+    lifecycleNotifyObsolete === undefined
   ) {
-    return error("name, email, siteIds, or machineIds is required", 400);
+    return error("name, email, siteIds, machineIds, or lifecycleNotifyObsolete is required", 400);
   }
 
   const updated = await mutatePlatformDirectoryUser(userId, {
@@ -111,6 +118,7 @@ async function handlePATCH(
     ...(email !== undefined ? { email } : {}),
     ...(siteIds !== undefined ? { siteIds } : {}),
     ...(machineIds !== undefined ? { machineIds } : {}),
+    ...(lifecycleNotifyObsolete !== undefined ? { lifecycleNotifyObsolete } : {}),
   });
   if ("error" in updated) {
     if (updated.error === "email-taken") {

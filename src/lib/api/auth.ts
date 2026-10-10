@@ -81,7 +81,7 @@ export async function updatePersonAccess(
 
 export async function updatePersonProfile(
   userId: string,
-  profile: { name?: string | null; email?: string },
+  profile: { name?: string | null; email?: string; lifecycleNotifyObsolete?: boolean },
 ) {
   const data = await apiFetch<AuthUserResponse>(`/api/staff/customers/${userId}`, {
     method: "PATCH",
