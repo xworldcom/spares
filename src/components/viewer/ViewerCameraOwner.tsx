@@ -138,6 +138,8 @@ export function ViewerCameraOwner({
       if (!(camera instanceof PerspectiveCamera) || !controls) {
         return;
       }
+      const perspective = camera;
+      const orbit = controls;
       let alive = true;
       let pass = 0;
       function paint() {
@@ -148,8 +150,8 @@ export function ViewerCameraOwner({
           requestAnimationFrame(paint);
           return;
         }
-        applyOrbitSnapshot(camera, controls.target, snap);
-        controls.update();
+        applyOrbitSnapshot(perspective, orbit.target, snap);
+        orbit.update();
         invalidate();
         pass += 1;
         if (pass < READY_PAINT_FRAMES) {
@@ -183,6 +185,10 @@ export function ViewerCameraOwner({
       return false;
     }
     bounds.clip().fit();
+    uprightDefaultOrbit(camera, controls.target);
+    controls.update();
+    invalidate();
+    bounds.refresh().clip().fit();
     uprightDefaultOrbit(camera, controls.target);
     controls.update();
     const snap = snapshotOrbit(camera, controls.target);
