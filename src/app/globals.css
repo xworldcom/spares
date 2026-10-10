@@ -3930,6 +3930,22 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   margin-bottom: 0.75rem;
 }
 
+/* Queue filters stack vertically: catalog-search flex-basis 16rem is for row toolbars only. */
+.tickets-workspace-filters .catalog-search {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .tickets-workspace[data-tickets-layout="list"] {
+    min-height: 0;
+  }
+
+  .tickets-workspace[data-tickets-layout="list"] .tickets-workspace-filters {
+    flex: 0 0 auto;
+  }
+}
+
 .tickets-workspace-filter-row {
   display: flex;
   flex-wrap: wrap;
