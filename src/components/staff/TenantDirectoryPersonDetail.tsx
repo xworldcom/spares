@@ -249,6 +249,35 @@ export function TenantDirectoryPersonDetail({ userId }: { userId: string }) {
       </section>
 
       <section className="catalog-stack mb-8">
+        <h2 className="text-lg font-semibold">Notifications</h2>
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={user.lifecycleNotifyObsolete !== false}
+            disabled={saving}
+            onChange={(event) => {
+              void (async () => {
+                setSaving(true);
+                setError(null);
+                try {
+                  const updated = await updatePersonProfile(user.id, {
+                    lifecycleNotifyObsolete: event.target.checked,
+                  });
+                  setUser(updated);
+                } catch (cause) {
+                  setError(errorMessage(cause, "Could not update notification preference."));
+                } finally {
+                  setSaving(false);
+                }
+              })();
+            }}
+            className="h-4 w-4"
+          />
+          Email and in-app alerts when a part on their machines becomes discontinued
+        </label>
+      </section>
+
+      <section className="catalog-stack mb-8">
         <h2 className="text-lg font-semibold">Access</h2>
         <AccessCascadePicker
           grant={access}

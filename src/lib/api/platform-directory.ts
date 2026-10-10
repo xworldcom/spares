@@ -25,6 +25,7 @@ export async function updatePlatformDirectoryUser(
     email?: string;
     siteIds?: string[];
     machineIds?: string[];
+    lifecycleNotifyObsolete?: boolean;
   },
 ) {
   const data = await apiFetch<{ user: PublicUser }>(

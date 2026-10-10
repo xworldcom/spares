@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
+import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 import { usePlatformInquiryAlerts } from "@/components/platform/PlatformInquiryAlerts";
 import {
   machinesFamilyActive,
@@ -101,12 +102,13 @@ export function MobileTabBar() {
   const { user } = useAuth();
   const { unreadCount: careUnreadCount } = useCareAlerts();
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
+  const { unreadCount: lifecycleUnreadCount } = useLifecycleAlerts();
   const { newCount: inquiryNewCount } = usePlatformInquiryAlerts();
   const pathname = usePathname();
   const [moreForPath, setMoreForPath] = useState<string | null>(null);
   const [machinesForPath, setMachinesForPath] = useState<string | null>(null);
 
-  const customerHrefs = ["/machines", "/care", "/quotes"] as const;
+  const customerHrefs = ["/machines", "/care", "/quotes", "/notifications"] as const;
   const staffHrefs = [
     // keep in sync with AppShell STAFF_NAV_HREFS
     "/machines",
@@ -114,6 +116,7 @@ export function MobileTabBar() {
     "/care",
     "/staff/directory",
     "/staff/parts",
+    "/staff/notifications",
     "/staff/activity",
     "/staff/quotes",
     "/staff/bugs",
@@ -182,6 +185,17 @@ export function MobileTabBar() {
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
               Part lifecycle
+            </Link>
+            <Link
+              href="/staff/notifications"
+              className="flex min-h-12 items-center justify-between gap-2 rounded-2xl px-4 text-[16px] font-medium"
+            >
+              Notifications
+              {lifecycleUnreadCount > 0 ? (
+                <span className="rounded-full bg-[#e8c27a] px-2 py-0.5 text-[11px] font-semibold text-black tabular-nums">
+                  {lifecycleUnreadCount}
+                </span>
+              ) : null}
             </Link>
             {ACTIVITY_LOG_ENABLED ? (
               <Link
@@ -298,6 +312,14 @@ export function MobileTabBar() {
                 badge={quotesUnreadCount}
               >
                 <QuotesIcon active={isNavActive(pathname, "/quotes", customerHrefs)} />
+              </TabLink>
+              <TabLink
+                href="/notifications"
+                hrefs={customerHrefs}
+                label="Alerts"
+                badge={lifecycleUnreadCount}
+              >
+                <CareIcon active={isNavActive(pathname, "/notifications", customerHrefs)} />
               </TabLink>
             </>
           )}
