@@ -16,10 +16,10 @@ import {
   validateChatFileClient,
 } from "@/lib/api/chat-attachments";
 import { errorMessage } from "@/lib/api/errors";
-import { initialsFromEmail } from "@/lib/ui/initials";
 import { activityLane, sameMessageAuthor } from "@/lib/ui/activity-lane";
 import { isAssistantActivity } from "@/lib/assistant/actor";
-import { messageActorLabel } from "@/lib/ui/message-actor-label";
+import { chatSenderLabel } from "@/lib/ui/message-actor-label";
+import { messageSenderInitials } from "@/lib/ui/message-sender-display";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import { displayChatMessageText } from "@/lib/ui/chat-message-text";
 import { dedupeConsecutiveChatActivities } from "@/lib/ui/chat-activity-dedupe";
@@ -33,13 +33,26 @@ export type ActivitySendInput = {
   attachments?: ChatAttachment[];
 };
 
-function OtherAvatar({ email, assistant }: { email: string; assistant?: boolean }) {
+function OtherAvatar({
+  email,
+  assistant,
+  displayName,
+}: {
+  email: string;
+  assistant?: boolean;
+  displayName?: string;
+}) {
   return (
     <span
       aria-hidden="true"
       className={assistant ? "imsg-avatar imsg-avatar-assistant" : "imsg-avatar"}
     >
-      {assistant ? "AI" : initialsFromEmail(email)}
+      {assistant
+        ? "AI"
+        : messageSenderInitials({
+            email,
+            name: displayName?.includes("@") ? undefined : displayName,
+          })}
     </span>
   );
 }
@@ -56,6 +69,7 @@ export function QuoteActivityFeed({
   subtitle,
   layout = "card",
   customerReadReceipts,
+  actorDisplayNames,
   assistantAvailable,
   assistantPaused,
   onAssistantPausedChange,
@@ -74,6 +88,7 @@ export function QuoteActivityFeed({
   layout?: "card" | "sheet";
   /** Staff-only thread read receipts (customers on thread). */
   customerReadReceipts?: TicketCustomerReadReceipt[];
+  actorDisplayNames?: Readonly<Record<string, string>>;
   assistantAvailable?: boolean;
   assistantPaused?: boolean;
   onAssistantPausedChange?: (paused: boolean) => Promise<void>;
@@ -384,10 +399,8 @@ export function QuoteActivityFeed({
             const lastInStack = !sameMessageAuthor(activity, nextActivity);
             const own = lane === "own";
             const assistant = isAssistantActivity(activity);
-            const label =
-              activity.actorRole === "staff" && !assistant
-                ? displayNameFromEmail(activity.actorEmail)
-                : messageActorLabel(activity, self);
+            const label = chatSenderLabel(activity, self, actorDisplayNames);
+            const senderDisplay = actorDisplayNames?.[activity.actorEmail] ?? label;
             const showSenderMeta =
               !stacked &&
               (!own || (role === "staff" && activity.actorRole === "staff" && !assistant));
@@ -455,7 +468,11 @@ export function QuoteActivityFeed({
                 ) : null}
                 {!own ? (
                   lastInStack ? (
-                    <OtherAvatar email={activity.actorEmail} assistant={assistant} />
+                    <OtherAvatar
+                      email={activity.actorEmail}
+                      assistant={assistant}
+                      displayName={senderDisplay}
+                    />
                   ) : (
                     <span className="imsg-avatar-spacer" aria-hidden="true" />
                   )

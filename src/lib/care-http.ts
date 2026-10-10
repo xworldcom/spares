@@ -4,6 +4,7 @@ import { canAccessCareMachine, canManageCare, customerReadReceiptsForTicket, toP
 import { toPublicUser } from "@/lib/access";
 import { error } from "@/lib/http";
 import { tenantIdForUser, userTenantId } from "@/lib/tenant";
+import { actorDisplayNamesForActivities } from "@/lib/chat-actor-display-server";
 import {
   findUserById,
   getMachine,
@@ -135,10 +136,11 @@ export async function publicTicketForUser(
   const tenantId = userTenantId(user);
   const customerUsers =
     user.role === "staff" ? await staffCustomerUsersForThread(tenantId, ticket) : undefined;
-  return attachStaffAssistantAvailability(
-    user,
-    toPublicTicket(ticket, user, machineName, { customerUsers }),
-  );
+  const base = toPublicTicket(ticket, user, machineName, { customerUsers });
+  return attachStaffAssistantAvailability(user, {
+    ...base,
+    actorDisplayNames: await actorDisplayNamesForActivities(ticket.activities),
+  });
 }
 
 export async function ticketReadReceiptsForStaff(

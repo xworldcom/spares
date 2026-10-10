@@ -330,6 +330,7 @@ export function TicketDetail({
           subtitle={embedded && threadSubtitle ? threadSubtitle : undefined}
           layout={embedded ? "card" : "sheet"}
           customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
+          actorDisplayNames={ticket.actorDisplayNames}
           assistantAvailable={staff ? ticket.assistantAvailable : undefined}
           assistantPaused={ticket.assistantPaused}
           onAssistantPausedChange={staff ? onAssistantPaused : undefined}
