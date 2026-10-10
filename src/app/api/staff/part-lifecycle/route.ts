@@ -1,3 +1,4 @@
+import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import type { PartLifecycleStatus } from "@/lib/part-lifecycle";
@@ -115,6 +116,27 @@ async function handlePATCH(request: Request) {
       : [{ partNumber: parsed.partNumber, patch: parsed.patch }];
 
   await upsertTenantPartLifecycle(tenantId, updates, auth.user.email);
+  const actor = actorFromUser(auth.user);
+  for (const update of updates) {
+    const details: Record<string, string | null> = {};
+    if (update.patch.status !== undefined) {
+      details.status = update.patch.status;
+    }
+    if (update.patch.discontinuationDate !== undefined) {
+      details.discontinuationDate = update.patch.discontinuationDate ?? null;
+    }
+    if (update.patch.successorPartNumber !== undefined) {
+      details.successorPartNumber = update.patch.successorPartNumber ?? null;
+    }
+    await recordAccountActivity({
+      tenantId,
+      actor,
+      action: "part.lifecycle.updated",
+      summary: `Updated lifecycle for ${update.partNumber}.`,
+      target: { type: "part", id: update.partNumber, label: update.partNumber },
+      details,
+    });
+  }
   const parts = await listTenantPartLifecycleCatalog(tenantId, {});
   return json({ ok: true, parts });
 }

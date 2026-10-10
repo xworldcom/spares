@@ -19,6 +19,21 @@ describe("activity log", () => {
     setPersistenceForTests(null);
   });
 
+  it("records part lifecycle updates", async () => {
+    const event = await recordAccountActivity({
+      tenantId: "tenant-a",
+      actor: { userId: "u1", email: "staff@host.test", role: "staff" },
+      action: "part.lifecycle.updated",
+      summary: "Updated lifecycle for PN-MTR-3301.",
+      target: { type: "part", id: "PN-MTR-3301", label: "PN-MTR-3301" },
+      details: { status: "active", discontinuationDate: null, successorPartNumber: null },
+    });
+    assert.ok(event);
+    assert.equal(event?.action, "part.lifecycle.updated");
+    const listed = await listAccountActivity({ tenantId: "tenant-a" });
+    assert.equal(listed.events[0]?.action, "part.lifecycle.updated");
+  });
+
   it("appends events and never exposes a delete path", async () => {
     const first = await recordAccountActivity({
       tenantId: "tenant-a",
