@@ -4,6 +4,7 @@ import { PerspectiveCamera, Vector3 } from "three";
 import {
   applyOrbitSnapshot,
   snapshotOrbit,
+  isValidOrbitSnapshot,
   syncRendererViewport,
   uprightDefaultOrbit,
 } from "./viewer-viewport.ts";
@@ -20,7 +21,7 @@ describe("viewer viewport", () => {
         canvas.height = h;
       },
     };
-    syncRendererViewport(gl as never, camera, 1280, 800, 1);
+    assert.equal(syncRendererViewport(gl as never, camera, 1280, 800, 1), true);
     assert.equal(camera.aspect, 1280 / 800);
   });
 

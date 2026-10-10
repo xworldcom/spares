@@ -13,13 +13,14 @@ export function syncRendererViewport(
   maxDpr = 1.5,
 ) {
   if (width < 1 || height < 1) {
-    return;
+    return false;
   }
   const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
   gl.setPixelRatio(dpr);
   gl.setSize(width, height, false);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
+  return true;
 }
 
 export function snapshotOrbit(
@@ -32,14 +33,22 @@ export function snapshotOrbit(
   };
 }
 
+export function isValidOrbitSnapshot(snapshot: ViewerOrbitSnapshot): boolean {
+  return [...snapshot.position, ...snapshot.target].every((value) => Number.isFinite(value));
+}
+
 export function applyOrbitSnapshot(
   camera: PerspectiveCamera,
   target: Vector3,
   snapshot: ViewerOrbitSnapshot,
 ) {
+  if (!isValidOrbitSnapshot(snapshot)) {
+    return false;
+  }
   camera.position.set(...snapshot.position);
   target.set(...snapshot.target);
   camera.updateProjectionMatrix();
+  return true;
 }
 
 /**
