@@ -9,8 +9,11 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { listQuotes } from "@/lib/api/quotes";
 import { invalidateWarmRead } from "@/lib/api/warm-read";
+import {
+  fetchQuoteAlertsUnreadCount,
+  scheduleQuoteAlertsInitialLoad,
+} from "@/components/quote/quote-alerts-fetch";
 
 type QuoteAlertsValue = {
   unreadCount: number;
@@ -32,8 +35,8 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
     }
     try {
       invalidateWarmRead("quotes:list");
-      const data = await listQuotes({ background: true });
-      setUnreadCount(data.unreadCount);
+      const unreadCount = await fetchQuoteAlertsUnreadCount();
+      setUnreadCount(unreadCount);
     } catch (cause) {
       console.warn("[spares] quote alerts refresh failed", cause);
     }
@@ -44,17 +47,20 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
       return;
     }
     let cancelled = false;
-    listQuotes({ background: true })
-      .then((data) => {
+    const clearSchedule = scheduleQuoteAlertsInitialLoad(async () => {
+      try {
+        invalidateWarmRead("quotes:list");
+        const unreadCount = await fetchQuoteAlertsUnreadCount();
         if (!cancelled) {
-          setUnreadCount(data.unreadCount);
+          setUnreadCount(unreadCount);
         }
-      })
-      .catch((cause) => {
+      } catch (cause) {
         console.warn("[spares] quote alerts load failed", cause);
-      });
+      }
+    });
     return () => {
       cancelled = true;
+      clearSchedule();
     };
   }, [status, user]);
 
