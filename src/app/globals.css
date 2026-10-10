@@ -182,6 +182,33 @@ body {
   box-shadow: inset 0 0 0 1px rgba(236, 234, 228, 0.35);
 }
 
+.login-page {
+  display: flex;
+  width: 100%;
+  min-height: calc(100dvh - var(--spares-header) - 2.5rem);
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 0 2rem;
+}
+
+.login-page-card {
+  width: min(24rem, 100%);
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-radius: 1.5rem;
+  background: #12141a;
+  box-shadow:
+    inset 0 0 0 1px rgba(236, 234, 228, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+.login-page-wordmark {
+  margin-bottom: 0.35rem;
+}
+
+.login-page-card .login-form {
+  margin-top: 1.25rem;
+}
+
 .row-on-ink {
   background: var(--spares-ink);
   color: var(--spares-on-ink);
@@ -1712,6 +1739,8 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
 
 @media (max-width: 639px) {
   .quote-progress-scroll-wrap .quote-progress-track {
+    padding-inline: 0.5rem;
+    scroll-padding-inline: 0.5rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(236, 234, 228, 0.35) transparent;
   }

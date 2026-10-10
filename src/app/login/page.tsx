@@ -1,4 +1,4 @@
-import { LandingPageGate } from "@/components/landing/LandingPageGate";
+import { SignInGate } from "@/components/auth/SignInGate";
 import { PASSWORD_LOGIN_DISABLED_CODE } from "@/lib/auth/password-login-public";
 import { getSignInOptions } from "@/lib/auth/password-login.server";
 import { sanitizeNextPath } from "@/lib/auth/safe-url";
@@ -21,7 +21,7 @@ export default async function LoginPage({
       : (error ?? null);
 
   return (
-    <LandingPageGate
+    <SignInGate
       nextPath={nextPath}
       microsoftSignInEnabled={signIn.microsoftSignInEnabled}
       passwordLoginEnabled={signIn.passwordLoginEnabled}

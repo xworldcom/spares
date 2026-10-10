@@ -407,11 +407,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         undoRemoveRef.current = null;
         undoRemoveTimer.current = null;
       }, UNDO_REMOVE_MS);
-      if (isCustomer && customerTrayInViewer) {
-        setTrayOpen(false);
-      }
     },
-    [commitTrayLinesToStorage, isCustomer, customerTrayInViewer],
+    [commitTrayLinesToStorage],
   );
 
   const undoTrayRemove = useCallback(() => {
@@ -434,7 +431,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     undoRemoveRef.current = null;
     setUndoRemove(null);
-  }, [undoRemove, commitTrayLinesToStorage]);
+    if (isCustomer && customerTrayInViewer) {
+      setTrayOpen(true);
+    }
+  }, [undoRemove, commitTrayLinesToStorage, isCustomer, customerTrayInViewer]);
 
   const flashAddToast = useCallback((label: string) => {
     setAddToast(label);
@@ -761,31 +761,89 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           aria-hidden="true"
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
-        <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 items-center gap-2">
-          {showViewToggle && hasModel ? (
-            <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
+        <div
+          className={`absolute top-3 right-3 left-3 z-20 flex min-w-0 gap-2 ${
+            isCustomer && showViewToggle && view === "model"
+              ? "flex-col items-stretch"
+              : "flex-row items-center"
+          }`}
+        >
+          <div
+            className={`flex min-w-0 items-center gap-2 ${
+              isCustomer && showViewToggle && view === "model" ? "w-full" : "flex-1"
+            }`}
+          >
+            {showViewToggle && hasModel ? (
+              <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
+                <button
+                  type="button"
+                  onClick={() => setView("model")}
+                  className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                    view === "model" ? "bg-white/12" : "chrome-quiet"
+                  }`}
+                >
+                  3D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("list")}
+                  className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                    view === "list" ? "bg-white/12" : "chrome-quiet"
+                  }`}
+                >
+                  List
+                </button>
+              </div>
+            ) : null}
+            {((showViewToggle && view === "model") || staffSplitView) && needsReset ? (
               <button
                 type="button"
-                onClick={() => setView("model")}
-                className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                  view === "model" ? "bg-white/12" : "chrome-quiet"
-                }`}
+                data-show-all=""
+                onPointerDown={(event) => {
+                  if (event.button !== 0) {
+                    return;
+                  }
+                  event.preventDefault();
+                  showAll();
+                }}
+                onClick={showAll}
+                className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
               >
-                3D
+                Show all
               </button>
-              <button
-                type="button"
-                onClick={() => setView("list")}
-                className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
-                  view === "list" ? "bg-white/12" : "chrome-quiet"
-                }`}
-              >
-                List
-              </button>
-            </div>
-          ) : null}
-          {hasModel && ((showViewToggle && view === "model") || staffSplitView) ? (
-            <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
+            ) : null}
+            {hasModel &&
+            ((showViewToggle && view === "model") || staffSplitView) &&
+            !(isCustomer && showViewToggle && view === "model") ? (
+              <label className="viewer-chrome-chip flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3">
+                <span className="chrome-quiet shrink-0 text-[12px] font-medium tracking-wide sm:text-[13px]">
+                  Explode
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(explode * 100)}
+                  onChange={(event) => setExplode(Number(event.target.value) / 100)}
+                  onPointerUp={fitExploded}
+                  onPointerCancel={fitExploded}
+                  onKeyUp={fitExploded}
+                  className="explode-slider"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(explode * 100)}
+                  aria-label="Explode assembly"
+                />
+              </label>
+            ) : showViewToggle && !(isCustomer && view === "model") ? (
+              <div className="min-w-0 flex-1" />
+            ) : null}
+          </div>
+          {hasModel &&
+          isCustomer &&
+          showViewToggle &&
+          view === "model" ? (
+            <label className="viewer-chrome-chip flex min-h-11 w-full min-w-0 items-center gap-2 px-3">
               <span className="chrome-quiet shrink-0 text-[12px] font-medium tracking-wide sm:text-[13px]">
                 Explode
               </span>
@@ -805,25 +863,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 aria-label="Explode assembly"
               />
             </label>
-          ) : showViewToggle ? (
-            <div className="min-w-0 flex-1" />
-          ) : null}
-          {((showViewToggle && view === "model") || staffSplitView) && needsReset ? (
-            <button
-              type="button"
-              data-show-all=""
-              onPointerDown={(event) => {
-                if (event.button !== 0) {
-                  return;
-                }
-                event.preventDefault();
-                showAll();
-              }}
-              onClick={showAll}
-              className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
-            >
-              Show all
-            </button>
           ) : null}
           {isCustomer && fullscreen ? (
             <QuoteTray
