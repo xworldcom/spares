@@ -541,6 +541,9 @@ async function readCareStore(): Promise<CareStore> {
 }
 
 async function overlayPersistedCare(db: Database): Promise<Database> {
+  if (memory && db === memory) {
+    return db;
+  }
   return applyCare(
     db,
     unionCare(careCollections(db), await readCareStore(), memory ? careCollections(memory) : emptyCare()),
@@ -549,7 +552,37 @@ async function overlayPersistedCare(db: Database): Promise<Database> {
 
 let queue: Promise<unknown> = Promise.resolve();
 let memory: Database | null = null;
+/** Blob ETags / content hashes for the catalog `memory` was built from. */
+let memoryCatalogVersions: { database: string | null; care: string | null } | null = null;
 let loggedStoreKind = false;
+
+function rememberCatalogMemory(
+  db: Database,
+  versions: { database: string | null; care: string | null },
+  base?: SnapshotBase,
+) {
+  memory = stampSnapshot(db, base ?? snapshotOf(db));
+  memoryCatalogVersions = versions;
+}
+
+function clearCatalogMemory() {
+  memory = null;
+  memoryCatalogVersions = null;
+}
+
+async function catalogMemoryStillFresh(): Promise<boolean> {
+  if (!memory || !memoryCatalogVersions) {
+    return false;
+  }
+  if (trustProcessMemory()) {
+    return true;
+  }
+  const live = await getPersistence().peekCatalogVersions();
+  return (
+    live.database === memoryCatalogVersions.database &&
+    live.care === memoryCatalogVersions.care
+  );
+}
 
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.then(fn, fn);
@@ -1265,8 +1298,12 @@ async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Data
   const db = await readDatabase();
   const kept = await healCatalogStep(db, Boolean(options?.restoreFiles));
   if (!catalogNeedsWrite(db, kept)) {
-    memory = stampSnapshot(kept, snapshotOf(db));
-    return memory;
+    rememberCatalogMemory(
+      kept,
+      memoryCatalogVersions ?? { database: null, care: null },
+      snapshotOf(db),
+    );
+    return memory!;
   }
   // Recompute on the freshest blob instead of writing (or merging) this stale result.
   return await commitCatalog(async (latest) => {
@@ -1395,8 +1432,19 @@ async function readLatestCatalog(mode: ReadMode = "commit"): Promise<LatestCatal
   return { loaded, db: overlayStoredCare(parsed.db, careRead.json), ...common };
 }
 
-async function loadPersistedSnapshot(): Promise<LoadedDatabase | null> {
-  return (await readLatestCatalog("snapshot")).loaded;
+type PersistedSnapshot = {
+  loaded: LoadedDatabase | null;
+  dbVersion: string | null;
+  careVersion: string | null;
+};
+
+async function loadPersistedSnapshot(): Promise<PersistedSnapshot> {
+  const latest = await readLatestCatalog("snapshot");
+  return {
+    loaded: latest.loaded,
+    dbVersion: latest.dbVersion,
+    careVersion: latest.careVersion,
+  };
 }
 
 function materializeBase(base: SnapshotBase): Database | null {
@@ -1431,15 +1479,21 @@ async function commitCatalog(
     const dbJson = JSON.stringify(normalized, null, 2);
     const careJson = JSON.stringify(careCollections(normalized), null, 2);
     if (!built.write || (dbJson === latest.base.dbJson && careJson === latest.base.careJson)) {
-      memory = stampSnapshot(built.db, latest.base);
-      return memory;
+      rememberCatalogMemory(built.db, {
+        database: latest.dbVersion,
+        care: latest.careVersion,
+      }, latest.base);
+      return memory!;
     }
+    let dbVersion = latest.dbVersion;
+    let careVersion = latest.careVersion;
     if (careJson !== latest.base.careJson) {
       const careWrite = await persistence.writeIfVersion("care", careJson, latest.careVersion);
       if (!careWrite.ok) {
         await conflictBackoff(attempt);
         continue;
       }
+      careVersion = careWrite.version;
     }
     if (dbJson !== latest.base.dbJson) {
       const dbWrite = await persistence.writeIfVersion("database", dbJson, latest.dbVersion);
@@ -1447,11 +1501,16 @@ async function commitCatalog(
         await conflictBackoff(attempt);
         continue;
       }
+      dbVersion = dbWrite.version;
     }
     const result = stampSnapshot(normalized, { dbJson, careJson });
-    memory = result;
+    rememberCatalogMemory(result, { database: dbVersion, care: careVersion }, {
+      dbJson,
+      careJson,
+    });
     return result;
   }
+  clearCatalogMemory();
   throw new CatalogWriteConflictError();
 }
 
@@ -1462,11 +1521,11 @@ function conflictBackoff(attempt: number) {
 
 async function readDatabase(): Promise<Database> {
   logStoreKind();
-  if (memory && trustProcessMemory()) {
+  if (memory && (trustProcessMemory() || await catalogMemoryStillFresh())) {
     return memory;
   }
 
-  const loaded = await loadPersistedSnapshot();
+  const { loaded, dbVersion, careVersion } = await loadPersistedSnapshot();
   if (!loaded) {
     const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
     const seeded = (
@@ -1478,15 +1537,18 @@ async function readDatabase(): Promise<Database> {
     ).db;
     // Another instance may have created the catalog while we were building fixtures.
     const appeared = await loadPersistedSnapshot();
-    if (appeared) {
-      return await healLoadedDatabase(appeared);
+    if (appeared.loaded) {
+      return await healLoadedDatabase(appeared.loaded, {
+        database: appeared.dbVersion,
+        care: appeared.careVersion,
+      });
     }
     // Create-only: if an instance wins the race to the first write, theirs stands.
     return await commitCatalog(async (latest) =>
       latest.db ? { db: latest.db, write: false } : { db: seeded, write: true },
     );
   }
-  return await healLoadedDatabase(loaded);
+  return await healLoadedDatabase(loaded, { database: dbVersion, care: careVersion });
 }
 
 async function persistModelBytes(name: string, bytes: Uint8Array | Buffer) {
@@ -1556,11 +1618,14 @@ async function healSnapshot(
  * A heal result is therefore never merged onto a newer copy, so a field it sets (the demo
  * buyer's grant) cannot be overwritten by the snapshot it was computed from.
  */
-async function healLoadedDatabase(loaded: LoadedDatabase): Promise<Database> {
+async function healLoadedDatabase(
+  loaded: LoadedDatabase,
+  versions: { database: string | null; care: string | null },
+): Promise<Database> {
   const first = await healSnapshot(loaded);
   if (!first.changed) {
-    memory = stampSnapshot(first.db, loaded.base);
-    return memory;
+    rememberCatalogMemory(first.db, versions, loaded.base);
+    return memory!;
   }
   return await commitCatalog(async (latest) => {
     if (!latest.loaded || !latest.db) {
@@ -3298,7 +3363,7 @@ function machinesForTenantListing(db: Database, tenantId: string) {
 export function listMachines(tenantId: string, options?: { heal?: boolean }) {
   return withLock(async () => {
     if (options?.heal) {
-      memory = null;
+      clearCatalogMemory();
     }
     const db = await ensureCatalog({ restoreFiles: options?.heal });
     return machinesForTenantListing(db, tenantId).map((machine) => ({
@@ -3548,7 +3613,7 @@ export function listMachineModelFiles(tenantId: string) {
 
 /** Test helper: drop the in-process cache so the next read hits disk. */
 export function resetStoreMemoryForTests() {
-  memory = null;
+  clearCatalogMemory();
 }
 
 /** Test helper: simulate a stale catalog heal racing a persisted org delete. */
@@ -4202,6 +4267,49 @@ export type QuotePublicCatalogBundle = {
   catalogUsers: Array<{ email: string; name?: string }>;
 };
 
+function quotePublicCatalogBundleFromDb(
+  db: Database,
+  tenantId: string,
+  quote: Pick<QuoteRecord, "machineId" | "customerId">,
+): QuotePublicCatalogBundle {
+  const machine = db.machines.find(
+    (row) => row.id === quote.machineId && belongsToTenant(row, tenantId),
+  );
+  const sites = filterByTenant(db.sites ?? [], tenantId);
+  const customerAccounts = filterByTenant(db.customers ?? [], tenantId);
+  let customerUsers = db.users
+    .filter(
+      (user) =>
+        user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
+    )
+    .map((user) => toPublicUser(user, sites, customerAccounts))
+    .sort((a, b) => a.email.localeCompare(b.email));
+  if (!customerUsers.some((row) => row.id === quote.customerId)) {
+    const stored = db.users.find(
+      (user) => user.id === quote.customerId && !user.deletedAt,
+    );
+    if (
+      stored &&
+      stored.role === "customer" &&
+      belongsToTenant(stored, tenantId)
+    ) {
+      customerUsers = [
+        ...customerUsers,
+        toPublicUser(stored, sites, customerAccounts),
+      ].sort((a, b) => a.email.localeCompare(b.email));
+    }
+  }
+  const catalogUsers = db.users
+    .filter((user) => !user.deletedAt)
+    .map((user) => ({ email: user.email, name: user.name }));
+  return {
+    machineName: machine?.name,
+    customerUsers,
+    partLifecycle: db.partLifecycle ?? [],
+    catalogUsers,
+  };
+}
+
 /** One catalog read for staff quote detail enrichment (machine, customers, lifecycle, actor names). */
 export function loadQuotePublicCatalogBundle(
   tenantId: string,
@@ -4209,41 +4317,49 @@ export function loadQuotePublicCatalogBundle(
 ): Promise<QuotePublicCatalogBundle> {
   return withLock(async () => {
     const db = await ensureCatalog();
-    const machine = db.machines.find(
-      (row) => row.id === quote.machineId && belongsToTenant(row, tenantId),
-    );
-    const sites = filterByTenant(db.sites ?? [], tenantId);
-    const customerAccounts = filterByTenant(db.customers ?? [], tenantId);
-    let customerUsers = db.users
-      .filter(
-        (user) =>
-          user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
-      )
-      .map((user) => toPublicUser(user, sites, customerAccounts))
-      .sort((a, b) => a.email.localeCompare(b.email));
-    if (!customerUsers.some((row) => row.id === quote.customerId)) {
-      const stored = db.users.find(
-        (user) => user.id === quote.customerId && !user.deletedAt,
-      );
-      if (
-        stored &&
-        stored.role === "customer" &&
-        belongsToTenant(stored, tenantId)
-      ) {
-        customerUsers = [
-          ...customerUsers,
-          toPublicUser(stored, sites, customerAccounts),
-        ].sort((a, b) => a.email.localeCompare(b.email));
+    return quotePublicCatalogBundleFromDb(db, tenantId, quote);
+  });
+}
+
+export type QuoteDetailCatalogRead = {
+  quote: QuoteRecord;
+  bundle: QuotePublicCatalogBundle;
+};
+
+/**
+ * Single catalog lock for quote GET: resolve quote, optional read watermark write, and
+ * public enrichment bundle (avoids 3× ensureCatalog per request on warm instances).
+ */
+export function readQuoteDetailCatalog(
+  idOrNumber: string,
+  tenantId: string,
+  userId: string,
+  options?: { markRead?: boolean },
+): Promise<QuoteDetailCatalogRead | null> {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
+    if (!current) {
+      return null;
+    }
+    let quote = current;
+    if (options?.markRead) {
+      const watermark = readWatermarkNow(current.activities);
+      const prior = current.lastReadAt?.[userId];
+      if (!prior || prior < watermark) {
+        quote = {
+          ...current,
+          lastReadAt: { ...current.lastReadAt, [userId]: watermark },
+        };
+        await writeDatabase({
+          ...db,
+          quotes: db.quotes.map((row) => (row.id === current.id ? quote : row)),
+        });
       }
     }
-    const catalogUsers = db.users
-      .filter((user) => !user.deletedAt)
-      .map((user) => ({ email: user.email, name: user.name }));
     return {
-      machineName: machine?.name,
-      customerUsers,
-      partLifecycle: db.partLifecycle ?? [],
-      catalogUsers,
+      quote,
+      bundle: quotePublicCatalogBundleFromDb(db, tenantId, quote),
     };
   });
 }

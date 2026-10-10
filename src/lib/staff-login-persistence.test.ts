@@ -52,6 +52,9 @@ function harness(): Harness {
     async readDatabaseJson() {
       return (await this.readVersioned("database")).json;
     },
+    peekCatalogVersions() {
+      return inner.peekCatalogVersions();
+    },
     async readVersioned(doc) {
       if (doc === "database") {
         if (failReads > 0) {

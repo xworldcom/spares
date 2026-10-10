@@ -8,7 +8,12 @@ import {
   enrichQuoteItemsWithLifecycle,
   lifecycleMapForQuotePartIds,
 } from "@/lib/part-lifecycle";
-import { getMachine, getQuote, loadQuotePublicCatalogBundle } from "@/lib/store";
+import {
+  getMachine,
+  getQuote,
+  loadQuotePublicCatalogBundle,
+  type QuotePublicCatalogBundle,
+} from "@/lib/store";
 import type { PublicUser, Quote, QuoteRecord } from "@/types";
 import type { NextResponse } from "next/server";
 
@@ -53,6 +58,7 @@ export async function publicQuoteForUser(
   quote: QuoteRecord,
   user: PublicUser,
   machineName?: string,
+  bundleOverride?: QuotePublicCatalogBundle,
 ): Promise<Quote> {
   const tenantId = userTenantId(user);
   const partIds = quote.items.map((item) => item.id);
@@ -61,7 +67,8 @@ export async function publicQuoteForUser(
     return attachStaffAssistantAvailability(user, toPublicQuote(quote, user, machineName));
   }
 
-  const bundle = await loadQuotePublicCatalogBundle(tenantId, quote);
+  const bundle =
+    bundleOverride ?? (await loadQuotePublicCatalogBundle(tenantId, quote));
   const resolvedMachineName = machineName ?? bundle.machineName;
   const base = toPublicQuote(quote, user, resolvedMachineName, {
     customerUsers: user.role === "staff" ? bundle.customerUsers : undefined,

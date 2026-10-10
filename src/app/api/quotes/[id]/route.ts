@@ -18,7 +18,7 @@ import {
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";
-import { createQuoteActivity, markQuoteRead, mutateQuote } from "@/lib/store";
+import { createQuoteActivity, mutateQuote, readQuoteDetailCatalog } from "@/lib/store";
 import type { QuoteRecord, QuoteStatus } from "@/types";
 
 type PatchBody = {
@@ -42,9 +42,13 @@ export async function GET(
   const tenantId = userTenantId(access.user);
   const beforeRead = access.quote.lastReadAt;
   const warm = isWarmConversationRequest(_request);
-  const marked = warm
-    ? access.quote
-    : (await markQuoteRead(access.quote.id, tenantId, access.user.id)) ?? access.quote;
+  const detail = await readQuoteDetailCatalog(id, tenantId, access.user.id, {
+    markRead: !warm,
+  });
+  if (!detail) {
+    return error("Quote not found", 404);
+  }
+  const marked = detail.quote;
   if (!warm && access.user.role === "customer") {
     await bumpConversationWatchForCustomerRead(
       "quote",
@@ -67,7 +71,7 @@ export async function GET(
     });
   }
   return json({
-    quote: await publicQuoteForUser(marked, access.user),
+    quote: await publicQuoteForUser(marked, access.user, undefined, detail.bundle),
   });
 }
 
