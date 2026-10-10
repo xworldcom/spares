@@ -48,6 +48,21 @@ describe("messageActorLabel", () => {
     );
   });
 
+  it("prefers profile names when provided", () => {
+    assert.equal(
+      messageActorLabel(
+        {
+          kind: "message",
+          actorEmail: customer.email,
+          actorRole: "customer",
+        },
+        staff,
+        { [customer.email]: "Pat Demo" },
+      ),
+      "Pat Demo",
+    );
+  });
+
   it("labels assistant messages", () => {
     assert.equal(
       messageActorLabel(

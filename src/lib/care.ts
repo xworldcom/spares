@@ -12,6 +12,7 @@ import type {
   TicketStatus,
   UsageHistoryEntry,
 } from "../types/index.ts";
+import { displayChatMessageText } from "./ui/chat-message-text.ts";
 
 export const MANUAL_CATEGORIES = [
   "operator",
@@ -411,9 +412,29 @@ export function ticketContextLine(
     if (!text || text === ticket.title.trim()) {
       continue;
     }
-    return text;
+    const line = displayChatMessageText(text).trim();
+    if (!line) {
+      continue;
+    }
+    return line;
   }
   return null;
+}
+
+/**
+ * Ticket header blurb — omit when the thread already carries the opening note
+ * (duplicate render; storage stays one first message activity).
+ */
+export function ticketHeaderContextLine(
+  ticket: Pick<ServiceTicket, "activities" | "title">,
+): string | null {
+  const hasOpeningMessage = ticket.activities.some(
+    (activity) => activity.kind === "message" && activity.text?.trim(),
+  );
+  if (hasOpeningMessage) {
+    return null;
+  }
+  return ticketContextLine(ticket);
 }
 
 export function ticketRefMatches(

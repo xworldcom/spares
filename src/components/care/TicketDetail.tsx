@@ -17,7 +17,8 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
-import { careHref, ticketContextLine, ticketRefMatches } from "@/lib/care";
+import { careHref, ticketHeaderContextLine, ticketRefMatches } from "@/lib/care";
+import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
@@ -247,7 +248,15 @@ export function TicketDetail({
           role: user.role,
         })
       : { text: "Loading…", unreadHint: false };
-  const contextLine = threadReady ? ticketContextLine(ticket) : null;
+  const contextLine = threadReady ? ticketHeaderContextLine(ticket) : null;
+  const threadSubtitle =
+    threadReady && user.role === "staff"
+      ? conversationThreadSubtitle(user.role, {
+          customerEmail: ticket.customerEmail,
+        })
+      : user.role === "customer"
+        ? conversationThreadSubtitle(user.role, {})
+        : null;
 
   return (
     <div className="care-stack" data-care-ticket-detail="">
@@ -317,6 +326,7 @@ export function TicketDetail({
           threadKind="ticket"
           threadId={ticket.id}
           title={conversationTitle}
+          subtitle={embedded && threadSubtitle ? threadSubtitle : undefined}
           layout={embedded ? "card" : "sheet"}
           customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
           assistantAvailable={staff ? ticket.assistantAvailable : undefined}

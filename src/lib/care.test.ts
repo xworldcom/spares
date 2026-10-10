@@ -24,6 +24,7 @@ import {
   statusTicketText,
   ticketHref,
   ticketRefMatches,
+  ticketHeaderContextLine,
   ticketIsOpen,
   ticketStepState,
   toPublicTicket,
@@ -318,5 +319,41 @@ describe("care access and usage", () => {
     assert.equal(parseCareText("   ", "Title").ok, false);
     assert.equal(parseOptionalNumber("12", "Hours").ok, true);
     assert.equal(parseOptionalNumber(-1, "Hours").ok, false);
+  });
+});
+
+describe("ticketHeaderContextLine", () => {
+  it("hides the opening note when the thread already shows it", () => {
+    const ticket = {
+      title: "Jam on infeed",
+      activities: [
+        {
+          id: "m1",
+          at: "2026-01-01T00:00:00.000Z",
+          actorRole: "customer" as const,
+          actorEmail: "user@demo.com",
+          kind: "message" as const,
+          text: "Only message in thread",
+        },
+      ],
+    };
+    assert.equal(ticketHeaderContextLine(ticket), null);
+  });
+
+  it("falls back to context when there are no messages yet", () => {
+    const ticket = {
+      title: "Jam on infeed",
+      activities: [
+        {
+          id: "s1",
+          at: "2026-01-01T00:00:00.000Z",
+          actorRole: "staff" as const,
+          actorEmail: "staff@demo.com",
+          kind: "status" as const,
+          text: "Ticket opened",
+        },
+      ],
+    };
+    assert.equal(ticketHeaderContextLine(ticket), null);
   });
 });

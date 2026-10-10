@@ -9,6 +9,7 @@ import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
+import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { QuoteLines } from "@/components/quote/QuoteLines";
 import { QuotePoPanel } from "@/components/quote/QuotePoPanel";
@@ -304,6 +305,13 @@ export function QuoteWorkspace({
         role,
       })
     : { text: "Loading…", unreadHint: false };
+  const threadSubtitle =
+    threadReady && desktop
+      ? conversationThreadSubtitle(role, {
+          customerEmail: quote.customerEmail,
+          machineName: quote.machineName,
+        })
+      : null;
 
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
@@ -625,6 +633,7 @@ export function QuoteWorkspace({
           threadId={quote.id}
           layout={desktop ? "card" : "sheet"}
           title="Messages"
+          subtitle={desktop ? threadSubtitle ?? undefined : undefined}
           customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
           assistantPaused={quote.assistantPaused}
