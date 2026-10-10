@@ -250,7 +250,7 @@ export function TicketDetail({
   const contextLine = threadReady ? ticketContextLine(ticket) : null;
 
   return (
-    <div className="care-stack">
+    <div className="care-stack" data-care-ticket-detail="">
       {!embedded ? (
         <Link href={ticketsBack} className="care-back">
           <span aria-hidden="true">‹</span> Tickets
