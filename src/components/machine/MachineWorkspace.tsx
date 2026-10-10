@@ -70,7 +70,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [explode, setExplode] = useState(0);
-  const [explodeFitKey, setExplodeFitKey] = useState(0);
+  const [viewerFitKey, setViewerFitKey] = useState(0);
+  const [viewerResetKey, setViewerResetKey] = useState(0);
+  const viewerSurfaceRef = useRef<HTMLDivElement>(null);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [isolatedId, setIsolatedId] = useState<string | null>(null);
   const [lines, setLines] = useState<TrayLine[]>([]);
@@ -114,15 +116,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       : null;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
-  const wasViewerFullscreen = useRef(false);
-
-  useEffect(() => {
-    if (wasViewerFullscreen.current && !fullscreen) {
-      setExplodeFitKey((key) => key + 1);
-    }
-    wasViewerFullscreen.current = fullscreen;
-  }, [fullscreen]);
-
   useEffect(() => {
     if (trayOpen) {
       setQuoteChip(false);
@@ -542,28 +535,27 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }
 
   function fitExploded() {
-    setExplodeFitKey((key) => key + 1);
+    setViewerFitKey((key) => key + 1);
   }
 
   function showAll() {
     setHiddenIds([]);
     setIsolatedId(null);
-    // Always refit bounds (phone + desktop) so clearing isolate/hide recenters like web.
-    setExplodeFitKey((key) => key + 1);
   }
 
   function fitView() {
-    setExplodeFitKey((key) => key + 1);
+    setViewerFitKey((key) => key + 1);
   }
 
   function resetView() {
     setExplode(0);
-    showAll();
+    setHiddenIds([]);
+    setIsolatedId(null);
+    setViewerResetKey((key) => key + 1);
   }
 
   function exitViewerFullscreen() {
     exit();
-    setExplodeFitKey((key) => key + 1);
   }
 
   function hideSelected() {
@@ -575,7 +567,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     );
     if (isolatedId === selectedPart.id) {
       setIsolatedId(null);
-      setExplodeFitKey((key) => key + 1);
+      setViewerFitKey((key) => key + 1);
     }
     if (shouldAutoDismissPartSheet("hide")) {
       setSelectedPart(null);
@@ -588,11 +580,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     if (isolatedId === selectedPart.id) {
       setIsolatedId(null);
-      setExplodeFitKey((key) => key + 1);
+      setViewerFitKey((key) => key + 1);
     } else {
       setIsolatedId(selectedPart.id);
       setHiddenIds((current) => current.filter((id) => id !== selectedPart.id));
-      setExplodeFitKey((key) => key + 1);
+      setViewerFitKey((key) => key + 1);
     }
     if (shouldAutoDismissPartSheet("isolate")) {
       setSelectedPart(null);
@@ -657,7 +649,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             parts={joinedParts}
             selectedId={selectedPart?.id ?? null}
             explode={explode}
-            explodeFitKey={explodeFitKey}
+            fitKey={viewerFitKey}
+            resetKey={viewerResetKey}
+            layoutRootRef={viewerSurfaceRef}
+            containFullscreenGestures={fullscreen}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
             onSelect={setSelectedPart}
@@ -810,6 +805,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 <button
                   type="button"
                   data-show-all=""
+                  aria-label="Show all parts"
                   onClick={showAll}
                   className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
                 >
@@ -818,6 +814,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 <button
                   type="button"
                   data-fit-view=""
+                  aria-label="Fit view to assembly"
                   onClick={fitView}
                   className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
                 >
@@ -826,6 +823,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 <button
                   type="button"
                   data-reset-view=""
+                  aria-label="Reset view to first load"
                   onClick={resetView}
                   className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
                 >
@@ -900,6 +898,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           {hasModel ? (
             <button
               type="button"
+              onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation();
                 if (fullscreen) {

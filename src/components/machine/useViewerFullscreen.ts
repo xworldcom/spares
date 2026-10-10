@@ -70,7 +70,8 @@ export function useViewerFullscreen() {
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape" && !event.defaultPrevented) {
-        exit();
+        // Overlay mode only — native fullscreen exits via the browser; never from orbit gestures.
+        setOverlay(false);
       }
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
@@ -79,7 +80,7 @@ export function useViewerFullscreen() {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.removeEventListener("keydown", onKey);
     };
-  }, [exit]);
+  }, []);
 
   return {
     chromeRef,
