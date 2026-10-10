@@ -261,6 +261,26 @@
   display: none;
 }
 
+@media (max-width: 1023px) {
+  .machine-viewer .quote-sheet {
+    position: fixed;
+    z-index: 65;
+    bottom: env(safe-area-inset-bottom, 0px);
+    height: auto;
+    max-height: calc(
+      100dvh - var(--spares-header) - env(safe-area-inset-top, 0px) - 0.35rem
+    );
+  }
+
+  .spares-app-tabs .machine-viewer .quote-sheet {
+    bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+    max-height: calc(
+      100dvh - var(--spares-header) - var(--spares-tabbar) -
+        env(safe-area-inset-top, 0px) - 0.35rem
+    );
+  }
+}
+
 @media (min-width: 1024px) {
   .quote-sheet {
     left: auto;

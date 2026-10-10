@@ -391,6 +391,7 @@ export function QuoteWorkspace({
           role={role}
           onChange={(status: QuoteStatus) => {
             setError(null);
+            setNotice(null);
             setPendingStatus(status);
           }}
         />

@@ -46,7 +46,7 @@ type DemoMigrationUser = {
 type DemoMigrationDb = {
   dataMigrations?: DataMigrations;
   users: DemoMigrationUser[];
-  machines: Array<{ id: string; tenantId?: string; storedFileName: string }>;
+  machines: Array<{ id: string; tenantId?: string; storedFileName: string; name?: string }>;
   partLifecycle?: StoredPartLifecycle[];
 };
 
@@ -102,6 +102,14 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
   }
   const machineId = FIXTURE_MACHINE_IDS.hardware;
   let machines = db.machines;
+  let machineNameHealed = false;
+  machines = machines.map((machine) => {
+    if (machine.id !== machineId || machine.name !== "Harware fixture") {
+      return machine;
+    }
+    machineNameHealed = true;
+    return { ...machine, name: "Hardware fixture" };
+  });
   let machineCreated = false;
   if (!machines.some((machine) => machine.id === machineId)) {
     const built = await buildFixtureMachineById(machineId);
@@ -143,7 +151,7 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
   }
 
   const changed =
-    machineCreated || additions.length > 0 || buyerGranted;
+    machineCreated || machineNameHealed || additions.length > 0 || buyerGranted;
   if (!changed) {
     if (migrationMarker(db)) {
       return { db, changed: false, result: null };

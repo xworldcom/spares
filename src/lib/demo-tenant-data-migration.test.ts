@@ -138,4 +138,21 @@ describe("demo tenant v1 migration (auto)", () => {
     assert.ok(buyer.machineIds?.includes(FIXTURE_MACHINE_IDS.hardware));
     assert.equal(buyer.passwordHash, "preexisting-hash");
   });
+
+  it("heals the Harware fixture machine name typo", async () => {
+    const seed = {
+      users: [],
+      machines: [
+        {
+          id: FIXTURE_MACHINE_IDS.hardware,
+          storedFileName: "hardware.glb",
+          name: "Harware fixture",
+        },
+      ],
+      partLifecycle: [],
+    };
+    const result = await applyDemoTenantV1Migration(seed, "migration@oee360.com", noopPersist);
+    assert.ok(result.changed);
+    assert.equal(result.db.machines[0]?.name, "Hardware fixture");
+  });
 });
