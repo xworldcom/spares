@@ -1220,3 +1220,11 @@ export function quoteHref(role: Role, quote: { number: number }) {
 export function quoteIsOpen(status: QuoteStatus) {
   return status !== "closed" && status !== "cancelled";
 }
+
+/** Staff may cancel only before fulfillment has shipped. */
+export function quoteStaffMayCancel(status: QuoteStatus) {
+  if (status === "cancelled" || status === "closed") {
+    return false;
+  }
+  return !quoteHasReached(status, "shipped");
+}

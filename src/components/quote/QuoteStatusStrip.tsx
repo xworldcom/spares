@@ -5,6 +5,7 @@ import {
   QUOTE_PIPELINE,
   QUOTE_STATUS_LABELS,
   QUOTE_STATUS_SHORT,
+  quoteStaffMayCancel,
   quoteStatusCaption,
   quoteStepState,
 } from "@/lib/quotes";
@@ -25,6 +26,7 @@ export function QuoteStatusStrip({
   onChange?: (status: QuoteStatus) => void;
 }) {
   const cancelled = status === "cancelled";
+  const mayCancel = editable && quoteStaffMayCancel(status);
   const trackRef = useRef<HTMLOListElement>(null);
 
   useLayoutEffect(() => {
@@ -110,18 +112,14 @@ export function QuoteStatusStrip({
       </ol>
       </div>
       <p className="quote-progress-caption">{quoteStatusCaption(status, role)}</p>
-      {editable && onChange ? (
+      {editable && onChange && mayCancel ? (
         <button
           type="button"
-          disabled={pending || cancelled}
+          disabled={pending}
           onClick={() => onChange("cancelled")}
-          className={
-            cancelled
-              ? "btn-danger inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-              : "inline-flex h-11 items-center rounded-full px-4 text-sm font-medium text-[var(--spares-danger)]"
-          }
+          className="inline-flex h-11 items-center rounded-full px-4 text-sm font-medium text-[var(--spares-danger)]"
         >
-          {cancelled ? "Cancelled" : "Cancel quote"}
+          Cancel quote
         </button>
       ) : cancelled ? (
         <p className="text-sm font-medium text-[var(--spares-danger)]">Cancelled</p>

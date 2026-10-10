@@ -56,16 +56,17 @@ export async function publicQuoteForUser(
   machineName?: string,
 ): Promise<Quote> {
   const tenantId = userTenantId(user);
-  const customerUsers =
+  const partIds = quote.items.map((item) => item.id);
+  const [customerUsers, rows] = await Promise.all([
     user.role === "staff" && tenantId
-      ? await staffCustomerUsersForThread(tenantId, quote)
-      : undefined;
+      ? staffCustomerUsersForThread(tenantId, quote)
+      : Promise.resolve(undefined),
+    tenantId ? listPartLifecycleRows() : Promise.resolve([]),
+  ]);
   const base = toPublicQuote(quote, user, machineName, { customerUsers });
   if (!tenantId) {
     return attachStaffAssistantAvailability(user, base);
   }
-  const partIds = base.items.map((item) => item.id);
-  const rows = await listPartLifecycleRows();
   const map = lifecycleMapForQuotePartIds(rows, tenantId, partIds);
   const items = enrichQuoteItemsWithLifecycle(base.items, map, user.role);
   return attachStaffAssistantAvailability(user, {

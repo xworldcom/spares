@@ -115,11 +115,20 @@ export function QuoteWorkspace({
   }
 
   useEffect(() => {
+    setPendingStatus(null);
+    setError(null);
+    setNotice(null);
     const seed = quoteSeedForRef(quoteRef);
     if (seed) {
       setQuote(seed);
       setItems(seed.items);
       setShipments(draftShipmentsFrom(seed));
+      setLoadedRef(quoteRef);
+    } else {
+      setQuote(null);
+      setItems([]);
+      setShipments([]);
+      setLoadedRef(null);
     }
     let cancelled = false;
     getQuote(quoteRef)
@@ -135,6 +144,9 @@ export function QuoteWorkspace({
           return;
         }
         setError(errorMessage(cause, "Could not load this quote."));
+        if (!seed) {
+          setQuote(null);
+        }
         setLoadedRef(quoteRef);
       });
     return () => {
