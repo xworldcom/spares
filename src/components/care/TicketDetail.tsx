@@ -17,6 +17,10 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
+import { isRecordConflictError } from "@/lib/api/record-conflict";
+import { RecordConflictBanner } from "@/components/record/RecordConflictBanner";
+import { useRecordFreshnessPoll } from "@/lib/hooks/useRecordFreshnessPoll";
+import { ticketRecordEtag } from "@/lib/record-etag";
 import { careHref, ticketHeaderContextLine, ticketRefMatches } from "@/lib/care";
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
@@ -82,6 +86,7 @@ export function TicketDetail({
     seedTicket && ticketRefMatches(seedTicket, ticketId) ? seedTicket : null,
   );
   const [error, setError] = useState<string | null>(null);
+  const [recordConflict, setRecordConflict] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
@@ -165,18 +170,32 @@ export function TicketDetail({
     pollTicket,
   );
 
+  useRecordFreshnessPoll(
+    Boolean(ticket && user),
+    ticket ? `/api/tickets/${ticket.id}` : null,
+    ticket ? ticketRecordEtag(ticket) : null,
+    pollTicket,
+  );
+
   async function onStatus(status: TicketStatus) {
     if (!ticket) {
       return;
     }
     setBusy(true);
     setError(null);
+    setRecordConflict(null);
     try {
-      const next = await updateTicketStatus(ticket.id, status);
+      const next = await updateTicketStatus(ticket.id, status, {
+        recordVersion: ticket.recordVersion ?? 1,
+      });
       setTicket(next);
       onTicketListPatch?.(next);
       onUpdated?.();
     } catch (cause) {
+      if (isRecordConflictError(cause)) {
+        setRecordConflict(cause.message);
+        return;
+      }
       setError(errorMessage(cause, "Could not update status."));
     } finally {
       setBusy(false);
@@ -285,6 +304,22 @@ export function TicketDetail({
       ) : (
         <div className="h-24" aria-busy="true" aria-label="Loading conversation" />
       )}
+      {recordConflict ? (
+        <RecordConflictBanner
+          message={recordConflict}
+          onRefresh={() => {
+            setRecordConflict(null);
+            void getTicket(ticketId)
+              .then((next) => {
+                setTicket(next);
+                onTicketListPatch?.(next);
+              })
+              .catch(() => undefined);
+          }}
+          onDismiss={() => setRecordConflict(null)}
+        />
+      ) : null}
+
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
