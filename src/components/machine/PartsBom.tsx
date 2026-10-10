@@ -34,7 +34,11 @@ function PartRowSelectButton({
           {part.id}
           {part.replaces ? ` · replaces ${part.replaces}` : ""}
         </span>
-        <PartLifecycleNotice lifecycle={part.lifecycle} compact />
+        <PartLifecycleNotice
+          lifecycle={part.lifecycle}
+          compact
+          onLightBackground={selected}
+        />
       </span>
       <span
         className={`tabular-nums text-sm ${selected ? "row-on-ink-muted" : "spares-muted"}`}

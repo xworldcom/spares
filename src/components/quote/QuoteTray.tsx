@@ -556,12 +556,6 @@ export function QuoteTray({
         className="quote-sheet-handle"
         data-quote-target="handle"
         aria-label={sheet === "full" ? "Hide quote" : "Show quote"}
-        onPointerDown={(event) => {
-          event.stopPropagation();
-        }}
-        onPointerMove={(event) => {
-          event.stopPropagation();
-        }}
         onClick={() => {
           if (drag.current.moved) {
             return;
