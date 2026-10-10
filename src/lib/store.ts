@@ -1340,6 +1340,7 @@ function parseDatabase(raw: string): LoadedDatabase | null {
         tickets: parsed.tickets ?? [],
         machineUsage: parsed.machineUsage ?? [],
         partLifecycle: parsed.partLifecycle ?? [],
+        partLifecycleNotifications: parsed.partLifecycleNotifications ?? [],
         dataMigrations: parsed.dataMigrations,
         orgTombstones: parsed.orgTombstones,
         platformSettings: parsed.platformSettings,
