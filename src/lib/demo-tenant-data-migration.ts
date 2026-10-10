@@ -41,6 +41,11 @@ export const DEMO_TENANT_BUYER = {
   name: "Demo buyer",
 } as const;
 
+export const DEMO_TENANT_STAFF = {
+  email: "staff@demo.com",
+  name: "Demo staff",
+} as const;
+
 export type DataMigrations = {
   demoTenantV1?: number;
   demoTenantB1?: number;
@@ -248,8 +253,25 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
     }
   }
 
+  const staffEmail = normalizeEmail(DEMO_TENANT_STAFF.email);
+  let staffNameHealed = false;
+  users = users.map((user) => {
+    if (normalizeEmail(user.email) !== staffEmail || user.deletedAt) {
+      return user;
+    }
+    if (user.name?.trim()) {
+      return user;
+    }
+    staffNameHealed = true;
+    return { ...user, name: DEMO_TENANT_STAFF.name };
+  });
+
   const changed =
-    machineCreated || machineNameHealed || additions.length > 0 || buyerGranted;
+    machineCreated ||
+    machineNameHealed ||
+    additions.length > 0 ||
+    buyerGranted ||
+    staffNameHealed;
   if (!changed) {
     if (migrationMarker(db)) {
       return { db, changed: false, result: null };

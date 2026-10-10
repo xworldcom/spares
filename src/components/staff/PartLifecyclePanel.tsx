@@ -22,6 +22,7 @@ import {
   staffPartLifecycleHref,
 } from "@/lib/ui/part-lifecycle-url";
 import { PartLifecycleMachinesUsed } from "@/components/staff/PartLifecycleMachinesUsed";
+import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -54,6 +55,7 @@ function draftFromRow(row: StaffPartCatalogRow) {
 }
 
 export function PartLifecyclePanel() {
+  const { unreadPartNumbers } = useLifecycleAlerts();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialFilters = partLifecycleFiltersFromSearch(searchParams);
@@ -380,8 +382,14 @@ export function PartLifecyclePanel() {
           {parts.map((row) => {
             const active = selected?.partNumber === row.partNumber;
             const checked = selectedNumbers.has(row.partNumber);
+            const unreadObsolete = unreadPartNumbers.has(row.partNumber);
             return (
-              <li key={row.partNumber} className="border-t border-white/6 first:border-t-0">
+              <li
+                key={row.partNumber}
+                className={`border-t border-white/6 first:border-t-0 ${
+                  unreadObsolete ? "bg-[#e8c27a]/8" : ""
+                }`}
+              >
                 <div
                   className={`flex min-h-14 items-start gap-3 px-4 py-3 ${
                     active ? "row-on-ink" : ""

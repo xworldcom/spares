@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
 import { saveStaffPartLifecycle } from "@/lib/api/part-lifecycle";
 import { errorMessage } from "@/lib/api/errors";
@@ -51,6 +52,7 @@ export function StaffQuoteLineLifecycle({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { refresh: refreshLifecycleAlerts } = useLifecycleAlerts();
 
   useEffect(() => {
     setDraft(draftFrom(lifecycle));
@@ -99,6 +101,7 @@ export function StaffQuoteLineLifecycle({
       }
       setNotice("Lifecycle saved to part catalog.");
       setEditing(false);
+      void refreshLifecycleAlerts();
     } catch (cause) {
       setError(errorMessage(cause, "Could not save lifecycle."));
     } finally {

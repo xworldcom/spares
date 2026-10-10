@@ -1,4 +1,5 @@
 import { attachStaffAssistantAvailability } from "@/lib/assistant/public";
+import { actorDisplayNamesForActivities } from "@/lib/chat-actor-display-server";
 import { getCurrentUser } from "@/lib/auth";
 import { staffCustomerUsersForThread } from "@/lib/care-http";
 import { error } from "@/lib/http";
@@ -68,5 +69,9 @@ export async function publicQuoteForUser(
   }
   const map = lifecycleMapForQuotePartIds(rows, tenantId, partIds);
   const items = enrichQuoteItemsWithLifecycle(base.items, map, user.role);
-  return attachStaffAssistantAvailability(user, { ...base, items });
+  return attachStaffAssistantAvailability(user, {
+    ...base,
+    items,
+    actorDisplayNames: await actorDisplayNamesForActivities(quote.activities),
+  });
 }

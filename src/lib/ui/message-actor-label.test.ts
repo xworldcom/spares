@@ -30,7 +30,7 @@ describe("messageActorLabel", () => {
       },
       customer,
     );
-    assert.equal(label, "Staff");
+    assert.equal(label, "staff@spares");
     assert.notEqual(label.toLowerCase(), "spares");
   });
 
