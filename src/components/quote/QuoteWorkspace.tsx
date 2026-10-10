@@ -31,6 +31,7 @@ import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { useQuoteReadWatermark } from "@/lib/hooks/useQuoteReadWatermark";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
+  QUOTE_STATUS_LABELS,
   invoiceVisible,
   pricesVisibleToCustomer,
   quotePricingComplete,
@@ -140,12 +141,16 @@ export function QuoteWorkspace({
   }, [quoteRef]);
 
   const pollQuote = useCallback(async () => {
-    if (!quote || pendingStatus !== null) {
+    if (!quote) {
       return;
     }
+    const staffStatusDirty =
+      role === "staff" &&
+      pendingStatus !== null &&
+      pendingStatus !== quote.status;
     const staffItemsDirty =
       role === "staff" && JSON.stringify(items) !== JSON.stringify(quote.items);
-    if (staffItemsDirty) {
+    if (staffStatusDirty || staffItemsDirty) {
       return;
     }
     const next = await getQuote(quoteRef);
@@ -298,6 +303,7 @@ export function QuoteWorkspace({
   const displayStatus = pendingStatus ?? quote.status;
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
   const itemsDirty = JSON.stringify(items) !== JSON.stringify(quote.items);
+  const staffApplyDirty = statusDirty || itemsDirty;
   const primaryLabel =
     statusDirty && itemsDirty
       ? "Apply changes"
@@ -392,11 +398,11 @@ export function QuoteWorkspace({
           onChange={(status: QuoteStatus) => {
             setError(null);
             setNotice(null);
-            setPendingStatus(status);
+            setPendingStatus(status === quote.status ? null : status);
           }}
         />
       </div>
-      {role === "staff" && statusDirty ? (
+      {role === "staff" && staffApplyDirty ? (
         <button
           type="button"
           disabled={busy}
@@ -405,6 +411,16 @@ export function QuoteWorkspace({
         >
           {primaryLabel}
         </button>
+      ) : null}
+
+      {role === "staff" && staffApplyDirty ? (
+        <p className="text-sm text-[#e8c27a]" role="status">
+          {statusDirty && pendingStatus
+            ? `Staged as ${QUOTE_STATUS_LABELS[pendingStatus]}. Tap Apply to save${
+                itemsDirty ? " pricing and status" : ""
+              }.`
+            : "Unsaved pricing. Tap Apply to save."}
+        </p>
       ) : null}
 
       {role === "staff" && statusDirty && pendingStatus === "quoted" && !quotePricingComplete(items) ? (
@@ -419,7 +435,7 @@ export function QuoteWorkspace({
           {error}
         </p>
       ) : null}
-      {notice ? (
+      {notice && !(role === "staff" && staffApplyDirty) ? (
         <p
           className="spares-surface rounded-2xl px-4 py-3 text-sm font-medium text-[var(--spares-ink)]"
           role="status"
@@ -452,7 +468,10 @@ export function QuoteWorkspace({
           role={role}
           pricesVisible={showPrices}
           editable={role === "staff"}
-          onChange={setItems}
+          onChange={(next) => {
+            setNotice(null);
+            setItems(next);
+          }}
         />
       </section>
 
@@ -532,7 +551,7 @@ export function QuoteWorkspace({
 
       <div className="conversation-sheet-spacer" aria-hidden="true" />
 
-      {role === "staff" && (statusDirty || itemsDirty) ? (
+      {role === "staff" && staffApplyDirty ? (
         <div
           className="quote-staff-apply sticky z-20 -mx-4 border-t border-white/8 bg-[color-mix(in_srgb,var(--spares-paper)_94%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden"
           style={{
