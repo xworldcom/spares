@@ -8,7 +8,7 @@ export default function CareHubTicketsLayout() {
   const ticketId = typeof params.ticketId === "string" ? params.ticketId : undefined;
 
   return (
-    <div className="catalog-page care-page-wide">
+    <div className="catalog-page care-page-wide care-tickets-shell">
       <div className="catalog-page-intro">
         <h1>Care</h1>
       </div>
