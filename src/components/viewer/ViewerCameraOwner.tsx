@@ -30,6 +30,12 @@ type ViewerCameraOwnerProps = {
 const MIN_LAYOUT_PX = 80;
 const STABLE_FRAMES = 2;
 const LAYOUT_DRIFT_RATIO = 0.05;
+const MIN_BOUNDS_EXTENT = 0.02;
+
+function boundsHasGeometry(bounds: ReturnType<typeof useBounds>) {
+  const { size } = bounds.getSize();
+  return size.length() >= MIN_BOUNDS_EXTENT;
+}
 
 export function ViewerCameraOwner({
   layoutRootRef,
@@ -131,7 +137,11 @@ export function ViewerCameraOwner({
     if (!syncViewport()) {
       return false;
     }
-    bounds.refresh().clip().fit();
+    bounds.refresh();
+    if (!boundsHasGeometry(bounds)) {
+      return false;
+    }
+    bounds.clip().fit();
     uprightDefaultOrbit(camera, controls.target);
     controls.update();
     const snap = snapshotOrbit(camera, controls.target);
@@ -269,6 +279,13 @@ export function ViewerCameraOwner({
     function onFullscreenChange() {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          if (!syncViewport()) {
+            return;
+          }
+          if (document.fullscreenElement) {
+            performRefit();
+            return;
+          }
           if (canonicalReady.current) {
             applyCanonical();
             return;
@@ -279,7 +296,7 @@ export function ViewerCameraOwner({
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, [applyCanonical, captureCanonical]);
+  }, [applyCanonical, captureCanonical, performRefit, syncViewport]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;

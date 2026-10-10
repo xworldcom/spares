@@ -72,6 +72,34 @@ async function snapCanvas(page, path) {
   await canvas.screenshot({ path });
 }
 
+async function waitCenterModelVisible(page) {
+  await page.waitForFunction(
+    (bg) => {
+      const canvas = document.querySelector("canvas");
+      const gl = canvas?.getContext("webgl2") || canvas?.getContext("webgl");
+      if (!gl || !canvas || canvas.width < 1) {
+        return false;
+      }
+      const pixels = new Uint8Array(4);
+      gl.readPixels(
+        Math.floor(canvas.width / 2),
+        Math.floor(canvas.height / 2),
+        1,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        pixels,
+      );
+      const dr = Math.abs(pixels[0] - bg.r);
+      const dg = Math.abs(pixels[1] - bg.g);
+      const db = Math.abs(pixels[2] - bg.b);
+      return dr + dg + db > 24;
+    },
+    VIEWER_BG,
+    { timeout: 90000 },
+  );
+}
+
 const proof = { baseUrl, checks: [], ok: true };
 const browser = await chromium.launch({ headless: true });
 const ctx = await browser.newContext();
@@ -103,7 +131,7 @@ for (const [w, h] of widths) {
       document.querySelector('[data-viewer-canonical-ready="true"]') != null,
     { timeout: 90000 },
   );
-  await page.waitForTimeout(400);
+  await waitCenterModelVisible(page);
 
   const first = await measureCanvas(page);
   await snapCanvas(page, join(outDir, `${tag}-first-load.png`));
@@ -119,7 +147,7 @@ for (const [w, h] of widths) {
 
   if (w >= 1024) {
     await page.getByRole("button", { name: "Enter full screen" }).click();
-    await page.waitForTimeout(1500);
+    await waitCenterModelVisible(page);
     await snapCanvas(page, join(outDir, `${tag}-fullscreen.png`));
     const fs = await measureCanvas(page);
     proof.checks.push({ id: `${tag}-fullscreen`, ...fs });
