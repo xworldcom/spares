@@ -5,10 +5,14 @@ export function parseEditableQty(raw: string): number {
     return 1;
   }
   const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isInteger(parsed)) {
     return 1;
   }
-  return parsed;
+  if (parsed < 1) {
+    const abs = Math.abs(parsed);
+    return abs >= 1 ? Math.min(abs, 999_999_999) : 1;
+  }
+  return Math.min(parsed, 999_999_999);
 }
 
 /** True when the draft is a complete integer ≥ 1 (safe to write through). */

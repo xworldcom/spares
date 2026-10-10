@@ -1,7 +1,13 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { formatMoney, hasSellPrice, lineSellTotal, quoteSellTotal } from "@/lib/quotes";
+import {
+  formatMoney,
+  hasSellPrice,
+  lineSellTotal,
+  parseStaffSellPrice,
+  quoteSellTotal,
+} from "@/lib/quotes";
 import {
   parseEditableQty,
   qtyDraftIsComplete,
@@ -209,9 +215,12 @@ export function QuoteLines({
                     value={item.sellPrice ?? ""}
                     onChange={(event) =>
                       patch(index, {
-                        sellPrice: event.target.value
-                          ? Number(event.target.value)
-                          : undefined,
+                        sellPrice: parseStaffSellPrice(event.target.value),
+                      })
+                    }
+                    onBlur={(event) =>
+                      patch(index, {
+                        sellPrice: parseStaffSellPrice(event.target.value),
                       })
                     }
                     className={inputClass}

@@ -14,6 +14,8 @@ import { errorMessage } from "@/lib/api/errors";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
+import { UNSAVED_LIFECYCLE_LEAVE_PROMPT } from "@/lib/ui/pending-send-guard";
+import { useLeavePageGuard } from "@/lib/ui/use-leave-page-guard";
 
 const STATUS_OPTIONS: Array<{ value: PartLifecycleStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -118,13 +120,31 @@ export function PartLifecyclePanel() {
     }
   }, [selected]);
 
-  const dirty =
+  const dirty = Boolean(
     selected &&
-    (draft.status !== selected.lifecycle.status ||
-      draft.discontinuationDate !== (selected.lifecycle.discontinuationDate ?? "") ||
-      draft.lastTimeBuyDate !== (selected.lifecycle.lastTimeBuyDate ?? "") ||
-      draft.successorPartNumber !== (selected.lifecycle.successorPartNumber ?? "") ||
-      draft.sourceNotes !== (selected.lifecycle.sourceNotes ?? ""));
+      (draft.status !== selected.lifecycle.status ||
+        draft.discontinuationDate !== (selected.lifecycle.discontinuationDate ?? "") ||
+        draft.lastTimeBuyDate !== (selected.lifecycle.lastTimeBuyDate ?? "") ||
+        draft.successorPartNumber !== (selected.lifecycle.successorPartNumber ?? "") ||
+        draft.sourceNotes !== (selected.lifecycle.sourceNotes ?? "")),
+  );
+
+  useLeavePageGuard(dirty && !saving && !bulkBusy, UNSAVED_LIFECYCLE_LEAVE_PROMPT);
+
+  function discardDraft() {
+    if (!selected) {
+      return;
+    }
+    setDraft(draftFromRow(selected));
+    setError(null);
+  }
+
+  function confirmDiscard(): boolean {
+    if (!dirty) {
+      return true;
+    }
+    return window.confirm(UNSAVED_LIFECYCLE_LEAVE_PROMPT);
+  }
 
   async function save() {
     if (!selected) {
@@ -208,7 +228,12 @@ export function PartLifecyclePanel() {
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              if (!confirmDiscard()) {
+                return;
+              }
+              setQuery(event.target.value);
+            }}
             placeholder="Part number or name"
             className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
           />
@@ -217,7 +242,12 @@ export function PartLifecyclePanel() {
           <span className="spares-muted text-xs font-medium">Machine</span>
           <select
             value={machineId}
-            onChange={(event) => setMachineId(event.target.value)}
+            onChange={(event) => {
+              if (!confirmDiscard()) {
+                return;
+              }
+              setMachineId(event.target.value);
+            }}
             className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
           >
             <option value="">All machines</option>
@@ -235,7 +265,15 @@ export function PartLifecyclePanel() {
           <button
             key={option.value}
             type="button"
-            onClick={() => setStatus(option.value)}
+            onClick={() => {
+              if (option.value === status) {
+                return;
+              }
+              if (!confirmDiscard()) {
+                return;
+              }
+              setStatus(option.value);
+            }}
             aria-pressed={status === option.value}
             className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
               status === option.value ? "btn-primary" : "btn-soft"
@@ -326,7 +364,14 @@ export function PartLifecyclePanel() {
                   />
                   <button
                     type="button"
-                    onClick={() => setSelected(row)}
+                    onClick={() => {
+                      if (
+                        selected?.partNumber === row.partNumber ||
+                        confirmDiscard()
+                      ) {
+                        setSelected(row);
+                      }
+                    }}
                     className="min-w-0 flex-1 text-left"
                   >
                     <span className="block truncate text-[15px] font-medium">{row.name}</span>
@@ -439,13 +484,23 @@ export function PartLifecyclePanel() {
               className="spares-field mt-1 w-full rounded-2xl border-0 px-3 py-2 text-[15px] outline-none"
             />
           </label>
-          <button
-            type="submit"
-            disabled={saving || !dirty}
-            className="btn-primary inline-flex h-11 w-full items-center justify-center rounded-full text-[15px] font-semibold disabled:opacity-40"
-          >
-            {saving ? "Saving…" : "Save lifecycle"}
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              disabled={saving || !dirty}
+              onClick={discardDraft}
+              className="btn-soft inline-flex h-11 flex-1 items-center justify-center rounded-full text-[15px] font-semibold disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !dirty}
+              className="btn-primary inline-flex h-11 flex-1 items-center justify-center rounded-full text-[15px] font-semibold disabled:opacity-40"
+            >
+              {saving ? "Saving…" : "Save lifecycle"}
+            </button>
+          </div>
         </form>
       ) : null}
     </div>
