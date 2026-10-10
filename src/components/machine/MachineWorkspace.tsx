@@ -85,6 +85,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [undoRemove, setUndoRemove] = useState<TrayLine | null>(null);
   const addToastTimer = useRef<number | null>(null);
   const undoRemoveTimer = useRef<number | null>(null);
+  const undoRemoveRef = useRef<TrayLine | null>(null);
   const UNDO_REMOVE_MS = 12_000;
   const trayPersistRef = useRef({
     storageKey: null as string | null,
@@ -170,6 +171,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     setHiddenIds([]);
     setHiddenKey(null);
     setTrayOpen(false);
+    undoRemoveRef.current = null;
+    if (undoRemoveTimer.current != null) {
+      window.clearTimeout(undoRemoveTimer.current);
+      undoRemoveTimer.current = null;
+    }
+    setUndoRemove(null);
   }, [machineId]);
 
   // Read storage as soon as the key exists (not after the machine loads), and only let the
@@ -343,24 +350,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       window.clearTimeout(undoRemoveTimer.current);
       undoRemoveTimer.current = null;
     }
+    undoRemoveRef.current = null;
     setUndoRemove(null);
   }, []);
 
   const removeTrayLine = useCallback(
     (partId: string) => {
+      let removedLine: TrayLine | null = null;
       setLines((current) => {
         const removed = current.find((line) => line.part.id === partId);
         if (!removed) {
           return current;
         }
-        if (undoRemoveTimer.current != null) {
-          window.clearTimeout(undoRemoveTimer.current);
-        }
-        setUndoRemove(removed);
-        undoRemoveTimer.current = window.setTimeout(() => {
-          setUndoRemove(null);
-          undoRemoveTimer.current = null;
-        }, UNDO_REMOVE_MS);
+        removedLine = removed;
         const next = current.filter((line) => line.part.id !== partId);
         if (next.length === 0) {
           setTrayNote("");
@@ -368,22 +370,40 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         persistTrayLinesNow(next);
         return next;
       });
+      if (!removedLine) {
+        return;
+      }
+      if (undoRemoveTimer.current != null) {
+        window.clearTimeout(undoRemoveTimer.current);
+      }
+      undoRemoveRef.current = removedLine;
+      setUndoRemove(removedLine);
+      undoRemoveTimer.current = window.setTimeout(() => {
+        setUndoRemove(null);
+        undoRemoveRef.current = null;
+        undoRemoveTimer.current = null;
+      }, UNDO_REMOVE_MS);
+      if (isCustomer && customerTrayInViewer) {
+        setTrayOpen(false);
+      }
     },
-    [persistTrayLinesNow],
+    [persistTrayLinesNow, isCustomer, customerTrayInViewer],
   );
 
   const undoTrayRemove = useCallback(() => {
-    if (!undoRemove) {
+    const removed = undoRemoveRef.current ?? undoRemove;
+    if (!removed) {
       return;
     }
     setLines((current) => {
-      if (current.some((line) => line.part.id === undoRemove.part.id)) {
+      if (current.some((line) => line.part.id === removed.part.id)) {
         return current;
       }
-      const next = [...current, undoRemove];
+      const next = [...current, removed];
       persistTrayLinesNow(next);
       return next;
     });
+    undoRemoveRef.current = null;
     clearUndoRemove();
   }, [undoRemove, clearUndoRemove, persistTrayLinesNow]);
 

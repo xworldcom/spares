@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+import { partMatchesBomFilter } from "@/components/machine/parts-bom-filter";
 
 function PartRowSelectButton({
   part,
@@ -17,7 +18,10 @@ function PartRowSelectButton({
   return (
     <button
       type="button"
-      onClick={() => onSelect(part)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(part);
+      }}
       className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
     >
       <span className="min-w-0">
@@ -61,38 +65,21 @@ export function PartsBom({
   const categories = useMemo(() => {
     return [...new Set(parts.map((part) => part.category).filter(Boolean))] as string[];
   }, [parts]);
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const base = parts.filter((part) => {
-      if (category && (part.category ?? "") !== category) {
-        return false;
-      }
-      if (!needle) {
-        return true;
-      }
-      const hay = [
-        part.name,
-        part.id,
-        part.meshName,
-        part.vendor,
-        part.material,
-        part.replaces,
-        part.category,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(needle);
-    });
+  const filtered = useMemo(
+    () => parts.filter((part) => partMatchesBomFilter(part, query, category)),
+    [parts, query, category],
+  );
+
+  const pinnedSelection = useMemo(() => {
     if (!selectedPartId) {
-      return base;
+      return null;
     }
     const selected = parts.find((part) => part.id === selectedPartId);
-    if (selected && !base.some((part) => part.id === selectedPartId)) {
-      return [selected, ...base];
+    if (!selected || partMatchesBomFilter(selected, query, category)) {
+      return null;
     }
-    return base;
-  }, [parts, query, category, selectedPartId]);
+    return selected;
+  }, [parts, selectedPartId, query, category]);
 
   if (parts.length === 0) {
     return (
@@ -140,10 +127,37 @@ export function PartsBom({
           ) : null}
         </div>
       ) : null}
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && !pinnedSelection ? (
         <p className="spares-muted text-sm">No parts match that search.</p>
       ) : (
         <ul data-parts-bom="" className="spares-surface overflow-hidden rounded-[22px]">
+          {pinnedSelection ? (
+            <li key={`pinned:${pinnedSelection.id}`} data-bom-pinned-selection="">
+              <div className="flex min-h-14 w-full items-center gap-3 px-4 py-2 row-on-ink">
+                <PartRowSelectButton
+                  part={pinnedSelection}
+                  selected
+                  onSelect={onSelect}
+                />
+                <span className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                  Selected
+                </span>
+                {showAdd && onAdd ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAdd(pinnedSelection);
+                    }}
+                    className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold"
+                    data-selected=""
+                  >
+                    Add
+                  </button>
+                ) : null}
+              </div>
+            </li>
+          ) : null}
           {filtered.map((part) => {
             const selected = part.id === selectedPartId;
             return (
