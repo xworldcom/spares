@@ -28,6 +28,7 @@ import {
   resolvePick,
 } from "./resolvePick";
 import { StudioGround } from "./StudioGround";
+import { ViewerCameraOwner } from "./ViewerCameraOwner";
 import type { PartPickerProps, UnmatchedMesh, ViewerPart } from "./types";
 import {
   loadGltfWithCredentials,
@@ -206,26 +207,6 @@ function captureRestPose(scene: Object3D) {
       ? object.parent.matrixWorld.clone().invert()
       : new Matrix4();
   });
-}
-
-function AssemblyBoundsRefresh({
-  explodeFitKey,
-  isolatedId,
-  hiddenKey,
-  selectedId,
-}: {
-  explodeFitKey: number;
-  isolatedId: string | null;
-  hiddenKey: string;
-  selectedId: string | null;
-}) {
-  const bounds = useBounds();
-  // Explode moves meshes every slider tick; the camera is only refit when the parent bumps
-  // `explodeFitKey` (slider release / reset), so dragging never fights the viewer.
-  useLayoutEffect(() => {
-    bounds.refresh().clip().fit();
-  }, [bounds, explodeFitKey, isolatedId, hiddenKey, selectedId]);
-  return null;
 }
 
 function applyExplode(scene: Object3D, amount: number) {
@@ -579,7 +560,11 @@ function ViewerCanvas({
   parts,
   selected,
   explode,
-  explodeFitKey,
+  fitKey,
+  resetKey,
+  assemblyKey,
+  layoutRootRef,
+  containFullscreenGestures,
   hiddenIds,
   isolatedId,
   onPick,
@@ -589,7 +574,11 @@ function ViewerCanvas({
   parts: ViewerPart[];
   selected: ViewerPart | UnmatchedMesh | null;
   explode: number;
-  explodeFitKey: number;
+  fitKey: number;
+  resetKey: number;
+  assemblyKey: string;
+  layoutRootRef: React.RefObject<HTMLDivElement | null>;
+  containFullscreenGestures: boolean;
   hiddenIds: readonly string[];
   isolatedId: string | null;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
@@ -701,15 +690,12 @@ function ViewerCanvas({
               clearHoverRef.current = clearHover;
             }}
           />
-          <AssemblyBoundsRefresh
-            explodeFitKey={explodeFitKey}
-            isolatedId={isolatedId}
-            hiddenKey={hiddenIds.join("\0")}
-            selectedId={
-              selected && "id" in selected && typeof selected.id === "string"
-                ? selected.id
-                : null
-            }
+          <ViewerCameraOwner
+            layoutRootRef={layoutRootRef}
+            fitKey={fitKey}
+            resetKey={resetKey}
+            assemblyKey={assemblyKey}
+            containFullscreenGestures={containFullscreenGestures}
           />
         </Bounds>
         </Suspense>
@@ -732,7 +718,10 @@ export function PartPicker({
   parts,
   selectedId,
   explode = 0,
-  explodeFitKey = 0,
+  fitKey = 0,
+  resetKey = 0,
+  layoutRootRef,
+  containFullscreenGestures = false,
   hiddenIds = [],
   isolatedId = null,
   onSelect,
@@ -779,17 +768,30 @@ export function PartPicker({
     onUnmatchedSelect?.(hit);
   }
 
+  const internalLayoutRef = useRef<HTMLDivElement>(null);
+  const surfaceRef = layoutRootRef ?? internalLayoutRef;
+  const assemblyKey = [
+    hiddenIds.join("\0"),
+    isolatedId ?? "",
+    selected && "id" in selected ? selected.id : "",
+  ].join("|");
+
   return (
     <div
+      ref={surfaceRef}
       className={`relative ${className ?? ""}`}
-      style={{ height: "100%", minHeight: 0 }}
+      style={{ height: "100%", minHeight: 0, touchAction: "none" }}
     >
       <ViewerCanvas
         src={src}
         parts={parts}
         selected={selected}
         explode={explode}
-        explodeFitKey={explodeFitKey}
+        fitKey={fitKey}
+        resetKey={resetKey}
+        assemblyKey={assemblyKey}
+        layoutRootRef={surfaceRef}
+        containFullscreenGestures={containFullscreenGestures}
         hiddenIds={hiddenIds}
         isolatedId={isolatedId}
         onPick={handlePick}
