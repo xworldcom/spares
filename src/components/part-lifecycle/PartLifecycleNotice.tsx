@@ -1,6 +1,7 @@
 import {
   partLifecycleDetailParts,
   partLifecycleStatusHeadline,
+  partLifecycleStatusLabel,
 } from "@/lib/part-lifecycle-copy";
 import type { PartLifecycleInfo } from "@/types";
 
@@ -11,28 +12,27 @@ export function PartLifecycleNotice({
   lifecycle?: PartLifecycleInfo;
   compact?: boolean;
 }) {
-  if (!lifecycle) {
-    return null;
-  }
-  const headline = partLifecycleStatusHeadline(lifecycle.status);
-  if (!headline) {
-    return null;
-  }
-
-  const details = partLifecycleDetailParts(lifecycle);
+  const status = lifecycle?.status ?? "unknown";
+  const atRisk = status === "obsolete" || status === "announced";
+  const headline = atRisk
+    ? partLifecycleStatusHeadline(status)
+    : partLifecycleStatusLabel(status);
+  const details = lifecycle && atRisk ? partLifecycleDetailParts(lifecycle) : [];
 
   return (
     <p
       className={`${
         compact ? "text-[11px] leading-snug" : "text-[12px] leading-snug"
       } ${
-        lifecycle.status === "obsolete"
+        status === "obsolete"
           ? "text-[#f0c4c0]"
-          : "text-[#f5d0a8]"
+          : status === "announced"
+            ? "text-[#f5d0a8]"
+            : "chrome-quiet"
       }`}
       role="status"
     >
-      <span className="font-medium">{headline}</span>
+      <span className={atRisk ? "font-medium" : undefined}>{headline}</span>
       {details.length > 0 ? ` · ${details.join(" · ")}` : null}
     </p>
   );

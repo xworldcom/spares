@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { partLifecycleNoticeText } from "./part-lifecycle-copy.ts";
+import {
+  partLifecycleNoticeText,
+  partLifecycleStatusLabel,
+} from "./part-lifecycle-copy.ts";
 
 describe("partLifecycleNoticeText", () => {
   it("formats ISO dates for customers", () => {
@@ -19,5 +22,10 @@ describe("partLifecycleNoticeText", () => {
 
   it("returns null for active parts", () => {
     assert.equal(partLifecycleNoticeText({ status: "active" }), null);
+  });
+
+  it("labels unknown and active for display", () => {
+    assert.equal(partLifecycleStatusLabel("unknown"), "Unknown");
+    assert.equal(partLifecycleStatusLabel("active"), "Active");
   });
 });

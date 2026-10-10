@@ -349,7 +349,7 @@
   }
 
   .machine-stage-grid[data-customer-desktop="true"] {
-    --spares-tray: 24.5rem;
+    --spares-tray: 26rem;
   }
 
   .quote-tray-dock.is-open {
@@ -3233,7 +3233,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   container-name: manual-quote;
 }
 
-@container manual-quote (max-width: 21rem) {
+@container manual-quote (max-width: 23rem) {
   .manual-quote-row {
     align-items: flex-start;
   }
@@ -3241,6 +3241,11 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   .manual-quote-row > .flex.items-center.gap-2 {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .manual-quote-remove {
+    min-width: 4.75rem;
+    justify-content: center;
   }
 }
 
