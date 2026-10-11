@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -10,10 +10,10 @@ import {
   fetchLifecycleNotifications,
   markAllLifecycleNotificationsRead,
   markLifecycleNotificationRead,
-  seedLifecycleNotificationsSlot,
   type LifecycleNotification,
   type LifecycleNotificationsResponse,
 } from "@/lib/api/lifecycle-notifications";
+import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
 import { errorMessage } from "@/lib/api/errors";
 import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 import { formatWhen } from "@/components/quote/quote-format";
@@ -34,26 +34,18 @@ export function LifecycleNotificationsPanel({
 }) {
   const { user } = useAuth();
   const { refresh: refreshAlerts } = useLifecycleAlerts();
-  const seeded = useRef(false);
+  useSeedListSlotOnce(
+    LIFECYCLE_LIST_WARM_KEY,
+    LIFECYCLE_LIST_PATH,
+    initialList,
+    listEtag,
+  );
   const [rows, setRows] = useState<LifecycleNotification[]>(
     initialList?.notifications ?? [],
   );
   const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
-  useEffect(() => {
-    if (seeded.current || !initialList || !listEtag) {
-      return;
-    }
-    seeded.current = true;
-    seedLifecycleNotificationsSlot(
-      LIFECYCLE_LIST_WARM_KEY,
-      LIFECYCLE_LIST_PATH,
-      initialList,
-      listEtag,
-    );
-  }, [initialList, listEtag]);
 
   const load = useCallback(
     async (fresh = false) => {

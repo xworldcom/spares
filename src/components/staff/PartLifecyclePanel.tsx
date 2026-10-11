@@ -9,10 +9,12 @@ import {
   bulkSaveStaffPartLifecycle,
   fetchStaffPartLifecycle,
   saveStaffPartLifecycle,
-  seedStaffPartLifecycleListSlot,
+  staffPartLifecycleDefaultListPath,
+  staffPartLifecycleDefaultWarmKey,
   type StaffPartCatalogRow,
   type StaffPartLifecycleResponse,
 } from "@/lib/api/part-lifecycle";
+import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
 import { errorMessage } from "@/lib/api/errors";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -80,14 +82,13 @@ export function PartLifecyclePanel({
     machineId: initialFilters.machineId,
     q: initialFilters.q,
   });
-  const seededDefault = useRef(false);
-  useEffect(() => {
-    if (!urlDefaultFilters || seededDefault.current || !initialList || !listEtag) {
-      return;
-    }
-    seededDefault.current = true;
-    seedStaffPartLifecycleListSlot(initialList, listEtag);
-  }, [initialList, listEtag, urlDefaultFilters]);
+  useSeedListSlotOnce(
+    staffPartLifecycleDefaultWarmKey(),
+    staffPartLifecycleDefaultListPath(),
+    urlDefaultFilters ? initialList : null,
+    urlDefaultFilters ? listEtag : null,
+    urlDefaultFilters,
+  );
   const [status, setStatus] = useState<PartLifecycleStatus | "all">(
     initialFilters.status,
   );
@@ -130,10 +131,6 @@ export function PartLifecyclePanel({
     });
     if (filtersDefault && initialList && initialLoadSkipped.current) {
       initialLoadSkipped.current = false;
-      void fetchStaffPartLifecycle(
-        { status, machineId: machineId || undefined, q: debouncedQuery || undefined },
-        { signal: controller.signal },
-      ).catch(() => undefined);
       return initialList.parts;
     }
     setLoading(true);
@@ -175,6 +172,18 @@ export function PartLifecyclePanel({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!hasDefaultInitial || !listEtag) {
+      return;
+    }
+    const controller = new AbortController();
+    void fetchStaffPartLifecycle(
+      { status: "all" },
+      { signal: controller.signal },
+    ).catch(() => undefined);
+    return () => controller.abort();
+  }, [hasDefaultInitial, listEtag]);
 
   useEffect(() => {
     const next = {

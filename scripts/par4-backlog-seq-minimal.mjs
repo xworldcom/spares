@@ -74,6 +74,14 @@ for (const account of accounts) {
     if (first.etag) {
       const second = await get(jar, path, { "if-none-match": first.etag });
       steps.push({ step: "GET+INM", ...second, inm: first.etag });
+      if (path === "/api/staff/part-lifecycle" && second.status !== 304) {
+        steps.push({
+          step: "assert",
+          path,
+          ok: false,
+          error: `expected 304 on INM replay, got ${second.status}`,
+        });
+      }
     }
   }
   transcript.accounts.push({

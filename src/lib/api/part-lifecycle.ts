@@ -63,9 +63,17 @@ export function invalidateStaffPartLifecycleListCache() {
   invalidateWarmRead("staff:part-lifecycle");
 }
 
+export function staffPartLifecycleDefaultListPath() {
+  return partLifecyclePath();
+}
+
+export function staffPartLifecycleDefaultWarmKey() {
+  return partLifecycleWarmKey();
+}
+
 export function prefetchStaffPartLifecycleDefault() {
-  const path = partLifecyclePath();
-  prefetchList(path, partLifecycleWarmKey());
+  const path = staffPartLifecycleDefaultListPath();
+  prefetchList(path, staffPartLifecycleDefaultWarmKey());
 }
 
 export function seedStaffPartLifecycleListSlot(
