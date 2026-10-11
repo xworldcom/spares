@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { LifecycleNotificationsPanel } from "@/components/notifications/LifecycleNotificationsPanel";
+import { LoadingState } from "@/components/states/LoadingState";
 import { getCurrentUser } from "@/lib/auth";
 import { derivedListEtagForScope } from "@/lib/derived-list-cache";
 import { loadLifecycleNotificationsForSession } from "@/lib/lifecycle-notifications-list-server";
@@ -26,7 +28,9 @@ export default async function NotificationsPage() {
             Part discontinuation alerts for machines you can access.
           </p>
         </div>
-        <LifecycleNotificationsPanel initialList={initialList} listEtag={listEtag} />
+        <Suspense fallback={<LoadingState label="Loading notifications…" />}>
+          <LifecycleNotificationsPanel initialList={initialList} listEtag={listEtag} />
+        </Suspense>
       </div>
     </RequireAuth>
   );

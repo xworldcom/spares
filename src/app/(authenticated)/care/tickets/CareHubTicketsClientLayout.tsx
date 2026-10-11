@@ -1,7 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import { useParams } from "next/navigation";
 import { TicketsWorkspace } from "@/components/care/TicketsWorkspace";
+import { LoadingState } from "@/components/states/LoadingState";
 import type { TicketsListResponse } from "@/lib/api/types";
 
 export function CareHubTicketsClientLayout({
@@ -22,12 +24,14 @@ export function CareHubTicketsClientLayout({
         <h1>Care</h1>
       </div>
       <div className="care-body">
-        <TicketsWorkspace
-          scope="hub"
-          ticketId={ticketId}
-          initialList={initialList}
-          listEtag={listEtag}
-        />
+        <Suspense fallback={<LoadingState label="Loading tickets…" />}>
+          <TicketsWorkspace
+            scope="hub"
+            ticketId={ticketId}
+            initialList={initialList}
+            listEtag={listEtag}
+          />
+        </Suspense>
       </div>
       {children}
     </div>

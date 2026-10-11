@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { BugReportsList } from "@/components/staff/BugReportsList";
+import { LoadingState } from "@/components/states/LoadingState";
 import { derivedListEtagForScope } from "@/lib/derived-list-cache";
 import { loadBugReportsListForSession } from "@/lib/bug-reports-list-server";
 import { bugReportsListScopeKey } from "@/lib/list-scope";
@@ -19,7 +21,9 @@ export default async function StaffBugReportsPage() {
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight">Bug reports</h1>
         </div>
-        <BugReportsList initialList={initialList} listEtag={listEtag} />
+        <Suspense fallback={<LoadingState label="Loading bug reports…" />}>
+          <BugReportsList initialList={initialList} listEtag={listEtag} />
+        </Suspense>
       </div>
     </RequireAuth>
   );
