@@ -234,7 +234,7 @@ export function AppShell({
                 </NavLink>
               )}
               <NavLinkWithBadge
-                href="/care"
+                href="/care/tickets"
                 hrefs={navHrefs}
                 label="Care"
                 unreadCount={careUnreadCount}

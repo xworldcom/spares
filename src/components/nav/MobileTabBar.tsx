@@ -262,7 +262,7 @@ export function MobileTabBar() {
                 <span>Machines</span>
               </button>
               <TabLink
-                href="/care"
+                href="/care/tickets"
                 hrefs={staffHrefs}
                 label="Care"
                 badge={careUnreadCount}
@@ -298,7 +298,7 @@ export function MobileTabBar() {
                 <MachinesIcon active={isNavActive(pathname, "/machines", customerHrefs)} />
               </TabLink>
               <TabLink
-                href="/care"
+                href="/care/tickets"
                 hrefs={customerHrefs}
                 label="Care"
                 badge={careUnreadCount}
