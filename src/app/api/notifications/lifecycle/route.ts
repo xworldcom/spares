@@ -2,6 +2,7 @@ import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { toPublicLifecycleNotification } from "@/lib/lifecycle-notifications";
 import {
+  countUserLifecycleNotificationsUnread,
   getUserLifecycleNotificationsBundle,
   markAllUserLifecycleNotificationsRead,
   markUserLifecycleNotificationRead,
