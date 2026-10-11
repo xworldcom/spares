@@ -27,6 +27,7 @@ import { MachineTypeahead } from "@/components/machine/MachineTypeahead";
 import { useRouter } from "next/navigation";
 import { machineHasModel, sitesForMachineCreate } from "@/lib/machines";
 import { warmQuotesList } from "@/lib/nav/prefetch";
+import { useRequestGeneration } from "@/lib/ui/request-generation";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -101,9 +102,10 @@ export function MachinesList() {
   const [workByMachine, setWorkByMachine] = useState<Record<string, MachineWork>>(
     {},
   );
+  const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
-    let cancelled = false;
+    const generation = begin();
     const sitesLoad =
       user?.role === "staff"
         ? Promise.all([listSites(), listCustomerAccounts()])
@@ -116,9 +118,10 @@ export function MachinesList() {
             sites: user?.sites ?? [],
             accounts: [] as CustomerAccount[],
           });
+    setLoading(true);
     Promise.all([loadMachines({ fresh: true }), sitesLoad])
       .then(([next, org]) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setMachines(next);
@@ -129,19 +132,19 @@ export function MachinesList() {
         );
         setAccounts(org.accounts);
         setError(null);
-        setLoading(false);
       })
       .catch((cause: unknown) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setError(errorMessage(cause, "Could not load machines."));
-        setLoading(false);
+      })
+      .finally(() => {
+        if (isCurrent(generation)) {
+          setLoading(false);
+        }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.role, user?.sites]);
+  }, [begin, isCurrent, user?.role, user?.sites]);
 
   useEffect(() => {
     let cancelled = false;

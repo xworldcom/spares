@@ -1,6 +1,7 @@
 import { ApiError } from "./errors.ts";
 import type { ApiErrorBody } from "./types.ts";
 import { SPARES_BACKGROUND_FETCH } from "./background-fetch.ts";
+import { fetchWithDeadline, isAbortError } from "./fetch-deadline.ts";
 import {
   isSessionProbePath,
   notifyUnauthorized,
@@ -81,14 +82,14 @@ async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
       headers.set("Content-Type", "application/json");
     }
 
-    response = await fetch(path, {
+    response = await fetchWithDeadline(path, {
       ...init,
       cache: "no-store",
       credentials: "include",
       headers,
     });
   } catch (cause) {
-    if (init?.signal?.aborted) {
+    if (init?.signal?.aborted || isAbortError(cause)) {
       throw cause;
     }
     const offline =

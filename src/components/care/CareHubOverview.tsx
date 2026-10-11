@@ -12,6 +12,7 @@ import { hubTicketsHref, machineTicketsHref, ticketIsOpen } from "@/lib/care";
 import { machineTabHref } from "@/lib/machine-context";
 import { warmCareHubLists, warmTicketDetail } from "@/lib/nav/prefetch";
 import { formatDay } from "@/components/quote/quote-format";
+import { useRequestGeneration } from "@/lib/ui/request-generation";
 import type { MachineSummary, ServiceTicket } from "@/types";
 
 export function CareHubOverview() {
@@ -20,34 +21,36 @@ export function CareHubOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
     warmCareHubLists();
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const generation = begin();
+    setLoading(true);
     Promise.all([listMachines(), listAccessibleTickets()])
       .then(([machineRows, ticketData]) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setMachines(machineRows);
         setTickets(ticketData.tickets);
         setError(null);
-        setLoading(false);
       })
       .catch((cause: unknown) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setError(errorMessage(cause, "Could not load Care."));
-        setLoading(false);
+      })
+      .finally(() => {
+        if (isCurrent(generation)) {
+          setLoading(false);
+        }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey]);
+  }, [begin, isCurrent, reloadKey]);
 
   const openTickets = useMemo(
     () => tickets.filter((ticket) => ticketIsOpen(ticket.status)),

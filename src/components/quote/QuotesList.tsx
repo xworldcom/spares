@@ -21,6 +21,7 @@ import {
 } from "@/lib/quotes";
 import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
 import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
+import { useRequestGeneration } from "@/lib/ui/request-generation";
 import type { Quote, QuoteStatus, Role } from "@/lib/api/types";
 
 export function QuotesList({
@@ -38,34 +39,35 @@ export function QuotesList({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
+  const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
-    let cancelled = false;
+    const generation = begin();
     const background = reloadKey > 0;
     if (!background) {
       setLoading(true);
     }
     listQuotes({ background })
       .then((data) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setQuotes(data.quotes);
         setError(null);
-        setLoading(false);
         void refresh();
       })
       .catch((cause: unknown) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setError(errorMessage(cause, "Could not load quotes."));
-        setLoading(false);
+      })
+      .finally(() => {
+        if (isCurrent(generation)) {
+          setLoading(false);
+        }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey, refresh]);
+  }, [begin, isCurrent, reloadKey, refresh]);
 
   useEffect(() => {
     function onVisible() {

@@ -38,6 +38,7 @@ import {
   workListMachineIdFromSearchParam,
   WORK_LIST_MACHINE_QUERY,
 } from "@/lib/work-list-scope";
+import { useRequestGeneration } from "@/lib/ui/request-generation";
 import type { ServiceTicket } from "@/types";
 
 type TicketsWorkspaceProps = {
@@ -81,34 +82,36 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
   );
   const machineIdentityPending =
     scope === "machine" && Boolean(machineId) && !machineName;
+  const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
-    let cancelled = false;
+    const generation = begin();
+    setLoading(true);
     const load =
       scope === "machine" && machineId
         ? listMachineTickets(machineId)
         : listAccessibleTickets();
     load
       .then((next) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setTickets(next.tickets);
         setError(null);
-        setLoading(false);
         void refreshCareAlerts();
       })
       .catch((cause: unknown) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setError(errorMessage(cause, "Could not load tickets."));
-        setLoading(false);
+      })
+      .finally(() => {
+        if (isCurrent(generation)) {
+          setLoading(false);
+        }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [scope, machineId, reloadKey, refreshCareAlerts]);
+  }, [begin, isCurrent, scope, machineId, reloadKey, refreshCareAlerts]);
 
   useEffect(() => {
     if (loading || tickets.length === 0) {

@@ -1,6 +1,8 @@
 import { quoteItemsPatchPayload } from "@/lib/quotes";
 import { backgroundFetchHeaders } from "./background-fetch";
 import { apiFetch } from "./client";
+import { ApiError } from "./errors";
+import { isAbortError } from "./fetch-deadline";
 import { apiFetchList, invalidateListEtag } from "./list-fetch";
 import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
@@ -47,7 +49,8 @@ export async function listQuotes(options?: { background?: boolean }): Promise<Qu
 }
 
 export async function getQuote(idOrNumber: string): Promise<Quote> {
-  return readIfWarm(`quote:${idOrNumber}:view`, async () => {
+  const warmKey = `quote:${idOrNumber}:view`;
+  const load = async () => {
     const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`);
     const quote = data.quote;
     invalidateWarmRead("quotes:list");
@@ -55,7 +58,18 @@ export async function getQuote(idOrNumber: string): Promise<Quote> {
     warmRead(`quote:${quote.id}:view`, () => Promise.resolve(quote));
     warmRead(`quote:${String(quote.number)}:view`, () => Promise.resolve(quote));
     return quote;
-  });
+  };
+  try {
+    return await readIfWarm(warmKey, load);
+  } catch (cause) {
+    invalidateWarmRead(warmKey);
+    const retryable =
+      isAbortError(cause) || (cause instanceof ApiError && cause.status === 0);
+    if (!retryable) {
+      throw cause;
+    }
+    return await readIfWarm(warmKey, load);
+  }
 }
 
 export function warmQuoteDetailFetch(idOrNumber: string) {
