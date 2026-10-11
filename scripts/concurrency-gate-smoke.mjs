@@ -147,7 +147,7 @@ async function main() {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               partNumber,
-              patch: { sourceNotes: `gate-smoke-${Date.now()}` },
+              sourceNotes: `gate-smoke-${Date.now()}`,
             }),
           },
         ),
