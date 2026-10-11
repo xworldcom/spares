@@ -6,6 +6,7 @@
  *   sequential  — one browser cell at a time (8 cells)
  *   parallel-4  — up to 4 cells concurrently
  *   parallel-8  — all 8 cells concurrently
+ *   parallel-12 — twelve cells concurrently (same 8 cells; batch size 12)
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -19,8 +20,11 @@ const outDir = resolve(
 mkdirSync(outDir, { recursive: true });
 
 const SWITCHES = Number(process.env.P0_TAB_SWITCHES || "10");
+const NOTIF_SWITCHES = Number(process.env.P0_NOTIF_TAB_SWITCHES || "20");
 const MAX_MS = Number(process.env.P0_LOAD_MAX_MS || 15_000);
+const COLD_GATE_MS = Number(process.env.P0_COLD_GATE_MS || 3_000);
 const MATRIX_MODE = process.env.P0_MATRIX_MODE || "sequential";
+const gitSha = process.env.GIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 
 const viewports = [
   { name: "desktop-1440", width: 1440, height: 900 },
@@ -34,10 +38,21 @@ const users = [
 
 const routes = {
   customer: ["/machines", "/care/tickets", "/quotes", "/notifications", "/quotes/34"],
-  staff: ["/machines", "/care/tickets", "/staff/quotes", "/staff/quotes/34", "/staff/parts"],
+  staff: [
+    "/machines",
+    "/care/tickets",
+    "/staff/directory",
+    "/staff/quotes",
+    "/staff/quotes/34",
+    "/staff/parts",
+    "/staff/notifications",
+  ],
 };
 
 function batchSizeForMode() {
+  if (MATRIX_MODE === "parallel-12") {
+    return 12;
+  }
   if (MATRIX_MODE === "parallel-8") {
     return 8;
   }
@@ -54,7 +69,7 @@ function isPhone(vp) {
 function tabCycle(role, vp) {
   const phone = isPhone(vp);
   if (role === "staff") {
-    return ["Care", "Quotes"];
+    return phone ? ["Care", "Quotes"] : ["Care", "Quotes", "Notifications"];
   }
   return phone
     ? ["Machines", "Care", "Quotes", "Alerts"]
@@ -69,15 +84,25 @@ async function signIn(page, email, password) {
   await page.waitForURL(/\/(staff\/quotes|machines|quotes)/, { timeout: 60_000 });
 }
 
-async function waitLoaded(page) {
+/** aria-busy clear = shell ready; ttvMs adds main heading visibility (user-visible content). */
+async function waitTimeToVisible(page) {
   const busy = page.locator('[aria-busy="true"]').first();
   const start = Date.now();
   try {
     await busy.waitFor({ state: "detached", timeout: MAX_MS });
   } catch {
-    return { ok: false, ms: Date.now() - start, reason: "aria-busy stuck" };
+    const ms = Date.now() - start;
+    return { ok: false, ms, busyMs: ms, ttvMs: ms, reason: "aria-busy stuck" };
   }
-  return { ok: true, ms: Date.now() - start };
+  const busyMs = Date.now() - start;
+  const heading = page.locator("main h1, main [role='heading']").first();
+  try {
+    await heading.waitFor({ state: "visible", timeout: 3_000 });
+  } catch {
+    /* some routes omit a main heading */
+  }
+  const ttvMs = Date.now() - start;
+  return { ok: true, ms: busyMs, busyMs, ttvMs };
 }
 
 async function clickNav(page, name, role, vp) {
@@ -103,6 +128,29 @@ function attachDiagnostics(page, bucket) {
       failure: req.failure()?.errorText ?? "unknown",
     });
   });
+  page.on("response", (res) => {
+    const url = res.url();
+    if (!url.includes("/api/")) {
+      return;
+    }
+    const status = res.status();
+    if (status >= 500) {
+      bucket.http5xx.push({ url, status, method: res.request().method() });
+    }
+  });
+}
+
+function rowFromWait(href, kind, wait, extra = {}) {
+  return {
+    href,
+    kind,
+    ok: wait.ok,
+    ms: wait.ms,
+    busyMs: wait.busyMs ?? wait.ms,
+    ttvMs: wait.ttvMs ?? wait.ms,
+    reason: wait.reason,
+    ...extra,
+  };
 }
 
 async function runCell(browserType, browserName, user, vp) {
@@ -112,30 +160,18 @@ async function runCell(browserType, browserName, user, vp) {
     baseURL: baseUrl,
   });
   const page = await context.newPage();
-  const diagnostics = { consoleErrors: [], pageErrors: [], failedRequests: [] };
+  const diagnostics = { consoleErrors: [], pageErrors: [], failedRequests: [], http5xx: [] };
   attachDiagnostics(page, diagnostics);
   const rows = [];
   try {
     await signIn(page, user.email, user.password);
     for (const href of routes[user.role]) {
       await page.goto(href, { waitUntil: "domcontentloaded" });
-      const cold = await waitLoaded(page);
-      rows.push({
-        href,
-        kind: "cold",
-        ok: cold.ok,
-        ms: cold.ms,
-        reason: cold.reason,
-      });
+      const cold = await waitTimeToVisible(page);
+      rows.push(rowFromWait(href, "cold", cold));
       await page.reload({ waitUntil: "domcontentloaded" });
-      const reload = await waitLoaded(page);
-      rows.push({
-        href,
-        kind: "reload",
-        ok: reload.ok,
-        ms: reload.ms,
-        reason: reload.reason,
-      });
+      const reload = await waitTimeToVisible(page);
+      rows.push(rowFromWait(href, "reload", reload));
     }
     const tabs = tabCycle(user.role, vp);
     for (let i = 0; i < SWITCHES; i += 1) {
@@ -143,22 +179,46 @@ async function runCell(browserType, browserName, user, vp) {
       const start = Date.now();
       try {
         await clickNav(page, name, user.role, vp);
-        const tab = await waitLoaded(page);
-        rows.push({
-          href: `tab:${name}`,
-          kind: "tab",
-          ok: tab.ok,
-          ms: tab.ms,
-          reason: tab.reason,
-        });
+        const tab = await waitTimeToVisible(page);
+        rows.push(rowFromWait(`tab:${name}`, "tab", tab));
       } catch (cause) {
         rows.push({
           href: `tab:${name}`,
           kind: "tab",
           ok: false,
           ms: Date.now() - start,
+          busyMs: Date.now() - start,
+          ttvMs: Date.now() - start,
           reason: cause instanceof Error ? cause.message : String(cause),
         });
+      }
+    }
+    if (user.role === "staff" && !isPhone(vp)) {
+      for (let i = 0; i < NOTIF_SWITCHES; i += 1) {
+        let lifecycleGets = 0;
+        const onReq = (req) => {
+          if (
+            req.method() === "GET" &&
+            req.url().includes("/api/notifications/lifecycle")
+          ) {
+            lifecycleGets += 1;
+          }
+        };
+        page.on("request", onReq);
+        try {
+          await page.getByRole("link", { name: "Notifications" }).first().click();
+          const notif = await waitTimeToVisible(page);
+          rows.push(
+            rowFromWait("tab:Notifications(staff)", "staff-notif-tab", notif, {
+              lifecycleGets,
+            }),
+          );
+          lifecycleGets = 0;
+          await page.getByRole("link", { name: "Quotes" }).first().click();
+          await waitTimeToVisible(page);
+        } finally {
+          page.off("request", onReq);
+        }
       }
     }
   } finally {
@@ -170,6 +230,7 @@ async function runCell(browserType, browserName, user, vp) {
     JSON.stringify(
       {
         matrixMode: MATRIX_MODE,
+        gitSha,
         rows,
         diagnostics,
         elapsed: rows.reduce((s, r) => s + r.ms, 0),
@@ -190,6 +251,7 @@ async function runCell(browserType, browserName, user, vp) {
     role: user.role,
     viewport: vp.name,
     unhandledReachability,
+    http5xx: diagnostics.http5xx,
   };
 }
 
@@ -240,6 +302,8 @@ async function main() {
   const started = Date.now();
   const results = await runJobs(jobs);
 
+  const allRows = results.flatMap((r) => r.rows);
+  const coldRows = allRows.filter((row) => row.kind === "cold");
   const summary = results.map((r) => ({
     file: r.file,
     cell: `${r.browserName}-${r.role}-${r.viewport}`,
@@ -247,18 +311,33 @@ async function main() {
     fatal: r.fatal ?? null,
     medianMs: median(r.rows.map((row) => row.ms)),
     tabMedianMs: median(r.rows.filter((row) => row.kind === "tab").map((row) => row.ms)),
+    tabTtvMedianMs: median(
+      r.rows.filter((row) => row.kind === "tab").map((row) => row.ttvMs ?? row.ms),
+    ),
     routeMedianMs: median(
       r.rows.filter((row) => row.kind === "cold" || row.kind === "reload").map((row) => row.ms),
     ),
+    coldTtvMedianMs: median(
+      r.rows.filter((row) => row.kind === "cold").map((row) => row.ttvMs ?? row.ms),
+    ),
+    staffNotifLifecycleGets: r.rows
+      .filter((row) => row.kind === "staff-notif-tab")
+      .reduce((sum, row) => sum + (row.lifecycleGets ?? 0), 0),
     unhandledReachability: r.unhandledReachability?.length ?? 0,
   }));
   const aggregate = {
     matrixMode: MATRIX_MODE,
     batchSize: batchSizeForMode(),
+    gitSha,
     wallMs: Date.now() - started,
     totalFail: results.reduce((n, r) => n + r.failed.length, 0),
     tabMedianMs: median(summary.map((row) => row.tabMedianMs)),
+    tabTtvMedianMs: median(summary.map((row) => row.tabTtvMedianMs)),
     routeMedianMs: median(summary.map((row) => row.routeMedianMs)),
+    coldTtvMedianMs: median(coldRows.map((row) => row.ttvMs ?? row.ms)),
+    coldOverGate: coldRows.filter((row) => (row.ttvMs ?? row.ms) > COLD_GATE_MS).length,
+    coldGateMs: COLD_GATE_MS,
+    http5xx: results.flatMap((r) => r.http5xx ?? []),
     cells: summary,
   };
   writeFileSync(resolve(outDir, "summary.json"), JSON.stringify(aggregate, null, 2));

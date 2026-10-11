@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Run sequential, parallel-4, and parallel-8 prod matrix probes.
+ * Run sequential, parallel-4, parallel-8, and parallel-12 prod matrix probes.
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -10,7 +10,8 @@ const baseOut = resolve(
   process.env.OEE360_EVIDENCE_DIR ||
     "/cursor/stores/self/media/staff-app/p0-fetch-abort-2026-10-11",
 );
-const modes = ["sequential", "parallel-4", "parallel-8"];
+const modes = ["sequential", "parallel-4", "parallel-8", "parallel-12"];
+const gitSha = process.env.GIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 const rollup = [];
 
 for (const mode of modes) {
@@ -24,6 +25,7 @@ for (const mode of modes) {
         ...process.env,
         OEE360_EVIDENCE_DIR: outDir,
         P0_MATRIX_MODE: mode,
+        GIT_SHA: gitSha ?? "",
       },
       stdio: "inherit",
     },
@@ -31,6 +33,9 @@ for (const mode of modes) {
   rollup.push({ mode, exitCode: result.status ?? 1, outDir });
 }
 
-writeFileSync(resolve(baseOut, "matrix-rollup.json"), JSON.stringify(rollup, null, 2));
+writeFileSync(
+  resolve(baseOut, "matrix-rollup.json"),
+  JSON.stringify({ gitSha, modes: rollup }, null, 2),
+);
 const failed = rollup.some((row) => row.exitCode !== 0);
 process.exit(failed ? 1 : 0);

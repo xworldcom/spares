@@ -4482,7 +4482,7 @@ export function readQuoteDetailCatalog(
   options?: { markRead?: boolean },
 ): Promise<QuoteDetailCatalogRead | null> {
   return withLock(async () => {
-    const db = await ensureCatalog();
+    let db = await ensureCatalog();
     const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
     if (!current) {
       return null;
@@ -4496,10 +4496,22 @@ export function readQuoteDetailCatalog(
           ...current,
           lastReadAt: { ...current.lastReadAt, [userId]: watermark },
         };
-        await writeDatabase({
+        db = {
           ...db,
           quotes: db.quotes.map((row) => (row.id === current.id ? quote : row)),
-        });
+        };
+        rememberCatalogMemory(
+          db,
+          memoryCatalogVersions ?? { database: null, care: null },
+          snapshotOf(db),
+        );
+        try {
+          await writeDatabase(db);
+        } catch (cause) {
+          if (!(cause instanceof CatalogWriteConflictError)) {
+            throw cause;
+          }
+        }
       }
     }
     return {

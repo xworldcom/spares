@@ -28,18 +28,23 @@ export function LifecycleNotificationsPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (fresh = false) => {
-    setLoading(true);
+    const background = !fresh && rows.length > 0;
+    if (!background) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const data = await fetchLifecycleNotifications({ fresh });
+      const data = await fetchLifecycleNotifications({ fresh, background });
       setRows(data.notifications);
     } catch (cause) {
       setError(errorMessage(cause, "Could not load notifications."));
-      setRows([]);
+      if (!background) {
+        setRows([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [rows.length]);
 
   useEffect(() => {
     void load();

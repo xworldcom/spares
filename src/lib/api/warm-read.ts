@@ -1,6 +1,4 @@
 const DEFAULT_TTL_MS = 45_000;
-/** Reuse an in-flight warm promise only briefly; older pending loads are superseded. */
-const PENDING_REUSE_MAX_MS = 8_000;
 
 type WarmEntry = {
   expires: number;
@@ -20,10 +18,6 @@ function nextGeneration(key: string) {
 
 function entryIsFresh(hit: WarmEntry) {
   return hit.expires > Date.now();
-}
-
-function pendingReuseAllowed(hit: WarmEntry) {
-  return Date.now() - hit.startedAt <= PENDING_REUSE_MAX_MS;
 }
 
 function storeWarmPromise<T>(key: string, generation: number, promise: Promise<T>, ttlMs: number) {
@@ -53,7 +47,7 @@ function storeWarmPromise<T>(key: string, generation: number, promise: Promise<T
 
 export function warmRead<T>(key: string, load: () => Promise<T>, ttlMs = DEFAULT_TTL_MS) {
   const existing = warmReads.get(key);
-  if (existing && entryIsFresh(existing) && pendingReuseAllowed(existing)) {
+  if (existing && entryIsFresh(existing)) {
     return;
   }
   const generation = nextGeneration(key);
@@ -67,7 +61,7 @@ export async function readIfWarm<T>(
   ttlMs = DEFAULT_TTL_MS,
 ): Promise<T> {
   const hit = warmReads.get(key);
-  if (hit && entryIsFresh(hit) && pendingReuseAllowed(hit)) {
+  if (hit && entryIsFresh(hit)) {
     return hit.promise as Promise<T>;
   }
   if (hit) {
