@@ -7,6 +7,7 @@ import { CreatePersonForm } from "@/components/staff/CreatePersonForm";
 import { PeopleList } from "@/components/staff/PeopleList";
 import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { AccountsList } from "@/components/staff/AccountsList";
+import { ErrorState } from "@/components/states/ErrorState";
 import {
   listCustomerAccounts,
   listCustomers,
