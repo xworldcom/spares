@@ -130,13 +130,22 @@ export async function apiFetchList<T>(
   warmKey: string,
   init?: RequestInit,
 ): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const background = headers.get(SPARES_BACKGROUND_FETCH) === "1";
+  const slot = slotFor(warmKey, path);
+
   return readIfWarm(warmKey, async () => {
+    if (!background && slot.body !== undefined) {
+      void fetchListOnce<T>(path, warmKey, {
+        headers: { [SPARES_BACKGROUND_FETCH]: "1" },
+      }).catch(() => {});
+      return slot.body as T;
+    }
     let fresh = await fetchListOnce<T>(path, warmKey, init);
     if (fresh !== undefined) {
       return fresh;
     }
-    const slot = slotFor(warmKey, path);
-    slot.etag = undefined;
+    slotFor(warmKey, path).etag = undefined;
     const retry = await fetchListOnce<T>(path, warmKey, init);
     if (retry === undefined) {
       throw new ApiError("List response missing body.", 500);

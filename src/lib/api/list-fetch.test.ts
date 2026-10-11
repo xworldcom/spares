@@ -59,6 +59,25 @@ describe("apiFetchList ETag / 304", () => {
     assert.equal(calls, 2);
   });
 
+  it("returns cached body immediately when warm-read was invalidated", async () => {
+    let calls = 0;
+    globalThis.fetch = mock.fn(async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ quotes: [{ id: "q1" }], unreadCount: 0 }), {
+        status: 200,
+        headers: { "content-type": "application/json", etag: 'W/"c"' },
+      });
+    }) as typeof fetch;
+
+    await apiFetchList<{ quotes: unknown[] }>("/api/quotes", "quotes:list");
+    invalidateWarmRead("quotes:list");
+    const t0 = performance.now();
+    await apiFetchList<{ quotes: unknown[] }>("/api/quotes", "quotes:list");
+    const elapsed = performance.now() - t0;
+    assert.ok(elapsed < 50, `expected sync cache hit, took ${elapsed}ms`);
+    assert.equal(calls, 1);
+  });
+
   it("ignores orphan etag when no body is held (no If-None-Match)", async () => {
     const seen: string[] = [];
     globalThis.fetch = mock.fn(async (_url: string, init?: RequestInit) => {
