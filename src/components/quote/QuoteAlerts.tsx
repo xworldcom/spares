@@ -13,6 +13,7 @@ import {
   fetchQuoteAlertsUnreadCount,
   scheduleQuoteAlertsInitialLoad,
 } from "@/components/quote/quote-alerts-fetch";
+import { TAB_ALERT_POLL_MS } from "@/lib/ui/tab-alert-poll";
 
 type QuoteAlertsValue = {
   unreadCount: number;
@@ -20,9 +21,6 @@ type QuoteAlertsValue = {
 };
 
 const QuoteAlertsContext = createContext<QuoteAlertsValue | null>(null);
-
-/** Keep tab badges current while the user stays on another page (no window blur). */
-const TAB_ALERT_POLL_MS = 15_000;
 
 export function QuoteAlertsProvider({ children }: { children: React.ReactNode }) {
   const { status, user } = useAuth();
@@ -73,7 +71,12 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
     if (status !== "signed-in" || !user) {
       return;
     }
-    const id = window.setInterval(() => void refresh(), TAB_ALERT_POLL_MS);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+      void refresh();
+    }, TAB_ALERT_POLL_MS);
     return () => window.clearInterval(id);
   }, [refresh, status, user]);
 

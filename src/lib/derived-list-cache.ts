@@ -5,6 +5,7 @@ import {
   formatCatalogVersionKey,
   peekCatalogVersionsCoalesced,
 } from "./catalog-version-peek.ts";
+import { blobReadBytesHeaders, resetBlobReadBytes } from "./blob-read-bytes.ts";
 
 type CacheEntry = {
   catalogKey: string;
@@ -53,6 +54,7 @@ export async function respondDerivedList(
   scopeKey: string,
   build: () => Promise<unknown>,
 ): Promise<NextResponse> {
+  resetBlobReadBytes();
   const catalogKey = await catalogVersionKey();
   const etag = weakEtag(scopeKey, catalogKey);
   const ifNoneMatch = request.headers.get("if-none-match");
@@ -62,6 +64,7 @@ export async function respondDerivedList(
       headers: {
         ETag: etag,
         "Cache-Control": "private, must-revalidate",
+        ...blobReadBytesHeaders(),
       },
     });
   }
@@ -74,6 +77,7 @@ export async function respondDerivedList(
         "Content-Type": "application/json; charset=utf-8",
         ETag: etag,
         "Cache-Control": "private, must-revalidate",
+        ...blobReadBytesHeaders(),
       },
     });
   }
@@ -89,6 +93,7 @@ export async function respondDerivedList(
       "Content-Type": "application/json; charset=utf-8",
       ETag: etag,
       "Cache-Control": "private, must-revalidate",
+      ...blobReadBytesHeaders(),
     },
   });
 }

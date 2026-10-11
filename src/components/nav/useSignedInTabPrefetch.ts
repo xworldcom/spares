@@ -31,9 +31,18 @@ export function useSignedInTabPrefetch(role?: string) {
     for (const href of routes) {
       prefetchAppRoute(router, href);
     }
-    warmCareHubLists();
-    warmQuotesList();
-    warmTicketsList();
+    const path = window.location.pathname;
+    const onMachinesHub = path === "/machines";
+    const onQuotesHub = path === "/quotes" || path.startsWith("/staff/quotes");
+    const onTicketsHub = path === "/care/tickets";
+    if (!onMachinesHub && !onTicketsHub) {
+      warmCareHubLists();
+    } else if (onMachinesHub && !onTicketsHub) {
+      warmTicketsList();
+    }
+    if (!onQuotesHub) {
+      warmQuotesList();
+    }
     if (role === "staff") {
       warmStaffHubLists();
     }

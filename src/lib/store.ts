@@ -559,6 +559,9 @@ function parseCareJson(raw: string | null): CareStore | null {
 }
 
 async function readCareStore(): Promise<CareStore> {
+  if (memory && (trustProcessMemory() || await catalogMemoryStillFresh())) {
+    return careCollections(memory);
+  }
   return parseCareJson(await getPersistence().readCareJson()) ?? emptyCare();
 }
 
@@ -1517,6 +1520,27 @@ function overlayStoredCare(db: Database, careRaw: string | null): Database {
 
 /** Throws {@link CatalogUnreadableError} rather than treating bad JSON as an empty store. */
 async function readLatestCatalog(mode: ReadMode = "commit"): Promise<LatestCatalog> {
+  if (
+    mode === "snapshot" &&
+    memory &&
+    memoryCatalogVersions &&
+    (trustProcessMemory() || await catalogMemoryStillFresh())
+  ) {
+    const base = snapshotOf(memory);
+    if (base?.dbJson) {
+      const parsed = parseDatabase(base.dbJson);
+      if (parsed) {
+        const loaded: LoadedDatabase = { ...parsed, base };
+        return {
+          loaded,
+          db: memory,
+          dbVersion: memoryCatalogVersions.database,
+          careVersion: memoryCatalogVersions.care,
+          base,
+        };
+      }
+    }
+  }
   const persistence = getPersistence();
   const [dbRead, careRead] = await Promise.all([
     persistence.readVersioned("database", mode),

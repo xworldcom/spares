@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { listAccessibleTickets } from "@/lib/api/care";
+import { TAB_ALERT_POLL_MS } from "@/lib/ui/tab-alert-poll";
 
 type CareAlertsValue = {
   unreadCount: number;
@@ -17,9 +18,6 @@ type CareAlertsValue = {
 };
 
 const CareAlertsContext = createContext<CareAlertsValue | null>(null);
-
-/** Keep tab badges current while the user stays on another page (no window blur). */
-const TAB_ALERT_POLL_MS = 15_000;
 
 export function CareAlertsProvider({ children }: { children: React.ReactNode }) {
   const { status, user } = useAuth();
@@ -68,7 +66,12 @@ export function CareAlertsProvider({ children }: { children: React.ReactNode }) 
     if (status !== "signed-in" || !user) {
       return;
     }
-    const id = window.setInterval(() => void refresh(), TAB_ALERT_POLL_MS);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+      void refresh();
+    }, TAB_ALERT_POLL_MS);
     return () => window.clearInterval(id);
   }, [refresh, status, user]);
 

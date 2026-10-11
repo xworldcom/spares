@@ -1,5 +1,5 @@
 import { isMicrosoftSignInEnabled } from "./microsoft.ts";
-import { getPlatformSignInSettingsFromCatalog } from "../store.ts";
+import { readPersistedPlatformSignInSettings } from "../platform-settings-persistence.ts";
 import { PASSWORD_LOGIN_DISABLED_MESSAGE } from "./password-login-public.ts";
 
 export type PasswordLoginEnvOverride = "force-off" | "force-on" | null;
@@ -37,11 +37,11 @@ export type SignInOptions = {
 };
 
 export async function getSignInOptions(): Promise<SignInOptions> {
-  const stored = await getPlatformSignInSettingsFromCatalog();
-  const passwordLoginStoredEnabled = stored.passwordLoginEnabled !== false;
+  const sidecar = await readPersistedPlatformSignInSettings();
+  const passwordLoginStoredEnabled = sidecar?.passwordLoginEnabled !== false;
   return {
     passwordLoginStoredEnabled,
-    passwordLoginEnabled: effectivePasswordLoginEnabled(stored.passwordLoginEnabled),
+    passwordLoginEnabled: effectivePasswordLoginEnabled(sidecar?.passwordLoginEnabled),
     microsoftSignInEnabled: isMicrosoftSignInEnabled(),
     passwordLoginEnvOverride: readPasswordLoginEnvOverride(),
   };

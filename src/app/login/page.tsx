@@ -4,7 +4,7 @@ import { getSignInOptions } from "@/lib/auth/password-login.server";
 import { sanitizeNextPath } from "@/lib/auth/safe-url";
 import { isEntraTenantId } from "@/lib/auth/sso-domain";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function LoginPage({
   searchParams,

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { addBlobReadBytes } from "./blob-read-bytes.ts";
 import { mkdir, readFile, rename, rmdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -487,6 +488,11 @@ const VERSION_READ_ATTEMPTS = 5;
 
 function blobPersistence(client: BlobClient): Persistence {
   const softCasUntil = new Map<string, number>();
+  const snapshotJsonCache = new Map<string, { version: string; json: string }>();
+
+  function dropSnapshotCache(pathname: string) {
+    snapshotJsonCache.delete(pathname);
+  }
 
   async function readBuffer(pathname: string): Promise<Buffer | null> {
     const result = await client.get(pathname, { access: "private", useCache: false });
@@ -496,7 +502,9 @@ function blobPersistence(client: BlobClient): Persistence {
     if (result.statusCode !== 200 || !result.stream) {
       throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
     }
-    return Buffer.from(await new Response(result.stream).arrayBuffer());
+    const buffer = Buffer.from(await new Response(result.stream).arrayBuffer());
+    addBlobReadBytes(buffer.length);
+    return buffer;
   }
 
   /**
@@ -529,7 +537,9 @@ function blobPersistence(client: BlobClient): Persistence {
     if (result.statusCode !== 200 || !result.stream) {
       throw new Error(`Blob ${pathname} returned status ${result.statusCode}`);
     }
-    const json = Buffer.from(await new Response(result.stream).arrayBuffer()).toString("utf8");
+    const buffer = Buffer.from(await new Response(result.stream).arrayBuffer());
+    addBlobReadBytes(buffer.length);
+    const json = buffer.toString("utf8");
     return { json, etag: result.blob.etag };
   }
 
@@ -576,10 +586,25 @@ function blobPersistence(client: BlobClient): Persistence {
     let lastError: unknown;
     for (let attempt = 1; attempt <= JSON_READ_ATTEMPTS; attempt++) {
       try {
+        const version = await headEtag(pathname);
+        if (version === null) {
+          dropSnapshotCache(pathname);
+          return { json: null, version: null };
+        }
+        const cached = snapshotJsonCache.get(pathname);
+        if (cached && cached.version === version) {
+          return { json: cached.json, version };
+        }
         const body = await readBody(pathname);
-        return body ? { json: body.json, version: body.etag } : { json: null, version: null };
+        if (!body) {
+          dropSnapshotCache(pathname);
+          return { json: null, version: null };
+        }
+        snapshotJsonCache.set(pathname, { version, json: body.json });
+        return { json: body.json, version };
       } catch (cause) {
         if (isNotFoundError(cause)) {
+          dropSnapshotCache(pathname);
           return { json: null, version: null };
         }
         lastError = cause;
@@ -613,6 +638,7 @@ function blobPersistence(client: BlobClient): Persistence {
       return { ok: false };
     }
     const written = await client.put(pathname, json, { ...putOptions, allowOverwrite: true });
+    dropSnapshotCache(pathname);
     return { ok: true, version: written.etag };
   }
 
@@ -624,6 +650,7 @@ function blobPersistence(client: BlobClient): Persistence {
     try {
       if (expected === null) {
         const created = await client.put(pathname, json, { ...putOptions, allowOverwrite: false });
+        dropSnapshotCache(pathname);
         return { ok: true, version: created.etag };
       }
       if ((softCasUntil.get(pathname) ?? 0) > Date.now()) {
@@ -634,6 +661,7 @@ function blobPersistence(client: BlobClient): Persistence {
         allowOverwrite: true,
         ifMatch: expected,
       });
+      dropSnapshotCache(pathname);
       return { ok: true, version: written.etag };
     } catch (cause) {
       if (isAlreadyExists(cause) || isNotFoundError(cause)) {
