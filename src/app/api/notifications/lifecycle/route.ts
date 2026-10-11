@@ -2,8 +2,7 @@ import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { toPublicLifecycleNotification } from "@/lib/lifecycle-notifications";
 import {
-  countUserLifecycleNotificationsUnread,
-  listUserLifecycleNotifications,
+  getUserLifecycleNotificationsBundle,
   markAllUserLifecycleNotificationsRead,
   markUserLifecycleNotificationRead,
 } from "@/lib/store";
@@ -21,10 +20,11 @@ export async function GET(request: Request) {
   }
   const url = new URL(request.url);
   const unreadOnly = url.searchParams.get("unread") === "1";
-  const [rows, unreadCount] = await Promise.all([
-    listUserLifecycleNotifications(tenantId, auth.user.id, { unreadOnly }),
-    countUserLifecycleNotificationsUnread(tenantId, auth.user.id),
-  ]);
+  const { notifications: rows, unreadCount } = await getUserLifecycleNotificationsBundle(
+    tenantId,
+    auth.user.id,
+    { unreadOnly },
+  );
   return json({
     notifications: rows.map(toPublicLifecycleNotification),
     unreadCount,

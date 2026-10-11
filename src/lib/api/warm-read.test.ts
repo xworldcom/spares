@@ -41,6 +41,21 @@ describe("warm-read", () => {
     assert.equal(calls, 1);
   });
 
+  it("drops a rejected warm read so the next call retries", async () => {
+    let calls = 0;
+    const load = () => {
+      calls += 1;
+      if (calls === 1) {
+        return Promise.reject(new Error("network"));
+      }
+      return Promise.resolve("ok");
+    };
+    await readIfWarm("retry", load).catch(() => undefined);
+    const value = await readIfWarm("retry", load);
+    assert.equal(value, "ok");
+    assert.equal(calls, 2);
+  });
+
   it("invalidates a warmed key", async () => {
     let calls = 0;
     const load = () => {

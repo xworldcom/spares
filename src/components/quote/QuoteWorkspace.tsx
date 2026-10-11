@@ -50,7 +50,9 @@ import {
   quoteRequestedBannerText,
 } from "@/lib/ui/quote-requested-banner";
 import { UNSAVED_QUOTE_LEAVE_PROMPT } from "@/lib/ui/pending-send-guard";
+import { useRequestGeneration } from "@/lib/ui/request-generation";
 import { useLeavePageGuard } from "@/lib/ui/use-leave-page-guard";
+import { releaseWarmReadIfPending } from "@/lib/api/warm-read";
 import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role, TicketCustomerReadReceipt } from "@/types";
 
 function sameReadReceipts(
@@ -91,7 +93,9 @@ export function QuoteWorkspace({
   const [notice, setNotice] = useState<string | null>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [recordConflict, setRecordConflict] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const runLock = useRef<Promise<void>>(Promise.resolve());
+  const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
     if (role !== "customer") {
@@ -135,17 +139,17 @@ export function QuoteWorkspace({
       setShipments([]);
       setLoadedRef(null);
     }
-    let cancelled = false;
+    const generation = begin();
     getQuote(quoteRef)
       .then((next) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         applyQuote(next);
         setError(null);
       })
       .catch((cause: unknown) => {
-        if (cancelled) {
+        if (!isCurrent(generation)) {
           return;
         }
         setError(errorMessage(cause, "Could not load this quote."));
@@ -155,11 +159,11 @@ export function QuoteWorkspace({
         setLoadedRef(quoteRef);
       });
     return () => {
-      cancelled = true;
+      releaseWarmReadIfPending(`quote:${quoteRef}:view`);
     };
     // applyQuote is local state wiring, not an effect input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteRef]);
+  }, [quoteRef, loadAttempt, begin, isCurrent]);
 
   const pollQuote = useCallback(async () => {
     if (!quote) {
@@ -303,6 +307,10 @@ export function QuoteWorkspace({
         <ErrorState
           title="Quote unavailable"
           message={error}
+          onRetry={() => {
+            setError(null);
+            setLoadAttempt((attempt) => attempt + 1);
+          }}
         />
       );
     }

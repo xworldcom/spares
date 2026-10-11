@@ -3571,6 +3571,32 @@ export function countUserLifecycleNotificationsUnread(tenantId: string, userId: 
   });
 }
 
+export function getUserLifecycleNotificationsBundle(
+  tenantId: string,
+  userId: string,
+  filter?: { unreadOnly?: boolean },
+) {
+  return withLock(async () => {
+    const db = await ensureCatalog();
+    const {
+      listLifecycleNotificationsForUser,
+      countUnreadLifecycleNotifications,
+    } = await import("./lifecycle-notifications.ts");
+    const notifications = listLifecycleNotificationsForUser(
+      db.partLifecycleNotifications,
+      tenantId,
+      userId,
+      filter,
+    );
+    const unreadCount = countUnreadLifecycleNotifications(
+      db.partLifecycleNotifications,
+      tenantId,
+      userId,
+    );
+    return { notifications, unreadCount };
+  });
+}
+
 export function markUserLifecycleNotificationRead(
   tenantId: string,
   userId: string,

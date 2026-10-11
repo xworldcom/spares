@@ -5,7 +5,8 @@ import {
   SIGNED_OUT_MESSAGE,
 } from "./unauthorized.ts";
 import { SPARES_BACKGROUND_FETCH } from "./background-fetch.ts";
-import { readIfWarm, warmRead } from "./warm-read.ts";
+import { fetchWithDeadline, isAbortError } from "./fetch-deadline.ts";
+import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read.ts";
 
 type ListSlot = {
   path: string;
@@ -88,7 +89,7 @@ async function fetchListOnce<T>(
 
   let response: Response;
   try {
-    response = await fetch(path, {
+    response = await fetchWithDeadline(path, {
       ...init,
       method: "GET",
       cache: "no-store",
@@ -96,7 +97,7 @@ async function fetchListOnce<T>(
       headers,
     });
   } catch (cause) {
-    if (init?.signal?.aborted) {
+    if (init?.signal?.aborted || isAbortError(cause)) {
       throw cause;
     }
     throw new ApiError("Could not reach OEE360. Check your network and try again.", 0);
@@ -134,22 +135,25 @@ async function fetchListOnce<T>(
   return body as T;
 }
 
-export async function apiFetchList<T>(
+async function loadListBody<T>(
   path: string,
   warmKey: string,
   init?: RequestInit,
 ): Promise<T> {
+  const slot = slotFor(warmKey, path);
   const headers = new Headers(init?.headers);
   const background = headers.get(SPARES_BACKGROUND_FETCH) === "1";
-  const slot = slotFor(warmKey, path);
 
-  return readIfWarm(warmKey, async () => {
-    if (!background && slot.body !== undefined) {
-      void fetchListOnce<T>(path, warmKey, {
-        headers: { [SPARES_BACKGROUND_FETCH]: "1" },
-      }).catch(() => {});
-      return slot.body as T;
-    }
+  if (!background && slot.body !== undefined) {
+    void fetchListOnce<T>(path, warmKey, {
+      headers: { [SPARES_BACKGROUND_FETCH]: "1" },
+    }).catch(() => {
+      invalidateWarmRead(warmKey);
+    });
+    return slot.body as T;
+  }
+
+  const attempt = async () => {
     let fresh = await fetchListOnce<T>(path, warmKey, init);
     if (fresh !== undefined) {
       return fresh;
@@ -160,7 +164,31 @@ export async function apiFetchList<T>(
       throw new ApiError("List response missing body.", 500);
     }
     return retry;
-  });
+  };
+
+  try {
+    return await attempt();
+  } catch (cause) {
+    if (init?.signal?.aborted || isAbortError(cause)) {
+      invalidateWarmRead(warmKey);
+      throw cause;
+    }
+    invalidateWarmRead(warmKey);
+    try {
+      return await attempt();
+    } catch (retryCause) {
+      invalidateWarmRead(warmKey);
+      throw retryCause;
+    }
+  }
+}
+
+export async function apiFetchList<T>(
+  path: string,
+  warmKey: string,
+  init?: RequestInit,
+): Promise<T> {
+  return readIfWarm(warmKey, () => loadListBody<T>(path, warmKey, init));
 }
 
 /** Fire-and-forget list warm (idle prefetch). */
