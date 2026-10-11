@@ -194,6 +194,7 @@ async function runCell(browserType, browserName, user, vp) {
 }
 
 async function runCellSafe(job) {
+  mkdirSync(outDir, { recursive: true });
   try {
     return await runCell(job.browserType, job.browserName, job.user, job.vp);
   } catch (cause) {
