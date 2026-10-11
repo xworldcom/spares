@@ -7,9 +7,16 @@ import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
 import { QuotesList } from "@/components/quote/QuotesList";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
 import { workListMachineIdFromSearchParam, WORK_LIST_MACHINE_QUERY } from "@/lib/work-list-scope";
+import type { QuotesListResponse } from "@/lib/api/types";
 import type { Role } from "@/types";
 
-export function MachineQuotesWorkspace({ machineId }: { machineId: string }) {
+export function MachineQuotesWorkspace({
+  machineId,
+  initialList,
+}: {
+  machineId: string;
+  initialList?: QuotesListResponse | null;
+}) {
   const { user } = useAuth();
   if (!user) {
     return null;
@@ -18,6 +25,7 @@ export function MachineQuotesWorkspace({ machineId }: { machineId: string }) {
     <QuotesWorkspace
       role={user.role === "staff" ? "staff" : "customer"}
       machineId={machineId}
+      initialList={initialList}
     />
   );
 }
@@ -25,9 +33,11 @@ export function MachineQuotesWorkspace({ machineId }: { machineId: string }) {
 export function QuotesWorkspace({
   role = "customer",
   machineId,
+  initialList,
 }: {
   role?: Role;
   machineId?: string;
+  initialList?: QuotesListResponse | null;
 }) {
   const searchParams = useSearchParams();
   const [creating, setCreating] = useState(false);
@@ -67,7 +77,7 @@ export function QuotesWorkspace({
           onCancel={() => setCreating(false)}
         />
       ) : null}
-      <QuotesList role={role} machineId={hubMachineId} />
+      <QuotesList role={role} machineId={hubMachineId} initialList={initialList} />
     </div>
   );
 }

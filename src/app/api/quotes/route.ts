@@ -1,4 +1,3 @@
-import { staffAssistantEnabled } from "@/lib/assistant/public";
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { respondDerivedList } from "@/lib/derived-list-cache";
 import { error, isErrorResponse, readJson, withCatalogConflict } from "@/lib/http";
@@ -8,8 +7,8 @@ import {
   parseQuoteItems,
   quoteOwnerIdForCreate,
   staffQuoteAccountMatch,
-  toPublicQuoteListRow,
 } from "@/lib/quotes";
+import { buildQuotesListPayload } from "@/lib/quotes-list-payload";
 import { canAccessMachine, customerIdFromGrant, grantFromUser } from "@/lib/access";
 import { publicQuoteForUser } from "@/lib/quote-http";
 import { isSeedAllowed } from "@/lib/production-env";
@@ -26,7 +25,6 @@ import {
   getOrgContext,
   grantCustomerMachine,
   listMachines,
-  readTenantWorkListSnapshot,
 } from "@/lib/store";
 
 type CreateQuoteBody = {
@@ -43,33 +41,9 @@ export async function GET(request: NextRequest) {
   }
 
   const scope = listScopeKey("quotes", auth.tenantId, auth.user);
-  return respondDerivedList(request, scope, async () => {
-    if (auth.user.role === "staff" && isSeedAllowed()) {
-      await ensurePreviewQaQuoteFixture(auth.tenantId);
-      await ensureDemoStageQuoteFixtures(auth.tenantId);
-    }
-
-    const snapshot = await readTenantWorkListSnapshot(auth.tenantId);
-    const names = new Map(snapshot.machines.map((machine) => [machine.id, machine.name]));
-    const visible =
-      auth.user.role === "staff"
-        ? snapshot.quotes
-        : snapshot.quotes.filter((quote) => quote.customerId === auth.user.id);
-
-    const assistantAvailable =
-      auth.user.role === "staff" ? await staffAssistantEnabled() : false;
-
-    const publicQuotes = visible.map((quote) =>
-      toPublicQuoteListRow(quote, auth.user, names.get(quote.machineId), {
-        assistantAvailable: auth.user.role === "staff" ? assistantAvailable : undefined,
-      }),
-    );
-
-    return {
-      quotes: publicQuotes,
-      unreadCount: publicQuotes.filter((quote) => quote.unread).length,
-    };
-  });
+  return respondDerivedList(request, scope, () =>
+    buildQuotesListPayload(auth.user, auth.tenantId),
+  );
 }
 
 async function handlePOST(request: Request) {

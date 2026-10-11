@@ -22,20 +22,22 @@ import {
 import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
 import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
 import { useRequestGeneration } from "@/lib/ui/request-generation";
-import type { Quote, QuoteStatus, Role } from "@/lib/api/types";
+import type { Quote, QuoteStatus, QuotesListResponse, Role } from "@/lib/api/types";
 
 export function QuotesList({
   role,
   machineId,
+  initialList,
 }: {
   role: Role;
   machineId?: string;
+  initialList?: QuotesListResponse | null;
 }) {
   const router = useRouter();
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [quotes, setQuotes] = useState<Quote[]>(initialList?.quotes ?? []);
+  const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
@@ -43,7 +45,7 @@ export function QuotesList({
 
   useEffect(() => {
     const generation = begin();
-    const background = reloadKey > 0;
+    const background = reloadKey > 0 || Boolean(initialList);
     if (!background) {
       setLoading(true);
     }
@@ -67,7 +69,7 @@ export function QuotesList({
           setLoading(false);
         }
       });
-  }, [begin, isCurrent, reloadKey, refresh]);
+  }, [begin, initialList, isCurrent, reloadKey, refresh]);
 
   useEffect(() => {
     function onVisible() {
