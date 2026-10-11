@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import { ApiError } from "./errors";
+import { invalidateStaffHostDirectoryCache } from "./staff-directory";
 import { invalidateWarmRead } from "./warm-read";
 import type {
   AuthUserResponse,
@@ -20,6 +21,7 @@ export async function login(email: string, password: string) {
   invalidateWarmRead("care-hub:machines");
   invalidateWarmRead("machines:list");
   invalidateWarmRead("quotes:list");
+  invalidateStaffHostDirectoryCache();
   return data.user;
 }
 
@@ -59,6 +61,7 @@ export async function createPerson(
       machineIds: access.machineIds ?? [],
     }),
   });
+  invalidateStaffHostDirectoryCache();
   return data.user;
 }
 
@@ -105,6 +108,7 @@ export async function deletePerson(userId: string) {
   await apiFetch<{ ok: true }>(`/api/staff/customers/${userId}`, {
     method: "DELETE",
   });
+  invalidateStaffHostDirectoryCache();
 }
 
 export type StaffTeamMember = {
@@ -132,6 +136,7 @@ export async function createStaffMember(
       ...(tenantId ? { tenantId } : {}),
     }),
   });
+  invalidateStaffHostDirectoryCache();
   return data.user;
 }
 
@@ -181,6 +186,7 @@ export async function createCustomerAccount(name: string) {
       body: JSON.stringify({ name }),
     },
   );
+  invalidateStaffHostDirectoryCache();
   return data.account;
 }
 

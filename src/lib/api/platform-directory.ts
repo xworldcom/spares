@@ -1,5 +1,28 @@
+import type { DirectoryEntry } from "@/lib/platform-directory";
 import { apiFetch } from "./client";
+import { apiFetchList, invalidateListEtag, prefetchList } from "./list-fetch";
 import type { CustomerAccount, PublicUser, Site } from "./types";
+import { invalidateWarmRead } from "./warm-read";
+
+const PLATFORM_DIRECTORY_PATH = "/api/platform/directory";
+const PLATFORM_DIRECTORY_KEY = "platform:directory";
+
+export function invalidatePlatformDirectoryListCache() {
+  invalidateWarmRead(PLATFORM_DIRECTORY_KEY);
+  invalidateListEtag(PLATFORM_DIRECTORY_PATH);
+}
+
+export async function listPlatformDirectoryEntries(): Promise<DirectoryEntry[]> {
+  const data = await apiFetchList<{ entries: DirectoryEntry[] }>(
+    PLATFORM_DIRECTORY_PATH,
+    PLATFORM_DIRECTORY_KEY,
+  );
+  return data.entries ?? [];
+}
+
+export function prefetchPlatformDirectory() {
+  prefetchList(PLATFORM_DIRECTORY_PATH, PLATFORM_DIRECTORY_KEY);
+}
 
 export type PlatformDirectoryUserDetail = {
   user: PublicUser;

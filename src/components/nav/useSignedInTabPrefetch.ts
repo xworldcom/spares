@@ -7,6 +7,7 @@ import {
   prefetchAppRoute,
   warmCareHubLists,
   warmQuotesList,
+  warmStaffHubLists,
   warmTicketsList,
 } from "@/lib/nav/prefetch";
 
@@ -33,6 +34,9 @@ export function useSignedInTabPrefetch(role?: string) {
     warmCareHubLists();
     warmQuotesList();
     warmTicketsList();
+    if (role === "staff") {
+      warmStaffHubLists();
+    }
     const lifecyclePrefetch = window.setTimeout(() => {
       prefetchLifecycleNotifications();
     }, 2_000);
