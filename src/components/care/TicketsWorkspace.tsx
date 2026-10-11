@@ -39,12 +39,19 @@ import {
   WORK_LIST_MACHINE_QUERY,
 } from "@/lib/work-list-scope";
 import { useRequestGeneration } from "@/lib/ui/request-generation";
+import type { TicketsListResponse } from "@/lib/api/types";
 import type { ServiceTicket } from "@/types";
+import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
+
+const ACCESSIBLE_TICKETS_PATH = "/api/tickets";
+const ACCESSIBLE_TICKETS_WARM_KEY = "tickets:accessible";
 
 type TicketsWorkspaceProps = {
   scope: "hub" | "machine";
   machineId?: string;
   ticketId?: string;
+  initialList?: TicketsListResponse | null;
+  listEtag?: string | null;
 };
 
 function ticketHrefFor(scope: TicketsWorkspaceProps["scope"], ticket: ServiceTicket) {
@@ -61,7 +68,19 @@ function listHrefFor(scope: TicketsWorkspaceProps["scope"], machineId?: string) 
   return machineTicketsHref(machineId ?? "");
 }
 
-export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspaceProps) {
+export function TicketsWorkspace({
+  scope,
+  machineId,
+  ticketId,
+  initialList,
+  listEtag,
+}: TicketsWorkspaceProps) {
+  useSeedListSlotOnce(
+    ACCESSIBLE_TICKETS_WARM_KEY,
+    ACCESSIBLE_TICKETS_PATH,
+    scope === "hub" ? initialList : null,
+    scope === "hub" ? listEtag : null,
+  );
   const router = useRouter();
   const searchParams = useSearchParams();
   const hubMachineFilter =
@@ -70,8 +89,9 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
       : undefined;
   const desktop = useDesktopStage();
   const { refresh: refreshCareAlerts } = useCareAlerts();
-  const [tickets, setTickets] = useState<ServiceTicket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hubInitial = scope === "hub" ? initialList : null;
+  const [tickets, setTickets] = useState<ServiceTicket[]>(hubInitial?.tickets ?? []);
+  const [loading, setLoading] = useState(scope === "hub" ? !hubInitial : true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
@@ -86,11 +106,17 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
 
   useEffect(() => {
     const generation = begin();
-    setLoading(true);
+    const skipHubFetch = scope === "hub" && Boolean(hubInitial) && reloadKey === 0;
+    const background = reloadKey > 0;
+    if (!skipHubFetch && !background) {
+      setLoading(true);
+    }
     const load =
       scope === "machine" && machineId
         ? listMachineTickets(machineId)
-        : listAccessibleTickets();
+        : skipHubFetch
+          ? Promise.resolve({ tickets: hubInitial?.tickets ?? [], unreadCount: hubInitial?.unreadCount ?? 0 })
+          : listAccessibleTickets();
     load
       .then((next) => {
         if (!isCurrent(generation)) {
@@ -111,7 +137,7 @@ export function TicketsWorkspace({ scope, machineId, ticketId }: TicketsWorkspac
           setLoading(false);
         }
       });
-  }, [begin, isCurrent, scope, machineId, reloadKey, refreshCareAlerts]);
+  }, [begin, hubInitial, isCurrent, scope, machineId, reloadKey, refreshCareAlerts]);
 
   useEffect(() => {
     if (loading || tickets.length === 0) {

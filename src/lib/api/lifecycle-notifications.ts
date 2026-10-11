@@ -42,6 +42,15 @@ function lifecycleSlots() {
   return root.__sparesLifecycleFetchSlots;
 }
 
+export function seedLifecycleNotificationsSlot(
+  warmKey: string,
+  path: string,
+  body: LifecycleNotificationsResponse,
+  etag: string,
+) {
+  lifecycleSlots().set(warmKey, { path, etag, body });
+}
+
 function slotFor(warmKey: string, path: string): LifecycleSlot {
   const slots = lifecycleSlots();
   const existing = slots.get(warmKey);

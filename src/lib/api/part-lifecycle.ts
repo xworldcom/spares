@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import { apiFetchList, invalidateListEtag, prefetchList } from "./list-fetch";
+import { apiFetchList, invalidateListEtag, prefetchList, seedListSlot } from "./list-fetch";
 import { invalidateWarmRead } from "./warm-read";
 import type { PartLifecycleInfo, PartLifecycleStatus } from "@/types";
 import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
@@ -66,6 +66,19 @@ export function invalidateStaffPartLifecycleListCache() {
 export function prefetchStaffPartLifecycleDefault() {
   const path = partLifecyclePath();
   prefetchList(path, partLifecycleWarmKey());
+}
+
+export function seedStaffPartLifecycleListSlot(
+  body: StaffPartLifecycleResponse,
+  etag: string,
+  filters?: {
+    status?: PartLifecycleStatus | "all";
+    machineId?: string;
+    q?: string;
+    tenantId?: string;
+  },
+) {
+  seedListSlot(partLifecycleWarmKey(filters), partLifecyclePath(filters), body, etag);
 }
 
 export async function fetchStaffPartLifecycle(

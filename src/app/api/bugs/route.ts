@@ -1,5 +1,9 @@
+import type { NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
+import { buildBugReportsListPayload } from "@/lib/bug-reports-list-payload";
+import { respondDerivedList } from "@/lib/derived-list-cache";
+import { bugReportsListScopeKey } from "@/lib/list-scope";
 import { isSameOriginRequest } from "@/lib/cors";
 import { DEFAULT_TENANT_ID, tenantIdForUser } from "@/lib/tenant";
 import {
@@ -15,7 +19,6 @@ import { allowRateLimit, clientIp } from "@/lib/rate-limit";
 import {
   attachBugReportGithubIssue,
   createBugReport,
-  listBugReports,
 } from "@/lib/store";
 
 type CreateBugBody = {
@@ -46,30 +49,14 @@ function githubDeliveryRequired() {
   return Boolean(process.env.VERCEL) || Boolean(githubToken());
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
-  const reports = await listBugReports(auth.tenantId);
-  return json({
-    reports: reports.map((report) => ({
-      id: report.id,
-      description: report.description,
-      createdAt: report.createdAt,
-      path: report.path,
-      userAgent: report.userAgent,
-      userEmail: report.userEmail,
-      userRole: report.userRole,
-      logText: report.logText,
-      githubIssueUrl: report.githubIssueUrl,
-      delivery: report.delivery,
-      screenshotUrl: report.screenshotFileName
-        ? `/api/bugs/${report.id}/screenshot`
-        : undefined,
-    })),
-  });
+  const scope = bugReportsListScopeKey(auth.tenantId);
+  return respondDerivedList(request, scope, () => buildBugReportsListPayload(auth.tenantId));
 }
 
 async function handlePOST(request: Request) {

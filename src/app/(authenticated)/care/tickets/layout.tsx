@@ -1,20 +1,26 @@
-"use client";
+import { getCurrentUser } from "@/lib/auth";
+import { derivedListEtagForScope } from "@/lib/derived-list-cache";
+import { listScopeKey } from "@/lib/list-scope";
+import { loadAccessibleTicketsListForSession } from "@/lib/tickets-list-server";
+import { tenantIdForUser } from "@/lib/tenant";
+import { CareHubTicketsClientLayout } from "./CareHubTicketsClientLayout";
 
-import { useParams } from "next/navigation";
-import { TicketsWorkspace } from "@/components/care/TicketsWorkspace";
-
-export default function CareHubTicketsLayout() {
-  const params = useParams();
-  const ticketId = typeof params.ticketId === "string" ? params.ticketId : undefined;
+export default async function CareHubTicketsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const user = await getCurrentUser();
+  const tenantId = user ? tenantIdForUser(user) : null;
+  const initialList = await loadAccessibleTicketsListForSession();
+  const listEtag =
+    user && tenantId
+      ? await derivedListEtagForScope(listScopeKey("tickets", tenantId, user))
+      : null;
 
   return (
-    <div className="catalog-page care-page-wide care-tickets-shell">
-      <div className="catalog-page-intro">
-        <h1>Care</h1>
-      </div>
-      <div className="care-body">
-        <TicketsWorkspace scope="hub" ticketId={ticketId} />
-      </div>
-    </div>
+    <CareHubTicketsClientLayout initialList={initialList} listEtag={listEtag}>
+      {children}
+    </CareHubTicketsClientLayout>
   );
 }

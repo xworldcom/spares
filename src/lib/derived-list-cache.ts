@@ -41,6 +41,11 @@ function weakEtag(scopeKey: string, catalogKey: string) {
   return `W/"${hash.slice(0, 24)}"`;
 }
 
+/** Matches respondDerivedList ETag for seeding client list slots after RSC. */
+export async function derivedListEtagForScope(scopeKey: string) {
+  return weakEtag(scopeKey, await catalogVersionKey());
+}
+
 export function clearDerivedListCachesForTests() {
   LIST_CACHE.clear();
 }

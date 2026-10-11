@@ -1,18 +1,18 @@
-import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
+import { respondDerivedList } from "@/lib/derived-list-cache";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
-import { etagMatches } from "@/lib/record-etag";
-import { toPublicLifecycleNotification } from "@/lib/lifecycle-notifications";
+import { buildLifecycleNotificationsPayload } from "@/lib/lifecycle-notifications-list-payload";
+import { lifecycleNotificationsScopeKey } from "@/lib/list-scope";
 import {
   countUserLifecycleNotificationsUnread,
-  getUserLifecycleNotificationsBundle,
   markAllUserLifecycleNotificationsRead,
   markUserLifecycleNotificationRead,
 } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const auth = await requireTenantUser();
   if ("error" in auth) {
     return auth.error;
@@ -21,28 +21,11 @@ export async function GET(request: Request) {
   if (!tenantId) {
     return error("Choose a host", 400);
   }
-  const url = new URL(request.url);
+  const url = request.nextUrl;
   const unreadOnly = url.searchParams.get("unread") === "1";
-  const { notifications: rows, unreadCount } = await getUserLifecycleNotificationsBundle(
-    tenantId,
-    auth.user.id,
-    { unreadOnly },
-  );
-  const generatedAt = new Date().toISOString();
-  const etag = `W/"lifecycle:${unreadCount}:${rows.length}:${rows[0]?.id ?? "none"}"`;
-  if (etagMatches(request, etag)) {
-    return new NextResponse(null, {
-      status: 304,
-      headers: { ETag: etag, "Cache-Control": "private, must-revalidate" },
-    });
-  }
-  return NextResponse.json(
-    {
-      notifications: rows.map(toPublicLifecycleNotification),
-      unreadCount,
-      generatedAt,
-    },
-    { status: 200, headers: { ETag: etag, "Cache-Control": "private, must-revalidate" } },
+  const scope = lifecycleNotificationsScopeKey(tenantId, auth.user.id, unreadOnly);
+  return respondDerivedList(request, scope, () =>
+    buildLifecycleNotificationsPayload(tenantId, auth.user.id, { unreadOnly }),
   );
 }
 
