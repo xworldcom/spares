@@ -5,9 +5,39 @@ import {
   SIGNED_OUT_MESSAGE,
 } from "./unauthorized.ts";
 import { SPARES_BACKGROUND_FETCH } from "./background-fetch.ts";
-import { peekWarmResolved, readIfWarm, warmRead } from "./warm-read.ts";
+import { readIfWarm, warmRead } from "./warm-read.ts";
 
-const listEtags = new Map<string, string>();
+type ListSlot = {
+  path: string;
+  etag?: string;
+  body?: unknown;
+};
+
+const listSlots = new Map<string, ListSlot>();
+
+function slotFor(warmKey: string, path: string): ListSlot {
+  const existing = listSlots.get(warmKey);
+  if (existing) {
+    return existing;
+  }
+  const slot: ListSlot = { path };
+  listSlots.set(warmKey, slot);
+  return slot;
+}
+
+export function clearListFetchStateForTests() {
+  listSlots.clear();
+}
+
+/** Test-only: etag without body (stale client state). */
+export function seedListSlotForTests(
+  warmKey: string,
+  path: string,
+  etag: string,
+  body?: unknown,
+) {
+  listSlots.set(warmKey, { path, etag, body });
+}
 
 function readErrorMessage(body: unknown, status: number) {
   if (body && typeof body === "object" && "error" in body) {
@@ -23,17 +53,28 @@ function readErrorMessage(body: unknown, status: number) {
 }
 
 export function invalidateListEtag(path: string) {
-  listEtags.delete(path);
+  for (const slot of listSlots.values()) {
+    if (slot.path === path) {
+      slot.etag = undefined;
+      slot.body = undefined;
+    }
+  }
 }
 
 /**
- * GET list with If-None-Match + warm-read reuse on 304 (pairs with respondDerivedList).
+ * GET list with If-None-Match only when this tab holds a body for the warm key
+ * (pairs with respondDerivedList). Safari exposes 304 to JS — never treat 304 as
+ * success without a cached body.
  */
-async function fetchListOnce<T>(path: string, init?: RequestInit): Promise<T> {
+async function fetchListOnce<T>(
+  path: string,
+  warmKey: string,
+  init?: RequestInit,
+): Promise<T | undefined> {
+  const slot = slotFor(warmKey, path);
   const headers = new Headers(init?.headers);
-  const etag = listEtags.get(path);
-  if (etag) {
-    headers.set("If-None-Match", etag);
+  if (slot.etag && slot.body !== undefined) {
+    headers.set("If-None-Match", slot.etag);
   }
 
   let response: Response;
@@ -53,7 +94,10 @@ async function fetchListOnce<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (response.status === 304) {
-    return undefined as T;
+    if (slot.body !== undefined) {
+      return slot.body as T;
+    }
+    return undefined;
   }
 
   const contentType = response.headers.get("content-type") ?? "";
@@ -75,8 +119,9 @@ async function fetchListOnce<T>(path: string, init?: RequestInit): Promise<T> {
 
   const nextEtag = response.headers.get("etag");
   if (nextEtag) {
-    listEtags.set(path, nextEtag);
+    slot.etag = nextEtag;
   }
+  slot.body = body;
   return body as T;
 }
 
@@ -86,16 +131,13 @@ export async function apiFetchList<T>(
   init?: RequestInit,
 ): Promise<T> {
   return readIfWarm(warmKey, async () => {
-    const fresh = await fetchListOnce<T>(path, init);
+    let fresh = await fetchListOnce<T>(path, warmKey, init);
     if (fresh !== undefined) {
       return fresh;
     }
-    const cached = await peekWarmResolved<T>(warmKey);
-    if (cached !== undefined) {
-      return cached;
-    }
-    listEtags.delete(path);
-    const retry = await fetchListOnce<T>(path, init);
+    const slot = slotFor(warmKey, path);
+    slot.etag = undefined;
+    const retry = await fetchListOnce<T>(path, warmKey, init);
     if (retry === undefined) {
       throw new ApiError("List response missing body.", 500);
     }
@@ -105,5 +147,7 @@ export async function apiFetchList<T>(
 
 /** Fire-and-forget list warm (idle prefetch). */
 export function prefetchList(path: string, warmKey: string) {
-  warmRead(warmKey, () => apiFetchList(path, warmKey, { headers: { [SPARES_BACKGROUND_FETCH]: "1" } }));
+  warmRead(warmKey, () =>
+    apiFetchList(path, warmKey, { headers: { [SPARES_BACKGROUND_FETCH]: "1" } }),
+  );
 }
