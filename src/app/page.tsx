@@ -1,7 +1,8 @@
 import { LandingPageGate } from "@/components/landing/LandingPageGate";
 import { getSignInOptions } from "@/lib/auth/password-login.server";
 
-export const dynamic = "force-dynamic";
+/** Sign-in flags come from tiny platform-settings.json, not the catalog blob. */
+export const revalidate = 3600;
 
 export default async function Home() {
   const signIn = await getSignInOptions();

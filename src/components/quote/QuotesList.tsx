@@ -45,11 +45,15 @@ export function QuotesList({
 
   useEffect(() => {
     const generation = begin();
-    const background = reloadKey > 0 || Boolean(initialList);
-    if (!background) {
+    const skipListFetch = Boolean(initialList) && reloadKey === 0;
+    const background = reloadKey > 0;
+    if (!skipListFetch && !background) {
       setLoading(true);
     }
-    listQuotes({ background })
+    const load = skipListFetch
+      ? Promise.resolve({ quotes: initialList?.quotes ?? [] })
+      : listQuotes({ background });
+    load
       .then((data) => {
         if (!isCurrent(generation)) {
           return;

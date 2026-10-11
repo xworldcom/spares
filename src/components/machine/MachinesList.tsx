@@ -118,7 +118,8 @@ export function MachinesList({
 
   useEffect(() => {
     const generation = begin();
-    const background = reloadKey > 0 || Boolean(initialList);
+    const skipListFetch = Boolean(initialList) && reloadKey === 0;
+    const background = reloadKey > 0;
     const sitesLoad =
       user?.role === "staff"
         ? Promise.all([listSites(), listCustomerAccounts()])
@@ -131,13 +132,13 @@ export function MachinesList({
             sites: user?.sites ?? [],
             accounts: [] as CustomerAccount[],
           });
-    if (!background) {
+    if (!skipListFetch && !background) {
       setLoading(true);
     }
-    Promise.all([
-      loadMachines(background ? { background: true } : undefined),
-      sitesLoad,
-    ])
+    const machinesLoad = skipListFetch
+      ? Promise.resolve(initialList?.machines ?? [])
+      : loadMachines(background ? { background: true } : undefined);
+    Promise.all([machinesLoad, sitesLoad])
       .then(([next, org]) => {
         if (!isCurrent(generation)) {
           return;

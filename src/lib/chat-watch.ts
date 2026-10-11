@@ -1,7 +1,7 @@
 import { getPersistence } from "./persistence.ts";
 
 export const CHAT_WATCH_HOLD_MS = 25_000;
-export const CHAT_WATCH_PEEK_MS = 1_000;
+export const CHAT_WATCH_PEEK_MS = 2_500;
 export const CHAT_WATCH_PERSIST_ATTEMPTS = 3;
 
 export type ChatWatchKind = "ticket" | "quote";

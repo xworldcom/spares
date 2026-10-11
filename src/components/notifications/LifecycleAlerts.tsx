@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchLifecycleNotifications } from "@/lib/api/lifecycle-notifications";
+import { TAB_ALERT_POLL_MS } from "@/lib/ui/tab-alert-poll";
 
 type LifecycleAlertsValue = {
   unreadCount: number;
@@ -18,8 +19,6 @@ type LifecycleAlertsValue = {
 };
 
 const LifecycleAlertsContext = createContext<LifecycleAlertsValue | null>(null);
-
-const TAB_ALERT_POLL_MS = 15_000;
 
 export function LifecycleAlertsProvider({ children }: { children: React.ReactNode }) {
   const { status, user } = useAuth();
@@ -62,7 +61,12 @@ export function LifecycleAlertsProvider({ children }: { children: React.ReactNod
     if (status !== "signed-in" || !user) {
       return;
     }
-    const id = window.setInterval(() => void refresh(), TAB_ALERT_POLL_MS);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+      void refresh();
+    }, TAB_ALERT_POLL_MS);
     return () => window.clearInterval(id);
   }, [refresh, status, user]);
 
