@@ -13,20 +13,29 @@ type ListSlot = {
   body?: unknown;
 };
 
-const listSlots = new Map<string, ListSlot>();
+function listSlots() {
+  const root = globalThis as typeof globalThis & {
+    __sparesListFetchSlots?: Map<string, ListSlot>;
+  };
+  if (!root.__sparesListFetchSlots) {
+    root.__sparesListFetchSlots = new Map();
+  }
+  return root.__sparesListFetchSlots;
+}
 
 function slotFor(warmKey: string, path: string): ListSlot {
-  const existing = listSlots.get(warmKey);
+  const slots = listSlots();
+  const existing = slots.get(warmKey);
   if (existing) {
     return existing;
   }
   const slot: ListSlot = { path };
-  listSlots.set(warmKey, slot);
+  slots.set(warmKey, slot);
   return slot;
 }
 
 export function clearListFetchStateForTests() {
-  listSlots.clear();
+  listSlots().clear();
 }
 
 /** Test-only: etag without body (stale client state). */
@@ -36,7 +45,7 @@ export function seedListSlotForTests(
   etag: string,
   body?: unknown,
 ) {
-  listSlots.set(warmKey, { path, etag, body });
+  listSlots().set(warmKey, { path, etag, body });
 }
 
 function readErrorMessage(body: unknown, status: number) {
@@ -53,7 +62,7 @@ function readErrorMessage(body: unknown, status: number) {
 }
 
 export function invalidateListEtag(path: string) {
-  for (const slot of listSlots.values()) {
+  for (const slot of listSlots().values()) {
     if (slot.path === path) {
       slot.etag = undefined;
       slot.body = undefined;
