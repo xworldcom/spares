@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CreatePersonForm } from "@/components/staff/CreatePersonForm";
 import { HostTenantDirectory } from "@/components/staff/HostTenantDirectory";
+import { ErrorState } from "@/components/states/ErrorState";
 import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { apiFetch } from "@/lib/api/client";
 import { createCustomerAccount } from "@/lib/api/auth";
@@ -416,9 +417,14 @@ function PlatformDirectory() {
 
       {loading ? <p className="text-muted">Loading directory…</p> : null}
       {error ? (
-        <p className="text-danger mb-3" role="alert">
-          {error}
-        </p>
+        <ErrorState
+          title="Failed to load directory"
+          message={error}
+          onRetry={() => {
+            setLoading(true);
+            setReloadKey((key) => key + 1);
+          }}
+        />
       ) : null}
 
       {!loading && grouped ? (

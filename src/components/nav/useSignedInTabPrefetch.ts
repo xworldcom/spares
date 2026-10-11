@@ -33,6 +33,11 @@ export function useSignedInTabPrefetch(role?: string) {
     warmCareHubLists();
     warmQuotesList();
     warmTicketsList();
-    prefetchLifecycleNotifications();
+    const lifecyclePrefetch = window.setTimeout(() => {
+      prefetchLifecycleNotifications();
+    }, 2_000);
+    return () => {
+      window.clearTimeout(lifecyclePrefetch);
+    };
   }, [role, router]);
 }

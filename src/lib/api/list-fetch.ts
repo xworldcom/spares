@@ -1,4 +1,4 @@
-import { ApiError } from "./errors.ts";
+import { ApiError, NETWORK_TIMEOUT_MESSAGE } from "./errors.ts";
 import {
   isSessionProbePath,
   notifyUnauthorized,
@@ -98,7 +98,7 @@ async function fetchListOnce<T>(
     });
   } catch (cause) {
     if (init?.signal?.aborted || isAbortError(cause)) {
-      throw cause;
+      throw new ApiError(NETWORK_TIMEOUT_MESSAGE, 0, "timeout");
     }
     throw new ApiError("Could not reach OEE360. Check your network and try again.", 0);
   }
@@ -171,7 +171,7 @@ async function loadListBody<T>(
   } catch (cause) {
     if (init?.signal?.aborted || isAbortError(cause)) {
       invalidateWarmRead(warmKey);
-      throw cause;
+      throw new ApiError(NETWORK_TIMEOUT_MESSAGE, 0, "timeout");
     }
     invalidateWarmRead(warmKey);
     try {

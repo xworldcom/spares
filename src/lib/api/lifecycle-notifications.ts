@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 import { SPARES_BACKGROUND_FETCH, backgroundFetchHeaders } from "./background-fetch";
-import { ApiError } from "./errors";
+import { ApiError, NETWORK_TIMEOUT_MESSAGE } from "./errors";
 import { fetchWithDeadline, isAbortError } from "./fetch-deadline";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 
@@ -88,7 +88,7 @@ async function fetchLifecycleOnce(
     });
   } catch (cause) {
     if (init?.signal?.aborted || isAbortError(cause)) {
-      throw cause;
+      throw new ApiError(NETWORK_TIMEOUT_MESSAGE, 0, "timeout");
     }
     throw new ApiError("Could not reach OEE360. Check your network and try again.", 0);
   }
@@ -161,7 +161,7 @@ async function loadLifecycleBody(
   } catch (cause) {
     if (init?.signal?.aborted || isAbortError(cause)) {
       invalidateWarmRead(warmKey);
-      throw cause;
+      throw new ApiError(NETWORK_TIMEOUT_MESSAGE, 0, "timeout");
     }
     invalidateWarmRead(warmKey);
     return await attempt();

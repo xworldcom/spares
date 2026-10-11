@@ -201,7 +201,14 @@ export function HostTenantDirectory() {
       ) : loading ? (
         <p className="text-muted">Loading directory…</p>
       ) : error ? (
-        <p className="text-danger" role="alert">{error}</p>
+        <ErrorState
+          title="Failed to load directory"
+          message={error}
+          onRetry={() => {
+            setLoading(true);
+            setReloadKey((key) => key + 1);
+          }}
+        />
       ) : (
         <div className="tenant-directory-table-wrap overflow-x-auto">
           <table className="tenant-directory-table w-full min-w-0 text-left text-sm">

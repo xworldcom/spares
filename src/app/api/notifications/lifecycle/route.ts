@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (etagMatches(request, etag)) {
     return new NextResponse(null, {
       status: 304,
-      headers: { ETag: etag, "Cache-Control": "private, no-store" },
+      headers: { ETag: etag, "Cache-Control": "private, must-revalidate" },
     });
   }
   return NextResponse.json(
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       unreadCount,
       generatedAt,
     },
-    { status: 200, headers: { ETag: etag, "Cache-Control": "private, no-store" } },
+    { status: 200, headers: { ETag: etag, "Cache-Control": "private, must-revalidate" } },
   );
 }
 
