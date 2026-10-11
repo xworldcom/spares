@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { QuoteWorkspace } from "@/components/quote/QuoteWorkspace";
 import { LoadingState } from "@/components/states/LoadingState";
+import type { Quote } from "@/types";
 
-export function CustomerQuotePage({ quoteRef }: { quoteRef: string }) {
+export function CustomerQuotePage({
+  quoteRef,
+  initialQuote,
+}: {
+  quoteRef: string;
+  initialQuote?: Quote | null;
+}) {
   const router = useRouter();
   const { user, status } = useAuth();
 
@@ -25,5 +32,11 @@ export function CustomerQuotePage({ quoteRef }: { quoteRef: string }) {
     return <LoadingState label="Opening staff quote…" />;
   }
 
-  return <QuoteWorkspace quoteRef={quoteRef} role="customer" />;
+  return (
+    <QuoteWorkspace
+      quoteRef={quoteRef}
+      role="customer"
+      initialQuote={initialQuote}
+    />
+  );
 }

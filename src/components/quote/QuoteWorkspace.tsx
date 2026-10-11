@@ -74,16 +74,20 @@ function sameReadReceipts(
 export function QuoteWorkspace({
   quoteRef,
   role,
+  initialQuote,
 }: {
   quoteRef: string;
   role: Role;
+  initialQuote?: Quote | null;
 }) {
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
   const desktop = useDesktopStage();
   const searchParams = useSearchParams();
   const seedQuote = quoteSeedForRef(quoteRef);
-  const [quote, setQuote] = useState<Quote | null>(() => seedQuote ?? null);
+  const [quote, setQuote] = useState<Quote | null>(
+    () => initialQuote ?? seedQuote ?? null,
+  );
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [shipments, setShipments] = useState<QuoteShipment[]>([]);
   const [loadedRef, setLoadedRef] = useState<string | null>(null);
@@ -127,7 +131,7 @@ export function QuoteWorkspace({
     setPendingStatus(null);
     setError(null);
     setNotice(null);
-    const seed = quoteSeedForRef(quoteRef);
+    const seed = initialQuote ?? quoteSeedForRef(quoteRef);
     if (seed) {
       setQuote(seed);
       setItems(seed.items);
@@ -163,7 +167,7 @@ export function QuoteWorkspace({
     };
     // applyQuote is local state wiring, not an effect input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteRef, loadAttempt, begin, isCurrent]);
+  }, [initialQuote, quoteRef, loadAttempt, begin, isCurrent]);
 
   const pollQuote = useCallback(async () => {
     if (!quote) {
