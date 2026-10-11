@@ -36,47 +36,88 @@ async function loginJar() {
   return { loginMs, jar };
 }
 
-async function probeApis(jar, label) {
+async function probeApis(jar, mode) {
   const endpoints = {};
   for (const ep of ["/api/machines", "/api/quotes", "/api/tickets"]) {
-    const samples = [];
-    for (let i = 0; i < 5; i++) {
+    const coldHeaders = { cookie: jar, "cache-control": "no-cache" };
+    const tCold = performance.now();
+    const coldRes = await fetch(`${baseUrl}${ep}`, { headers: coldHeaders });
+    const coldBody = await coldRes.arrayBuffer();
+    const coldMs = Math.round(performance.now() - tCold);
+    const etag = coldRes.headers.get("etag");
+
+    const warm200 = [];
+    for (let i = 0; i < 4; i++) {
       const t0 = performance.now();
-      const headers = { cookie: jar };
-      if (label === "cold" && i === 0) {
-        headers["cache-control"] = "no-cache";
-        headers["pragma"] = "no-cache";
-      }
-      const res = await fetch(`${baseUrl}${ep}`, { headers });
+      const res = await fetch(`${baseUrl}${ep}`, { headers: { cookie: jar } });
       await res.arrayBuffer();
-      samples.push({ ms: Math.round(performance.now() - t0), status: res.status, bytes: Number(res.headers.get("content-length") || 0) });
+      warm200.push(Math.round(performance.now() - t0));
     }
-    endpoints[ep] = { p50: p50(samples.map((s) => s.ms)), samples };
+
+    const warm304 = [];
+    if (etag) {
+      for (let i = 0; i < 5; i++) {
+        const t0 = performance.now();
+        const res = await fetch(`${baseUrl}${ep}`, {
+          headers: { cookie: jar, "if-none-match": etag },
+        });
+        await res.arrayBuffer();
+        warm304.push({
+          ms: Math.round(performance.now() - t0),
+          status: res.status,
+        });
+      }
+    }
+
+    endpoints[ep] = {
+      cold: {
+        ms: coldMs,
+        status: coldRes.status,
+        bytes: coldBody.byteLength,
+        etag,
+      },
+      warm200: { p50: p50(warm200), samples: warm200 },
+      warm304: {
+        p50: p50(warm304.map((s) => s.ms)),
+        samples: warm304,
+      },
+    };
   }
   return endpoints;
 }
 
+function navLocators(page, width) {
+  const mobile = width < 1024;
+  if (mobile) {
+    return {
+      quotes: page.locator('nav[aria-label="Primary"] a[href="/staff/quotes"]'),
+      care: page.locator('nav[aria-label="Primary"] a[href="/care"]'),
+      machines: page.locator('nav[aria-label="Primary"] button:has-text("Machines")'),
+    };
+  }
+  return {
+    quotes: page.locator('nav[aria-label="Main"] a[href="/staff/quotes"]'),
+    care: page.locator('nav[aria-label="Main"] a[href="/care"]'),
+    machines: page.locator('header a[href="/machines"]').first(),
+  };
+}
+
 async function tabSwitchMs(page, width) {
   await page.setViewportSize({ width, height: 900 });
-  await page.goto(`${baseUrl}/machines`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(400);
+  await page.goto(`${baseUrl}/machines`, { waitUntil: "networkidle" });
+  const nav = navLocators(page, width);
 
-  const measureHop = async (selector) => {
+  const measureHop = async (locator) => {
     const t0 = performance.now();
-    await page.click(selector);
+    await locator.click({ timeout: 20_000 });
     await page.waitForLoadState("domcontentloaded");
     await page.waitForSelector("main", { timeout: 15_000 });
     return Math.round(performance.now() - t0);
   };
 
-  const quotesSel =
-    'a[href="/staff/quotes"], a[href="/quotes"], nav a:has-text("Quotes")';
-  const careSel = 'a[href="/care"], nav a:has-text("Care")';
-  const machinesSel = 'a[href="/machines"], nav a:has-text("Machines")';
-
-  const toQuotes = await measureHop(quotesSel);
-  const toCare = await measureHop(careSel);
-  const toMachines = await measureHop(machinesSel);
+  const toQuotes = await measureHop(nav.quotes);
+  const toCare = await measureHop(nav.care);
+  const toMachines = await measureHop(nav.machines);
   return { width, toQuotes, toCare, toMachines, max: Math.max(toQuotes, toCare, toMachines) };
 }
 
@@ -85,7 +126,7 @@ async function main() {
     baseUrl,
     at: new Date().toISOString(),
     loginMs: null,
-    apis: { warm: null, cold: null },
+    apis: null,
     tabSwitch: { warm: [], cold: [] },
     ok: true,
   };
@@ -93,11 +134,12 @@ async function main() {
   const { loginMs, jar } = await loginJar();
   result.loginMs = loginMs;
 
-  result.apis.warm = await probeApis(jar, "warm");
-  result.apis.cold = await probeApis(jar, "cold");
+  result.apis = await probeApis(jar, "probe");
 
-  for (const ep of Object.keys(result.apis.warm)) {
-    if (result.apis.warm[ep].p50 > 300) result.ok = false;
+  for (const ep of Object.keys(result.apis)) {
+    const row = result.apis[ep];
+    if (row.warm200.p50 > 300) result.ok = false;
+    if (row.warm304.p50 > 300) result.ok = false;
   }
 
   const browser = await chromium.launch({ headless: true });
@@ -114,23 +156,17 @@ async function main() {
     result.tabSwitch.warm.push(await tabSwitchMs(page, width));
   }
 
-  await context.clearCookies();
-  await context.addCookies(
-    jar.split("; ").map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name, value: rest.join("="), url: baseUrl };
-    }),
-  );
-  const coldPage = await context.newPage();
-  await coldPage.goto(`${baseUrl}/api/auth/logout`, { waitUntil: "domcontentloaded" }).catch(() => {});
-  await context.addCookies(
-    jar.split("; ").map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name, value: rest.join("="), url: baseUrl };
-    }),
-  );
   for (const width of [390, 1440]) {
+    const coldContext = await browser.newContext();
+    await coldContext.addCookies(
+      jar.split("; ").map((pair) => {
+        const [name, ...rest] = pair.split("=");
+        return { name, value: rest.join("="), url: baseUrl };
+      }),
+    );
+    const coldPage = await coldContext.newPage();
     result.tabSwitch.cold.push(await tabSwitchMs(coldPage, width));
+    await coldContext.close();
   }
 
   await browser.close();
