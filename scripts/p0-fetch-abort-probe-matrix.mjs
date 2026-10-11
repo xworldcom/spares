@@ -3,7 +3,7 @@
  * Run sequential, parallel-4, parallel-8, and parallel-12 prod matrix probes.
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const baseOut = resolve(
@@ -30,7 +30,25 @@ for (const mode of modes) {
       stdio: "inherit",
     },
   );
-  rollup.push({ mode, exitCode: result.status ?? 1, outDir });
+  let summary = null;
+  try {
+    summary = JSON.parse(
+      readFileSync(resolve(outDir, "summary.json"), "utf8"),
+    );
+  } catch {
+    summary = null;
+  }
+  rollup.push({
+    mode,
+    exitCode: result.status ?? 1,
+    outDir,
+    coldTtvMedianMs: summary?.coldTtvMedianMs ?? null,
+    coldTtvP95Ms: summary?.coldTtvP95Ms ?? null,
+    coldTtvMaxMs: summary?.coldTtvMaxMs ?? null,
+    coldOverGate: summary?.coldOverGate ?? null,
+    coldRouteTtv: summary?.coldRouteTtv ?? null,
+    http5xx: summary?.http5xx?.length ?? null,
+  });
 }
 
 writeFileSync(
