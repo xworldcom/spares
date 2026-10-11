@@ -148,7 +148,8 @@ async function runFlow(browserType, label) {
     waitUntil: "domcontentloaded",
     timeout: 120000,
   });
-  await carePage.waitForTimeout(1500);
+  await carePage.waitForSelector('a[href*="/care/tickets/"]', { timeout: 120000 });
+  await carePage.waitForTimeout(500);
   const careUnread = carePage.locator('a[href*="/care/tickets/"]').filter({
     has: carePage.locator('[aria-label="Unread"]'),
   });
