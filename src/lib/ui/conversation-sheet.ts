@@ -4,8 +4,6 @@ export type ConversationSheetSnap = "peek" | "reply" | "full" | "out";
 export function initialConversationSheetSnap(
   open: boolean,
   desktopStage: boolean,
-  /** Overlay: open straight to full when the thread has unread messages. */
-  openForUnread = false,
   /** Split-pane column (quote/care desktop) — not the bottom overlay sheet. */
   inlineLayout = false,
 ): ConversationSheetSnap {
@@ -14,9 +12,6 @@ export function initialConversationSheetSnap(
   }
   if (inlineLayout && desktopStage) {
     return "reply";
-  }
-  if (openForUnread) {
-    return "full";
   }
   return "peek";
 }
