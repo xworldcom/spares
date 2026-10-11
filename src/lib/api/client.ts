@@ -41,6 +41,7 @@ function readErrorCode(body: unknown) {
 const CATALOG_CONFLICT_CODE = "catalog-conflict";
 const RECORD_CONFLICT_CODE = "record-conflict";
 const CONFLICT_RETRY_DELAY_MS = 400;
+const GET_NETWORK_RETRY_DELAY_MS = 250;
 
 function isReplayableBody(body: RequestInit["body"]) {
   return body == null || typeof body === "string" || (typeof FormData !== "undefined" && body instanceof FormData);
@@ -66,6 +67,15 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       !init?.signal?.aborted
     ) {
       await new Promise((resolve) => setTimeout(resolve, CONFLICT_RETRY_DELAY_MS));
+      return await apiFetchOnce<T>(path, init);
+    }
+    if (
+      cause instanceof ApiError &&
+      cause.status === 0 &&
+      (method === "GET" || method === "HEAD") &&
+      !init?.signal?.aborted
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, GET_NETWORK_RETRY_DELAY_MS));
       return await apiFetchOnce<T>(path, init);
     }
     throw cause;
