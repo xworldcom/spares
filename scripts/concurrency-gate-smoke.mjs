@@ -132,6 +132,27 @@ async function main() {
       apiStep(staffLogin.jar, "notifications", "/api/notifications/lifecycle"),
       apiStep(staffLogin.jar, "auth me", "/api/auth/me"),
     ]);
+    const lifecycleList = await fetch(`${baseUrl}/api/staff/part-lifecycle`, {
+      headers: { cookie: staffLogin.jar },
+    }).then((r) => r.json());
+    const partNumber = lifecycleList.parts?.[0]?.partNumber;
+    if (partNumber) {
+      transcript.api.staff.push(
+        await apiStep(
+          staffLogin.jar,
+          "lifecycle PATCH",
+          `/api/staff/part-lifecycle`,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              partNumber,
+              patch: { sourceNotes: `gate-smoke-${Date.now()}` },
+            }),
+          },
+        ),
+      );
+    }
     const tickets = await fetch(`${baseUrl}/api/tickets`, {
       headers: { cookie: staffLogin.jar },
     }).then((r) => r.json());
@@ -217,7 +238,7 @@ async function main() {
   transcript.ok = apiOk && browserOk;
   transcript.notes = {
     lifecycleEdit:
-      "Lifecycle row edit not automated (read-only API list + page visit); chat covered via activity POST.",
+      "Lifecycle API PATCH on first part row; Playwright save on grid optional follow-up.",
     platformDirectory: "Demo staff lacks /api/platform/directory (403); users counted from Blob backup.",
   };
   writeFileSync(join(outDir, "smoke-matrix.json"), JSON.stringify(transcript, null, 2));
