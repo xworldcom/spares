@@ -7,8 +7,10 @@ import { listScopeKey } from "@/lib/list-scope";
 import type { NextRequest } from "next/server";
 import { readTenantWorkListSnapshot } from "@/lib/store";
 
+export const preferredRegion = "iad1";
+
 export async function GET(request: NextRequest) {
-  const auth = await requireTenantUser();
+  const auth = await requireTenantUserReadOnly();
   if ("error" in auth) {
     return auth.error;
   }
