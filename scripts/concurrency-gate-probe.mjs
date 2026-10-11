@@ -128,14 +128,20 @@ async function main() {
     idx === 0 ? { ...row, qty: Math.max(1, (row.qty ?? 1)) } : row,
   );
   const existingShipments = mergeQuote?.shipments ?? [];
-  const shipmentsForMerge = [
-    ...existingShipments,
-    {
-      id: `draft-${gateSuffix}`,
-      trackingNumber: `1Z${String(gateSuffix).replace(/\D/g, "").slice(-10) || "999"}`,
-      carrier: "UPS",
-    },
-  ];
+  const trackingBump = `1Z${String(gateSuffix).replace(/\D/g, "").slice(-10) || "999"}`;
+  const shipmentsForMerge =
+    existingShipments.length >= 8
+      ? existingShipments.map((row, idx) =>
+          idx === 0 ? { ...row, trackingNumber: trackingBump } : row,
+        )
+      : [
+          ...existingShipments,
+          {
+            id: `draft-${gateSuffix}`,
+            trackingNumber: trackingBump,
+            carrier: "UPS",
+          },
+        ];
   const [diffFieldA, diffFieldB] = await Promise.all([
     fetch(`${baseUrl}/api/quotes/${mergeQuoteId}`, {
       method: "PATCH",
