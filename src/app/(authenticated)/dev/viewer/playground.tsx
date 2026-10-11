@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { PartPicker } from "@/components/viewer";
 import type { UnmatchedMesh, ViewerPart } from "@/components/viewer";
-import hardwareRows from "../../../../public/placeholders/hardware/mcmaster-hardware-parts.json";
-import palletizerRows from "../../../../public/placeholders/palletizer-parts.json";
+import hardwareRows from "../../../../../public/placeholders/hardware/mcmaster-hardware-parts.json";
+import palletizerRows from "../../../../../public/placeholders/palletizer-parts.json";
 
 export type DevViewerPack = "hardware" | "palletizer";
 
