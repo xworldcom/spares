@@ -14,7 +14,12 @@ import { listAccessibleTickets } from "@/lib/api/care";
 import { listMachines, deleteMachine, updateMachineName, updateMachineSite } from "@/lib/api/machines";
 import { listQuotes } from "@/lib/api/quotes";
 import { errorMessage, isUnauthorized } from "@/lib/api/errors";
-import type { CustomerAccount, MachineSummary, Site } from "@/lib/api/types";
+import type {
+  CustomerAccount,
+  MachineSummary,
+  MachinesListResponse,
+  Site,
+} from "@/lib/api/types";
 import { siteLabel } from "@/lib/access";
 import { ticketIsOpen } from "@/lib/care";
 import { machineTabHref } from "@/lib/machine-context";
@@ -39,11 +44,13 @@ type MachineWork = {
 async function loadMachines(options?: {
   heal?: boolean;
   fresh?: boolean;
+  background?: boolean;
 }): Promise<MachineSummary[]> {
   const heal = options?.heal ?? false;
   const fresh = options?.fresh ?? false;
+  const background = options?.background ?? false;
   const next = await listMachines(
-    heal || fresh ? { heal, fresh } : undefined,
+    heal || fresh || background ? { heal, fresh, background } : undefined,
   );
   if (next.length > 0 || heal) {
     return next;
@@ -83,15 +90,20 @@ function machinePlant(machine: MachineSummary, role?: string) {
   return role === "staff" ? "No plant — hidden from customers" : "";
 }
 
-export function MachinesList() {
+export function MachinesList({
+  initialList,
+}: {
+  initialList?: MachinesListResponse | null;
+}) {
   const router = useRouter();
   const { user, refresh } = useAuth();
   const [adding, setAdding] = useState(false);
-  const [machines, setMachines] = useState<MachineSummary[]>([]);
+  const [machines, setMachines] = useState<MachineSummary[]>(initialList?.machines ?? []);
   const [sites, setSites] = useState<Site[]>([]);
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialList);
+  const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
@@ -106,6 +118,7 @@ export function MachinesList() {
 
   useEffect(() => {
     const generation = begin();
+    const background = reloadKey > 0 || Boolean(initialList);
     const sitesLoad =
       user?.role === "staff"
         ? Promise.all([listSites(), listCustomerAccounts()])
@@ -118,8 +131,13 @@ export function MachinesList() {
             sites: user?.sites ?? [],
             accounts: [] as CustomerAccount[],
           });
-    setLoading(true);
-    Promise.all([loadMachines({ fresh: true }), sitesLoad])
+    if (!background) {
+      setLoading(true);
+    }
+    Promise.all([
+      loadMachines(background ? { background: true } : undefined),
+      sitesLoad,
+    ])
       .then(([next, org]) => {
         if (!isCurrent(generation)) {
           return;
@@ -144,7 +162,17 @@ export function MachinesList() {
           setLoading(false);
         }
       });
-  }, [begin, isCurrent, user?.role, user?.sites]);
+  }, [begin, initialList, isCurrent, reloadKey, user?.role, user?.sites]);
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        setReloadKey((key) => key + 1);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,7 +188,7 @@ export function MachinesList() {
 
   useEffect(() => {
     function refreshFromCache() {
-      void loadMachines({ fresh: true }).then((next) => {
+      void loadMachines({ background: true }).then((next) => {
         setMachines(next);
       });
       void loadMachineWork().then(setWorkByMachine);
