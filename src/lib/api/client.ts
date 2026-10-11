@@ -130,10 +130,30 @@ async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
       }
       throw new ApiError(SIGNED_OUT_MESSAGE, 401);
     }
+    const code = readErrorCode(body);
+    const recordMeta =
+      body && typeof body === "object" && code === "record-conflict"
+        ? {
+            recordVersion:
+              typeof (body as { recordVersion?: unknown }).recordVersion === "number"
+                ? (body as { recordVersion: number }).recordVersion
+                : undefined,
+            lastModifiedAt:
+              typeof (body as { lastModifiedAt?: unknown }).lastModifiedAt === "string"
+                ? (body as { lastModifiedAt: string }).lastModifiedAt
+                : undefined,
+            lastModifiedByName:
+              typeof (body as { lastModifiedByName?: unknown }).lastModifiedByName ===
+              "string"
+                ? (body as { lastModifiedByName: string }).lastModifiedByName
+                : undefined,
+          }
+        : undefined;
     throw new ApiError(
       readErrorMessage(body, response.status),
       response.status,
-      readErrorCode(body),
+      code,
+      recordMeta,
     );
   }
 

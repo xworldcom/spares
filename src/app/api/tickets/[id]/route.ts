@@ -86,9 +86,6 @@ async function handlePATCH(
     typeof body.recordVersion === "number" && body.recordVersion >= 1
       ? body.recordVersion
       : readRecordVersion(access.ticket);
-  if (expectedVersion < readRecordVersion(access.ticket)) {
-    return recordConflictResponse("ticket", recordMetaFromRow(access.ticket));
-  }
   const next = await updateTicketStatus(access.ticket.id, tenantId, body.status, actor, {
     actor: { id: actor.id, email: actor.email, name: access.user.name },
     lock: {

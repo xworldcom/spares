@@ -17,7 +17,8 @@ export function messageSenderDisplayName(input: {
   const local = localRaw?.toLowerCase() ?? "";
   const host = domainRaw?.split(".")[0]?.toLowerCase();
   if (local && host && HANDLE_LOCALS.has(local)) {
-    return `${local}@${host}`;
+    const tenant = host.charAt(0).toUpperCase() + host.slice(1);
+    return `${tenant} ${local}`;
   }
   return displayNameFromEmail(email);
 }

@@ -40,8 +40,11 @@ import {
   QUOTE_STATUS_LABELS,
   quoteFulfillmentVisibility,
   pricesVisibleToCustomer,
+  quoteIsStaffReadOnly,
   quoteItemsEqual,
   quotePricingComplete,
+  quoteStaffPricingLocked,
+  quoteStatusRegressionSteps,
   quoteTitle,
 } from "@/lib/quotes";
 import { quoteSeedForRef } from "@/lib/nav/quote-list-seed";
@@ -96,6 +99,12 @@ export function QuoteWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [statusRegressConfirm, setStatusRegressConfirm] = useState<{
+    target: QuoteStatus;
+    steps: number;
+  } | null>(null);
+  const [itemsTouched, setItemsTouched] = useState(false);
+  const [invoiceDraft, setInvoiceDraft] = useState("");
   const [recordConflict, setRecordConflict] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const runLock = useRef<Promise<void>>(Promise.resolve());
@@ -123,6 +132,8 @@ export function QuoteWorkspace({
     setItems(next.items);
     setShipments(draftShipmentsFrom(next));
     setPendingStatus(null);
+    setItemsTouched(false);
+    setInvoiceDraft(next.invoiceNumber ?? "");
     setLoadedRef(quoteRef);
     void refresh();
   }
@@ -213,6 +224,10 @@ export function QuoteWorkspace({
         customerReadReceipts: next.customerReadReceipts,
         assistantPaused: next.assistantPaused,
         assistantAvailable: next.assistantAvailable,
+        recordVersion: next.recordVersion,
+        lastModifiedAt: next.lastModifiedAt,
+        lastModifiedByName: next.lastModifiedByName,
+        staffPricingUnlocked: next.staffPricingUnlocked,
       };
     });
     if (role === "staff") {
@@ -254,7 +269,7 @@ export function QuoteWorkspace({
     !busy &&
     quote != null &&
     loadedRef === quoteRef &&
-    (itemsDirtyForGuard || statusDirtyForGuard);
+    (statusDirtyForGuard || (itemsTouched && itemsDirtyForGuard));
   useLeavePageGuard(unsavedStaffChanges, UNSAVED_QUOTE_LEAVE_PROMPT);
 
   async function run(action: () => Promise<Quote>, success?: string) {
@@ -353,11 +368,15 @@ export function QuoteWorkspace({
 
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
-  const fulfillment = quoteFulfillmentVisibility(quote);
+  const fulfillment = quoteFulfillmentVisibility(quote, role);
   const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
   const displayStatus = pendingStatus ?? quote.status;
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
-  const itemsDirty = !quoteItemsEqual(items, quote.items);
+  const itemsDirty = itemsTouched && !quoteItemsEqual(items, quote.items);
+  const staffReadOnly =
+    role === "staff" && quoteIsStaffReadOnly(quote.status);
+  const pricingLocked =
+    role === "staff" && quoteStaffPricingLocked(quote);
   const staffApplyDirty = statusDirty || itemsDirty;
   const quoteRecordVersion = quote.recordVersion ?? 1;
   function withQuoteVersion<T extends object>(patch: T) {
@@ -413,8 +432,26 @@ export function QuoteWorkspace({
       void run(
         () => updateQuote(String(quote.number), withQuoteVersion({ items })),
         "Pricing saved.",
-      );
+      ).then((ok) => {
+        if (ok) {
+          setItemsTouched(false);
+        }
+      });
     }
+  }
+
+  async function unlockStaffPricing() {
+    if (!quote) {
+      return;
+    }
+    await run(
+      () =>
+        updateQuote(String(quote.number), {
+          recordVersion: quoteRecordVersion,
+          unlockStaffPricing: true,
+        }),
+      "Pricing unlocked.",
+    );
   }
 
   return (
@@ -452,7 +489,7 @@ export function QuoteWorkspace({
 
         <QuoteStatusStrip
           status={displayStatus}
-          editable={role === "staff"}
+          editable={role === "staff" && !staffReadOnly}
           pending={busy}
           role={role}
           onChange={(status: QuoteStatus) => {
@@ -466,9 +503,41 @@ export function QuoteWorkspace({
               setCancelConfirmOpen(true);
               return;
             }
+            const regressSteps = quoteStatusRegressionSteps(quote.status, status);
+            if (role === "staff" && regressSteps > 1) {
+              setStatusRegressConfirm({ target: status, steps: regressSteps });
+              return;
+            }
             setPendingStatus(status === quote.status ? null : status);
           }}
         />
+        {role === "staff" ? (
+          <ConfirmSheet
+            open={statusRegressConfirm !== null}
+            title="Move this quote backward?"
+            message={
+              statusRegressConfirm
+                ? `This skips ${statusRegressConfirm.steps} stages. Clear invoice and tracking if the plant should not see them at the new stage.`
+                : ""
+            }
+            confirmLabel="Apply status"
+            cancelLabel="Keep current status"
+            busy={busy}
+            onCancel={() => {
+              if (!busy) {
+                setStatusRegressConfirm(null);
+              }
+            }}
+            onConfirm={() => {
+              if (!statusRegressConfirm) {
+                return;
+              }
+              const target = statusRegressConfirm.target;
+              setStatusRegressConfirm(null);
+              setPendingStatus(target === quote.status ? null : target);
+            }}
+          />
+        ) : null}
         {role === "staff" ? (
           <ConfirmSheet
             open={cancelConfirmOpen}
@@ -500,6 +569,21 @@ export function QuoteWorkspace({
           />
         ) : null}
       </div>
+      {role === "staff" && pricingLocked ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/4 px-4 py-3">
+          <p className="text-sm text-[var(--spares-muted)]">
+            Pricing is locked after PO received.
+          </p>
+          <button
+            type="button"
+            disabled={busy || staffReadOnly}
+            onClick={() => void unlockStaffPricing()}
+            className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+          >
+            Edit pricing
+          </button>
+        </div>
+      ) : null}
       {role === "staff" && staffApplyDirty ? (
         <div
           className="quote-staff-apply hidden flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e8c27a]/25 bg-[color-mix(in_srgb,var(--spares-paper)_92%,#e8c27a_8%)] px-4 py-3 sm:flex"
@@ -563,9 +647,11 @@ export function QuoteWorkspace({
           items={role === "staff" ? items : quote.items}
           role={role}
           pricesVisible={showPrices}
-          editable={role === "staff"}
+          editable={role === "staff" && !staffReadOnly}
+          pricingEditable={role === "staff" && !staffReadOnly && !pricingLocked}
           onChange={(next) => {
             setNotice(null);
+            setItemsTouched(true);
             setItems(next);
           }}
         />
@@ -591,23 +677,28 @@ export function QuoteWorkspace({
       {fulfillment.invoice ? (
         <section className="spares-surface rounded-[24px] px-5 py-4">
           <h2 className="text-[19px] font-semibold tracking-tight">Invoice</h2>
-          {role === "staff" ? (
+          {role === "staff" && !staffReadOnly ? (
             <form
               className="mt-3 flex flex-col gap-2 sm:flex-row"
               onSubmit={(event) => {
                 event.preventDefault();
-                const data = new FormData(event.currentTarget);
-                const invoiceNumber = String(data.get("invoice") ?? "").trim();
+                const invoiceNumber = invoiceDraft.trim();
                 void run(
                   () =>
-                    updateQuote(String(quote.number), withQuoteVersion({ invoiceNumber })),
-                  "Invoice saved.",
+                    updateQuote(
+                      String(quote.number),
+                      withQuoteVersion({
+                        invoiceNumber: invoiceNumber || null,
+                      }),
+                    ),
+                  invoiceNumber ? "Invoice saved." : "Invoice cleared.",
                 );
               }}
             >
               <input
                 name="invoice"
-                defaultValue={quote.invoiceNumber ?? ""}
+                value={invoiceDraft}
+                onChange={(event) => setInvoiceDraft(event.target.value)}
                 placeholder="INV-1042"
                 className="spares-field h-12 flex-1 rounded-2xl border-0 px-4 text-[16px] outline-none"
               />

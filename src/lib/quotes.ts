@@ -111,6 +111,32 @@ export function quoteHasReached(status: QuoteStatus, step: QuotePipelineStep): b
   return quotePipelineIndex(status) >= QUOTE_PIPELINE.indexOf(step);
 }
 
+/** How many pipeline steps `to` is behind `from` when moving backward (0 if forward or cancelled). */
+export function quoteStatusRegressionSteps(
+  from: QuoteStatus,
+  to: QuoteStatus,
+): number {
+  if (from === "cancelled" || to === "cancelled") {
+    return 0;
+  }
+  const fromIndex = quotePipelineIndex(from);
+  const toIndex = quotePipelineIndex(to);
+  if (toIndex < fromIndex) {
+    return fromIndex - toIndex;
+  }
+  return 0;
+}
+
+export function quoteStaffPricingLocked(
+  quote: Pick<QuoteRecord, "status" | "staffPricingUnlocked">,
+): boolean {
+  return quoteHasReached(quote.status, "po_received") && !quote.staffPricingUnlocked;
+}
+
+export function quoteIsStaffReadOnly(status: QuoteStatus) {
+  return status === "closed" || status === "cancelled";
+}
+
 export function quoteStepState(
   status: QuoteStatus,
   step: QuotePipelineStep,
@@ -335,13 +361,25 @@ function parseItemRow(
         }
       }
     }
-    const supplier = asOptionalString(record.supplier, 120);
-    if (supplier) {
-      item.supplier = supplier;
+    if ("supplier" in record) {
+      if (record.supplier === null) {
+        // Explicit clear — merge step removes stored supplier.
+      } else {
+        const supplier = asOptionalString(record.supplier, 120);
+        if (supplier) {
+          item.supplier = supplier;
+        }
+      }
     }
-    const note = asOptionalString(record.note, 500);
-    if (note) {
-      item.note = note;
+    if ("note" in record) {
+      if (record.note === null) {
+        // Explicit clear
+      } else {
+        const note = asOptionalString(record.note, 500);
+        if (note) {
+          item.note = note;
+        }
+      }
     }
   }
 
@@ -475,6 +513,12 @@ export function mergeQuoteItems(
       if ("leadTimeDays" in record && record.leadTimeDays === null) {
         delete normalized.leadTimeDays;
       }
+      if ("supplier" in record && record.supplier === null) {
+        delete normalized.supplier;
+      }
+      if ("note" in record && record.note === null) {
+        delete normalized.note;
+      }
     }
     return normalized;
   });
@@ -490,8 +534,8 @@ export function quoteItemsPatchPayload(items: QuoteItem[]) {
     sellPrice: item.sellPrice ?? null,
     supplierCost: item.supplierCost ?? null,
     leadTimeDays: item.leadTimeDays ?? null,
-    ...(item.supplier ? { supplier: item.supplier } : {}),
-    ...(item.note ? { note: item.note } : {}),
+    supplier: item.supplier ?? null,
+    note: item.note ?? null,
   }));
 }
 
@@ -572,15 +616,23 @@ function quoteHasTrackingData(quote: Pick<Quote, "shipments">): boolean {
  */
 export function quoteFulfillmentVisibility(
   quote: Pick<Quote, "status" | "poNumber" | "hasPoFile" | "invoiceNumber" | "shipments">,
+  role: Role = "staff",
 ): QuoteFulfillmentVisibility {
   const hasPo = quoteHasPoData(quote);
   const hasInvoice = quoteHasInvoiceData(quote);
   const hasTracking = quoteHasTrackingData(quote);
+  const stageOnly = role === "customer";
 
   return {
-    po: quoteHasReached(quote.status, "quoted") || hasPo,
-    invoice: invoiceVisible(quote.status) || hasInvoice,
-    tracking: quoteHasReached(quote.status, "po_received") || hasTracking,
+    po: stageOnly
+      ? quoteHasReached(quote.status, "quoted")
+      : quoteHasReached(quote.status, "quoted") || hasPo,
+    invoice: stageOnly
+      ? invoiceVisible(quote.status)
+      : invoiceVisible(quote.status) || hasInvoice,
+    tracking: stageOnly
+      ? quoteHasReached(quote.status, "po_received")
+      : quoteHasReached(quote.status, "po_received") || hasTracking,
   };
 }
 
@@ -633,20 +685,34 @@ function readLeadDaysFromRaw(item: Record<string, unknown>): number | undefined 
 
 const STAFF_PRICE_MAX = 999_999_999;
 
-/** Staff quote line sell price: reject NaN, clamp negatives to 0, cap magnitude. */
-export function parseStaffSellPrice(raw: string): number | undefined {
+export type StaffMoneyParseResult =
+  | { ok: true; value?: number }
+  | { ok: false; error: string };
+
+/** Staff money fields: 2 decimal places, reject negatives and NaN. */
+export function parseStaffMoneyField(raw: string): StaffMoneyParseResult {
   const trimmed = raw.trim();
   if (!trimmed) {
-    return undefined;
+    return { ok: true, value: undefined };
   }
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed)) {
-    return undefined;
+    return { ok: false, error: "Enter a valid amount (up to 2 decimals)." };
   }
   if (parsed < 0) {
-    return 0;
+    return { ok: false, error: "Amount cannot be negative." };
   }
-  return Math.min(parsed, STAFF_PRICE_MAX);
+  const rounded = Math.round(parsed * 100) / 100;
+  if (rounded > STAFF_PRICE_MAX) {
+    return { ok: false, error: "Amount is too large." };
+  }
+  return { ok: true, value: rounded };
+}
+
+/** Staff quote line sell price: reject NaN and negatives, cap magnitude. */
+export function parseStaffSellPrice(raw: string): number | undefined {
+  const parsed = parseStaffMoneyField(raw);
+  return parsed.ok ? parsed.value : undefined;
 }
 
 export function hasSellPrice(item: QuoteItem) {
@@ -886,10 +952,13 @@ export function shipmentsForRole(
   role: Role,
   status: QuoteStatus,
 ) {
-  if (role === "staff" || trackingVisible(status)) {
+  if (role === "staff") {
     return shipments;
   }
-  return [];
+  if (!quoteHasReached(status, "po_received")) {
+    return [];
+  }
+  return shipments;
 }
 
 /** Slim row for GET /api/quotes — no thread payloads. */
@@ -956,17 +1025,31 @@ export function toPublicQuote(
   if (machineName) {
     publicQuote.machineName = machineName;
   }
-  if (quote.poNumber) {
+  const showPo =
+    user.role === "staff" || quoteHasReached(quote.status, "quoted");
+  if (showPo && quote.poNumber) {
     publicQuote.poNumber = quote.poNumber;
   }
-  if (quote.poOriginalFileName) {
+  if (showPo && quote.poOriginalFileName) {
     publicQuote.poOriginalFileName = quote.poOriginalFileName;
   }
-  if (quote.poUploadedAt) {
+  if (showPo && quote.poUploadedAt) {
     publicQuote.poUploadedAt = quote.poUploadedAt;
   }
-  if (quote.invoiceNumber && (invoiceVisible(quote.status) || quoteHasInvoiceData(quote))) {
-    publicQuote.invoiceNumber = quote.invoiceNumber;
+  if (!showPo) {
+    publicQuote.hasPoFile = false;
+  }
+  if (quote.invoiceNumber) {
+    const showInvoice =
+      user.role === "staff"
+        ? invoiceVisible(quote.status) || quoteHasInvoiceData(quote)
+        : invoiceVisible(quote.status);
+    if (showInvoice) {
+      publicQuote.invoiceNumber = quote.invoiceNumber;
+    }
+  }
+  if (user.role === "staff" && quote.staffPricingUnlocked) {
+    publicQuote.staffPricingUnlocked = true;
   }
   if (quote.assistantPaused) {
     publicQuote.assistantPaused = true;
@@ -1220,6 +1303,9 @@ export function normalizeStoredQuote(
   }
   if (typeof record.lastModifiedByName === "string" && record.lastModifiedByName) {
     next.lastModifiedByName = record.lastModifiedByName;
+  }
+  if (record.staffPricingUnlocked === true) {
+    next.staffPricingUnlocked = true;
   }
 
   return next;

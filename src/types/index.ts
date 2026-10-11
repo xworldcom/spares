@@ -233,6 +233,8 @@ export type Quote = {
   recordVersion?: number;
   lastModifiedAt?: string;
   lastModifiedByName?: string;
+  /** Staff-only: pricing fields editable after PO received when true. */
+  staffPricingUnlocked?: boolean;
 };
 
 export type QuoteRecord = {
@@ -261,6 +263,7 @@ export type QuoteRecord = {
   lastModifiedAt?: string;
   lastModifiedByUserId?: string;
   lastModifiedByName?: string;
+  staffPricingUnlocked?: boolean;
 };
 
 export type BugReport = {

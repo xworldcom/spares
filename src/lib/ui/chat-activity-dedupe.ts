@@ -36,14 +36,35 @@ export function isDuplicateChatActivityPair(
   return Math.abs(nextAt - prevAt) <= DUPLICATE_WINDOW_MS;
 }
 
-/** Safe render: drop back-to-back identical message rows; storage unchanged. */
+function isDuplicateTimelinePair(
+  previous: QuoteActivity | undefined,
+  next: QuoteActivity,
+): boolean {
+  if (!previous || previous.kind !== next.kind) {
+    return false;
+  }
+  if (previous.kind === "message") {
+    return isDuplicateChatActivityPair(previous, next);
+  }
+  if (previous.text !== next.text) {
+    return false;
+  }
+  const prevAt = Date.parse(previous.at);
+  const nextAt = Date.parse(next.at);
+  if (!Number.isFinite(prevAt) || !Number.isFinite(nextAt)) {
+    return true;
+  }
+  return Math.abs(nextAt - prevAt) <= DUPLICATE_WINDOW_MS;
+}
+
+/** Safe render: drop back-to-back identical rows; storage unchanged. */
 export function dedupeConsecutiveChatActivities<T extends QuoteActivity>(
   activities: readonly T[],
 ): T[] {
   const deduped: T[] = [];
   for (const activity of activities) {
     const prev = deduped.at(-1);
-    if (isDuplicateChatActivityPair(prev, activity)) {
+    if (isDuplicateTimelinePair(prev, activity)) {
       continue;
     }
     deduped.push(activity);

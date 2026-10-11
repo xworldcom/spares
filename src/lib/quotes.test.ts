@@ -666,6 +666,22 @@ describe("mergeQuoteItems and numbers", () => {
       ok: true,
       items: [{ id: "A", qty: 1 }],
     });
+    const clearedMeta = mergeQuoteItems(
+      [
+        {
+          id: "A",
+          qty: 1,
+          supplier: "TEST Supplier",
+          note: "TEST note",
+        },
+      ],
+      [{ id: "A", qty: 1 }],
+      [{ id: "A", qty: 1, supplier: null, note: null }],
+    );
+    assert.deepEqual(clearedMeta, {
+      ok: true,
+      items: [{ id: "A", qty: 1 }],
+    });
     assert.equal(
       mergeQuoteItems([{ id: "A", qty: 1 }], [{ id: "B", qty: 1 }]).ok,
       false,

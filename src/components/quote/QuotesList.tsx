@@ -40,7 +40,9 @@ export function QuotesList({
   const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    QuoteStatus | "all" | "in_review" | "closed_group"
+  >("all");
   const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
@@ -100,7 +102,13 @@ export function QuotesList({
     let rows = machineId
       ? quotes.filter((quote) => quote.machineId === machineId)
       : quotes;
-    if (statusFilter !== "all") {
+    if (statusFilter === "in_review") {
+      rows = rows.filter((quote) => quote.status === "in_review");
+    } else if (statusFilter === "closed_group") {
+      rows = rows.filter(
+        (quote) => quote.status === "closed" || quote.status === "cancelled",
+      );
+    } else if (statusFilter !== "all") {
       rows = rows.filter((quote) => quote.status === statusFilter);
     }
     return [...rows].sort(
@@ -108,16 +116,26 @@ export function QuotesList({
     );
   }, [quotes, machineId, statusFilter]);
 
-  const statusFilters: Array<{ value: QuoteStatus | "all"; label: string }> = [
-    { value: "all", label: "All" },
-    { value: "requested", label: "Requested" },
-    { value: "pricing", label: "Pricing" },
-    { value: "quoted", label: "Quoted" },
-    { value: "ordered", label: "Ordered" },
-    { value: "shipped", label: "Shipped" },
-    { value: "delivered", label: "Delivered" },
-    { value: "cancelled", label: "Cancelled" },
-  ];
+  const statusFilters: Array<{
+    value: QuoteStatus | "all" | "in_review" | "closed_group";
+    label: string;
+  }> =
+    role === "staff"
+      ? [
+          { value: "all", label: "All" },
+          { value: "in_review", label: "In review" },
+          { value: "closed_group", label: "Closed" },
+        ]
+      : [
+          { value: "all", label: "All" },
+          { value: "requested", label: "Requested" },
+          { value: "pricing", label: "Pricing" },
+          { value: "quoted", label: "Quoted" },
+          { value: "ordered", label: "Ordered" },
+          { value: "shipped", label: "Shipped" },
+          { value: "delivered", label: "Delivered" },
+          { value: "cancelled", label: "Cancelled" },
+        ];
 
   if (loading) {
     return (
@@ -141,27 +159,58 @@ export function QuotesList({
   }
 
   if (visible.length === 0) {
+    const filteredEmpty =
+      !machineId && quotes.length > 0 && statusFilter !== "all";
     return (
-      <EmptyState
-        title={role === "staff" ? "No quotes yet" : "No quotes yet"}
-        message={
-          machineId
-            ? "Nothing quoted for this machine yet. Open the model, add parts to the tray, then request a quote."
-            : role === "staff"
-              ? "New quotes appear when a plant sends a request."
-              : "Request a quote from a machine to get started."
-        }
-        action={
-          user?.role === "customer" && !machineId ? (
-            <Link
-              href="/machines"
-              className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-            >
-              Open machines
-            </Link>
-          ) : null
-        }
-      />
+      <div className="space-y-3">
+        {!machineId ? (
+          <div className="flex flex-wrap gap-1.5">
+            {statusFilters.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={statusFilter === option.value}
+                onClick={() => setStatusFilter(option.value)}
+                className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
+                  statusFilter === option.value ? "btn-primary" : "btn-soft"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <EmptyState
+          title={filteredEmpty ? "No quotes match" : "No quotes yet"}
+          message={
+            filteredEmpty
+              ? "Try another filter or clear the current one."
+              : machineId
+                ? "Nothing quoted for this machine yet. Open the model, add parts to the tray, then request a quote."
+                : role === "staff"
+                  ? "New quotes appear when a plant sends a request."
+                  : "Request a quote from a machine to get started."
+          }
+          action={
+            filteredEmpty ? (
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+              >
+                Clear filters
+              </button>
+            ) : user?.role === "customer" && !machineId ? (
+              <Link
+                href="/machines"
+                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+              >
+                Open machines
+              </Link>
+            ) : null
+          }
+        />
+      </div>
     );
   }
 

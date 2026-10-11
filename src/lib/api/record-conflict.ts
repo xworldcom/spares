@@ -9,3 +9,16 @@ export function isRecordConflictError(cause: unknown): cause is ApiError & Recor
     cause.code === RECORD_CONFLICT_CODE
   );
 }
+
+export function recordConflictMetaFromError(
+  cause: unknown,
+): Pick<RecordConflictBody, "recordVersion" | "lastModifiedAt" | "lastModifiedByName"> | null {
+  if (!isRecordConflictError(cause)) {
+    return null;
+  }
+  return {
+    recordVersion: cause.recordVersion ?? 0,
+    lastModifiedAt: cause.lastModifiedAt ?? "",
+    lastModifiedByName: cause.lastModifiedByName ?? "",
+  };
+}

@@ -6,12 +6,27 @@ export const NETWORK_TIMEOUT_MESSAGE =
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
+  readonly recordVersion?: number;
+  readonly lastModifiedAt?: string;
+  readonly lastModifiedByName?: string;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    recordMeta?: {
+      recordVersion?: number;
+      lastModifiedAt?: string;
+      lastModifiedByName?: string;
+    },
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.recordVersion = recordMeta?.recordVersion;
+    this.lastModifiedAt = recordMeta?.lastModifiedAt;
+    this.lastModifiedByName = recordMeta?.lastModifiedByName;
   }
 }
 

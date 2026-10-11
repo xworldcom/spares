@@ -5,6 +5,7 @@ import {
   qtyDraftIsComplete,
   qtyKeyReplacesDraft,
   sanitizeQtyDraft,
+  validateEditableQty,
 } from "./editable-qty.ts";
 
 describe("editable qty", () => {
@@ -13,12 +14,23 @@ describe("editable qty", () => {
     assert.equal(parseEditableQty(" 25 "), 25);
   });
 
-  it("treats empty and invalid drafts as 1 so the field can be cleared", () => {
+  it("treats empty and invalid drafts as 1 on commit so the field can be cleared", () => {
     assert.equal(parseEditableQty(""), 1);
     assert.equal(parseEditableQty("   "), 1);
     assert.equal(parseEditableQty("1.5"), 1);
     assert.equal(parseEditableQty("0"), 1);
-    assert.equal(parseEditableQty("-3"), 3);
+    assert.equal(parseEditableQty("-3"), 1);
+  });
+
+  it("surfaces validation errors without silent abs()", () => {
+    assert.deepEqual(validateEditableQty("-3"), {
+      ok: false,
+      error: "Quantity must be at least 1.",
+    });
+    assert.deepEqual(validateEditableQty("2.5"), {
+      ok: false,
+      error: "Whole numbers only.",
+    });
   });
 
   it("does not treat an empty in-progress draft as complete", () => {
