@@ -28,8 +28,8 @@ export function warmTicketDetail(ticketId: string) {
 export function warmQuoteDetail(quote: { id: string; number: number }) {
   const byNumber = String(quote.number);
   const load = () => warmQuoteDetailFetch(byNumber);
-  warmRead(`quote:${byNumber}:view`, load);
-  warmRead(`quote:${quote.id}:view`, load);
+  warmRead(`quote:${byNumber}:prefetch`, load);
+  warmRead(`quote:${quote.id}:prefetch`, load);
 }
 
 export function warmCareOverview(machineId: string) {

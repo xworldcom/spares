@@ -9,10 +9,10 @@ import {
   warmTicketsList,
 } from "@/lib/nav/prefetch";
 
-const CUSTOMER_TAB_ROUTES = ["/machines", "/care", "/quotes"] as const;
+const CUSTOMER_TAB_ROUTES = ["/machines", "/care/tickets", "/quotes"] as const;
 const STAFF_TAB_ROUTES = [
   "/machines",
-  "/care",
+  "/care/tickets",
   "/staff/directory",
   "/staff/parts",
   "/staff/quotes",
