@@ -1,4 +1,4 @@
-import { requireTenantUser } from "@/lib/auth/tenant-scope";
+import { requireTenantUser, requireTenantUserReadOnly } from "@/lib/auth/tenant-scope";
 import { respondDerivedList } from "@/lib/derived-list-cache";
 import { error, isErrorResponse, readJson, withCatalogConflict } from "@/lib/http";
 import { listScopeKey } from "@/lib/list-scope";

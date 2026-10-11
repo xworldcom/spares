@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getPersistence } from "./persistence.ts";
+import {
+  formatCatalogVersionKey,
+  peekCatalogVersionsCoalesced,
+} from "./catalog-version-peek.ts";
 
 type CacheEntry = {
   catalogKey: string;
@@ -25,8 +28,7 @@ function pruneCache() {
 
 /** Catalog blob versions — same gate as in-process catalog memory (#377). */
 export async function catalogVersionKey(): Promise<string> {
-  const live = await getPersistence().peekCatalogVersions();
-  return `${live.database ?? "∅"}:${live.care ?? "∅"}`;
+  return formatCatalogVersionKey(await peekCatalogVersionsCoalesced());
 }
 
 function weakEtag(scopeKey: string, catalogKey: string) {

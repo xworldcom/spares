@@ -1,6 +1,6 @@
 import { canAccessMachine } from "@/lib/access";
 import { staffAssistantEnabled } from "@/lib/assistant/public";
-import { requireTenantUser } from "@/lib/auth/tenant-scope";
+import { requireTenantUserReadOnly } from "@/lib/auth/tenant-scope";
 import { toPublicTicketListRow } from "@/lib/care";
 import { respondDerivedList } from "@/lib/derived-list-cache";
 import { listScopeKey } from "@/lib/list-scope";

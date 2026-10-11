@@ -1,5 +1,9 @@
 import type { NextRequest } from "next/server";
-import { requireTenantStaff, requireTenantUser } from "@/lib/auth/tenant-scope";
+import {
+  requireTenantStaff,
+  requireTenantUser,
+  requireTenantUserReadOnly,
+} from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail, toMachineSummary } from "@/lib/machines";
@@ -26,9 +30,10 @@ import {
 import { StoredFileClaimedError } from "@/lib/stored-file-claim";
 
 export const maxDuration = 120;
+export const preferredRegion = "iad1";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireTenantUser();
+  const auth = await requireTenantUserReadOnly();
   if ("error" in auth) {
     return auth.error;
   }
