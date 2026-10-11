@@ -27,11 +27,11 @@ export function LifecycleNotificationsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (fresh = false) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchLifecycleNotifications();
+      const data = await fetchLifecycleNotifications({ fresh });
       setRows(data.notifications);
     } catch (cause) {
       setError(errorMessage(cause, "Could not load notifications."));
@@ -79,7 +79,7 @@ export function LifecycleNotificationsPanel() {
   }
 
   if (error && rows.length === 0) {
-    return <ErrorState message={error} onRetry={() => void load()} />;
+    return <ErrorState message={error} onRetry={() => void load(true)} />;
   }
 
   return (

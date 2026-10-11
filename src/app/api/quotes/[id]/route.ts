@@ -15,7 +15,15 @@ import {
   recordMetaFromRow,
 } from "@/lib/record-meta";
 import { recordConflictResponse } from "@/lib/record-conflict";
-import { actorOf, machineNameFor, publicQuoteForUser, requireQuoteAccess } from "@/lib/quote-http";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  actorOf,
+  machineNameFor,
+  publicQuoteForUser,
+  requireQuoteAccess,
+} from "@/lib/quote-http";
+import { canViewQuote } from "@/lib/quotes";
+import { tenantIdForUser, userTenantId } from "@/lib/tenant";
 import { bumpConversationWatchForCustomerRead } from "@/lib/chat-watch";
 import {
   canEditTracking,
@@ -30,7 +38,6 @@ import {
   statusActivityText,
   trackingUpdatedActivityText,
 } from "@/lib/quotes";
-import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";
 import { createQuoteActivity, mutateQuote, readQuoteDetailCatalog } from "@/lib/store";
@@ -50,43 +57,50 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const access = await requireQuoteAccess(id);
-  if ("error" in access) {
-    return access.error;
+  const user = await getCurrentUser();
+  if (!user) {
+    return error("Unauthorized", 401);
+  }
+  const tenantId = tenantIdForUser(user);
+  if (!tenantId) {
+    return error("Forbidden", 403);
   }
 
-  const tenantId = userTenantId(access.user);
-  const beforeRead = access.quote.lastReadAt;
   const warm = isWarmConversationRequest(_request);
-  const detail = await readQuoteDetailCatalog(id, tenantId, access.user.id, {
+  const detail = await readQuoteDetailCatalog(id, tenantId, user.id, {
     markRead: !warm,
   });
   if (!detail) {
     return error("Quote not found", 404);
   }
+  if (!canViewQuote(detail.quote, user)) {
+    return error("Forbidden", 403);
+  }
+
+  const beforeRead = detail.quote.lastReadAt;
   const marked = detail.quote;
-  if (!warm && access.user.role === "customer") {
+  if (!warm && user.role === "customer") {
     await bumpConversationWatchForCustomerRead(
       "quote",
       marked.id,
       beforeRead,
       marked.lastReadAt,
-      [access.user.id],
+      [user.id],
     );
   }
   if (
-    access.user.role === "staff" &&
-    shouldRecordView(`quote.viewed:${access.user.id}:${marked.id}`)
+    user.role === "staff" &&
+    shouldRecordView(`quote.viewed:${user.id}:${marked.id}`)
   ) {
     await recordAccountActivity({
       tenantId,
-      actor: actorFromUser(access.user),
+      actor: actorFromUser(user),
       action: "quote.viewed",
-      summary: `${access.user.email} opened quote #${marked.number}`,
+      summary: `${user.email} opened quote #${marked.number}`,
       target: { type: "quote", id: marked.id, label: `#${marked.number}` },
     });
   }
-  const publicQuote = await publicQuoteForUser(marked, access.user, undefined, detail.bundle);
+  const publicQuote = await publicQuoteForUser(marked, user, undefined, detail.bundle);
   const etag = quoteRecordEtag(marked);
   if (etagMatches(_request, etag)) {
     return new NextResponse(null, {

@@ -99,12 +99,32 @@ export function installClientLogCapture() {
     );
   });
   window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason;
+    const message = formatArg(reason);
+    const transientReachability =
+      message.includes("Could not reach OEE360") ||
+      (reason instanceof Error &&
+        reason.name === "AbortError" &&
+        message.includes("aborted"));
+    if (transientReachability) {
+      event.preventDefault();
+      pushLimited(
+        consoleEntries,
+        {
+          t: new Date().toISOString(),
+          level: "warn",
+          message: `transient fetch ${message}`,
+        },
+        MAX_CONSOLE,
+      );
+      return;
+    }
     pushLimited(
       consoleEntries,
       {
         t: new Date().toISOString(),
         level: "error",
-        message: `unhandledrejection ${formatArg(event.reason)}`,
+        message: `unhandledrejection ${message}`,
       },
       MAX_CONSOLE,
     );

@@ -1,5 +1,7 @@
+import { NextResponse } from "next/server";
 import { requireTenantUser } from "@/lib/auth/tenant-scope";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
+import { etagMatches } from "@/lib/record-etag";
 import { toPublicLifecycleNotification } from "@/lib/lifecycle-notifications";
 import {
   countUserLifecycleNotificationsUnread,
@@ -26,11 +28,22 @@ export async function GET(request: Request) {
     auth.user.id,
     { unreadOnly },
   );
-  return json({
-    notifications: rows.map(toPublicLifecycleNotification),
-    unreadCount,
-    generatedAt: new Date().toISOString(),
-  });
+  const generatedAt = new Date().toISOString();
+  const etag = `W/"lifecycle:${unreadCount}:${rows.length}:${rows[0]?.id ?? "none"}"`;
+  if (etagMatches(request, etag)) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: { ETag: etag, "Cache-Control": "private, no-store" },
+    });
+  }
+  return NextResponse.json(
+    {
+      notifications: rows.map(toPublicLifecycleNotification),
+      unreadCount,
+      generatedAt,
+    },
+    { status: 200, headers: { ETag: etag, "Cache-Control": "private, no-store" } },
+  );
 }
 
 type PatchBody = { id?: unknown; markAll?: unknown };
