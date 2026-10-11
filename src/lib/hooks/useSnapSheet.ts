@@ -192,6 +192,7 @@ export function useSnapSheet({
   desktopStage,
   scrollBodySelector,
   openForUnread,
+  inlineLayout,
   resetKey,
 }: {
   cardRef: RefObject<HTMLElement | null>;
@@ -200,10 +201,11 @@ export function useSnapSheet({
   desktopStage: boolean;
   scrollBodySelector: string;
   openForUnread?: boolean;
+  inlineLayout?: boolean;
   resetKey?: string;
 }) {
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
-    initialConversationSheetSnap(open, desktopStage, openForUnread),
+    initialConversationSheetSnap(open, desktopStage, openForUnread, inlineLayout),
   );
   const [motionSnap, setMotionSnap] = useState<ConversationSheetSnap | null>(null);
   const [motionPhases, setMotionPhases] = useState({ phaseA: 0, phaseB: 0 });
@@ -497,14 +499,19 @@ export function useSnapSheet({
       return;
     }
     setSheet(
-      initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
+      initialConversationSheetSnap(
+        open,
+        desktopStage,
+        openForUnreadRef.current,
+        inlineLayout,
+      ),
     );
     clearMotionSnap();
     setThreadDockedState(true);
     clearMotionPaint();
     setDragging(false);
     setDraggingClass(false);
-  }, [resetKey, open, desktopStage, cardRef]);
+  }, [resetKey, open, desktopStage, inlineLayout, cardRef]);
 
   useEffect(() => {
     if (open) {
@@ -512,7 +519,12 @@ export function useSnapSheet({
         if (current !== "out") {
           return current;
         }
-        return initialConversationSheetSnap(true, desktopStage, openForUnread);
+        return initialConversationSheetSnap(
+          true,
+          desktopStage,
+          openForUnread,
+          inlineLayout,
+        );
       });
       setThreadDockedState(true);
       clearMotionPaint();
@@ -522,7 +534,7 @@ export function useSnapSheet({
       return;
     }
     if (!controlledOpen && !desktopStage) {
-      setSheet("reply");
+      setSheet("peek");
       clearMotionPaint();
       setDragging(false);
       setDraggingClass(false);
@@ -534,7 +546,7 @@ export function useSnapSheet({
     setDragging(false);
     setDraggingClass(false);
     clearMotionSnap();
-  }, [open, desktopStage, cardRef, controlledOpen, openForUnread]);
+  }, [open, desktopStage, inlineLayout, cardRef, controlledOpen, openForUnread]);
 
   useEffect(() => {
     const body = cardRef.current?.querySelector(scrollBodySelector);
