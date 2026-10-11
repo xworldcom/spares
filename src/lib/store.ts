@@ -578,6 +578,22 @@ let memory: Database | null = null;
 let memoryCatalogVersions: { database: string | null; care: string | null } | null = null;
 let loggedStoreKind = false;
 
+const coalescedCatalogReads = new Map<string, Promise<unknown>>();
+
+type TenantWorkListSnapshot = {
+  machines: ReturnType<typeof machineRowsForTenantListing>;
+  quotes: ReturnType<typeof quoteRowsForTenant>;
+  tickets: ReturnType<typeof ticketRowsForTenant>;
+  sites: ReturnType<typeof activeSites>;
+  customers: Database["customers"];
+};
+
+let workListSnapshotCache: {
+  catalogKey: string;
+  tenantId: string;
+  snapshot: TenantWorkListSnapshot;
+} | null = null;
+
 function rememberCatalogMemory(
   db: Database,
   versions: { database: string | null; care: string | null },
@@ -590,6 +606,29 @@ function rememberCatalogMemory(
 function clearCatalogMemory() {
   memory = null;
   memoryCatalogVersions = null;
+  workListSnapshotCache = null;
+}
+
+async function catalogVersionFingerprint(): Promise<string> {
+  if (memory && memoryCatalogVersions && (trustProcessMemory() || await catalogMemoryStillFresh())) {
+    return `${memoryCatalogVersions.database ?? "∅"}:${memoryCatalogVersions.care ?? "∅"}`;
+  }
+  const live = await getPersistence().peekCatalogVersions();
+  return `${live.database ?? "∅"}:${live.care ?? "∅"}`;
+}
+
+function coalescedCatalogRead<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const pending = coalescedCatalogReads.get(key);
+  if (pending) {
+    return pending as Promise<T>;
+  }
+  const run = load().finally(() => {
+    if (coalescedCatalogReads.get(key) === run) {
+      coalescedCatalogReads.delete(key);
+    }
+  });
+  coalescedCatalogReads.set(key, run);
+  return run;
 }
 
 async function catalogMemoryStillFresh(): Promise<boolean> {
@@ -3018,14 +3057,26 @@ function ticketRowsForTenant(db: Database, tenantId: string) {
 
 /** One catalog read for quotes/tickets list APIs (avoids queued double reads). */
 export function readTenantWorkListSnapshot(tenantId: string) {
-  return withLock(async () => {
-    const db = await ensureCatalog();
-    return {
-      machines: machineRowsForTenantListing(db, tenantId),
-      quotes: quoteRowsForTenant(db, tenantId),
-      tickets: ticketRowsForTenant(db, tenantId),
-      ...orgContextFromDb(db, tenantId),
-    };
+  return coalescedCatalogRead(`worklist:${tenantId}`, async () => {
+    const catalogKey = await catalogVersionFingerprint();
+    if (
+      workListSnapshotCache &&
+      workListSnapshotCache.tenantId === tenantId &&
+      workListSnapshotCache.catalogKey === catalogKey
+    ) {
+      return workListSnapshotCache.snapshot;
+    }
+    const snapshot = await withLock(async () => {
+      const db = await readDatabase();
+      return {
+        machines: machineRowsForTenantListing(db, tenantId),
+        quotes: quoteRowsForTenant(db, tenantId),
+        tickets: ticketRowsForTenant(db, tenantId),
+        ...orgContextFromDb(db, tenantId),
+      };
+    });
+    workListSnapshotCache = { catalogKey, tenantId, snapshot };
+    return snapshot;
   });
 }
 
@@ -4481,8 +4532,10 @@ export function readQuoteDetailCatalog(
   userId: string,
   options?: { markRead?: boolean },
 ): Promise<QuoteDetailCatalogRead | null> {
-  return withLock(async () => {
-    let db = await ensureCatalog();
+  const coalesceKey = `quote-detail:${tenantId}:${idOrNumber}:${options?.markRead ? "mark" : "read"}`;
+  return coalescedCatalogRead(coalesceKey, () =>
+    withLock(async () => {
+    let db = await readDatabase();
     const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
     if (!current) {
       return null;
@@ -4518,7 +4571,8 @@ export function readQuoteDetailCatalog(
       quote,
       bundle: quotePublicCatalogBundleFromDb(db, tenantId, quote),
     };
-  });
+  }),
+  );
 }
 
 export { newActivity as createQuoteActivity };

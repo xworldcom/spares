@@ -336,6 +336,12 @@ async function main() {
     routeMedianMs: median(summary.map((row) => row.routeMedianMs)),
     coldTtvMedianMs: median(coldRows.map((row) => row.ttvMs ?? row.ms)),
     coldOverGate: coldRows.filter((row) => (row.ttvMs ?? row.ms) > COLD_GATE_MS).length,
+    coldTtvP95Ms: percentile(coldRows.map((row) => row.ttvMs ?? row.ms), 95),
+    coldTtvMaxMs: coldRows.reduce(
+      (max, row) => Math.max(max, row.ttvMs ?? row.ms),
+      0,
+    ),
+    coldRouteTtv: coldRouteTtvStats(allRows),
     coldGateMs: COLD_GATE_MS,
     http5xx: results.flatMap((r) => r.http5xx ?? []),
     cells: summary,
@@ -352,6 +358,38 @@ function median(values) {
   }
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function percentile(values, p) {
+  const sorted = [...values].filter((v) => v >= 0).sort((a, b) => a - b);
+  if (sorted.length === 0) {
+    return 0;
+  }
+  const rank = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, Math.min(sorted.length - 1, rank))];
+}
+
+/** Per-route cold TTV across all cells in this mode run. */
+function coldRouteTtvStats(rows) {
+  const byHref = new Map();
+  for (const row of rows.filter((entry) => entry.kind === "cold")) {
+    const ttv = row.ttvMs ?? row.ms;
+    const bucket = byHref.get(row.href) ?? [];
+    bucket.push(ttv);
+    byHref.set(row.href, bucket);
+  }
+  const stats = {};
+  for (const [href, values] of byHref.entries()) {
+    const sorted = [...values].sort((a, b) => a - b);
+    stats[href] = {
+      n: sorted.length,
+      medianMs: median(sorted),
+      p95Ms: percentile(sorted, 95),
+      maxMs: sorted[sorted.length - 1] ?? 0,
+      overGate: sorted.filter((v) => v > COLD_GATE_MS).length,
+    };
+  }
+  return stats;
 }
 
 main().catch((err) => {
