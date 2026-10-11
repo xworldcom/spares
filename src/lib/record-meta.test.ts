@@ -5,7 +5,9 @@ import {
   quoteChangedFields,
   readRecordVersion,
   stampQuoteRecord,
+  ticketChangedFields,
 } from "./record-meta.ts";
+import type { ServiceTicketRecord } from "@/types";
 import type { QuoteRecord } from "@/types";
 
 function sampleQuote(overrides: Partial<QuoteRecord> = {}): QuoteRecord {
@@ -45,5 +47,28 @@ describe("record-meta", () => {
     });
     assert.equal(readRecordVersion(stamped), 5);
     assert.equal(stamped.lastModifiedByName, "Staff");
+  });
+
+  it("does not treat read-watermark version drift as a status conflict", () => {
+    const base: ServiceTicketRecord = {
+      id: "t1",
+      number: 9,
+      machineId: "m1",
+      title: "Ticket 9",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "user@demo.com",
+      customerId: "c1",
+      status: "open",
+      activities: [],
+      lastReadAt: {},
+      recordVersion: 2,
+    };
+    const server: ServiceTicketRecord = {
+      ...base,
+      recordVersion: 3,
+      lastReadAt: { staff: "2026-01-02T00:00:00.000Z" },
+    };
+    const overlap = fieldsOverlap(ticketChangedFields(base, server), ["status"]);
+    assert.equal(overlap, false);
   });
 });

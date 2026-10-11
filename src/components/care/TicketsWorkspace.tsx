@@ -19,6 +19,7 @@ import { errorMessage } from "@/lib/api/errors";
 import {
   hubTicketHref,
   machineTicketsHref,
+  ticketIsOpen,
   ticketRefMatches,
 } from "@/lib/care";
 import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
@@ -83,7 +84,7 @@ export function TicketsWorkspace({
   );
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hubMachineFilter =
+  const hubMachineFromUrl =
     scope === "hub"
       ? workListMachineIdFromSearchParam(searchParams.get(WORK_LIST_MACHINE_QUERY))
       : undefined;
@@ -96,6 +97,14 @@ export function TicketsWorkspace({
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
   const listHref = listHrefFor(scope, machineId);
+  const seedSelected =
+    ticketId && tickets.length > 0
+      ? tickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ?? null
+      : null;
+  const hubMachineFilter =
+    scope === "hub"
+      ? hubMachineFromUrl ?? seedSelected?.machineId
+      : undefined;
   const showMachine = scope === "hub" && !hubMachineFilter;
   const machineName = useMachineName(
     scope === "machine" ? (machineId ?? null) : null,
@@ -248,8 +257,22 @@ export function TicketsWorkspace({
     if (visibleTickets.some((ticket) => ticketRefMatches(ticket, selected.id))) {
       return visibleTickets;
     }
+    const selectedMatchesFilter =
+      statusFilter === "all" ||
+      (statusFilter === "open" && ticketIsOpen(selected.status)) ||
+      (statusFilter === "closed" && !ticketIsOpen(selected.status));
+    if (!selectedMatchesFilter) {
+      return visibleTickets;
+    }
     return [selected, ...visibleTickets];
-  }, [selected, visibleTickets]);
+  }, [selected, statusFilter, visibleTickets]);
+
+  useEffect(() => {
+    if (scope !== "hub" || !ticketId || hubMachineFromUrl || !selected?.machineId) {
+      return;
+    }
+    replaceListQuery({ [WORK_LIST_MACHINE_QUERY]: selected.machineId });
+  }, [hubMachineFromUrl, replaceListQuery, scope, selected?.machineId, ticketId]);
 
   const listPanel = (
     <div className="tickets-workspace-list">

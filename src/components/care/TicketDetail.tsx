@@ -17,7 +17,10 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
-import { isRecordConflictError } from "@/lib/api/record-conflict";
+import {
+  isRecordConflictError,
+  recordConflictMetaFromError,
+} from "@/lib/api/record-conflict";
 import { RecordConflictBanner } from "@/components/record/RecordConflictBanner";
 import { useRecordFreshnessPoll } from "@/lib/hooks/useRecordFreshnessPoll";
 import { ticketRecordEtag } from "@/lib/record-etag";
@@ -87,6 +90,7 @@ export function TicketDetail({
   );
   const [error, setError] = useState<string | null>(null);
   const [recordConflict, setRecordConflict] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(() => !seedTicket);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const staff = user?.role === "staff";
@@ -106,6 +110,7 @@ export function TicketDetail({
 
   useEffect(() => {
     setError(null);
+    setDetailLoading(true);
     let cancelled = false;
     getTicket(ticketId)
       .then((next) => {
@@ -121,6 +126,11 @@ export function TicketDetail({
           return;
         }
         setError(errorMessage(cause, "Could not load this ticket."));
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDetailLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -141,6 +151,7 @@ export function TicketDetail({
       ticket.unread === next.unread &&
       ticket.assistantPaused === next.assistantPaused &&
       ticket.assistantAvailable === next.assistantAvailable &&
+      ticket.recordVersion === next.recordVersion &&
       sameReadReceipts(ticket.customerReadReceipts, next.customerReadReceipts)
     ) {
       return;
@@ -154,6 +165,10 @@ export function TicketDetail({
       customerReadReceipts: next.customerReadReceipts,
       assistantPaused: next.assistantPaused,
       assistantAvailable: next.assistantAvailable,
+      recordVersion: next.recordVersion,
+      lastModifiedAt: next.lastModifiedAt,
+      lastModifiedByName: next.lastModifiedByName,
+      actorDisplayNames: next.actorDisplayNames,
     };
     setTicket(merged);
     onTicketListPatch?.(merged);
@@ -193,7 +208,15 @@ export function TicketDetail({
       onUpdated?.();
     } catch (cause) {
       if (isRecordConflictError(cause)) {
+        const meta = recordConflictMetaFromError(cause);
         setRecordConflict(cause.message);
+        if (meta && meta.recordVersion >= 1) {
+          setTicket((current) =>
+            current && ticketRefMatches(current, ticketId)
+              ? { ...current, recordVersion: meta.recordVersion }
+              : current,
+          );
+        }
         return;
       }
       setError(errorMessage(cause, "Could not update status."));
@@ -309,12 +332,7 @@ export function TicketDetail({
           message={recordConflict}
           onRefresh={() => {
             setRecordConflict(null);
-            void getTicket(ticketId)
-              .then((next) => {
-                setTicket(next);
-                onTicketListPatch?.(next);
-              })
-              .catch(() => undefined);
+            setReloadKey((key) => key + 1);
           }}
           onDismiss={() => setRecordConflict(null)}
         />
@@ -357,7 +375,7 @@ export function TicketDetail({
           role={user.role}
           selfEmail={user.email}
           viewerReadAt={ticket.viewerReadAt}
-          busy={busy || !threadReady}
+          busy={busy || !threadReady || detailLoading}
           onSend={onSend}
           threadKind="ticket"
           threadId={ticket.id}

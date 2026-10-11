@@ -81,10 +81,12 @@ export function invalidateListEtag(path: string) {
  * (pairs with respondDerivedList). Safari exposes 304 to JS — never treat 304 as
  * success without a cached body.
  */
+type ListFetchInit = RequestInit & { deadlineMs?: number };
+
 async function fetchListOnce<T>(
   path: string,
   warmKey: string,
-  init?: RequestInit,
+  init?: ListFetchInit,
 ): Promise<T | undefined> {
   const slot = slotFor(warmKey, path);
   const headers = new Headers(init?.headers);
@@ -94,13 +96,18 @@ async function fetchListOnce<T>(
 
   let response: Response;
   try {
-    response = await fetchWithDeadline(path, {
-      ...init,
-      method: "GET",
-      cache: "no-store",
-      credentials: "include",
-      headers,
-    });
+    const { deadlineMs, ...rest } = init ?? {};
+    response = await fetchWithDeadline(
+      path,
+      {
+        ...rest,
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+        headers,
+      },
+      deadlineMs,
+    );
   } catch (cause) {
     if (init?.signal?.aborted || isAbortError(cause)) {
       throw new ApiError(NETWORK_TIMEOUT_MESSAGE, 0, "timeout");
@@ -143,7 +150,7 @@ async function fetchListOnce<T>(
 async function loadListBody<T>(
   path: string,
   warmKey: string,
-  init?: RequestInit,
+  init?: ListFetchInit,
 ): Promise<T> {
   const slot = slotFor(warmKey, path);
   const headers = new Headers(init?.headers);
@@ -191,7 +198,7 @@ async function loadListBody<T>(
 export async function apiFetchList<T>(
   path: string,
   warmKey: string,
-  init?: RequestInit,
+  init?: ListFetchInit,
 ): Promise<T> {
   return readIfWarm(warmKey, () => loadListBody<T>(path, warmKey, init));
 }

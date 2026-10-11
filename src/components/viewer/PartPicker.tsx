@@ -672,7 +672,7 @@ function ViewerCanvas({
       <StudioGround />
       {load.status === "ready" ? (
         <Suspense fallback={null}>
-        <Bounds clip observe margin={1.3} maxDuration={0}>
+        <Bounds clip observe fit={false} margin={1.3} maxDuration={0}>
           <LoadedModel
             src={src}
             parts={parts}

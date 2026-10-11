@@ -14,7 +14,6 @@ import {
   readRecordVersion,
   recordMetaFromRow,
 } from "@/lib/record-meta";
-import { recordConflictResponse } from "@/lib/record-conflict";
 import { getCurrentUser } from "@/lib/auth";
 import {
   actorOf,
@@ -34,6 +33,7 @@ import {
   parseQuoteItems,
   parseShipments,
   quoteItemsEqual,
+  quoteStaffPricingLocked,
   shippedActivityText,
   statusActivityText,
   trackingUpdatedActivityText,
@@ -50,6 +50,7 @@ type PatchBody = {
   poNumber?: unknown;
   invoiceNumber?: unknown;
   recordVersion?: unknown;
+  unlockStaffPricing?: unknown;
 };
 
 export async function GET(
@@ -148,13 +149,6 @@ async function handlePATCH(
     expectedVersion,
     touchedFields,
   };
-  if (
-    expectedVersion < readRecordVersion(access.quote) &&
-    touchedFields.length > 0
-  ) {
-    return recordConflictResponse("quote", recordMetaFromRow(access.quote));
-  }
-
   if (access.user.role === "customer") {
     const poNumber =
       typeof body.poNumber === "string" ? body.poNumber.trim() : "";
@@ -205,8 +199,40 @@ async function handlePATCH(
     status = body.status;
   }
 
+  if (body.unlockStaffPricing === true) {
+    if (quoteStaffPricingLocked(access.quote)) {
+      const next = await mutateQuote(
+        access.quote.id,
+        tenantId,
+        (quote) => ({
+          ...quote,
+          staffPricingUnlocked: true,
+          activities: [
+            ...quote.activities,
+            createQuoteActivity(
+              actor,
+              "pricing",
+              "Pricing unlocked for editing.",
+              now(),
+            ),
+          ],
+          lastReadAt: { ...quote.lastReadAt, [actor.id]: now() },
+        }),
+        { actor: mutationActor, lock: quoteLock },
+      );
+      if (!next) {
+        return error("Quote not found", 404);
+      }
+      return json({ quote: await publicQuoteForUser(next, access.user, await machineNameFor(next)) });
+    }
+    return json({ quote: await publicQuoteForUser(access.quote, access.user, await machineNameFor(access.quote)) });
+  }
+
   let items = access.quote.items;
   if (body.items !== undefined) {
+    if (quoteStaffPricingLocked(access.quote)) {
+      return error("Pricing is locked after PO received. Use Edit pricing to unlock.", 400);
+    }
     const parsed = parseQuoteItems(body.items, { allowPricing: true });
     if (!parsed.ok) {
       return error(parsed.error, 400);
@@ -247,7 +273,7 @@ async function handlePATCH(
     return error("Add a tracking number to mark this quote shipped", 400);
   }
 
-  if (typeof body.invoiceNumber === "string") {
+  if (body.invoiceNumber !== undefined) {
     const invoiceAt = status ?? access.quote.status;
     if (!invoiceVisible(invoiceAt)) {
       return error("Invoice opens after PO is received", 400);
@@ -259,16 +285,26 @@ async function handlePATCH(
     tenantId,
     (quote) => {
     let updated: QuoteRecord = { ...quote, items, shipments };
-    const invoiceNumber =
-      typeof body.invoiceNumber === "string" ? body.invoiceNumber.trim() : quote.invoiceNumber;
-    if (invoiceNumber) {
-      updated = { ...updated, invoiceNumber };
+    if (body.invoiceNumber !== undefined) {
+      if (body.invoiceNumber === null) {
+        const { invoiceNumber: _removed, ...rest } = updated;
+        updated = rest as QuoteRecord;
+      } else if (typeof body.invoiceNumber === "string") {
+        const trimmed = body.invoiceNumber.trim();
+        if (trimmed) {
+          updated = { ...updated, invoiceNumber: trimmed };
+        } else {
+          const { invoiceNumber: _removed, ...rest } = updated;
+          updated = rest as QuoteRecord;
+        }
+      }
     }
     const activities = [...quote.activities];
     const stamp = now();
 
     if (body.items !== undefined && !quoteItemsEqual(items, quote.items)) {
       activities.push(createQuoteActivity(actor, "pricing", "Pricing updated.", stamp));
+      updated = { ...updated, staffPricingUnlocked: false };
     }
     if (status && status !== quote.status) {
       if (status === "shipped") {

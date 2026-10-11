@@ -38,10 +38,17 @@ export async function createQuote(input: {
   return data.quote;
 }
 
+const QUOTES_LIST_DEADLINE_MS = 20_000;
+
 export async function listQuotes(options?: { background?: boolean }): Promise<QuotesListResponse> {
-  const data = await apiFetchList<QuotesListResponse>("/api/quotes", "quotes:list", {
-    headers: options?.background ? backgroundFetchHeaders() : undefined,
-  });
+  const data = await apiFetchList<QuotesListResponse>(
+    "/api/quotes",
+    "quotes:list",
+    {
+      headers: options?.background ? backgroundFetchHeaders() : undefined,
+      deadlineMs: QUOTES_LIST_DEADLINE_MS,
+    },
+  );
   return {
     quotes: data.quotes ?? [],
     unreadCount: data.unreadCount ?? 0,
@@ -85,8 +92,9 @@ export async function updateQuote(
     items?: QuoteItem[];
     shipments?: Array<Omit<QuoteShipment, "id"> & { id?: string }>;
     poNumber?: string;
-    invoiceNumber?: string;
+    invoiceNumber?: string | null;
     recordVersion?: number;
+    unlockStaffPricing?: boolean;
   },
 ): Promise<Quote> {
   const body =

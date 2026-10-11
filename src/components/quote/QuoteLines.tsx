@@ -5,7 +5,7 @@ import {
   formatMoney,
   hasSellPrice,
   lineSellTotal,
-  parseStaffSellPrice,
+  parseStaffMoneyField,
   quoteSellTotal,
 } from "@/lib/quotes";
 import {
@@ -13,6 +13,7 @@ import {
   qtyDraftIsComplete,
   qtyKeyReplacesDraft,
   sanitizeQtyDraft,
+  validateEditableQty,
 } from "@/lib/ui/editable-qty";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { StaffQuoteLineLifecycle } from "@/components/quote/StaffQuoteLineLifecycle";
@@ -54,11 +55,20 @@ function QtyField({
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const replaceOnType = useRef(true);
 
   function commit(raw: string) {
-    const next = parseEditableQty(raw);
-    onCommit(next);
+    const validated = validateEditableQty(raw);
+    if (!validated.ok) {
+      setError(validated.error);
+      onCommit(parseEditableQty(raw));
+      setDraft(null);
+      replaceOnType.current = true;
+      return;
+    }
+    setError(null);
+    onCommit(validated.qty);
     setDraft(null);
     replaceOnType.current = true;
   }
@@ -101,8 +111,12 @@ function QtyField({
             const next = sanitizeQtyDraft(event.target.value);
             setDraft(next);
             replaceOnType.current = false;
-            if (qtyDraftIsComplete(next)) {
-              onCommit(parseEditableQty(next));
+            const validated = validateEditableQty(next);
+            if (validated.ok) {
+              setError(null);
+              onCommit(validated.qty);
+            } else {
+              setError(validated.error);
             }
           }}
           onBlur={() => {
@@ -129,7 +143,11 @@ function QtyField({
             }
           }}
           className={inputClass}
+          aria-invalid={error ? true : undefined}
         />
+        {error ? (
+          <p className="mt-1 text-xs text-[#f0c4c0]" role="alert">{error}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -140,14 +158,18 @@ export function QuoteLines({
   role,
   pricesVisible,
   editable,
+  pricingEditable = editable,
   onChange,
 }: {
   items: QuoteItem[];
   role: Role;
   pricesVisible: boolean;
   editable: boolean;
+  pricingEditable?: boolean;
   onChange?: (items: QuoteItem[]) => void;
 }) {
+  const [moneyErrors, setMoneyErrors] = useState<Record<string, string>>({});
+
   function patch(index: number, update: Partial<QuoteItem>) {
     onChange?.(
       items.map((item, itemIndex) =>
@@ -199,46 +221,74 @@ export function QuoteLines({
                   value={item.qty}
                   onCommit={(qty) => patch(index, { qty })}
                 />
+                {pricingEditable ? (
+                  <>
                 <Field label="Supplier cost">
                   <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={item.supplierCost ?? ""}
-                    onChange={(event) =>
-                      patch(index, {
-                        supplierCost: event.target.value
-                          ? Number(event.target.value)
-                          : undefined,
-                      })
+                    type="text"
+                    inputMode="decimal"
+                    value={
+                      item.supplierCost !== undefined
+                        ? item.supplierCost.toFixed(2)
+                        : ""
                     }
+                    onChange={(event) => {
+                      const parsed = parseStaffMoneyField(event.target.value);
+                      const key = `cost-${item.id}`;
+                      if (!parsed.ok) {
+                        setMoneyErrors((prev) => ({ ...prev, [key]: parsed.error }));
+                        return;
+                      }
+                      setMoneyErrors((prev) => {
+                        const next = { ...prev };
+                        delete next[key];
+                        return next;
+                      });
+                      patch(index, { supplierCost: parsed.value });
+                    }}
                     className={inputClass}
                     placeholder="0.00"
+                    aria-invalid={moneyErrors[`cost-${item.id}`] ? true : undefined}
                   />
+                  {moneyErrors[`cost-${item.id}`] ? (
+                    <p className="mt-1 text-xs text-[#f0c4c0]" role="alert">
+                      {moneyErrors[`cost-${item.id}`]}
+                    </p>
+                  ) : null}
                 </Field>
                 <Field label="Sell price">
                   <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={item.sellPrice ?? ""}
-                    onChange={(event) =>
-                      patch(index, {
-                        sellPrice: parseStaffSellPrice(event.target.value),
-                      })
+                    type="text"
+                    inputMode="decimal"
+                    value={
+                      item.sellPrice !== undefined ? item.sellPrice.toFixed(2) : ""
                     }
-                    onBlur={(event) =>
-                      patch(index, {
-                        sellPrice: parseStaffSellPrice(event.target.value),
-                      })
-                    }
+                    onChange={(event) => {
+                      const parsed = parseStaffMoneyField(event.target.value);
+                      const key = `sell-${item.id}`;
+                      if (!parsed.ok) {
+                        setMoneyErrors((prev) => ({ ...prev, [key]: parsed.error }));
+                        return;
+                      }
+                      setMoneyErrors((prev) => {
+                        const next = { ...prev };
+                        delete next[key];
+                        return next;
+                      });
+                      patch(index, { sellPrice: parsed.value });
+                    }}
                     className={inputClass}
                     placeholder="0.00"
-                    aria-invalid={!hasSellPrice(item)}
+                    aria-invalid={!hasSellPrice(item) || moneyErrors[`sell-${item.id}`] ? true : undefined}
                     aria-describedby={
                       !hasSellPrice(item) ? `sell-hint-${item.id}` : undefined
                     }
                   />
+                  {moneyErrors[`sell-${item.id}`] ? (
+                    <p className="mt-1 text-xs text-[#f0c4c0]" role="alert">
+                      {moneyErrors[`sell-${item.id}`]}
+                    </p>
+                  ) : null}
                   {!hasSellPrice(item) ? (
                     <p
                       id={`sell-hint-${item.id}`}
@@ -285,6 +335,12 @@ export function QuoteLines({
                     className={inputClass}
                   />
                 </Field>
+                  </>
+                ) : (
+                  <p className="col-span-2 text-sm text-[#e8c27a] sm:col-span-3">
+                    Pricing is locked after PO received.
+                  </p>
+                )}
               </div>
             ) : (
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">

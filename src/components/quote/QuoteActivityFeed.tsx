@@ -373,7 +373,9 @@ export function QuoteActivityFeed({
       )}
       <ol ref={scrollerRef} className={threadClass}>
         {threadActivities.length === 0 ? (
-          <li className="imsg-empty">No messages yet.</li>
+          <li className="imsg-empty" aria-busy={busy}>
+            {busy ? "Loading messages…" : "No messages yet."}
+          </li>
         ) : (
           threadActivities.map((activity, index) => {
             const pending = activity.displayKey.startsWith("pending-");
@@ -572,6 +574,7 @@ export function QuoteActivityFeed({
         ) : null}
         <div className="imsg-composer-row">
           <input
+            id={`${threadKind}-${threadId}-attach`}
             ref={fileInputRef}
             type="file"
             className="sr-only"
@@ -583,17 +586,16 @@ export function QuoteActivityFeed({
               event.target.value = "";
             }}
           />
-          <button
-            type="button"
+          <label
+            htmlFor={`${threadKind}-${threadId}-attach`}
             className="imsg-attach"
-            disabled={busy || uploading}
             aria-label="Attach file"
-            onClick={() => fileInputRef.current?.click()}
+            data-disabled={busy || uploading ? "true" : undefined}
           >
             <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path d="M8.5 14.5 15 8a3.5 3.5 0 1 1 5 5l-7.5 7.5a5 5 0 1 1-7-7l8-8" />
             </svg>
-          </button>
+          </label>
           <label className="imsg-composer-field">
             <span className="sr-only">Message</span>
             <textarea
@@ -610,6 +612,10 @@ export function QuoteActivityFeed({
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
+                  if (!canSendChatMessage(text, pendingFiles.length)) {
+                    setComposerError(EMPTY_CHAT_MESSAGE_ERROR);
+                    return;
+                  }
                   event.preventDefault();
                   void submit();
                 }

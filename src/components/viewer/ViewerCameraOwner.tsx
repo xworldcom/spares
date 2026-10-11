@@ -32,6 +32,7 @@ const MIN_LAYOUT_PX = 80;
 const STABLE_FRAMES = 3;
 const READY_PAINT_FRAMES = 5;
 const FIT_MARGIN = 1.3;
+const FIT_MARGIN_PHONE = 1.48;
 const MIN_BOUNDS_EXTENT = 0.02;
 
 function boundsHasGeometry(bounds: ReturnType<typeof useBounds>) {
@@ -102,6 +103,14 @@ export function ViewerCameraOwner({
     return syncRendererViewport(gl, camera, size.width, size.height);
   }, [camera, gl, readSize]);
 
+  const fitMargin = useCallback(() => {
+    const layout = readSize();
+    if (layout && layout.width < 480) {
+      return FIT_MARGIN_PHONE;
+    }
+    return FIT_MARGIN;
+  }, [readSize]);
+
   const fitModelInView = useCallback(() => {
     if (!(camera instanceof PerspectiveCamera) || !controls) {
       return false;
@@ -110,13 +119,14 @@ export function ViewerCameraOwner({
     if (!boundsHasGeometry(bounds)) {
       return false;
     }
+    const margin = fitMargin();
     const { center, distance, size } = bounds.getSize();
     const sphereRadius = size.length() * 0.5;
     const vFovRad = (camera.fov * Math.PI) / 180;
     const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * camera.aspect);
     const sphereDistV = sphereRadius / Math.sin(vFovRad / 2);
     const sphereDistH = sphereRadius / Math.sin(hFovRad / 2);
-    const sphereDistance = Math.max(sphereDistV, sphereDistH) * FIT_MARGIN;
+    const sphereDistance = Math.max(sphereDistV, sphereDistH) * margin;
     const fitDistance = Math.max(distance, sphereDistance);
     const direction = new Vector3().subVectors(camera.position, controls.target);
     if (direction.lengthSq() < 1e-8) {
@@ -128,9 +138,34 @@ export function ViewerCameraOwner({
     uprightDefaultOrbit(camera, controls.target);
     controls.update();
     return true;
-  }, [bounds, camera, controls]);
+  }, [bounds, camera, controls, fitMargin]);
+
+  const refitToContainer = useCallback(() => {
+    if (!(camera instanceof PerspectiveCamera) || !controls) {
+      return false;
+    }
+    if (!syncViewport()) {
+      return false;
+    }
+    if (canonicalPose.current) {
+      const damping = controls.enableDamping;
+      controls.enableDamping = false;
+      applyOrbitSnapshot(camera, controls.target, canonicalPose.current);
+      controls.enableDamping = damping;
+    }
+    if (!fitModelInView()) {
+      return false;
+    }
+    controls.update();
+    invalidate();
+    return true;
+  }, [camera, controls, fitModelInView, invalidate, syncViewport]);
 
   const performRefit = useCallback(() => {
+    if (canonicalPose.current) {
+      refitToContainer();
+      return;
+    }
     if (!syncViewport()) {
       return;
     }
@@ -138,7 +173,7 @@ export function ViewerCameraOwner({
       return;
     }
     invalidate();
-  }, [fitModelInView, invalidate, syncViewport]);
+  }, [fitModelInView, invalidate, refitToContainer, syncViewport]);
 
   const applyCanonical = useCallback(() => {
     if (!(camera instanceof PerspectiveCamera) || !controls || !canonicalPose.current) {
@@ -159,6 +194,24 @@ export function ViewerCameraOwner({
     return true;
   }, [camera, controls, invalidate, syncViewport]);
 
+  const refitAfterFullscreenExit = useCallback(() => {
+    if (!applyCanonical()) {
+      return;
+    }
+    let frame = 0;
+    const settle = () => {
+      frame += 1;
+      if (frame < 3) {
+        requestAnimationFrame(settle);
+        return;
+      }
+      syncViewport();
+      applyCanonical();
+      invalidate();
+    };
+    requestAnimationFrame(settle);
+  }, [applyCanonical, invalidate, syncViewport]);
+
   const commitCanonicalReady = useCallback(
     (snap: ViewerOrbitSnapshot) => {
       if (!(camera instanceof PerspectiveCamera) || !controls) {
@@ -176,8 +229,11 @@ export function ViewerCameraOwner({
           requestAnimationFrame(paint);
           return;
         }
+        const damping = orbit.enableDamping;
+        orbit.enableDamping = false;
         applyOrbitSnapshot(perspective, orbit.target, snap);
         orbit.update();
+        orbit.enableDamping = damping;
         invalidate();
         pass += 1;
         if (pass < READY_PAINT_FRAMES) {
@@ -197,7 +253,7 @@ export function ViewerCameraOwner({
 
   const captureCanonical = useCallback(() => {
     if (canonicalPose.current) {
-      return true;
+      return canonicalReady.current;
     }
     if (!(camera instanceof PerspectiveCamera) || !controls) {
       return false;
@@ -218,7 +274,7 @@ export function ViewerCameraOwner({
     }
     canonicalPose.current = snap;
     commitCanonicalReady(snap);
-    return true;
+    return canonicalReady.current;
   }, [camera, commitCanonicalReady, controls, fitModelInView, invalidate, syncViewport]);
 
   useLayoutEffect(() => {
@@ -328,11 +384,11 @@ export function ViewerCameraOwner({
         return;
       }
       if (viewerFullscreen) {
-        performRefit();
+        refitToContainer();
         return;
       }
       if (canonicalReady.current) {
-        applyCanonical();
+        refitAfterFullscreenExit();
       }
     }
     frame = requestAnimationFrame(step);
@@ -340,7 +396,7 @@ export function ViewerCameraOwner({
       alive = false;
       cancelAnimationFrame(frame);
     };
-  }, [applyCanonical, performRefit, syncViewport, viewerFullscreen]);
+  }, [refitAfterFullscreenExit, refitToContainer, syncViewport, viewerFullscreen]);
 
   useLayoutEffect(() => {
     function onFullscreenChange() {
@@ -351,12 +407,11 @@ export function ViewerCameraOwner({
               return;
             }
             if (document.fullscreenElement) {
-              performRefit();
-              invalidate();
+              refitToContainer();
               return;
             }
             if (canonicalReady.current) {
-              applyCanonical();
+              refitAfterFullscreenExit();
             }
           });
         });
@@ -364,7 +419,7 @@ export function ViewerCameraOwner({
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, [applyCanonical, performRefit, syncViewport]);
+  }, [refitAfterFullscreenExit, refitToContainer, syncViewport]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;

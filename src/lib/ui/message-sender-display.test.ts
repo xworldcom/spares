@@ -13,8 +13,8 @@ describe("messageSenderDisplayName", () => {
     );
   });
 
-  it("uses email handle for role-like staff mailboxes", () => {
-    assert.equal(messageSenderDisplayName({ email: "staff@demo.com" }), "staff@demo");
+  it("uses tenant staff label for role-like staff mailboxes", () => {
+    assert.equal(messageSenderDisplayName({ email: "staff@demo.com" }), "Demo staff");
     assert.notEqual(messageSenderDisplayName({ email: "staff@demo.com" }), "Staff");
   });
 
