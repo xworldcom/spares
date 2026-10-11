@@ -14,6 +14,7 @@ const outDir = resolve(
 mkdirSync(outDir, { recursive: true });
 
 const staff = { email: "staff@demo.com", password: "demo123456" };
+const customer = { email: "user@demo.com", password: "demo123456" };
 const vp = { key: "390x844", width: 390, height: 844 };
 
 async function sheetProbe(page) {
@@ -78,37 +79,24 @@ async function firstUnreadQuoteLink(page) {
   return page.locator('a[href*="/staff/quotes/"]').first();
 }
 
-async function firstUnreadTicketLink(page) {
-  await page.goto(`${baseUrl}/care/tickets`, {
-    waitUntil: "domcontentloaded",
-    timeout: 120000,
-  });
-  await page.waitForTimeout(1200);
-  const rows = page.locator('a[href*="/care/tickets/"]');
-  const count = await rows.count();
-  for (let i = 0; i < Math.min(count, 40); i++) {
-    const row = rows.nth(i);
-    const text = (await row.innerText().catch(() => "")) || "";
-    const hasUnread =
-      (await row.locator("[data-unread], .is-unread, .ticket-unread").count()) > 0 ||
-      /\bunread\b/i.test(text) ||
-      (await row.locator(".conversation-sheet-unread-dot").count()) > 0;
-    if (hasUnread) {
-      return { row, hadUnreadMarker: true };
-    }
+async function loginContext(browser, account) {
+  const context = await browser.newContext();
+  const login = await context.request.post(`${baseUrl}/api/auth/login`, { data: account });
+  if (!login.ok()) {
+    await context.close();
+    return null;
   }
-  return { row: rows.first(), hadUnreadMarker: false };
+  return context;
 }
 
 async function runFlow(browserType, label) {
   const browser = await browserType.launch({ headless: true });
-  const context = await browser.newContext();
-  const login = await context.request.post(`${baseUrl}/api/auth/login`, { data: staff });
-  if (!login.ok()) {
+  const staffCtx = await loginContext(browser, staff);
+  if (!staffCtx) {
     await browser.close();
-    return { label, ok: false, error: `login ${login.status()}` };
+    return { label, ok: false, error: "staff login" };
   }
-  const page = await context.newPage();
+  const page = await staffCtx.newPage();
   await page.setViewportSize({ width: vp.width, height: vp.height });
   const cases = [];
 
@@ -118,11 +106,15 @@ async function runFlow(browserType, label) {
   });
   await page.waitForTimeout(1200);
   const quoteLink = await firstUnreadQuoteLink(page);
+  const listHadUnread =
+    (await page.locator('a[href*="/staff/quotes/"]').filter({
+      has: page.locator('[aria-label="Unread"]'),
+    }).count()) > 0;
   await quoteLink.click({ timeout: 60000 });
   await page.locator("[data-conversation-sheet]").waitFor({ timeout: 60000 });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(400);
   let probe = await sheetProbe(page);
-  let verdict = expectUnreadPeek(probe, true);
+  let verdict = expectUnreadPeek(probe, listHadUnread);
   const quoteShot = `${label}-unread-quote-open-${vp.key}.png`;
   await page.screenshot({ path: join(outDir, quoteShot), fullPage: false });
   cases.push({ flow: "unread-quote-open", ...probe, ...verdict, shot: quoteShot });
@@ -131,7 +123,7 @@ async function runFlow(browserType, label) {
   await page.locator("[data-conversation-sheet]").waitFor({ timeout: 60000 });
   await page.waitForTimeout(700);
   probe = await sheetProbe(page);
-  verdict = expectUnreadPeek(probe, true);
+  verdict = expectUnreadPeek(probe, false);
   const quoteReloadShot = `${label}-unread-quote-reload-${vp.key}.png`;
   await page.screenshot({ path: join(outDir, quoteReloadShot), fullPage: false });
   cases.push({
@@ -141,18 +133,38 @@ async function runFlow(browserType, label) {
     shot: quoteReloadShot,
   });
 
-  const { row: ticketLink, hadUnreadMarker } = await firstUnreadTicketLink(page);
+  await staffCtx.close();
+
+  const customerCtx = await loginContext(browser, customer);
+  if (!customerCtx) {
+    cases.push({ flow: "unread-care-open", pass: false, detail: "customer login" });
+    await browser.close();
+    const ok = cases.every((c) => c.pass);
+    return { label, ok, cases };
+  }
+  const carePage = await customerCtx.newPage();
+  await carePage.setViewportSize({ width: vp.width, height: vp.height });
+  await carePage.goto(`${baseUrl}/care/tickets`, {
+    waitUntil: "domcontentloaded",
+    timeout: 120000,
+  });
+  await carePage.waitForTimeout(1500);
+  const careUnread = carePage.locator('a[href*="/care/tickets/"]').filter({
+    has: carePage.locator('[aria-label="Unread"]'),
+  });
+  const careListHadUnread = (await careUnread.count()) > 0;
+  const ticketLink = careListHadUnread ? careUnread.first() : carePage.locator('a[href*="/care/tickets/"]').first();
   if (await ticketLink.count()) {
     await ticketLink.click({ timeout: 60000 });
-    await page.locator("[data-conversation-sheet]").waitFor({ timeout: 60000 });
-    await page.waitForTimeout(700);
-    probe = await sheetProbe(page);
-    verdict = expectUnreadPeek(probe, probe.unreadDotVisible || hadUnreadMarker);
+    await carePage.locator("[data-conversation-sheet]").waitFor({ timeout: 60000 });
+    await carePage.waitForTimeout(400);
+    probe = await sheetProbe(carePage);
+    verdict = expectUnreadPeek(probe, careListHadUnread);
     const careShot = `${label}-unread-care-open-${vp.key}.png`;
-    await page.screenshot({ path: join(outDir, careShot), fullPage: false });
+    await carePage.screenshot({ path: join(outDir, careShot), fullPage: false });
     cases.push({
       flow: "unread-care-open",
-      hadUnreadMarker,
+      careListHadUnread,
       ...probe,
       ...verdict,
       shot: careShot,
@@ -161,6 +173,7 @@ async function runFlow(browserType, label) {
     cases.push({ flow: "unread-care-open", pass: false, detail: "no ticket link" });
   }
 
+  await customerCtx.close();
   await browser.close();
   const ok = cases.every((c) => c.pass);
   return { label, ok, cases };
