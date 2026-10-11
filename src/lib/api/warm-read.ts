@@ -40,3 +40,16 @@ export function invalidateWarmRead(keyOrPrefix: string) {
     }
   }
 }
+
+/** Resolved warm value for ETag 304 replay (same TTL window as readIfWarm). */
+export async function peekWarmResolved<T>(key: string): Promise<T | undefined> {
+  const hit = warmReads.get(key);
+  if (!hit || hit.expires <= Date.now()) {
+    return undefined;
+  }
+  try {
+    return (await hit.promise) as T;
+  } catch {
+    return undefined;
+  }
+}

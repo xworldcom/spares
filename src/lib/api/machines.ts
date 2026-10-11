@@ -13,6 +13,7 @@ import {
 } from "../model-upload-policy.ts";
 import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
+import { apiFetchList } from "./list-fetch";
 import { normalizePart } from "./normalize-part";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 import type {
@@ -98,10 +99,8 @@ export async function listMachines(options?: {
   if (options?.fresh) {
     invalidateWarmRead(cacheKey);
   }
-  return readIfWarm(cacheKey, async () => {
-    const data = await apiFetch<MachinesListResponse>(path);
-    return data.machines ?? [];
-  });
+  const data = await apiFetchList<MachinesListResponse>(path, cacheKey);
+  return data.machines ?? [];
 }
 
 function machineWarmKey(id: string) {

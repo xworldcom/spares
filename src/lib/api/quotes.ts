@@ -1,6 +1,7 @@
 import { quoteItemsPatchPayload } from "@/lib/quotes";
 import { backgroundFetchHeaders } from "./background-fetch";
 import { apiFetch } from "./client";
+import { apiFetchList, invalidateListEtag } from "./list-fetch";
 import { SPARES_WARM_HEADER } from "./warm-intent";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 import type {
@@ -29,21 +30,20 @@ export async function createQuote(input: {
     }),
   });
   invalidateWarmRead("quotes:list");
+  invalidateListEtag("/api/quotes");
   invalidateWarmRead("care-hub:machines");
   invalidateWarmRead("machines:list");
   return data.quote;
 }
 
 export async function listQuotes(options?: { background?: boolean }): Promise<QuotesListResponse> {
-  return readIfWarm("quotes:list", async () => {
-    const data = await apiFetch<QuotesListResponse>("/api/quotes", {
-      headers: options?.background ? backgroundFetchHeaders() : undefined,
-    });
-    return {
-      quotes: data.quotes ?? [],
-      unreadCount: data.unreadCount ?? 0,
-    };
+  const data = await apiFetchList<QuotesListResponse>("/api/quotes", "quotes:list", {
+    headers: options?.background ? backgroundFetchHeaders() : undefined,
   });
+  return {
+    quotes: data.quotes ?? [],
+    unreadCount: data.unreadCount ?? 0,
+  };
 }
 
 export async function getQuote(idOrNumber: string): Promise<Quote> {
@@ -51,6 +51,7 @@ export async function getQuote(idOrNumber: string): Promise<Quote> {
     const data = await apiFetch<QuoteResponse>(`/api/quotes/${idOrNumber}`);
     const quote = data.quote;
     invalidateWarmRead("quotes:list");
+    invalidateListEtag("/api/quotes");
     warmRead(`quote:${quote.id}:view`, () => Promise.resolve(quote));
     warmRead(`quote:${String(quote.number)}:view`, () => Promise.resolve(quote));
     return quote;
@@ -84,6 +85,7 @@ export async function updateQuote(
   });
   invalidateWarmRead(`quote:${idOrNumber}`);
   invalidateWarmRead("quotes:list");
+  invalidateListEtag("/api/quotes");
   return data.quote;
 }
 
@@ -94,6 +96,7 @@ export async function setQuoteAssistantPaused(idOrNumber: string, paused: boolea
   });
   invalidateWarmRead(`quote:${idOrNumber}`);
   invalidateWarmRead("quotes:list");
+  invalidateListEtag("/api/quotes");
   return data.quote;
 }
 
@@ -115,6 +118,7 @@ export async function patchQuoteRead(idOrNumber: string) {
   });
   invalidateWarmRead(`quote:${idOrNumber}`);
   invalidateWarmRead("quotes:list");
+  invalidateListEtag("/api/quotes");
   return data.quote;
 }
 
@@ -133,6 +137,7 @@ export async function uploadQuotePo(
   });
   invalidateWarmRead(`quote:${idOrNumber}`);
   invalidateWarmRead("quotes:list");
+  invalidateListEtag("/api/quotes");
   return data.quote;
 }
 

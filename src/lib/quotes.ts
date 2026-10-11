@@ -892,6 +892,42 @@ export function shipmentsForRole(
   return [];
 }
 
+/** Slim row for GET /api/quotes — no thread payloads. */
+export function toPublicQuoteListRow(
+  quote: QuoteRecord,
+  user: Pick<PublicUser, "id" | "email" | "role">,
+  machineName?: string,
+  options?: { assistantAvailable?: boolean },
+): Quote {
+  const lineCount = quote.items.length;
+  const showCustomerTotal =
+    user.role === "customer" && pricesVisibleToCustomer(quote.status);
+  const listSellTotal = showCustomerTotal ? quoteSellTotal(quote.items) : undefined;
+  const publicQuote: Quote = {
+    id: quote.id,
+    number: quote.number,
+    machineId: quote.machineId,
+    items: [],
+    lineCount,
+    listSellTotal,
+    createdAt: quote.createdAt,
+    customerEmail: user.role === "staff" ? quote.customerEmail : user.email,
+    status: quote.status,
+    shipments: [],
+    activities: [],
+    unread: isQuoteUnreadForUser(quote, user),
+    viewerReadAt: quote.lastReadAt[user.id],
+    hasPoFile: Boolean(quote.poStoredFileName),
+  };
+  if (machineName) {
+    publicQuote.machineName = machineName;
+  }
+  if (options?.assistantAvailable !== undefined && user.role === "staff") {
+    publicQuote.assistantAvailable = options.assistantAvailable;
+  }
+  return publicQuote;
+}
+
 export function toPublicQuote(
   quote: QuoteRecord,
   user: Pick<PublicUser, "id" | "email" | "role">,
