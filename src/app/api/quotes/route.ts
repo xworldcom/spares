@@ -1,4 +1,4 @@
-import { requireTenantUser } from "@/lib/auth/tenant-scope";
+import { requireTenantUser, requireTenantUserReadOnly } from "@/lib/auth/tenant-scope";
 import { respondDerivedList } from "@/lib/derived-list-cache";
 import { error, isErrorResponse, readJson, withCatalogConflict } from "@/lib/http";
 import { listScopeKey } from "@/lib/list-scope";
@@ -27,6 +27,8 @@ import {
   listMachines,
 } from "@/lib/store";
 
+export const preferredRegion = "iad1";
+
 type CreateQuoteBody = {
   machineId?: unknown;
   items?: unknown;
@@ -35,7 +37,7 @@ type CreateQuoteBody = {
 };
 
 export async function GET(request: NextRequest) {
-  const auth = await requireTenantUser();
+  const auth = await requireTenantUserReadOnly();
   if ("error" in auth) {
     return auth.error;
   }

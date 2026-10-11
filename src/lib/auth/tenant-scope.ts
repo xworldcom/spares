@@ -3,7 +3,7 @@ import { error } from "@/lib/http";
 import { effectiveStaffTenantId, isPlatformOwnerEmail } from "@/lib/tenant";
 import { findUserById } from "@/lib/store";
 import type { NextResponse } from "next/server";
-import { requireRole, requireUser } from "./session.ts";
+import { getCurrentUserReadOnly, requireRole, requireUser } from "./session.ts";
 
 export type TenantScope = {
   tenantId: string;
@@ -30,6 +30,15 @@ export async function requireTenantUser(): Promise<AuthError | TenantScope> {
     return { error: result.error! };
   }
   return scopeFromStoredUser(result.user);
+}
+
+/** List GET handlers: no session cookie refresh on hot paths. */
+export async function requireTenantUserReadOnly(): Promise<AuthError | TenantScope> {
+  const user = await getCurrentUserReadOnly();
+  if (!user) {
+    return { error: error("Unauthorized", 401) };
+  }
+  return scopeFromStoredUser(user);
 }
 
 export async function requireTenantStaff(): Promise<AuthError | TenantScope> {

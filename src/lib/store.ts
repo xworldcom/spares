@@ -649,8 +649,10 @@ async function catalogVersionFingerprint(): Promise<string> {
       return `${memoryCatalogVersions.database ?? "∅"}:${memoryCatalogVersions.care ?? "∅"}`;
     }
   }
-  const live = await getPersistence().peekCatalogVersions();
-  return `${live.database ?? "∅"}:${live.care ?? "∅"}`;
+  const { formatCatalogVersionKey, peekCatalogVersionsCoalesced } = await import(
+    "./catalog-version-peek.ts"
+  );
+  return formatCatalogVersionKey(await peekCatalogVersionsCoalesced());
 }
 
 function coalescedCatalogRead<T>(key: string, load: () => Promise<T>): Promise<T> {
@@ -674,7 +676,8 @@ async function catalogMemoryStillFresh(): Promise<boolean> {
   if (trustProcessMemory()) {
     return true;
   }
-  const live = await getPersistence().peekCatalogVersions();
+  const { peekCatalogVersionsCoalesced } = await import("./catalog-version-peek.ts");
+  const live = await peekCatalogVersionsCoalesced();
   return (
     live.database === memoryCatalogVersions.database &&
     live.care === memoryCatalogVersions.care
@@ -1393,6 +1396,9 @@ function catalogNeedsWrite(before: Database, after: Database) {
 
 async function ensureCatalog(options?: { restoreFiles?: boolean }): Promise<Database> {
   const db = await readDatabase();
+  if (!options?.restoreFiles && memory && db === memory) {
+    return memory;
+  }
   const kept = await healCatalogStep(db, Boolean(options?.restoreFiles));
   if (!catalogNeedsWrite(db, kept)) {
     rememberCatalogMemory(
@@ -1919,7 +1925,7 @@ function normalizeEmail(email: string) {
 
 export function findUserById(id: string) {
   return withLock(async () => {
-    const db = await ensureCatalog();
+    const db = await readDatabase();
     return db.users.find((user) => user.id === id) ?? null;
   });
 }

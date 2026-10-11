@@ -1,8 +1,19 @@
 import type { PublicUser } from "../../types/index.ts";
+import {
+  formatCatalogVersionKey,
+  peekCatalogVersionsCoalesced,
+} from "../catalog-version-peek.ts";
 import { getPlatformAssistantSettingsFromCatalog } from "../store.ts";
 
+let assistantEnabledCache: { catalogKey: string; enabled: boolean } | null = null;
+
 export async function staffAssistantEnabled(): Promise<boolean> {
+  const catalogKey = formatCatalogVersionKey(await peekCatalogVersionsCoalesced());
+  if (assistantEnabledCache && assistantEnabledCache.catalogKey === catalogKey) {
+    return assistantEnabledCache.enabled;
+  }
   const settings = await getPlatformAssistantSettingsFromCatalog();
+  assistantEnabledCache = { catalogKey, enabled: settings.enabled };
   return settings.enabled;
 }
 
