@@ -5,19 +5,39 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { listBugReports } from "@/lib/api/bugs";
+import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
+import type { BugReportsListResponse } from "@/lib/api/types";
 import { errorMessage } from "@/lib/api/errors";
 import type { BugReport } from "@/lib/api/types";
 import { formatWhen } from "@/components/quote/quote-format";
 
-export function BugReportsList() {
-  const [reports, setReports] = useState<BugReport[]>([]);
-  const [loading, setLoading] = useState(true);
+const BUG_REPORTS_PATH = "/api/bugs";
+const BUG_REPORTS_WARM_KEY = "bugs:list";
+
+export function BugReportsList({
+  initialList,
+  listEtag,
+}: {
+  initialList?: BugReportsListResponse | null;
+  listEtag?: string | null;
+}) {
+  useSeedListSlotOnce(BUG_REPORTS_WARM_KEY, BUG_REPORTS_PATH, initialList, listEtag);
+  const [reports, setReports] = useState<BugReport[]>(initialList?.reports ?? []);
+  const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    listBugReports()
+    const skipFetch = Boolean(initialList) && reloadKey === 0;
+    const background = reloadKey > 0;
+    if (!skipFetch && !background) {
+      setLoading(true);
+    }
+    const load = skipFetch
+      ? Promise.resolve(initialList?.reports ?? [])
+      : listBugReports();
+    load
       .then((next) => {
         if (cancelled) {
           return;
@@ -36,7 +56,7 @@ export function BugReportsList() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [initialList, reloadKey]);
 
   if (loading) {
     return <LoadingState label="Loading bug reports…" />;

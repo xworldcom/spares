@@ -29,3 +29,17 @@ export function partLifecycleListScopeKey(
     filters.q ?? "",
   ].join(":");
 }
+
+export function bugReportsListScopeKey(tenantId: string) {
+  return `bug-reports:${tenantId}`;
+}
+
+export function lifecycleNotificationsScopeKey(
+  tenantId: string,
+  userId: string,
+  unreadOnly: boolean,
+) {
+  return ["lifecycle-notifications", tenantId, userId, unreadOnly ? "unread" : "all"].join(
+    ":",
+  );
+}

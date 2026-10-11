@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -10,7 +10,9 @@ import {
   fetchLifecycleNotifications,
   markAllLifecycleNotificationsRead,
   markLifecycleNotificationRead,
+  seedLifecycleNotificationsSlot,
   type LifecycleNotification,
+  type LifecycleNotificationsResponse,
 } from "@/lib/api/lifecycle-notifications";
 import { errorMessage } from "@/lib/api/errors";
 import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
@@ -20,31 +22,63 @@ function machineLabel(row: LifecycleNotification) {
   return row.machineNames.length > 0 ? row.machineNames.join(" · ") : "—";
 }
 
-export function LifecycleNotificationsPanel() {
+const LIFECYCLE_LIST_PATH = "/api/notifications/lifecycle";
+const LIFECYCLE_LIST_WARM_KEY = "lifecycle:notifications";
+
+export function LifecycleNotificationsPanel({
+  initialList,
+  listEtag,
+}: {
+  initialList?: LifecycleNotificationsResponse | null;
+  listEtag?: string | null;
+}) {
   const { user } = useAuth();
   const { refresh: refreshAlerts } = useLifecycleAlerts();
-  const [rows, setRows] = useState<LifecycleNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const seeded = useRef(false);
+  const [rows, setRows] = useState<LifecycleNotification[]>(
+    initialList?.notifications ?? [],
+  );
+  const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const load = useCallback(async (fresh = false) => {
-    const background = !fresh && rows.length > 0;
-    if (!background) {
-      setLoading(true);
+  useEffect(() => {
+    if (seeded.current || !initialList || !listEtag) {
+      return;
     }
-    setError(null);
-    try {
-      const data = await fetchLifecycleNotifications({ fresh, background });
-      setRows(data.notifications);
-    } catch (cause) {
-      setError(errorMessage(cause, "Could not load notifications."));
-      if (!background) {
-        setRows([]);
+    seeded.current = true;
+    seedLifecycleNotificationsSlot(
+      LIFECYCLE_LIST_WARM_KEY,
+      LIFECYCLE_LIST_PATH,
+      initialList,
+      listEtag,
+    );
+  }, [initialList, listEtag]);
+
+  const load = useCallback(
+    async (fresh = false) => {
+      const skipFetch = Boolean(initialList) && reloadKey === 0 && !fresh;
+      const background = reloadKey > 0 && !fresh;
+      if (!skipFetch && !background) {
+        setLoading(true);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [rows.length]);
+      setError(null);
+      try {
+        const data = skipFetch
+          ? initialList!
+          : await fetchLifecycleNotifications({ fresh, background });
+        setRows(data.notifications);
+      } catch (cause) {
+        setError(errorMessage(cause, "Could not load notifications."));
+        if (!background) {
+          setRows([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [initialList, reloadKey],
+  );
 
   useEffect(() => {
     void load();
@@ -70,6 +104,7 @@ export function LifecycleNotificationsPanel() {
     try {
       await markAllLifecycleNotificationsRead();
       await refreshAlerts();
+      setReloadKey((key) => key + 1);
       await load();
     } catch (cause) {
       setError(errorMessage(cause, "Could not mark all read."));
@@ -84,7 +119,15 @@ export function LifecycleNotificationsPanel() {
   }
 
   if (error && rows.length === 0) {
-    return <ErrorState message={error} onRetry={() => void load(true)} />;
+    return (
+      <ErrorState
+        message={error}
+        onRetry={() => {
+          setReloadKey((key) => key + 1);
+          void load(true);
+        }}
+      />
+    );
   }
 
   return (

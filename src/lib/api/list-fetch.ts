@@ -39,6 +39,11 @@ export function clearListFetchStateForTests() {
   listSlots().clear();
 }
 
+/** Seed in-tab list cache so the next GET sends If-None-Match (RSC hydrate / prefetch). */
+export function seedListSlot<T>(warmKey: string, path: string, body: T, etag: string) {
+  listSlots().set(warmKey, { path, etag, body });
+}
+
 /** Test-only: etag without body (stale client state). */
 export function seedListSlotForTests(
   warmKey: string,
@@ -46,7 +51,7 @@ export function seedListSlotForTests(
   etag: string,
   body?: unknown,
 ) {
-  listSlots().set(warmKey, { path, etag, body });
+  seedListSlot(warmKey, path, body, etag);
 }
 
 function readErrorMessage(body: unknown, status: number) {

@@ -3793,7 +3793,7 @@ export function getUserLifecycleNotificationsBundle(
   filter?: { unreadOnly?: boolean },
 ) {
   return withLock(async () => {
-    const db = await ensureCatalog();
+    const db = await readDatabase();
     const {
       listLifecycleNotificationsForUser,
       countUnreadLifecycleNotifications,

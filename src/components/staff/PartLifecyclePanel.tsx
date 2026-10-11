@@ -9,7 +9,9 @@ import {
   bulkSaveStaffPartLifecycle,
   fetchStaffPartLifecycle,
   saveStaffPartLifecycle,
+  seedStaffPartLifecycleListSlot,
   type StaffPartCatalogRow,
+  type StaffPartLifecycleResponse,
 } from "@/lib/api/part-lifecycle";
 import { errorMessage } from "@/lib/api/errors";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -54,11 +56,38 @@ function draftFromRow(row: StaffPartCatalogRow) {
   };
 }
 
-export function PartLifecyclePanel() {
+function isDefaultPartLifecycleFilters(input: {
+  status: PartLifecycleStatus | "all";
+  machineId: string;
+  q: string;
+}) {
+  return input.status === "all" && !input.machineId && !input.q;
+}
+
+export function PartLifecyclePanel({
+  initialList,
+  listEtag,
+}: {
+  initialList?: StaffPartLifecycleResponse | null;
+  listEtag?: string | null;
+} = {}) {
   const { unreadPartNumbers } = useLifecycleAlerts();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialFilters = partLifecycleFiltersFromSearch(searchParams);
+  const urlDefaultFilters = isDefaultPartLifecycleFilters({
+    status: initialFilters.status,
+    machineId: initialFilters.machineId,
+    q: initialFilters.q,
+  });
+  const seededDefault = useRef(false);
+  useEffect(() => {
+    if (!urlDefaultFilters || seededDefault.current || !initialList || !listEtag) {
+      return;
+    }
+    seededDefault.current = true;
+    seedStaffPartLifecycleListSlot(initialList, listEtag);
+  }, [initialList, listEtag, urlDefaultFilters]);
   const [status, setStatus] = useState<PartLifecycleStatus | "all">(
     initialFilters.status,
   );
@@ -66,13 +95,17 @@ export function PartLifecyclePanel() {
   const [query, setQuery] = useState(initialFilters.q);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const urlFiltersRef = useRef(initialFilters);
-  const [parts, setParts] = useState<StaffPartCatalogRow[]>([]);
-  const [statusCounts, setStatusCounts] =
-    useState<PartLifecycleStatusCounts>(EMPTY_STATUS_COUNTS);
+  const hasDefaultInitial = urlDefaultFilters && Boolean(initialList);
+  const [parts, setParts] = useState<StaffPartCatalogRow[]>(
+    hasDefaultInitial ? (initialList?.parts ?? []) : [],
+  );
+  const [statusCounts, setStatusCounts] = useState<PartLifecycleStatusCounts>(
+    hasDefaultInitial ? (initialList?.statusCounts ?? EMPTY_STATUS_COUNTS) : EMPTY_STATUS_COUNTS,
+  );
   const [machines, setMachines] = useState<
     Array<{ id: string; name: string; siteId?: string }>
-  >([]);
-  const [loading, setLoading] = useState(true);
+  >(hasDefaultInitial ? (initialList?.machines ?? []) : []);
+  const [loading, setLoading] = useState(!hasDefaultInitial);
   const loadGenerationRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,12 +115,27 @@ export function PartLifecyclePanel() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [selectedNumbers, setSelectedNumbers] = useState<Set<string>>(new Set());
 
+  const initialLoadSkipped = useRef(hasDefaultInitial);
+
   const load = useCallback(async (): Promise<StaffPartCatalogRow[] | null> => {
     const generation = loadGenerationRef.current + 1;
     loadGenerationRef.current = generation;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    const filtersDefault = isDefaultPartLifecycleFilters({
+      status,
+      machineId,
+      q: debouncedQuery,
+    });
+    if (filtersDefault && initialList && initialLoadSkipped.current) {
+      initialLoadSkipped.current = false;
+      void fetchStaffPartLifecycle(
+        { status, machineId: machineId || undefined, q: debouncedQuery || undefined },
+        { signal: controller.signal },
+      ).catch(() => undefined);
+      return initialList.parts;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -122,7 +170,7 @@ export function PartLifecyclePanel() {
         setLoading(false);
       }
     }
-  }, [status, machineId, debouncedQuery]);
+  }, [debouncedQuery, initialList, machineId, status]);
 
   useEffect(() => {
     void load();

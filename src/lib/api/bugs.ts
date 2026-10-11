@@ -1,9 +1,17 @@
 import { apiFetch } from "./client";
+import { apiFetchList, invalidateListEtag } from "./list-fetch";
 import type {
   BugReport,
   BugReportsListResponse,
   SubmitBugReportResponse,
 } from "./types";
+
+const BUG_REPORTS_PATH = "/api/bugs";
+const BUG_REPORTS_WARM_KEY = "bugs:list";
+
+export function invalidateBugReportsListCache() {
+  invalidateListEtag(BUG_REPORTS_PATH);
+}
 
 export async function submitBugReport(input: {
   description: string;
@@ -21,7 +29,11 @@ export async function submitBugReport(input: {
   });
 }
 
-export async function listBugReports(): Promise<BugReport[]> {
-  const data = await apiFetch<BugReportsListResponse>("/api/bugs");
+export async function listBugReports(init?: Pick<RequestInit, "signal">): Promise<BugReport[]> {
+  const data = await apiFetchList<BugReportsListResponse>(
+    BUG_REPORTS_PATH,
+    BUG_REPORTS_WARM_KEY,
+    init,
+  );
   return data.reports ?? [];
 }
