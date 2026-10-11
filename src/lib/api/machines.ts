@@ -11,6 +11,7 @@ import {
   resolveModelUploadStrategy,
   type ModelUploadAvailability,
 } from "../model-upload-policy.ts";
+import { backgroundFetchHeaders } from "./background-fetch";
 import { ApiError, errorMessage, isApiError } from "./errors";
 import { apiFetch } from "./client";
 import { apiFetchList } from "./list-fetch";
@@ -92,6 +93,7 @@ export function normalizeMachine(
 export async function listMachines(options?: {
   heal?: boolean;
   fresh?: boolean;
+  background?: boolean;
 }): Promise<MachineSummary[]> {
   const heal = options?.heal ?? false;
   const path = heal ? "/api/machines?heal=1" : "/api/machines";
@@ -99,7 +101,9 @@ export async function listMachines(options?: {
   if (options?.fresh) {
     invalidateWarmRead(cacheKey);
   }
-  const data = await apiFetchList<MachinesListResponse>(path, cacheKey);
+  const data = await apiFetchList<MachinesListResponse>(path, cacheKey, {
+    headers: options?.background ? backgroundFetchHeaders() : undefined,
+  });
   return data.machines ?? [];
 }
 

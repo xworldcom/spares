@@ -13,6 +13,7 @@ import { canAccessMachine, canCreateMachineAtSite } from "@/lib/access";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { respondDerivedList } from "@/lib/derived-list-cache";
 import { listScopeKey } from "@/lib/list-scope";
+import { buildMachinesListPayload } from "@/lib/machines-list-payload";
 import {
   createMachine,
   findOrCreateModelLessMachine,
@@ -20,7 +21,6 @@ import {
   listMachines,
   listPartLifecycleRows,
   ModelPackError,
-  readTenantMachinesListSnapshot,
   saveMachineFile,
 } from "@/lib/store";
 import { StoredFileClaimedError } from "@/lib/stored-file-claim";
@@ -35,17 +35,9 @@ export async function GET(request: NextRequest) {
   const heal =
     auth.user.role === "staff" && request.nextUrl.searchParams.get("heal") === "1";
   const scope = listScopeKey("machines", auth.tenantId, auth.user, heal ? "heal" : "");
-  return respondDerivedList(request, scope, async () => {
-    const snapshot = await readTenantMachinesListSnapshot(auth.tenantId, { heal });
-    const visible = snapshot.machines.filter((machine) =>
-      canAccessMachine(auth.user, machine, snapshot.sites, snapshot.customers),
-    );
-    return {
-      machines: visible.map((machine) =>
-        toMachineSummary(machine, snapshot.sites, snapshot.customers),
-      ),
-    };
-  });
+  return respondDerivedList(request, scope, () =>
+    buildMachinesListPayload(auth.user, auth.tenantId, { heal }),
+  );
 }
 
 async function handlePOST(request: Request) {
