@@ -594,6 +594,9 @@ let workListSnapshotCache: {
   snapshot: TenantWorkListSnapshot;
 } | null = null;
 
+/** Coalesce cold catalog loads on one serverless instance (parallel GETs share one blob read). */
+let catalogDatabaseInflight: Promise<Database> | null = null;
+
 function rememberCatalogMemory(
   db: Database,
   versions: { database: string | null; care: string | null },
@@ -610,8 +613,10 @@ function clearCatalogMemory() {
 }
 
 async function catalogVersionFingerprint(): Promise<string> {
-  if (memory && memoryCatalogVersions && (trustProcessMemory() || await catalogMemoryStillFresh())) {
-    return `${memoryCatalogVersions.database ?? "∅"}:${memoryCatalogVersions.care ?? "∅"}`;
+  if (memory && memoryCatalogVersions) {
+    if (trustProcessMemory() || await catalogMemoryStillFresh()) {
+      return `${memoryCatalogVersions.database ?? "∅"}:${memoryCatalogVersions.care ?? "∅"}`;
+    }
   }
   const live = await getPersistence().peekCatalogVersions();
   return `${live.database ?? "∅"}:${live.care ?? "∅"}`;
@@ -1580,12 +1585,7 @@ function conflictBackoff(attempt: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function readDatabase(): Promise<Database> {
-  logStoreKind();
-  if (memory && (trustProcessMemory() || await catalogMemoryStillFresh())) {
-    return memory;
-  }
-
+async function loadDatabaseFromPersistence(): Promise<Database> {
   const { loaded, dbVersion, careVersion } = await loadPersistedSnapshot();
   if (!loaded) {
     const base = isSeedAllowed() ? await seedDatabase() : await emptyDatabase();
@@ -1610,6 +1610,20 @@ async function readDatabase(): Promise<Database> {
     );
   }
   return await healLoadedDatabase(loaded, { database: dbVersion, care: careVersion });
+}
+
+async function readDatabase(): Promise<Database> {
+  logStoreKind();
+  if (memory && (trustProcessMemory() || await catalogMemoryStillFresh())) {
+    return memory;
+  }
+  if (catalogDatabaseInflight) {
+    return catalogDatabaseInflight;
+  }
+  catalogDatabaseInflight = loadDatabaseFromPersistence().finally(() => {
+    catalogDatabaseInflight = null;
+  });
+  return catalogDatabaseInflight;
 }
 
 async function persistModelBytes(name: string, bytes: Uint8Array | Buffer) {
@@ -3066,15 +3080,13 @@ export function readTenantWorkListSnapshot(tenantId: string) {
     ) {
       return workListSnapshotCache.snapshot;
     }
-    const snapshot = await withLock(async () => {
-      const db = await readDatabase();
-      return {
-        machines: machineRowsForTenantListing(db, tenantId),
-        quotes: quoteRowsForTenant(db, tenantId),
-        tickets: ticketRowsForTenant(db, tenantId),
-        ...orgContextFromDb(db, tenantId),
-      };
-    });
+    const db = await readDatabase();
+    const snapshot = {
+      machines: machineRowsForTenantListing(db, tenantId),
+      quotes: quoteRowsForTenant(db, tenantId),
+      tickets: ticketRowsForTenant(db, tenantId),
+      ...orgContextFromDb(db, tenantId),
+    };
     workListSnapshotCache = { catalogKey, tenantId, snapshot };
     return snapshot;
   });
@@ -4532,16 +4544,30 @@ export function readQuoteDetailCatalog(
   userId: string,
   options?: { markRead?: boolean },
 ): Promise<QuoteDetailCatalogRead | null> {
-  const coalesceKey = `quote-detail:${tenantId}:${idOrNumber}:${options?.markRead ? "mark" : "read"}`;
-  return coalescedCatalogRead(coalesceKey, () =>
-    withLock(async () => {
-    let db = await readDatabase();
-    const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
-    if (!current) {
-      return null;
+  const markRead = Boolean(options?.markRead);
+  const coalesceKey = `quote-detail:${tenantId}:${idOrNumber}:${markRead ? "mark" : "read"}`;
+  return coalescedCatalogRead(coalesceKey, async () => {
+    const loadReadOnly = async () => {
+      const db = await readDatabase();
+      const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
+      if (!current) {
+        return null;
+      }
+      return {
+        quote: current,
+        bundle: quotePublicCatalogBundleFromDb(db, tenantId, current),
+      };
+    };
+    if (!markRead) {
+      return loadReadOnly();
     }
-    let quote = current;
-    if (options?.markRead) {
+    return withLock(async () => {
+      let db = await readDatabase();
+      const current = findQuoteInList(filterByTenant(db.quotes, tenantId), idOrNumber);
+      if (!current) {
+        return null;
+      }
+      let quote = current;
       const watermark = readWatermarkNow(current.activities);
       const prior = current.lastReadAt?.[userId];
       if (!prior || prior < watermark) {
@@ -4566,13 +4592,12 @@ export function readQuoteDetailCatalog(
           }
         }
       }
-    }
-    return {
-      quote,
-      bundle: quotePublicCatalogBundleFromDb(db, tenantId, quote),
-    };
-  }),
-  );
+      return {
+        quote,
+        bundle: quotePublicCatalogBundleFromDb(db, tenantId, quote),
+      };
+    });
+  });
 }
 
 export { newActivity as createQuoteActivity };
