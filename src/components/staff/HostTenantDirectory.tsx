@@ -3,16 +3,12 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ErrorState } from "@/components/states/ErrorState";
 import { CreatePersonForm } from "@/components/staff/CreatePersonForm";
 import { PeopleList } from "@/components/staff/PeopleList";
 import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
 import { AccountsList } from "@/components/staff/AccountsList";
-import { ErrorState } from "@/components/states/ErrorState";
-import {
-  listCustomerAccounts,
-  listCustomers,
-  listStaffTeam,
-} from "@/lib/api/auth";
+import { fetchStaffHostDirectory } from "@/lib/api/staff-directory";
 import { errorMessage } from "@/lib/api/errors";
 import { directoryHref, directoryTypeFromSearchParam } from "@/lib/directory-url";
 import type { DirectoryEntryType } from "@/lib/platform-directory";
@@ -51,11 +47,7 @@ export function HostTenantDirectory() {
     setLoading(true);
     setError(null);
     try {
-      const [accounts, people, staff] = await Promise.all([
-        listCustomerAccounts(),
-        listCustomers(),
-        listStaffTeam(),
-      ]);
+      const { accounts, customers: people, staff } = await fetchStaffHostDirectory();
       const next: TenantRow[] = [
         ...accounts.map((row) => ({
           type: "customer" as const,

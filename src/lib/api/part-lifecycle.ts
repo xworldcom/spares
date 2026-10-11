@@ -1,4 +1,6 @@
 import { apiFetch } from "./client";
+import { apiFetchList, invalidateListEtag, prefetchList } from "./list-fetch";
+import { invalidateWarmRead } from "./warm-read";
 import type { PartLifecycleInfo, PartLifecycleStatus } from "@/types";
 import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
 
@@ -19,15 +21,12 @@ export type StaffPartLifecycleResponse = {
   generatedAt: string;
 };
 
-export async function fetchStaffPartLifecycle(
-  filters?: {
-    status?: PartLifecycleStatus | "all";
-    machineId?: string;
-    q?: string;
-    tenantId?: string;
-  },
-  init?: Pick<RequestInit, "signal">,
-) {
+function partLifecyclePath(filters?: {
+  status?: PartLifecycleStatus | "all";
+  machineId?: string;
+  q?: string;
+  tenantId?: string;
+}) {
   const params = new URLSearchParams();
   if (filters?.status && filters.status !== "all") {
     params.set("status", filters.status);
@@ -42,10 +41,45 @@ export async function fetchStaffPartLifecycle(
     params.set("tenantId", filters.tenantId);
   }
   const query = params.toString();
-  return apiFetch<StaffPartLifecycleResponse>(
-    `/api/staff/part-lifecycle${query ? `?${query}` : ""}`,
-    init,
-  );
+  return `/api/staff/part-lifecycle${query ? `?${query}` : ""}`;
+}
+
+function partLifecycleWarmKey(filters?: {
+  status?: PartLifecycleStatus | "all";
+  machineId?: string;
+  q?: string;
+  tenantId?: string;
+}) {
+  return [
+    "staff:part-lifecycle",
+    filters?.tenantId ?? "",
+    filters?.status ?? "all",
+    filters?.machineId ?? "",
+    filters?.q ?? "",
+  ].join(":");
+}
+
+export function invalidateStaffPartLifecycleListCache() {
+  invalidateWarmRead("staff:part-lifecycle");
+}
+
+export function prefetchStaffPartLifecycleDefault() {
+  const path = partLifecyclePath();
+  prefetchList(path, partLifecycleWarmKey());
+}
+
+export async function fetchStaffPartLifecycle(
+  filters?: {
+    status?: PartLifecycleStatus | "all";
+    machineId?: string;
+    q?: string;
+    tenantId?: string;
+  },
+  init?: Pick<RequestInit, "signal">,
+) {
+  const path = partLifecyclePath(filters);
+  const warmKey = partLifecycleWarmKey(filters);
+  return apiFetchList<StaffPartLifecycleResponse>(path, warmKey, init);
 }
 
 export async function saveStaffPartLifecycle(input: {
@@ -54,7 +88,7 @@ export async function saveStaffPartLifecycle(input: {
   tenantId?: string;
 }) {
   const query = input.tenantId ? `?tenantId=${encodeURIComponent(input.tenantId)}` : "";
-  return apiFetch<{ ok: true; parts: StaffPartCatalogRow[] }>(
+  const result = await apiFetch<{ ok: true; parts: StaffPartCatalogRow[] }>(
     `/api/staff/part-lifecycle${query}`,
     {
       method: "PATCH",
@@ -64,6 +98,9 @@ export async function saveStaffPartLifecycle(input: {
       }),
     },
   );
+  invalidateStaffPartLifecycleListCache();
+  invalidateListEtag("/api/staff/part-lifecycle");
+  return result;
 }
 
 export async function bulkSaveStaffPartLifecycle(input: {
@@ -71,7 +108,7 @@ export async function bulkSaveStaffPartLifecycle(input: {
   tenantId?: string;
 }) {
   const query = input.tenantId ? `?tenantId=${encodeURIComponent(input.tenantId)}` : "";
-  return apiFetch<{ ok: true; parts: StaffPartCatalogRow[] }>(
+  const result = await apiFetch<{ ok: true; parts: StaffPartCatalogRow[] }>(
     `/api/staff/part-lifecycle${query}`,
     {
       method: "PATCH",
@@ -83,6 +120,9 @@ export async function bulkSaveStaffPartLifecycle(input: {
       }),
     },
   );
+  invalidateStaffPartLifecycleListCache();
+  invalidateListEtag("/api/staff/part-lifecycle");
+  return result;
 }
 
 /** Customer/staff lookup by part number (tenant from session). */

@@ -9,8 +9,8 @@ import { CreatePersonForm } from "@/components/staff/CreatePersonForm";
 import { HostTenantDirectory } from "@/components/staff/HostTenantDirectory";
 import { ErrorState } from "@/components/states/ErrorState";
 import { StaffTeamPanel } from "@/components/staff/StaffTeamPanel";
-import { apiFetch } from "@/lib/api/client";
 import { createCustomerAccount } from "@/lib/api/auth";
+import { listPlatformDirectoryEntries } from "@/lib/api/platform-directory";
 import { errorMessage, isForbidden } from "@/lib/api/errors";
 import { directoryHref, directoryTypeFromSearchParam } from "@/lib/directory-url";
 import {
@@ -18,8 +18,6 @@ import {
   type DirectoryEntry,
   type DirectoryEntryType,
 } from "@/lib/platform-directory";
-
-type DirectoryResponse = { entries: DirectoryEntry[] };
 
 type TypeFilter = DirectoryEntryType | "all";
 
@@ -115,8 +113,8 @@ function PlatformDirectory() {
 
   const load = useCallback(async () => {
     try {
-      const data = await apiFetch<DirectoryResponse>("/api/platform/directory");
-      setEntries(data.entries);
+      const entries = await listPlatformDirectoryEntries();
+      setEntries(entries);
       setForbidden(false);
       setError(null);
     } catch (cause) {

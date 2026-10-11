@@ -8,6 +8,8 @@ import {
 } from "@/lib/api/care";
 import { listMachines, warmMachineName } from "@/lib/api/machines";
 import { listQuotes, warmQuoteDetailFetch } from "@/lib/api/quotes";
+import { prefetchStaffHostDirectory } from "@/lib/api/staff-directory";
+import { prefetchStaffPartLifecycleDefault } from "@/lib/api/part-lifecycle";
 import { warmRead } from "@/lib/api/warm-read";
 
 export function prefetchAppRoute(router: AppRouter, href: string) {
@@ -47,6 +49,11 @@ export function warmQuotesList() {
 
 export function warmTicketsList() {
   warmRead("tickets:accessible", () => listAccessibleTickets());
+}
+
+export function warmStaffHubLists() {
+  prefetchStaffHostDirectory();
+  prefetchStaffPartLifecycleDefault();
 }
 
 export function warmMachineCareTabs(machineId: string) {

@@ -1,6 +1,9 @@
+import type { NextRequest } from "next/server";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { requireTenantStaff } from "@/lib/auth/tenant-scope";
+import { respondDerivedList } from "@/lib/derived-list-cache";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
+import { partLifecycleListScopeKey } from "@/lib/list-scope";
 import type { PartLifecycleStatus } from "@/lib/part-lifecycle";
 import {
   filterCatalogRows,
@@ -9,12 +12,10 @@ import {
   tallyPartLifecycleStatusCounts,
 } from "@/lib/part-lifecycle";
 import {
-  listMachines,
   listTenantPartLifecycleCatalog,
+  readTenantPartLifecycleBaseSnapshot,
   upsertTenantPartLifecycle,
 } from "@/lib/store";
-
-export const dynamic = "force-dynamic";
 
 /**
  * Staff part lifecycle catalog (one row per part number per tenant).
@@ -39,13 +40,13 @@ function parseStatus(value: string | null): PartLifecycleStatus | "all" {
   return "all";
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const auth = await requireTenantStaff();
   if ("error" in auth) {
     return auth.error;
   }
 
-  const url = new URL(request.url);
+  const url = request.nextUrl;
   const requestedTenantId = url.searchParams.get("tenantId")?.trim() || undefined;
   if (requestedTenantId && !auth.user.platformOwner && requestedTenantId !== auth.tenantId) {
     return error("Forbidden", 403);
@@ -59,23 +60,26 @@ export async function GET(request: Request) {
   const machineId = url.searchParams.get("machineId")?.trim() || undefined;
   const query = url.searchParams.get("q")?.trim() || undefined;
 
-  const [catalogRows, machines] = await Promise.all([
-    listTenantPartLifecycleCatalog(tenantId, { machineId, query }),
-    listMachines(tenantId),
-  ]);
-  const statusCounts = tallyPartLifecycleStatusCounts(catalogRows);
-  const parts = filterCatalogRows(catalogRows, { status, machineId, query });
-
-  return json({
-    tenantId,
-    parts,
-    statusCounts,
-    machines: machines.map((machine) => ({
-      id: machine.id,
-      name: machine.name,
-      siteId: machine.siteId,
-    })),
-    generatedAt: new Date().toISOString(),
+  const scope = partLifecycleListScopeKey(tenantId, {
+    status,
+    machineId,
+    q: query,
+  });
+  return respondDerivedList(request, scope, async () => {
+    const base = await readTenantPartLifecycleBaseSnapshot(tenantId);
+    const statusCounts = tallyPartLifecycleStatusCounts(base.catalogRows);
+    const parts = filterCatalogRows(base.catalogRows, { status, machineId, query });
+    return {
+      tenantId,
+      parts,
+      statusCounts,
+      machines: base.machines.map((machine) => ({
+        id: machine.id,
+        name: machine.name,
+        siteId: machine.siteId,
+      })),
+      generatedAt: new Date().toISOString(),
+    };
   });
 }
 

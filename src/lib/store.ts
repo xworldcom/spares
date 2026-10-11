@@ -594,6 +594,34 @@ let workListSnapshotCache: {
   snapshot: TenantWorkListSnapshot;
 } | null = null;
 
+type TenantPartLifecycleBaseSnapshot = {
+  catalogRows: ReturnType<typeof buildTenantPartCatalog>;
+  machines: ReturnType<typeof machinesForTenantListing>;
+};
+
+let partLifecycleBaseCache: {
+  catalogKey: string;
+  tenantId: string;
+  snapshot: TenantPartLifecycleBaseSnapshot;
+} | null = null;
+
+export type TenantHostDirectorySnapshot = {
+  accounts: Array<CustomerAccount & { siteCount: number }>;
+  customers: PublicUser[];
+  staff: Array<{ id: string; email: string; tenantId: string | null }>;
+};
+
+let hostDirectorySnapshotCache: {
+  catalogKey: string;
+  tenantId: string;
+  snapshot: TenantHostDirectorySnapshot;
+} | null = null;
+
+let platformDirectorySnapshotCache: {
+  catalogKey: string;
+  entries: DirectoryEntry[];
+} | null = null;
+
 /** Coalesce cold catalog loads on one serverless instance (parallel GETs share one blob read). */
 let catalogDatabaseInflight: Promise<Database> | null = null;
 
@@ -610,6 +638,9 @@ function clearCatalogMemory() {
   memory = null;
   memoryCatalogVersions = null;
   workListSnapshotCache = null;
+  partLifecycleBaseCache = null;
+  hostDirectorySnapshotCache = null;
+  platformDirectorySnapshotCache = null;
 }
 
 async function catalogVersionFingerprint(): Promise<string> {
@@ -3093,15 +3124,107 @@ export function readTenantWorkListSnapshot(tenantId: string) {
 }
 
 export function readTenantMachinesListSnapshot(tenantId: string, options?: { heal?: boolean }) {
-  return withLock(async () => {
-    if (options?.heal) {
+  if (options?.heal) {
+    return withLock(async () => {
       clearCatalogMemory();
+      const db = await ensureCatalog({ restoreFiles: true });
+      return {
+        machines: machineRowsForTenantListing(db, tenantId),
+        ...orgContextFromDb(db, tenantId),
+      };
+    });
+  }
+  return readTenantWorkListSnapshot(tenantId).then((snapshot) => ({
+    machines: snapshot.machines,
+    sites: snapshot.sites,
+    customers: snapshot.customers,
+  }));
+}
+
+/** One catalog read for host staff directory (accounts + people + team). */
+export function readTenantHostDirectorySnapshot(tenantId: string): Promise<TenantHostDirectorySnapshot> {
+  return coalescedCatalogRead(`host-directory:${tenantId}`, async () => {
+    const catalogKey = await catalogVersionFingerprint();
+    if (
+      hostDirectorySnapshotCache &&
+      hostDirectorySnapshotCache.tenantId === tenantId &&
+      hostDirectorySnapshotCache.catalogKey === catalogKey
+    ) {
+      return hostDirectorySnapshotCache.snapshot;
     }
-    const db = await ensureCatalog({ restoreFiles: options?.heal });
-    return {
-      machines: machineRowsForTenantListing(db, tenantId),
-      ...orgContextFromDb(db, tenantId),
-    };
+    const db = await readDatabase();
+    const sites = filterByTenant(db.sites ?? [], tenantId);
+    const customerRows = filterByTenant(db.customers ?? [], tenantId);
+    const accounts = customerRows
+      .filter((row) => !row.deletedAt)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((account) => ({
+        ...account,
+        siteCount: sites.filter((site) => site.customerId === account.id).length,
+      }));
+    const customers = db.users
+      .filter(
+        (user) =>
+          user.role === "customer" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => toPublicUser(user, sites, customerRows))
+      .sort((a, b) => a.email.localeCompare(b.email));
+    const staff = db.users
+      .filter(
+        (user) =>
+          user.role === "staff" && !user.deletedAt && belongsToTenant(user, tenantId),
+      )
+      .map((user) => ({
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId ?? null,
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+    const snapshot: TenantHostDirectorySnapshot = { accounts, customers, staff };
+    hostDirectorySnapshotCache = { catalogKey, tenantId, snapshot };
+    return snapshot;
+  });
+}
+
+/** Unfiltered part lifecycle rows + machine picklist (filter in the route). */
+export function readTenantPartLifecycleBaseSnapshot(
+  tenantId: string,
+): Promise<TenantPartLifecycleBaseSnapshot> {
+  return coalescedCatalogRead(`part-lifecycle-base:${tenantId}`, async () => {
+    const catalogKey = await catalogVersionFingerprint();
+    if (
+      partLifecycleBaseCache &&
+      partLifecycleBaseCache.tenantId === tenantId &&
+      partLifecycleBaseCache.catalogKey === catalogKey
+    ) {
+      return partLifecycleBaseCache.snapshot;
+    }
+    const db = await readDatabase();
+    const machines = machinesForTenantListing(db, tenantId);
+    const catalogRows = buildTenantPartCatalog(machines, db.partLifecycle ?? [], tenantId);
+    const snapshot = { catalogRows, machines };
+    partLifecycleBaseCache = { catalogKey, tenantId, snapshot };
+    return snapshot;
+  });
+}
+
+export function readPlatformDirectorySnapshot() {
+  return coalescedCatalogRead("platform-directory", async () => {
+    const catalogKey = await catalogVersionFingerprint();
+    if (
+      platformDirectorySnapshotCache &&
+      platformDirectorySnapshotCache.catalogKey === catalogKey
+    ) {
+      return platformDirectorySnapshotCache.entries;
+    }
+    const db = await readDatabase();
+    const entries = buildPlatformDirectory({
+      tenants: (db.tenants ?? []).filter((row) => !row.deletedAt),
+      customers: db.customers ?? [],
+      users: db.users,
+    });
+    platformDirectorySnapshotCache = { catalogKey, entries };
+    return entries;
   });
 }
 
