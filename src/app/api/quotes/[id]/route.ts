@@ -67,8 +67,9 @@ export async function GET(
   }
 
   const warm = isWarmConversationRequest(_request);
+  // Read watermarks are debounced on the client (PATCH /read); avoid catalog writes on GET under load.
   const detail = await readQuoteDetailCatalog(id, tenantId, user.id, {
-    markRead: !warm,
+    markRead: false,
   });
   if (!detail) {
     return error("Quote not found", 404);

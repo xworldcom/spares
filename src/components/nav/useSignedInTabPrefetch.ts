@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { prefetchLifecycleNotifications } from "@/lib/api/lifecycle-notifications";
 import {
   prefetchAppRoute,
   warmCareHubLists,
@@ -32,5 +33,6 @@ export function useSignedInTabPrefetch(role?: string) {
     warmCareHubLists();
     warmQuotesList();
     warmTicketsList();
+    prefetchLifecycleNotifications();
   }, [role, router]);
 }
