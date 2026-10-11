@@ -4664,17 +4664,11 @@ function mutateTicket(
       prior = current;
       if (options?.lock) {
         const liveVersion = readRecordVersion(current);
-        if (liveVersion !== options.lock.expectedVersion) {
-          let serverFields = ticketChangedFields(options.lock.base, current);
-          if (
-            serverFields.length === 0 &&
-            readRecordVersion(options.lock.base) > options.lock.expectedVersion
-          ) {
-            serverFields = [...options.lock.touchedFields];
-          }
-          if (fieldsOverlap(serverFields, options.lock.touchedFields)) {
-            throw new RecordWriteConflictError(recordMetaFromRow(current));
-          }
+        if (
+          liveVersion !== options.lock.expectedVersion &&
+          options.lock.touchedFields.length > 0
+        ) {
+          throw new RecordWriteConflictError(recordMetaFromRow(current));
         }
       }
       const rawNext = fn(current);
