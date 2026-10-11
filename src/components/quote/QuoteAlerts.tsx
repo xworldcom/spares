@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { invalidateWarmRead } from "@/lib/api/warm-read";
 import {
   fetchQuoteAlertsUnreadCount,
   scheduleQuoteAlertsInitialLoad,
@@ -34,7 +33,6 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
       return;
     }
     try {
-      invalidateWarmRead("quotes:list");
       const unreadCount = await fetchQuoteAlertsUnreadCount();
       setUnreadCount(unreadCount);
     } catch (cause) {
@@ -49,7 +47,6 @@ export function QuoteAlertsProvider({ children }: { children: React.ReactNode })
     let cancelled = false;
     const clearSchedule = scheduleQuoteAlertsInitialLoad(async () => {
       try {
-        invalidateWarmRead("quotes:list");
         const unreadCount = await fetchQuoteAlertsUnreadCount();
         if (!cancelled) {
           setUnreadCount(unreadCount);
