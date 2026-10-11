@@ -4,7 +4,10 @@ import {
 } from "./display-datetime.ts";
 
 /** Format ISO timestamps and calendar dates (YYYY-MM-DD) for display. */
-export function formatCalendarDay(value?: string) {
+export function formatCalendarDay(
+  value?: string,
+  timeZone: string = SPARES_DISPLAY_TIME_ZONE,
+) {
   if (!value) {
     return "—";
   }
@@ -18,6 +21,6 @@ export function formatCalendarDay(value?: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: SPARES_DISPLAY_TIME_ZONE,
+    timeZone,
   });
 }

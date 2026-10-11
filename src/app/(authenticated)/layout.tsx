@@ -2,6 +2,7 @@ import { AppShellFromRequest } from "@/components/nav/AppShellFromRequest";
 import { Providers } from "@/components/providers";
 import { cookies } from "next/headers";
 import { getCurrentUserReadOnly, SESSION_COOKIE } from "@/lib/auth";
+import { resolveDisplayTimeZone } from "@/lib/display-datetime";
 
 /** `undefined` = could not tell on the server, so the client asks `/api/auth/me`. */
 async function initialSessionUser() {
@@ -21,8 +22,9 @@ export default async function AuthenticatedAppLayout({
   children,
 }: LayoutProps<"/">) {
   const initialUser = await initialSessionUser();
+  const displayTimeZone = resolveDisplayTimeZone();
   return (
-    <Providers initialUser={initialUser}>
+    <Providers initialUser={initialUser} displayTimeZone={displayTimeZone}>
       <AppShellFromRequest>{children}</AppShellFromRequest>
     </Providers>
   );
