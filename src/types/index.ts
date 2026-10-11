@@ -225,6 +225,10 @@ export type Quote = {
   assistantEscalatedAt?: string;
   /** Staff-only: platform AI is on, so this thread can mute/unmute it. */
   assistantAvailable?: boolean;
+  /** Optimistic concurrency token for PATCH; bumps on meaningful edits. */
+  recordVersion?: number;
+  lastModifiedAt?: string;
+  lastModifiedByName?: string;
 };
 
 export type QuoteRecord = {
@@ -249,6 +253,10 @@ export type QuoteRecord = {
   /** When set, the plant assistant stops auto-replying on this quote. */
   assistantPaused?: boolean;
   assistantEscalatedAt?: string;
+  recordVersion?: number;
+  lastModifiedAt?: string;
+  lastModifiedByUserId?: string;
+  lastModifiedByName?: string;
 };
 
 export type BugReport = {
@@ -339,6 +347,10 @@ export type ServiceTicketRecord = {
   /** When set, the plant assistant stops auto-replying on this ticket. */
   assistantPaused?: boolean;
   assistantEscalatedAt?: string;
+  recordVersion?: number;
+  lastModifiedAt?: string;
+  lastModifiedByUserId?: string;
+  lastModifiedByName?: string;
 };
 
 /** Customer read receipt on a Care ticket (staff-only in API responses). */
@@ -372,6 +384,9 @@ export type ServiceTicket = {
   assistantEscalatedAt?: string;
   /** Staff-only: platform AI is on, so this thread can mute/unmute it. */
   assistantAvailable?: boolean;
+  recordVersion?: number;
+  lastModifiedAt?: string;
+  lastModifiedByName?: string;
 };
 
 export type ServiceVisitSnapshot = {

@@ -160,10 +160,17 @@ export function warmTicketDetailFetch(idOrNumber: string) {
   }).then((data) => data.ticket);
 }
 
-export async function updateTicketStatus(id: string, status: TicketStatus) {
+export async function updateTicketStatus(
+  id: string,
+  status: TicketStatus,
+  options?: { recordVersion?: number },
+) {
   const data = await apiFetch<TicketResponse>(`/api/tickets/${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({
+      status,
+      ...(options?.recordVersion != null ? { recordVersion: options.recordVersion } : {}),
+    }),
   });
   invalidateWarmRead(`ticket:${id}`);
   invalidateWarmRead("tickets:accessible");

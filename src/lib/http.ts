@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 export { catalogConflictResponse, withCatalogConflict } from "./catalog-conflict.ts";
+export { recordConflictResponse, withRecordConflict } from "./record-conflict.ts";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 

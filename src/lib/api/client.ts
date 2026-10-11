@@ -38,6 +38,7 @@ function readErrorCode(body: unknown) {
 }
 
 const CATALOG_CONFLICT_CODE = "catalog-conflict";
+const RECORD_CONFLICT_CODE = "record-conflict";
 const CONFLICT_RETRY_DELAY_MS = 400;
 
 function isReplayableBody(body: RequestInit["body"]) {

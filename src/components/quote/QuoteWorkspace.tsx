@@ -29,8 +29,12 @@ import {
   updateQuote,
   uploadQuotePo,
 } from "@/lib/api/quotes";
+import { RecordConflictBanner } from "@/components/record/RecordConflictBanner";
+import { isRecordConflictError } from "@/lib/api/record-conflict";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { useQuoteReadWatermark } from "@/lib/hooks/useQuoteReadWatermark";
+import { useRecordFreshnessPoll } from "@/lib/hooks/useRecordFreshnessPoll";
+import { quoteRecordEtag } from "@/lib/record-etag";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
   QUOTE_STATUS_LABELS,
@@ -86,6 +90,7 @@ export function QuoteWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [recordConflict, setRecordConflict] = useState<string | null>(null);
   const runLock = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -221,6 +226,13 @@ export function QuoteWorkspace({
     pollQuote,
   );
 
+  useRecordFreshnessPoll(
+    conversationReady,
+    quote ? `/api/quotes/${quote.id}` : null,
+    quote ? quoteRecordEtag(quote) : null,
+    pollQuote,
+  );
+
   useEffect(() => {
     return () => {
       void refresh();
@@ -255,6 +267,10 @@ export function QuoteWorkspace({
         setNotice(success);
       }
     } catch (cause) {
+      if (isRecordConflictError(cause)) {
+        setRecordConflict(cause.message);
+        return false;
+      }
       setError(errorMessage(cause, "Could not update this quote."));
       return false;
     } finally {
@@ -333,6 +349,11 @@ export function QuoteWorkspace({
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
   const itemsDirty = !quoteItemsEqual(items, quote.items);
   const staffApplyDirty = statusDirty || itemsDirty;
+  const quoteRecordVersion = quote.recordVersion ?? 1;
+  function withQuoteVersion<T extends object>(patch: T) {
+    return { ...patch, recordVersion: quoteRecordVersion };
+  }
+
   const primaryLabel =
     statusDirty && itemsDirty
       ? "Apply changes"
@@ -373,14 +394,14 @@ export function QuoteWorkspace({
               ...(includeItems ? { items } : {}),
             };
       void run(
-        () => updateQuote(String(quote.number), patch),
+        () => updateQuote(String(quote.number), withQuoteVersion(patch)),
         pendingStatus === "shipped" ? "Marked shipped." : "Status updated.",
       );
       return;
     }
     if (itemsDirty) {
       void run(
-        () => updateQuote(String(quote.number), { items }),
+        () => updateQuote(String(quote.number), withQuoteVersion({ items })),
         "Pricing saved.",
       );
     }
@@ -454,7 +475,11 @@ export function QuoteWorkspace({
             }}
             onConfirm={() => {
               void run(
-                () => updateQuote(String(quote.number), { status: "cancelled" }),
+                () =>
+                  updateQuote(
+                    String(quote.number),
+                    withQuoteVersion({ status: "cancelled" }),
+                  ),
                 "Quote cancelled.",
               ).then((ok) => {
                 if (ok) {
@@ -495,6 +520,17 @@ export function QuoteWorkspace({
         </p>
       ) : null}
 
+      {recordConflict ? (
+        <RecordConflictBanner
+          message={recordConflict}
+          onRefresh={() => {
+            setRecordConflict(null);
+            void getQuote(quoteRef).then(applyQuote).catch(() => undefined);
+          }}
+          onDismiss={() => setRecordConflict(null)}
+        />
+      ) : null}
+
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
@@ -531,7 +567,10 @@ export function QuoteWorkspace({
           role={role}
           busy={busy}
           onSaveNumber={async (poNumber) => {
-            await run(() => updateQuote(String(quote.number), { poNumber }), "PO number saved.");
+            await run(
+              () => updateQuote(String(quote.number), withQuoteVersion({ poNumber })),
+              "PO number saved.",
+            );
           }}
           onUpload={async (input) => {
             await run(() => uploadQuotePo(String(quote.number), input), "PO uploaded.");
@@ -550,7 +589,8 @@ export function QuoteWorkspace({
                 const data = new FormData(event.currentTarget);
                 const invoiceNumber = String(data.get("invoice") ?? "").trim();
                 void run(
-                  () => updateQuote(String(quote.number), { invoiceNumber }),
+                  () =>
+                    updateQuote(String(quote.number), withQuoteVersion({ invoiceNumber })),
                   "Invoice saved.",
                 );
               }}
@@ -592,7 +632,7 @@ export function QuoteWorkspace({
                 ? { status: "shipped" as const, shipments: readyShipments }
                 : { shipments: readyShipments };
             void run(
-              () => updateQuote(String(quote.number), patch),
+              () => updateQuote(String(quote.number), withQuoteVersion(patch)),
               "Tracking saved.",
             );
           }}
