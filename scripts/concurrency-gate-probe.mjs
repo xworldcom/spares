@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Gate probe: 2 staff + customer, quote + ticket, same-field 409 + different-field merge.
+ * Gate probe: 2 staff sessions, quote + ticket, four scenarios.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -39,6 +39,7 @@ async function main() {
   const result = {
     baseUrl,
     at: new Date().toISOString(),
+    prodShaNote: "probe assumes production; ticket overlap fix needs deploy when on branch",
     ok: false,
     quote: null,
     ticket: null,
@@ -47,18 +48,6 @@ async function main() {
     writeFileSync(`${outDir}/gate-probe.json`, JSON.stringify(result, null, 2));
     process.exit(1);
   }
-
-  const quotes = await fetch(`${baseUrl}/api/quotes`, {
-    headers: { cookie: staffA.jar },
-  }).then((r) => r.json());
-  const quoteId = quotes.quotes?.[0]?.id;
-  const detail = quoteId
-    ? await fetch(`${baseUrl}/api/quotes/${quoteId}`, {
-        headers: { cookie: staffA.jar },
-      }).then((r) => r.json())
-    : null;
-  const quote = detail?.quote;
-  const qVersion = quote?.recordVersion ?? 1;
 
   const tickets = await fetch(`${baseUrl}/api/tickets`, {
     headers: { cookie: staffA.jar },
@@ -69,49 +58,14 @@ async function main() {
         headers: { cookie: staffA.jar },
       }).then((r) => r.json())
     : null;
-  const ticket = tDetail?.ticket;
-  const tVersion = ticket?.recordVersion ?? 1;
-
-  const quoteSameField = await Promise.all([
-    fetch(`${baseUrl}/api/quotes/${quoteId}`, {
-      method: "PATCH",
-      headers: { cookie: staffA.jar, "content-type": "application/json" },
-      body: JSON.stringify({ recordVersion: qVersion, status: "pricing" }),
-    }),
-    fetch(`${baseUrl}/api/quotes/${quoteId}`, {
-      method: "PATCH",
-      headers: { cookie: staffB.jar, "content-type": "application/json" },
-      body: JSON.stringify({ recordVersion: qVersion, status: "quoted" }),
-    }),
-  ]);
-  const qBodies = await Promise.all(quoteSameField.map((r) => json(r)));
-  const qAfter = await fetch(`${baseUrl}/api/quotes/${quoteId}`, {
-    headers: { cookie: staffA.jar },
-  }).then((r) => r.json());
-
-  const freshQ = qAfter.quote;
-  const noteSuffix = `gate-${Date.now()}`;
-  const diffFieldA = await fetch(`${baseUrl}/api/quotes/${quoteId}`, {
-    method: "PATCH",
-    headers: { cookie: staffA.jar, "content-type": "application/json" },
-    body: JSON.stringify({
-      recordVersion: freshQ?.recordVersion,
-      invoiceNumber: `INV-${noteSuffix}-A`,
-    }),
-  });
-  const diffFieldB = await fetch(`${baseUrl}/api/quotes/${quoteId}`, {
-    method: "PATCH",
-    headers: { cookie: staffB.jar, "content-type": "application/json" },
-    body: JSON.stringify({
-      recordVersion: freshQ?.recordVersion,
-      shipments: freshQ?.shipments ?? [],
-    }),
-  });
-
   let ticketSameField = [];
   let ticketBodies = [];
   let ticketAfter = null;
   if (ticketId) {
+    const tFresh = await fetch(`${baseUrl}/api/tickets/${ticketId}`, {
+      headers: { cookie: staffA.jar },
+    }).then((r) => r.json());
+    const tVersion = tFresh.ticket?.recordVersion ?? 1;
     ticketSameField = await Promise.all([
       fetch(`${baseUrl}/api/tickets/${ticketId}`, {
         method: "PATCH",
@@ -130,20 +84,98 @@ async function main() {
     }).then((r) => r.json());
   }
 
+  const quotes = await fetch(`${baseUrl}/api/quotes`, {
+    headers: { cookie: staffA.jar },
+  }).then((r) => r.json());
+  const mergeQuoteId =
+    quotes.quotes?.find((q) => q.id?.includes("stage-ordered"))?.id ??
+    quotes.quotes?.find((q) => q.id?.includes("stage-shipped"))?.id ??
+    quotes.quotes?.[0]?.id;
+  const quoteId =
+    quotes.quotes?.find((q) => q.id !== mergeQuoteId)?.id ?? quotes.quotes?.[0]?.id;
+  const detail = quoteId
+    ? await fetch(`${baseUrl}/api/quotes/${quoteId}`, {
+        headers: { cookie: staffA.jar },
+      }).then((r) => r.json())
+    : null;
+  const quote = detail?.quote;
+  const qVersion = quote?.recordVersion ?? 1;
+
+  const quoteSameField = await Promise.all([
+    fetch(`${baseUrl}/api/quotes/${quoteId}`, {
+      method: "PATCH",
+      headers: { cookie: staffA.jar, "content-type": "application/json" },
+      body: JSON.stringify({ recordVersion: qVersion, status: "pricing" }),
+    }),
+    fetch(`${baseUrl}/api/quotes/${quoteId}`, {
+      method: "PATCH",
+      headers: { cookie: staffB.jar, "content-type": "application/json" },
+      body: JSON.stringify({ recordVersion: qVersion, status: "quoted" }),
+    }),
+  ]);
+  const qBodies = await Promise.all(quoteSameField.map((r) => json(r)));
+  const qAfter = await fetch(`${baseUrl}/api/quotes/${quoteId}`, {
+    headers: { cookie: staffA.jar },
+  }).then((r) => r.json());
+
+  const mergeBase = await fetch(`${baseUrl}/api/quotes/${mergeQuoteId}`, {
+    headers: { cookie: staffA.jar },
+  }).then((r) => r.json());
+  const mergeQuote = mergeBase.quote;
+  const mergeVersion = mergeQuote?.recordVersion ?? 1;
+  const gateSuffix = `gate-${Date.now()}`;
+  const itemsForMerge = (mergeQuote?.items ?? []).map((row, idx) =>
+    idx === 0 ? { ...row, qty: Math.max(1, (row.qty ?? 1)) } : row,
+  );
+  const existingShipments = mergeQuote?.shipments ?? [];
+  const shipmentsForMerge = [
+    ...existingShipments,
+    {
+      id: `draft-${gateSuffix}`,
+      trackingNumber: `1Z${String(gateSuffix).replace(/\D/g, "").slice(-10) || "999"}`,
+      carrier: "UPS",
+    },
+  ];
+  const [diffFieldA, diffFieldB] = await Promise.all([
+    fetch(`${baseUrl}/api/quotes/${mergeQuoteId}`, {
+      method: "PATCH",
+      headers: { cookie: staffA.jar, "content-type": "application/json" },
+      body: JSON.stringify({
+        recordVersion: mergeVersion,
+        items: itemsForMerge,
+      }),
+    }),
+    fetch(`${baseUrl}/api/quotes/${mergeQuoteId}`, {
+      method: "PATCH",
+      headers: { cookie: staffB.jar, "content-type": "application/json" },
+      body: JSON.stringify({
+        recordVersion: mergeVersion,
+        shipments: shipmentsForMerge,
+      }),
+    }),
+  ]);
+  const diffBodyA = await json(diffFieldA);
+  const diffBodyB = await json(diffFieldB);
+
   const conflictBody = qBodies.find((b) => b.code === "record-conflict");
+  const ticketConflictBody = ticketBodies.find((b) => b.code === "record-conflict");
   result.quote = {
     id: quoteId,
     sameField: {
       statuses: quoteSameField.map((r) => r.status),
       conflictCount: quoteSameField.filter((r) => r.status === 409).length,
-      successCount: quoteSameField.filter((r) => r.ok).length,
+      successCount: quoteSameField.filter((r) => r.status === 200).length,
       writerName: conflictBody?.lastModifiedByName,
       conflictMessage: conflictBody?.error,
     },
-    afterSameFieldVersion: freshQ?.recordVersion,
+    afterSameFieldVersion: qAfter.quote?.recordVersion,
     differentFields: {
-      invoiceStatus: diffFieldA.status,
+      mergeQuoteId,
+      itemsStatus: diffFieldA.status,
       shipmentsStatus: diffFieldB.status,
+      itemsError: diffBodyA.error,
+      shipmentsError: diffBodyB.error,
+      bothOk: diffFieldA.ok && diffFieldB.ok,
     },
   };
   result.ticket = ticketId
@@ -152,21 +184,31 @@ async function main() {
         sameField: {
           statuses: ticketSameField.map((r) => r.status),
           conflictCount: ticketSameField.filter((r) => r.status === 409).length,
-          successCount: ticketSameField.filter((r) => r.ok).length,
+          successCount: ticketSameField.filter((r) => r.status === 200).length,
+          writerName: ticketConflictBody?.lastModifiedByName,
+          conflictMessage: ticketConflictBody?.error,
         },
         finalStatus: ticketAfter?.ticket?.status,
       }
     : { skipped: "no ticket" };
 
-  const quoteOk =
+  const quoteSameOk =
     result.quote.sameField.successCount === 1 &&
     result.quote.sameField.conflictCount === 1 &&
     Boolean(result.quote.sameField.writerName);
+  const quoteDiffOk = result.quote.differentFields.bothOk === true;
   const ticketOk =
     !ticketId ||
     (result.ticket.sameField.successCount === 1 &&
-      result.ticket.sameField.conflictCount === 1);
-  result.ok = quoteOk && ticketOk;
+      result.ticket.sameField.conflictCount === 1 &&
+      Boolean(result.ticket.sameField.writerName));
+  result.scenarios = {
+    quoteSameField: quoteSameOk,
+    quoteDifferentFields: quoteDiffOk,
+    ticketSameField: ticketOk,
+    customerLogin: customer.ok,
+  };
+  result.ok = quoteSameOk && quoteDiffOk && ticketOk && customer.ok;
 
   writeFileSync(`${outDir}/gate-probe.json`, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
