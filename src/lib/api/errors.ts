@@ -1,3 +1,8 @@
+import { isAbortError } from "./fetch-deadline.ts";
+
+export const NETWORK_TIMEOUT_MESSAGE =
+  "That took too long. Check your connection and try again.";
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
@@ -27,7 +32,16 @@ export function isNotFound(error: unknown) {
 }
 
 export function errorMessage(error: unknown, fallback = "Something went wrong") {
-  if (isApiError(error) || error instanceof Error) {
+  if (isAbortError(error)) {
+    return NETWORK_TIMEOUT_MESSAGE;
+  }
+  if (isApiError(error)) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    if (/aborted without reason|AbortError|operation was aborted/i.test(error.message)) {
+      return NETWORK_TIMEOUT_MESSAGE;
+    }
     return error.message;
   }
   return fallback;

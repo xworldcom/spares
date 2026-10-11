@@ -21,7 +21,7 @@ mkdirSync(outDir, { recursive: true });
 
 const SWITCHES = Number(process.env.P0_TAB_SWITCHES || "10");
 const NOTIF_SWITCHES = Number(process.env.P0_NOTIF_TAB_SWITCHES || "20");
-const MAX_MS = Number(process.env.P0_LOAD_MAX_MS || 15_000);
+const MAX_MS = Number(process.env.P0_LOAD_MAX_MS || 30_000);
 const COLD_GATE_MS = Number(process.env.P0_COLD_GATE_MS || 3_000);
 const MATRIX_MODE = process.env.P0_MATRIX_MODE || "sequential";
 const gitSha = process.env.GIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
@@ -84,30 +84,52 @@ async function signIn(page, email, password) {
   await page.waitForURL(/\/(staff\/quotes|machines|quotes)/, { timeout: 60_000 });
 }
 
-/** aria-busy clear = shell ready; ttvMs adds main heading visibility (user-visible content). */
+/** Bea buyer16/17: time-to-visible main content (not skeleton / "Loading directory…"). */
 async function waitTimeToVisible(page) {
-  const busy = page.locator('[aria-busy="true"]').first();
   const start = Date.now();
   try {
-    await busy.waitFor({ state: "detached", timeout: MAX_MS });
+    await page.waitForFunction(
+      () => {
+        if (document.querySelector('[aria-busy="true"]')) {
+          return false;
+        }
+        const main = document.querySelector("main");
+        if (!main) {
+          return false;
+        }
+        if (main.querySelector(".catalog-skeleton")) {
+          return false;
+        }
+        const text = (main.textContent ?? "").replace(/\s+/g, " ").trim();
+        if (!text) {
+          return false;
+        }
+        if (/^Loading directory/i.test(text)) {
+          return false;
+        }
+        if (/^Loading\b/i.test(text) && !main.querySelector("h1, [role='heading'], table, a[href]")) {
+          return false;
+        }
+        return true;
+      },
+      { timeout: MAX_MS },
+    );
   } catch {
     const ms = Date.now() - start;
-    return { ok: false, ms, busyMs: ms, ttvMs: ms, reason: "aria-busy stuck" };
-  }
-  const busyMs = Date.now() - start;
-  const heading = page.locator("main h1, main [role='heading']").first();
-  try {
-    await heading.waitFor({ state: "visible", timeout: 3_000 });
-  } catch {
-    /* some routes omit a main heading */
+    return { ok: false, ms, busyMs: ms, ttvMs: ms, reason: "content never visible" };
   }
   const ttvMs = Date.now() - start;
-  return { ok: true, ms: busyMs, busyMs, ttvMs };
+  return { ok: true, ms: ttvMs, busyMs: ttvMs, ttvMs };
 }
 
 async function clickNav(page, name, role, vp) {
-  if (role === "staff" && name === "Machines" && isPhone(vp)) {
-    await page.getByRole("button", { name: "Machines" }).click();
+  if (role === "staff" && name === "Machines") {
+    if (isPhone(vp)) {
+      await page.getByRole("button", { name: "Machines" }).click();
+      return;
+    }
+    await page.getByRole("button", { name: /Machines/i }).click();
+    await page.getByRole("link", { name: "All machines" }).click({ timeout: 30_000 });
     return;
   }
   await page.getByRole("link", { name }).first().click({ timeout: 30_000 });
