@@ -4,10 +4,12 @@ import { createMemoryPersistence, setPersistenceForTests } from "./persistence.t
 import { RecordWriteConflictError } from "./record-conflict.ts";
 import {
   createQuote,
+  createTicket,
   listMachines,
   mutateQuote,
   resetStoreMemoryForTests,
   seedEmptyMachineCatalogForTests,
+  updateTicketStatus,
 } from "./store.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
@@ -83,6 +85,38 @@ describe("record version conflicts", () => {
             lock: { base, expectedVersion: 1, touchedFields: ["status"] },
           },
         ),
+      (cause: unknown) => cause instanceof RecordWriteConflictError,
+    );
+  });
+
+  it("returns a record conflict when two writers touch the same ticket status", async () => {
+    seedCatalog();
+    const machines = await listMachines(TENANT);
+    const machineId = machines[0]?.id;
+    assert.ok(machineId);
+    const created = await createTicket(TENANT, {
+      machineId,
+      title: "Concurrency",
+      customerId: "user-customer",
+      customerEmail: "user@demo.com",
+      actor: { id: "staff-a", email: "staff-a@demo.com", role: "staff" },
+    });
+    if ("error" in created) {
+      throw new Error("ticket create failed");
+    }
+    const { ticket } = created;
+    const base = { ...ticket, recordVersion: 1 };
+    const actor = { id: "staff-a", email: "staff-a@demo.com", role: "staff" as const };
+    await updateTicketStatus(ticket.id, TENANT, "in_progress", actor, {
+      actor: { id: actor.id, email: actor.email, name: "Staff A" },
+      lock: { base, expectedVersion: 1, touchedFields: ["status"] },
+    });
+    await assert.rejects(
+      () =>
+        updateTicketStatus(ticket.id, TENANT, "closed", actor, {
+          actor: { id: "staff-b", email: "staff-b@demo.com", name: "Staff B" },
+          lock: { base, expectedVersion: 1, touchedFields: ["status"] },
+        }),
       (cause: unknown) => cause instanceof RecordWriteConflictError,
     );
   });
