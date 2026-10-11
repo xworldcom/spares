@@ -40,8 +40,8 @@ describe("conversation sheet startup snap", () => {
     assert.equal(initialConversationSheetSnap(true, false), "peek");
   });
 
-  it("starts at full on phone when the thread is unread", () => {
-    assert.equal(initialConversationSheetSnap(true, false, true), "full");
+  it("starts at peek on phone overlay even when unread would have opened full", () => {
+    assert.equal(initialConversationSheetSnap(true, false), "peek");
   });
 
   it("opens at peek on desktop overlay tray", () => {
@@ -49,7 +49,7 @@ describe("conversation sheet startup snap", () => {
   });
 
   it("opens at reply in desktop split-pane inline column", () => {
-    assert.equal(initialConversationSheetSnap(true, true, false, true), "reply");
+    assert.equal(initialConversationSheetSnap(true, true, true), "reply");
   });
 });
 
