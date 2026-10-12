@@ -10,6 +10,11 @@ const STAFF = {
 };
 
 const CAS_TITLE = /^(CAS s[123] |cas gate test)/i;
+const FIXTURE_TITLES = new Set([
+  process.env.OEE360_CAS_GATE_TICKET_A_TITLE ?? "CAS gate fixture A",
+  process.env.OEE360_CAS_GATE_TICKET_B_TITLE ?? "CAS gate fixture B",
+]);
+const JUNK_NUMBERS = new Set([17, 18, 19, 20, 21, 22, 23, 24, 25, 27]);
 
 async function login() {
   const res = await fetch(`${BASE}/api/auth/login`, {
@@ -34,8 +39,11 @@ async function login() {
 
 async function readTicket(jar, id) {
   const res = await fetch(`${BASE}/api/tickets/${id}`, { headers: { cookie: jar } });
-  const body = await res.json();
-  return body.ticket;
+  const text = await res.text();
+  if (!res.ok || !text.trim()) {
+    throw new Error(`GET ${id} ${res.status} ${text.slice(0, 120)}`);
+  }
+  return JSON.parse(text).ticket;
 }
 
 async function closeTicket(jar, ticket) {
@@ -75,7 +83,18 @@ async function main() {
   const list = await fetch(`${BASE}/api/staff/tickets`, { headers: { cookie: jar } }).then((r) =>
     r.json(),
   );
-  const tickets = (list.tickets ?? []).filter((t) => CAS_TITLE.test(t.title ?? ""));
+  const tickets = (list.tickets ?? []).filter((t) => {
+    if (t.number === 9) {
+      return false;
+    }
+    if (FIXTURE_TITLES.has(t.title ?? "")) {
+      return false;
+    }
+    if (JUNK_NUMBERS.has(t.number)) {
+      return true;
+    }
+    return CAS_TITLE.test(t.title ?? "");
+  });
   const before = tickets.map((t) => ({
     id: t.id,
     number: t.number,
@@ -84,8 +103,16 @@ async function main() {
   }));
   const results = [];
   for (const row of tickets) {
-    const full = await readTicket(jar, row.id);
-    results.push(await closeTicket(jar, full));
+    try {
+      const full = await readTicket(jar, row.id);
+      results.push(await closeTicket(jar, full));
+    } catch (cause) {
+      results.push({
+        id: row.id,
+        number: row.number,
+        error: cause instanceof Error ? cause.message : String(cause),
+      });
+    }
   }
   const staffB = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",

@@ -37,6 +37,12 @@ const STATUS_LABELS = {
   closed: "Closed",
 };
 
+/** Demo tenant: reuse two dedicated gate tickets (no per-run spam). */
+const FIXTURE_TITLE_A =
+  process.env.OEE360_CAS_GATE_TICKET_A_TITLE ?? "CAS gate fixture A";
+const FIXTURE_TITLE_B =
+  process.env.OEE360_CAS_GATE_TICKET_B_TITLE ?? "CAS gate fixture B";
+
 async function readJson(res) {
   const text = await res.text();
   if (!text.trim()) {
@@ -72,18 +78,56 @@ async function loginContext(browser, staff) {
   return context;
 }
 
-async function createOpenTicket(api, machineId, label) {
-  const created = await api.post(`${BASE}/api/machines/${machineId}/tickets`, {
-    data: { title: `${label} ${Date.now()}` },
-  });
-  if (!created.ok()) {
-    throw new Error(`create ticket failed ${created.status()} ${await created.text()}`);
+async function fetchTicket(api, id) {
+  const res = await api.get(`${BASE}/api/tickets/${id}`);
+  if (!res.ok()) {
+    throw new Error(`get ticket ${id} failed ${res.status()} ${await res.text()}`);
   }
-  const body = await readJson(created);
+  const body = await readJson(res);
   if (!body?.ticket) {
-    throw new Error("create ticket missing body");
+    throw new Error(`get ticket ${id} missing body`);
   }
   return body.ticket;
+}
+
+async function patchStatus(api, ticket, status) {
+  const res = await api.patch(`${BASE}/api/tickets/${ticket.id}`, {
+    data: {
+      status,
+      recordVersion: ticket.recordVersion,
+      baseStatus: ticket.status,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(
+      `patch ticket ${ticket.id} → ${status} failed ${res.status()} ${await res.text()}`,
+    );
+  }
+  const body = await readJson(res);
+  return body?.ticket ?? ticket;
+}
+
+async function ensureGateFixture(api, machineId, exactTitle) {
+  const list = (await readJson(await api.get(`${BASE}/api/staff/tickets`)))?.tickets ?? [];
+  let row = list.find((t) => t.title === exactTitle);
+  if (!row) {
+    const created = await api.post(`${BASE}/api/machines/${machineId}/tickets`, {
+      data: { title: exactTitle },
+    });
+    if (!created.ok()) {
+      throw new Error(`create fixture "${exactTitle}" failed ${created.status()} ${await created.text()}`);
+    }
+    const body = await readJson(created);
+    if (!body?.ticket) {
+      throw new Error("create fixture missing body");
+    }
+    row = body.ticket;
+  }
+  let ticket = await fetchTicket(api, row.id);
+  if (ticket.status !== "open") {
+    ticket = await patchStatus(api, ticket, "open");
+  }
+  return ticket;
 }
 
 async function waitDetailReady(page) {
@@ -118,7 +162,8 @@ async function main() {
   const machines = (await readJson(await apiA.get(`${BASE}/api/machines`)))?.machines ?? [];
   const machineId = machines[0]?.id;
 
-  const ticket1 = await createOpenTicket(apiA, machineId, "CAS s1");
+  const ticket1 = await ensureGateFixture(apiA, machineId, FIXTURE_TITLE_A);
+  report.fixtureTickets = { a: ticket1.id, bTitle: FIXTURE_TITLE_B };
   const pageA1 = await ctxA.newPage();
   await pageA1.goto(`${BASE}/care/tickets/${ticket1.id}`);
   await waitDetailReady(pageA1);
@@ -134,7 +179,7 @@ async function main() {
   };
   await pageA1.screenshot({ path: path.join(OUT, "s1-single-session.png"), fullPage: true });
 
-  const ticket2 = await createOpenTicket(apiA, machineId, "CAS s2");
+  const ticket2 = await ensureGateFixture(apiA, machineId, FIXTURE_TITLE_B);
   let ctxB;
   try {
     ctxB = await loginContext(browser, STAFF_B);
@@ -235,7 +280,7 @@ async function main() {
   };
   await pageB.screenshot({ path: path.join(OUT, "s2-after-refresh.png"), fullPage: true });
 
-  const ticket3 = await createOpenTicket(apiA, machineId, "CAS s3");
+  const ticket3 = await ensureGateFixture(apiA, machineId, FIXTURE_TITLE_A);
   const pageA3 = await ctxA.newPage();
   await pageA3.goto(`${BASE}/care/tickets/${ticket3.id}`);
   await waitDetailReady(pageA3);

@@ -1,10 +1,19 @@
 import { updateJsonPathDocument } from "./json-path-document.ts";
 import { entityRecordPath } from "./entity-record-paths.ts";
+import { isManagedRuntime } from "./production-env.ts";
 import type { QuoteRecord, ServiceTicketRecord } from "@/types";
 import type { StoredPartLifecycle } from "./part-lifecycle.ts";
+
+/** Kevin subtract-shards: catalog CAS is SoT; shards opt-in only (off on Vercel by default). */
 export function entityShardsEnabled(db: {
   dataMigrations?: { entityShardsV1?: number };
 }) {
+  if (isManagedRuntime()) {
+    const override = process.env.SPARES_ENTITY_SHARDS?.trim().toLowerCase();
+    if (override !== "1" && override !== "true") {
+      return false;
+    }
+  }
   return (db.dataMigrations?.entityShardsV1 ?? 0) >= 1;
 }
 
