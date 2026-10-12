@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useCareAlerts } from "@/components/care/CareAlerts";
@@ -10,6 +10,7 @@ import { TicketsList } from "@/components/care/TicketsList";
 import {
   useConversationDockStage,
   useDesktopStage,
+  useOverlayConversationSheet,
 } from "@/components/machine/useDesktopStage";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -102,6 +103,7 @@ export function TicketsWorkspace({
     scope === "hub" ? listEtag : null,
   );
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const hubMachineFromUrl =
     scope === "hub"
@@ -109,6 +111,7 @@ export function TicketsWorkspace({
       : undefined;
   const desktop = useDesktopStage();
   const conversationDock = useConversationDockStage();
+  const overlayConversation = useOverlayConversationSheet();
   const { refresh: refreshCareAlerts } = useCareAlerts();
   const hubInitial = scope === "hub" ? initialList : null;
   const [tickets, setTickets] = useState<ServiceTicket[]>(hubInitial?.tickets ?? []);
@@ -120,11 +123,16 @@ export function TicketsWorkspace({
   const scopedMachineName = useMachineName(
     scope === "machine" ? machineId ?? null : hubMachineFromUrl ?? null,
   );
-  const ticketsPageTitle = workListTitle(
-    "tickets",
-    scope === "machine" || hubMachineFromUrl ? scopedMachineName : null,
-    scope === "machine" || Boolean(hubMachineFromUrl),
-  );
+  const searchQuery = searchParams.get(CARE_TICKETS_Q_QUERY) ?? "";
+  const ticketsPageTitle = (() => {
+    const base = workListTitle(
+      "tickets",
+      scope === "machine" || hubMachineFromUrl ? scopedMachineName : null,
+      scope === "machine" || Boolean(hubMachineFromUrl),
+    );
+    const q = searchQuery.trim();
+    return q ? `${base} · Search` : base;
+  })();
   const listHrefWithQuery = `${listHref}${careTicketsListQueryString(searchParams)}`;
   const hubMachineFilter = scope === "hub" ? hubMachineFromUrl : undefined;
   const showMachine = scope === "hub" && !hubMachineFilter;
@@ -233,6 +241,13 @@ export function TicketsWorkspace({
 
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
+
+  useEffect(() => {
+    if (desktop || !showList) {
+      return;
+    }
+    window.scrollTo(0, 0);
+  }, [desktop, pathname, showList]);
   const machineScopedTickets = hubMachineFilter
     ? tickets.filter((ticket) => ticket.machineId === hubMachineFilter)
     : tickets;
@@ -243,7 +258,6 @@ export function TicketsWorkspace({
   const sortKey = careTicketsSortFromParam(
     searchParams.get(CARE_TICKETS_SORT_QUERY),
   );
-  const searchQuery = searchParams.get(CARE_TICKETS_Q_QUERY) ?? "";
 
   const replaceListQuery = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -457,7 +471,7 @@ export function TicketsWorkspace({
       ticketId={ticketId}
       seedTicket={selected}
       backHref={listHrefWithQuery}
-      embedded={conversationDock}
+      embedded={conversationDock && desktop && !overlayConversation}
       onUpdated={refresh}
       onTicketListPatch={patchTicketInList}
     />
@@ -474,7 +488,9 @@ export function TicketsWorkspace({
     <div
       className="tickets-workspace"
       data-tickets-layout={desktop ? "split" : ticketId ? "detail" : "list"}
-      data-care-chat={conversationDock ? "inline" : "overlay"}
+      data-care-chat={
+        conversationDock && desktop && !overlayConversation ? "inline" : "overlay"
+      }
     >
       <DocumentTitle title={ticketsPageTitle} />
       {showList ? listPanel : null}

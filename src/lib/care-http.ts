@@ -5,6 +5,7 @@ import { toPublicUser } from "@/lib/access";
 import { error } from "@/lib/http";
 import { tenantIdForUser, userTenantId } from "@/lib/tenant";
 import { actorDisplayNamesForActivities } from "@/lib/chat-actor-display-server";
+import { ticketHiddenFromCustomer } from "@/lib/demo-customer-visibility.ts";
 import {
   findUserById,
   getMachine,
@@ -74,7 +75,7 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
   if (!machine || !canAccessCareMachine(user, machine, org.sites, org.customers)) {
     return { error: error("Ticket not found", 404) };
   }
-  if (user.role === "customer" && ticket.hiddenFromCustomer) {
+  if (user.role === "customer" && ticketHiddenFromCustomer(ticket, tenantId)) {
     return { error: error("Ticket not found", 404) };
   }
   return { user, ticket, machine };

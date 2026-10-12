@@ -676,6 +676,26 @@ export function useSnapSheet({
     settleTo("reply");
   }
 
+  /** Resting peek band — CSS `is-peek`, not reply height (settleTo("peek") used to expand). */
+  function settleToVisualPeek() {
+    cancelSettleAnimation();
+    drag.current.on = false;
+    drag.current.pending = false;
+    drag.current.moved = false;
+    steppedAtRef.current = performance.now();
+    setDragging(false);
+    setDraggingClass(false);
+    setSettling(false);
+    setSettlingClass(false);
+    cardRef.current?.classList.remove("is-dragging");
+    setThreadDockedState(true);
+    setOpen(true);
+    setSheet("peek");
+    clearMotionSnap("peek");
+    clearMotionPaint("peek");
+    clearCloseTranslate("peek");
+  }
+
   /** Toolbar Close — care uses `--sheet-close-ty`; quote Messages rolls full → reply → out. */
   function closeViaTranslate() {
     if (desktopStage || sheet === "out") {
@@ -696,8 +716,11 @@ export function useSnapSheet({
         return;
       }
       if (sheet === "reply") {
-        clearCloseTranslate("peek");
-        settleTo("peek");
+        settleToVisualPeek();
+        return;
+      }
+      if (sheet === "peek") {
+        settleCloseTo("out");
         return;
       }
       steppedAtRef.current = performance.now();
@@ -720,9 +743,11 @@ export function useSnapSheet({
       return;
     }
     if (sheet === "reply") {
-      setOpen(true);
-      clearCloseTranslate("peek");
-      settleTo("peek");
+      settleToVisualPeek();
+      return;
+    }
+    if (sheet === "peek") {
+      settleCloseTo("out");
       return;
     }
     settleCloseTo("out");

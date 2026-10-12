@@ -431,7 +431,9 @@ body {
     --sheet-x: calc(100% + 0.75rem);
   }
 
-  .quote-sheet-handle {
+  /* Quote tray dock only — conversation snap keeps .quote-sheet-handle visible @1024–1535 (#421). */
+  .quote-sheet:not(.conversation-sheet) > .quote-sheet-handle,
+  .quote-tray-dock .quote-sheet-handle {
     display: none;
   }
 }
@@ -821,7 +823,8 @@ body {
   font-weight: 500;
 }
 
-@media (min-width: 1024px) and (pointer: fine) {
+/* Side-tray Messages only on xl+ fine-pointer desktops — 1440 keeps phone snap + handle (#421). */
+@media (min-width: 1536px) and (pointer: fine) {
   .conversation-sheet:not(.is-inline) {
     left: auto;
     right: 1.1rem;
@@ -2442,6 +2445,23 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   .quote-workspace .quote-progress-step {
     flex: 0 0 3.35rem;
     min-width: 3.35rem;
+  }
+
+  .quote-workspace .quote-progress-step[data-state="current"] {
+    flex: 0 0 4.75rem;
+    min-width: 4.75rem;
+  }
+
+  .quote-workspace .quote-progress-step[data-state="current"] .quote-progress-label-short {
+    display: none;
+  }
+
+  .quote-workspace .quote-progress-step[data-state="current"] .quote-progress-label-full {
+    display: block;
+    max-width: 100%;
+    font-size: 9px;
+    line-height: 1.15;
+    white-space: normal;
   }
 
   .quote-workspace .quote-progress-label-short {

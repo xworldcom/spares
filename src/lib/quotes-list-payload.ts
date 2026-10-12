@@ -1,7 +1,7 @@
 import { staffAssistantEnabled } from "@/lib/assistant/public";
 import type { QuotesListResponse } from "@/lib/api/types";
 import { isSeedAllowed } from "@/lib/production-env";
-import { toPublicQuoteListRow } from "@/lib/quotes";
+import { quoteIsOpen, toPublicQuoteListRow } from "@/lib/quotes";
 import {
   ensureDemoStageQuoteFixtures,
   ensurePreviewQaQuoteFixture,
@@ -21,10 +21,9 @@ export async function buildQuotesListPayload(
 
   const snapshot = await readTenantWorkListSnapshot(tenantId);
   const names = new Map(snapshot.machines.map((machine) => [machine.id, machine.name]));
-  const visible =
-    user.role === "staff"
-      ? snapshot.quotes
-      : snapshot.quotes.filter((quote) => quote.customerId === user.id);
+  const visible = snapshot.quotes
+    .filter((quote) => user.role === "staff" || !quote.hiddenFromCustomer)
+    .filter((quote) => user.role === "staff" || quote.customerId === user.id);
 
   const assistantAvailable =
     user.role === "staff" ? await staffAssistantEnabled() : false;
@@ -37,6 +36,8 @@ export async function buildQuotesListPayload(
 
   return {
     quotes: publicQuotes,
-    unreadCount: publicQuotes.filter((quote) => quote.unread).length,
+    unreadCount: publicQuotes.filter(
+      (quote) => quote.unread && quoteIsOpen(quote.status),
+    ).length,
   };
 }

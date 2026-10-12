@@ -235,6 +235,8 @@ export type Quote = {
   lastModifiedByName?: string;
   /** Staff-only: pricing fields editable after PO received when true. */
   staffPricingUnlocked?: boolean;
+  /** Demo/gate quotes hidden from customer lists and detail. */
+  hiddenFromCustomer?: boolean;
 };
 
 export type QuoteRecord = {
@@ -264,6 +266,7 @@ export type QuoteRecord = {
   lastModifiedByUserId?: string;
   lastModifiedByName?: string;
   staffPricingUnlocked?: boolean;
+  hiddenFromCustomer?: boolean;
 };
 
 export type BugReport = {

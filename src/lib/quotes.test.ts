@@ -25,6 +25,7 @@ import {
   quoteOwnerIdForCreate,
   staffQuoteAccountMatch,
   quotePoNextStep,
+  quoteStaffPricingLocked,
   quoteStatusCaption,
   quoteStepState,
   shippedActivityText,
@@ -444,6 +445,21 @@ describe("status and visibility", () => {
     });
   });
 
+  it("locks staff pricing only after PO received", () => {
+    assert.equal(
+      quoteStaffPricingLocked({ status: "quoted", staffPricingUnlocked: false }),
+      false,
+    );
+    assert.equal(
+      quoteStaffPricingLocked({ status: "po_received", staffPricingUnlocked: false }),
+      true,
+    );
+    assert.equal(
+      quoteStaffPricingLocked({ status: "po_received", staffPricingUnlocked: true }),
+      false,
+    );
+  });
+
   it("names the PO as the next step while invoice is still closed", () => {
     assert.equal(
       quotePoNextStep("pricing", "staff"),
@@ -459,6 +475,7 @@ describe("status and visibility", () => {
     );
     assert.equal(quotePoNextStep("po_received", "staff"), null);
     assert.equal(quotePoNextStep("cancelled", "staff"), null);
+    assert.match(quotePoNextStep("closed", "staff") ?? "", /closed/i);
   });
 });
 

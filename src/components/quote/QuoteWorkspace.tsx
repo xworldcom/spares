@@ -4,9 +4,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
-import { useConversationDockStage } from "@/components/machine/useDesktopStage";
+import {
+  useConversationDockStage,
+  useOverlayConversationSheet,
+} from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
@@ -96,6 +100,8 @@ export function QuoteWorkspace({
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
   const conversationDock = useConversationDockStage();
+  const overlayConversation = useOverlayConversationSheet();
+  const inlineMessages = conversationDock && !overlayConversation;
   const searchParams = useSearchParams();
   const seedQuote = quoteSeedForRef(quoteRef);
   const [quote, setQuote] = useState<Quote | null>(
@@ -114,6 +120,7 @@ export function QuoteWorkspace({
     steps: number;
   } | null>(null);
   const [itemsTouched, setItemsTouched] = useState(false);
+  const [pricingPreviewActive, setPricingPreviewActive] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState("");
   const [recordConflict, setRecordConflict] = useState<string | null>(null);
   const [freshnessError, setFreshnessError] = useState<string | null>(null);
@@ -173,13 +180,17 @@ export function QuoteWorkspace({
         }
         applyQuote(next);
         setError(null);
+        setFreshnessError(null);
       })
       .catch((cause: unknown) => {
         if (!isCurrent(generation)) {
           return;
         }
-        setError(errorMessage(cause, "Could not load this quote."));
-        if (!seed) {
+        const message = errorMessage(cause, "Could not load this quote.");
+        if (seed) {
+          setFreshnessError(message);
+        } else {
+          setError(message);
           setQuote(null);
         }
         setLoadedRef(quoteRef);
@@ -394,7 +405,7 @@ export function QuoteWorkspace({
     role === "staff" && quoteIsStaffReadOnly(quote.status);
   const pricingLocked =
     role === "staff" && quoteStaffPricingLocked(quote);
-  const staffApplyDirty = statusDirty || itemsDirty;
+  const staffApplyDirty = statusDirty || itemsDirty || pricingPreviewActive;
   const quoteRecordVersion = quote.recordVersion ?? 1;
   function withQuoteVersion<T extends object>(patch: T) {
     return { ...patch, recordVersion: quoteRecordVersion };
@@ -513,8 +524,9 @@ export function QuoteWorkspace({
   return (
     <div
       className="quote-workspace mx-auto w-full max-w-5xl"
-      data-quote-layout={conversationDock ? "split" : "stack"}
+      data-quote-layout={inlineMessages ? "split" : "stack"}
     >
+      <DocumentTitle title={quote ? quoteTitle(quote) : "Quote"} />
       <div className="quote-workspace-main space-y-5">
       <div className="quote-timeline-handoff-dest space-y-5">
         <div>
@@ -687,9 +699,14 @@ export function QuoteWorkspace({
         </p>
       ) : null}
       {freshnessError ? (
-        <p className="text-sm text-[#f0c4c0]" role="alert">
-          {freshnessError}
-        </p>
+        <ErrorState
+          title="Could not refresh this quote"
+          message={freshnessError}
+          onRetry={() => {
+            setFreshnessError(null);
+            setLoadAttempt((attempt) => attempt + 1);
+          }}
+        />
       ) : null}
       <div className="min-h-[3.25rem]" aria-live="polite">
         {notice && !(role === "staff" && staffApplyDirty) ? (
@@ -717,6 +734,7 @@ export function QuoteWorkspace({
             setItemsTouched(true);
             setItems(next);
           }}
+          onPricingPreviewChange={setPricingPreviewActive}
         />
       </section>
 
@@ -858,7 +876,7 @@ export function QuoteWorkspace({
         peekLine={peek.text}
         unread={quote.unread}
         threadKey={loadedRef === quoteRef ? quote.id : quoteRef}
-        layout={conversationDock ? "inline" : "overlay"}
+        layout={inlineMessages ? "inline" : "overlay"}
         closeProfile="quote"
       >
         <QuoteActivityFeed
@@ -870,9 +888,9 @@ export function QuoteWorkspace({
           onSend={sendActivity}
           threadKind="quote"
           threadId={quote.id}
-          layout={conversationDock ? "card" : "sheet"}
+          layout={inlineMessages ? "card" : "sheet"}
           title="Messages"
-          subtitle={conversationDock ? threadSubtitle ?? undefined : undefined}
+          subtitle={inlineMessages ? threadSubtitle ?? undefined : undefined}
           customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
           actorDisplayNames={quote.actorDisplayNames}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}

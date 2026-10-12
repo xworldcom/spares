@@ -133,7 +133,7 @@ export function quoteStaffPricingLocked(
   if (quote.staffPricingUnlocked) {
     return false;
   }
-  return quoteHasReached(quote.status, "quoted");
+  return quoteHasReached(quote.status, "po_received");
 }
 
 export function quoteIsStaffReadOnly(status: QuoteStatus) {
@@ -675,6 +675,11 @@ export function quotePoNextStep(status: QuoteStatus, role: Role): string | null 
   if (status === "cancelled") {
     return null;
   }
+  if (status === "closed") {
+    return role === "staff"
+      ? "This quote is closed. Reopen it to change PO or invoice fields."
+      : "This quote is closed.";
+  }
   if (!canUploadPo(status)) {
     return "PO number and PDF upload open after this quote is issued.";
   }
@@ -825,9 +830,12 @@ export function parseActivityText(
 }
 
 export function canViewQuote(
-  quote: Pick<QuoteRecord, "customerId">,
+  quote: Pick<QuoteRecord, "customerId" | "hiddenFromCustomer">,
   user: Pick<PublicUser, "id" | "role">,
 ) {
+  if (user.role !== "staff" && quote.hiddenFromCustomer) {
+    return false;
+  }
   return user.role === "staff" || quote.customerId === user.id;
 }
 

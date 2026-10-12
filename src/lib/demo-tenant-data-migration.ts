@@ -75,12 +75,28 @@ export type DataMigrations = {
   demoQuote26HealV1?: number;
   /** Tickets #27–34 hidden from customers; Q37 note scrub. */
   demoCustomerHygieneV1?: number;
+  /** Tickets #1–26 hidden from customers (gate/smoke); extends v1. */
+  demoCustomerHygieneV2?: number;
+  /** Re-apply hide when v2 flag was set before rows were marked. */
+  demoCustomerHygieneV3?: number;
+  /** Demo quote #27 PO-stage pricing lock for Mac rv421 proofs. */
+  demoRv421Quote27V1?: number;
+  /** Re-apply hardware-fixture demo lifecycle rows when catalog lost them (rv421 item 8). */
+  demoRv421HardwareFixtureLifecycleV1?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
 
 /** Hide gate/smoke tickets from customer UI; scrub junk demo quote copy. */
 export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
+
+export const DEMO_CUSTOMER_HYGIENE_V2 = 2;
+
+export const DEMO_RV421_QUOTE_27_V1 = 1;
+
+export const DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1 = 1;
+
+export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
 
 type DemoMigrationUser = {
   id: string;
@@ -547,27 +563,21 @@ export function applyDemoQuote26HealMigration<T extends DemoMigrationDb & { quot
   };
 }
 
-const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS = new Set(
+const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V1 = new Set(
   Array.from({ length: 8 }, (_, index) => 27 + index),
 );
 
-/** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */
-export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
-  db: T,
-): { db: T; changed: boolean } {
-  const marked = {
-    ...db,
-    dataMigrations: {
-      ...db.dataMigrations,
-      demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
-    },
-  } as T;
-  if (db.dataMigrations?.demoCustomerHygieneV1 === DEMO_CUSTOMER_HYGIENE_V1) {
-    return { db, changed: false };
-  }
-  let changed = true;
-  const tickets = (db.tickets ?? []).map((ticket) => {
-    if (!DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS.has(ticket.number)) {
+const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2 = new Set(
+  Array.from({ length: 26 }, (_, index) => index + 1),
+);
+
+function hideDemoTicketsForCustomers<T extends DemoMigrationTicket>(
+  tickets: T[],
+  hiddenNumbers: ReadonlySet<number>,
+): { tickets: T[]; changed: boolean } {
+  let changed = false;
+  const next = tickets.map((ticket) => {
+    if (!hiddenNumbers.has(ticket.number)) {
       return ticket;
     }
     if (ticket.hiddenFromCustomer) {
@@ -576,21 +586,143 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
     changed = true;
     return { ...ticket, hiddenFromCustomer: true };
   });
+  return { tickets: next, changed };
+}
+
+/** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */
+export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean } {
+  const needsV1 = db.dataMigrations?.demoCustomerHygieneV1 !== DEMO_CUSTOMER_HYGIENE_V1;
+  const needsV2 = db.dataMigrations?.demoCustomerHygieneV2 !== DEMO_CUSTOMER_HYGIENE_V2;
+  const needsV3 = db.dataMigrations?.demoCustomerHygieneV3 !== DEMO_CUSTOMER_HYGIENE_V3;
+  if (!needsV1 && !needsV2 && !needsV3) {
+    return { db, changed: false };
+  }
+  let changed = false;
+  let tickets = db.tickets ?? [];
+  if (needsV1) {
+    const v1 = hideDemoTicketsForCustomers(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V1);
+    tickets = v1.tickets;
+    changed = changed || v1.changed;
+  }
+  if (needsV2) {
+    const v2 = hideDemoTicketsForCustomers(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2);
+    tickets = v2.tickets;
+    changed = changed || v2.changed;
+  }
+  if (needsV3) {
+    const v3 = hideDemoTicketsForCustomers(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2);
+    tickets = v3.tickets;
+    changed = changed || v3.changed;
+  }
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
+      demoCustomerHygieneV2: DEMO_CUSTOMER_HYGIENE_V2,
+      demoCustomerHygieneV3: DEMO_CUSTOMER_HYGIENE_V3,
+    },
+  } as T;
   const quotes = (db.quotes ?? []).map((quote) => {
     if (quote.number !== 37) {
       return quote;
     }
+    let next = quote;
     const note = quote.note?.trim().toLowerCase() ?? "";
-    if (!note.includes("testing")) {
-      return quote;
+    if (note.includes("testing")) {
+      changed = true;
+      const { note: _drop, ...rest } = next;
+      next = rest;
     }
-    changed = true;
-    const { note: _drop, ...rest } = quote;
-    return rest;
+    if (!next.hiddenFromCustomer) {
+      changed = true;
+      next = { ...next, hiddenFromCustomer: true };
+    }
+    return next;
   });
   return {
     db: { ...marked, tickets, quotes },
-    changed,
+    changed: changed || needsV1 || needsV2 || needsV3,
+  };
+}
+
+/** Ensure hardware-fixture demo lifecycle rows exist (6331K32 obsolete, 5972K325 announced). */
+export function applyDemoRv421HardwareFixtureLifecycleMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marker = DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1;
+  const hasMarker = db.dataMigrations?.demoRv421HardwareFixtureLifecycleV1 === marker;
+  const additions = missingDemoLifecycleRows(
+    db.partLifecycle,
+    DEFAULT_TENANT_ID,
+    new Date().toISOString(),
+    "migration@oee360.com",
+  );
+  if (additions.length === 0 && hasMarker) {
+    return { db, changed: false };
+  }
+  const next = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoRv421HardwareFixtureLifecycleV1: marker,
+    },
+    ...(additions.length > 0
+      ? { partLifecycle: [...(db.partLifecycle ?? []), ...additions] }
+      : {}),
+  } as T;
+  return { db: next, changed: !hasMarker || additions.length > 0 };
+}
+
+/** Ensure demo quote #27 stays PO-stage with staff pricing locked (rv421 Q27 proof). */
+export function applyDemoRv421Quote27Migration<T extends DemoMigrationDb & { quotes?: QuoteRecord[] }>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoRv421Quote27V1: DEMO_RV421_QUOTE_27_V1,
+    },
+  } as T;
+  if (db.dataMigrations?.demoRv421Quote27V1 === DEMO_RV421_QUOTE_27_V1) {
+    return { db, changed: false };
+  }
+  const quotes = db.quotes ?? [];
+  const index = quotes.findIndex((row) => row.number === 27);
+  if (index < 0) {
+    return { db: marked, changed: true };
+  }
+  const quote = quotes[index];
+  let next: QuoteRecord = { ...quote };
+  let touched = false;
+  if (next.staffPricingUnlocked) {
+    next = { ...next, staffPricingUnlocked: false };
+    touched = true;
+  }
+  const poStage =
+    next.status === "po_received" ||
+    next.status === "confirmed" ||
+    next.status === "ordered" ||
+    next.status === "shipped" ||
+    next.status === "delivered";
+  if (
+    !poStage &&
+    next.status !== "closed" &&
+    next.status !== "cancelled"
+  ) {
+    next = { ...next, status: "po_received" };
+    touched = true;
+  }
+  const nextQuotes = quotes.slice();
+  if (touched) {
+    nextQuotes[index] = next;
+  }
+  return {
+    db: { ...marked, quotes: nextQuotes },
+    changed: true,
   };
 }
 

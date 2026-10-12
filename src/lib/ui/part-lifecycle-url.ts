@@ -30,6 +30,7 @@ export function partLifecycleFiltersFromSearch(
 
 export function partLifecycleSearchParams(
   filters: PartLifecycleUrlFilters,
+  options?: { highlight?: string },
 ): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.status !== "all") {
@@ -41,11 +42,36 @@ export function partLifecycleSearchParams(
   if (filters.q) {
     params.set("q", filters.q);
   }
+  const highlight = options?.highlight?.trim();
+  if (highlight) {
+    params.set("highlight", highlight);
+  }
   return params;
 }
 
-export function staffPartLifecycleHref(filters: PartLifecycleUrlFilters): string {
-  const params = partLifecycleSearchParams(filters);
+export function staffPartLifecycleHref(
+  filters: PartLifecycleUrlFilters,
+  options?: { highlight?: string },
+): string {
+  const params = partLifecycleSearchParams(filters, options);
   const qs = params.toString();
   return qs ? `/staff/parts?${qs}` : "/staff/parts";
+}
+
+export function staffPartLifecycleViewHref(partNumber: string): string {
+  const trimmed = partNumber.trim();
+  return staffPartLifecycleHref(
+    { status: "all", machineId: "", q: trimmed },
+    { highlight: trimmed },
+  );
+}
+
+export function machinePartViewHref(machineId: string, partNumber: string): string {
+  const id = machineId.trim();
+  const part = partNumber.trim();
+  if (!id || !part) {
+    return "/machines";
+  }
+  const params = new URLSearchParams({ part });
+  return `/machines/${encodeURIComponent(id)}?${params.toString()}`;
 }

@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { derivedListEtagForScope } from "@/lib/derived-list-cache";
 import { listScopeKey } from "@/lib/list-scope";
+import { RouteDocumentTitle } from "@/components/nav/RouteDocumentTitle";
 import { loadAccessibleTicketsListForSession } from "@/lib/tickets-list-server";
 import { tenantIdForUser } from "@/lib/tenant";
 import { CareHubTicketsClientLayout } from "./CareHubTicketsClientLayout";
+
+export const metadata: Metadata = {
+  title: "All tickets",
+};
 
 export default async function CareHubTicketsLayout({
   children,
@@ -19,8 +25,11 @@ export default async function CareHubTicketsLayout({
       : null;
 
   return (
-    <CareHubTicketsClientLayout initialList={initialList} listEtag={listEtag}>
-      {children}
-    </CareHubTicketsClientLayout>
+    <>
+      <RouteDocumentTitle title="All tickets" />
+      <CareHubTicketsClientLayout initialList={initialList} listEtag={listEtag}>
+        {children}
+      </CareHubTicketsClientLayout>
+    </>
   );
 }

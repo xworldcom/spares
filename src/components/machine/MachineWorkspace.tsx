@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
@@ -49,12 +50,14 @@ import {
   readPersistedHiddenParts,
   writePersistedHiddenParts,
 } from "@/lib/ui/hidden-parts-persist";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { dismissPartSheetAfterQuoteAdd } from "@/lib/ui/quote-tray-open-policy";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 import {
-  prefersViewerOverlayFullscreen,
+  shouldPinViewerOverlayFrame,
   viewerOverlayFramePx,
 } from "@/lib/ui/viewer-pseudo-fullscreen";
+import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
 
 const VIEWER_STAGE = "#12161c";
 
@@ -70,6 +73,7 @@ function ExpandIcon() {
 }
 
 export function MachineWorkspace({ machineId }: { machineId: string }) {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const isCustomer = user?.role === "customer";
   const [machine, setMachine] = useState<MachineDetail | null>(null);
@@ -127,7 +131,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const customerTrayInViewer = isCustomer && !conversationDock;
 
   useEffect(() => {
-    if (!overlay || !prefersViewerOverlayFullscreen()) {
+    if (!overlay || !shouldPinViewerOverlayFrame()) {
       setOverlayFrame(null);
       return;
     }
@@ -206,6 +210,21 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }, [machineId, reloadKey, user?.role]);
 
   useEffect(() => {
+    const partKey = searchParams.get("part")?.trim();
+    if (!partKey || !machine) {
+      return;
+    }
+    const needle = partKey.toLowerCase();
+    const match =
+      machine.parts.find((part) => part.id.toLowerCase() === needle) ??
+      machine.parts.find((part) => part.id.toLowerCase().includes(needle));
+    if (match) {
+      setSelectedPart(match);
+      setView("model");
+    }
+  }, [machine, searchParams]);
+
+  useEffect(() => {
     setLines([]);
     setLinesKey(null);
     setHiddenIds([]);
@@ -246,8 +265,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     writePersistedTrayNote(trayNoteStorageKey, trayNote);
   }, [trayNote, trayNoteStorageKey, linesKey, trayStorageKey]);
 
-  const lineIdsKey = lines.map((line) => line.part.id).join("\n");
-  const lifecycleIdsKey = [lineIdsKey, selectedPart?.id ?? ""].filter(Boolean).join("\n");
+  const lifecycleIdsKey = useMemo(() => {
+    const ids = new Set<string>();
+    for (const part of machine?.parts ?? []) {
+      ids.add(part.id);
+    }
+    for (const line of lines) {
+      ids.add(line.part.id);
+    }
+    if (selectedPart?.id) {
+      ids.add(selectedPart.id);
+    }
+    return [...ids].join("\n");
+  }, [machine?.parts, lines, selectedPart?.id]);
 
   const selectedPartForSheet = useMemo(() => {
     if (!selectedPart) {
@@ -405,6 +435,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
+  const atRiskPartsOnMachine = useMemo(() => {
+    return joinedParts.filter((part) => {
+      const lifecycle = lifecycleById[part.id];
+      return lifecycle?.status === "obsolete" || lifecycle?.status === "announced";
+    });
+  }, [joinedParts, lifecycleById]);
 
   const clearUndoRemove = useCallback(() => {
     if (undoRemoveTimer.current != null) {
@@ -828,6 +864,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
+          {!isCustomer && atRiskPartsOnMachine.length > 0 && view === "model" ? (
+            <div className="flex flex-wrap gap-2" data-machine-lifecycle-links="">
+              {atRiskPartsOnMachine.map((part) => (
+                <Link
+                  key={part.id}
+                  href={staffPartLifecycleViewHref(part.id)}
+                  className="btn-primary inline-flex h-9 items-center rounded-full px-3 text-[12px] font-semibold"
+                >
+                  View part
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {showViewToggle && hasModel ? (
               <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
@@ -994,6 +1043,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   return (
     <div className="machine-stage">
+      <DocumentTitle title={machine.name} />
       <h1 className="sr-only">{machine.name}</h1>
       {isCustomer ? <QuoteAddToast message={addToast} /> : null}
       {isCustomer && undoRemove ? (

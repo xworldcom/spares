@@ -9,7 +9,8 @@ export const DESKTOP_STAGE = "(min-width: 1024px)";
  * Side-docked quote tray and inline Care/quote Messages column — pointer-primary
  * desktops only. Coarse-pointer tablets (iPad) keep the bottom overlay sheet.
  */
-export const CONVERSATION_DOCK_STAGE = "(min-width: 1024px) and (pointer: fine)";
+/** Inline Messages column on xl+ desktops — 1440×900 keeps overlay + snap handle (#421 item 7). */
+export const CONVERSATION_DOCK_STAGE = "(min-width: 1536px) and (pointer: fine)";
 
 function subscribeMedia(query: string, onChange: () => void) {
   const media = window.matchMedia(query);
@@ -42,5 +43,24 @@ export function useConversationDockStage() {
     subscribeConversationDock,
     matchesConversationDock,
     () => false,
+  );
+}
+
+/** True below xl width — force overlay snap sheet (avoids inline-only Messages on tablet widths). */
+export const OVERLAY_CONVERSATION_SHEET_STAGE = "(max-width: 1535px)";
+
+function subscribeOverlayConversation(onChange: () => void) {
+  return subscribeMedia(OVERLAY_CONVERSATION_SHEET_STAGE, onChange);
+}
+
+function matchesOverlayConversation() {
+  return window.matchMedia(OVERLAY_CONVERSATION_SHEET_STAGE).matches;
+}
+
+export function useOverlayConversationSheet() {
+  return useSyncExternalStore(
+    subscribeOverlayConversation,
+    matchesOverlayConversation,
+    () => true,
   );
 }

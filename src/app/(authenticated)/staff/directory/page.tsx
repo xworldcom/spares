@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { RouteDocumentTitle } from "@/components/nav/RouteDocumentTitle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CreatePersonForm } from "@/components/staff/CreatePersonForm";
 import { HostTenantDirectory } from "@/components/staff/HostTenantDirectory";
@@ -76,6 +77,7 @@ function sortValue(entry: DirectoryEntry, key: SortKey): string | number {
 export default function StaffDirectoryPage() {
   return (
     <RequireAuth role="staff">
+      <RouteDocumentTitle title="Directory" />
       <Suspense>
         <StaffDirectory />
       </Suspense>

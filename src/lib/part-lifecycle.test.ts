@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   applyLifecycleUpsert,
   buildTenantPartCatalog,
+  effectiveLifecycle,
   enrichPartsWithLifecycle,
   healDemoPartLifecycle,
   reconcileCorruptedDemoLifecycleRows,
@@ -145,6 +146,37 @@ describe("reconcileCorruptedDemoLifecycleRows", () => {
     ]);
     assert.equal(rows[0]?.status, "obsolete");
     assert.equal(rows[0]?.successorPartNumber, "6331K53");
+  });
+
+  it("restores prod regression: active with demo discontinuation metadata", () => {
+    const rows = reconcileCorruptedDemoLifecycleRows([
+      {
+        id: "tenant-oee360-host::6331K32",
+        tenantId: "tenant-oee360-host",
+        partNumber: "6331K32",
+        status: "active",
+        discontinuationDate: "2025-06-01",
+        successorPartNumber: "6331K53",
+        sourceNotes: "Demo seed — motor line discontinued.",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    assert.equal(rows[0]?.status, "obsolete");
+  });
+});
+
+describe("effectiveLifecycle demo resolution", () => {
+  it("resolves 6331K32 active+dates to obsolete without persist heal", () => {
+    const fields = effectiveLifecycle({
+      id: "tenant-oee360-host::6331K32",
+      tenantId: "tenant-oee360-host",
+      partNumber: "6331K32",
+      status: "active",
+      discontinuationDate: "2025-06-01",
+      successorPartNumber: "6331K53",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.equal(fields.status, "obsolete");
   });
 });
 
