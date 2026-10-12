@@ -6,6 +6,7 @@ export type ViewerOrbitSnapshot = {
   target: [number, number, number];
 };
 
+/** Sole renderer sizing path: layout-root pixels → WebGL buffer + canvas CSS. */
 export function syncRendererViewport(
   gl: WebGLRenderer,
   camera: PerspectiveCamera,
@@ -18,7 +19,7 @@ export function syncRendererViewport(
   }
   const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
   gl.setPixelRatio(dpr);
-  gl.setSize(width, height, false);
+  gl.setSize(width, height, true);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   return true;

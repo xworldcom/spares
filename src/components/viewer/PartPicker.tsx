@@ -562,7 +562,6 @@ function ViewerCanvas({
   explode,
   fitKey,
   resetKey,
-  viewerFullscreen,
   assemblyKey,
   layoutRootRef,
   hiddenIds,
@@ -576,7 +575,6 @@ function ViewerCanvas({
   explode: number;
   fitKey: number;
   resetKey: number;
-  viewerFullscreen: boolean;
   assemblyKey: string;
   layoutRootRef: React.RefObject<HTMLDivElement | null>;
   hiddenIds: readonly string[];
@@ -646,6 +644,9 @@ function ViewerCanvas({
       camera={{ position: [2.8, 1.9, 2.5], fov: 40, near: 0.05, far: 8000 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, preserveDrawingBuffer: true }}
+      onCreated={(state) => {
+        state.setSize = () => undefined;
+      }}
       onPointerMissed={() => {
         const gesture = gestureRef.current;
         if (!gesture.dragging && !gesture.moved) {
@@ -694,7 +695,6 @@ function ViewerCanvas({
             layoutRootRef={layoutRootRef}
             fitKey={fitKey}
             resetKey={resetKey}
-            viewerFullscreen={viewerFullscreen}
             assemblyKey={assemblyKey}
             modelSrc={src}
           />
@@ -721,7 +721,6 @@ export function PartPicker({
   explode = 0,
   fitKey = 0,
   resetKey = 0,
-  viewerFullscreen = false,
   layoutRootRef,
   hiddenIds = [],
   isolatedId = null,
@@ -770,7 +769,7 @@ export function PartPicker({
   }
 
   const internalLayoutRef = useRef<HTMLDivElement>(null);
-  const surfaceRef = layoutRootRef ?? internalLayoutRef;
+  const measureRef = layoutRootRef ?? internalLayoutRef;
   const assemblyKey = [
     hiddenIds.join("\0"),
     isolatedId ?? "",
@@ -779,9 +778,9 @@ export function PartPicker({
 
   return (
     <div
-      ref={surfaceRef}
-      className={`relative ${className ?? ""}`}
-      style={{ height: "100%", minHeight: 0, touchAction: "none" }}
+      ref={layoutRootRef ? undefined : internalLayoutRef}
+      className={`absolute inset-0 ${className ?? ""}`}
+      style={{ touchAction: "none" }}
     >
       <ViewerCanvas
         src={src}
@@ -790,9 +789,8 @@ export function PartPicker({
         explode={explode}
         fitKey={fitKey}
         resetKey={resetKey}
-        viewerFullscreen={viewerFullscreen}
         assemblyKey={assemblyKey}
-        layoutRootRef={surfaceRef}
+        layoutRootRef={measureRef}
         hiddenIds={hiddenIds}
         isolatedId={isolatedId}
         onPick={handlePick}

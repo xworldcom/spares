@@ -19,7 +19,7 @@ describe("lifecycle email rough-in", () => {
       machineNames: ["Line A", "Line B"],
       discontinuationDate: "2026-12-31",
       successorPartNumber: "PN-1A",
-      appUrl: "https://oee360.com/notifications",
+      appUrl: "https://oee360.com/part-alerts",
       role: "customer",
     });
     assert.match(built.subject, /PN-1/);

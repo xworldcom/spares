@@ -585,6 +585,8 @@ export function QuoteActivityFeed({
             ref={fileInputRef}
             type="file"
             className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
             multiple
             onChange={(event) => {
               if (event.target.files?.length) {
@@ -597,6 +599,7 @@ export function QuoteActivityFeed({
             type="button"
             className="imsg-attach"
             aria-label="Attach file"
+            title="Attach file"
             disabled={busy || uploading}
             onClick={() => fileInputRef.current?.click()}
           >

@@ -762,7 +762,13 @@ export function trackingVisible(status: QuoteStatus) {
 }
 
 export function canEditTracking(status: QuoteStatus) {
-  return status === "shipped" || status === "ordered";
+  if (status === "cancelled" || status === "closed") {
+    return false;
+  }
+  if (quoteHasReached(status, "delivered")) {
+    return false;
+  }
+  return quoteHasReached(status, "po_received");
 }
 
 export function quoteTitle(quote: { number: number; machineName?: string }) {

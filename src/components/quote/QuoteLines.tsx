@@ -45,6 +45,66 @@ function selectQtyInput(input: HTMLInputElement) {
   }
 }
 
+function StaffMoneyInput({
+  label,
+  value,
+  inputId,
+  error,
+  onError,
+  onCommit,
+}: {
+  label: string;
+  value?: number;
+  inputId: string;
+  error?: string;
+  onError: (message: string | null) => void;
+  onCommit: (value?: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  function commit(raw: string) {
+    const parsed = parseStaffMoneyField(raw);
+    if (!parsed.ok) {
+      onError(parsed.error);
+      setDraft(null);
+      return;
+    }
+    onError(null);
+    onCommit(parsed.value);
+    setDraft(null);
+  }
+
+  return (
+    <Field label={label}>
+      <input
+        id={inputId}
+        type="text"
+        inputMode="decimal"
+        value={draft ?? (value !== undefined ? value.toFixed(2) : "")}
+        onFocus={() => {
+          setDraft(value !== undefined ? value.toFixed(2) : "");
+        }}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          const parsed = parseStaffMoneyField(event.target.value);
+          if (!parsed.ok && event.target.value.trim()) {
+            onError(parsed.error);
+          } else if (parsed.ok) {
+            onError(null);
+          }
+        }}
+        onBlur={() => commit(draft ?? (value !== undefined ? value.toFixed(2) : ""))}
+        className={inputClass}
+        placeholder="0.00"
+        aria-invalid={error ? true : undefined}
+      />
+      {error ? (
+        <p className="mt-1 text-xs text-[#f0c4c0]" role="alert">{error}</p>
+      ) : null}
+    </Field>
+  );
+}
+
 function QtyField({
   value,
   onCommit,
@@ -109,10 +169,13 @@ function QtyField({
             const next = sanitizeQtyDraft(event.target.value);
             setDraft(next);
             replaceOnType.current = false;
+            if (!next.trim()) {
+              setError(null);
+              return;
+            }
             const validated = validateEditableQty(next);
             if (validated.ok) {
               setError(null);
-              onCommit(validated.qty);
             } else {
               setError(validated.error);
             }
@@ -227,72 +290,45 @@ export function QuoteLines({
                 />
                 {pricingEditable ? (
                   <>
-                <Field label="Supplier cost">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={
-                      item.supplierCost !== undefined
-                        ? item.supplierCost.toFixed(2)
-                        : ""
-                    }
-                    onChange={(event) => {
-                      const parsed = parseStaffMoneyField(event.target.value);
-                      const key = `cost-${item.id}`;
-                      if (!parsed.ok) {
-                        setMoneyErrors((prev) => ({ ...prev, [key]: parsed.error }));
-                        return;
-                      }
-                      setMoneyErrors((prev) => {
-                        const next = { ...prev };
+                <StaffMoneyInput
+                  label="Supplier cost"
+                  inputId={`cost-${item.id}`}
+                  value={item.supplierCost}
+                  error={moneyErrors[`cost-${item.id}`]}
+                  onError={(message) => {
+                    const key = `cost-${item.id}`;
+                    setMoneyErrors((prev) => {
+                      const next = { ...prev };
+                      if (message) {
+                        next[key] = message;
+                      } else {
                         delete next[key];
-                        return next;
-                      });
-                      patch(index, { supplierCost: parsed.value });
-                    }}
-                    className={inputClass}
-                    placeholder="0.00"
-                    aria-invalid={moneyErrors[`cost-${item.id}`] ? true : undefined}
-                  />
-                  {moneyErrors[`cost-${item.id}`] ? (
-                    <p className="mt-1 text-xs text-[#f0c4c0]" role="alert">
-                      {moneyErrors[`cost-${item.id}`]}
-                    </p>
-                  ) : null}
-                </Field>
-                <Field label="Sell price">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={
-                      item.sellPrice !== undefined ? item.sellPrice.toFixed(2) : ""
-                    }
-                    onChange={(event) => {
-                      const parsed = parseStaffMoneyField(event.target.value);
+                      }
+                      return next;
+                    });
+                  }}
+                  onCommit={(nextValue) => patch(index, { supplierCost: nextValue })}
+                />
+                <div>
+                  <StaffMoneyInput
+                    label="Sell price"
+                    inputId={`sell-${item.id}`}
+                    value={item.sellPrice}
+                    error={moneyErrors[`sell-${item.id}`]}
+                    onError={(message) => {
                       const key = `sell-${item.id}`;
-                      if (!parsed.ok) {
-                        setMoneyErrors((prev) => ({ ...prev, [key]: parsed.error }));
-                        return;
-                      }
                       setMoneyErrors((prev) => {
                         const next = { ...prev };
-                        delete next[key];
+                        if (message) {
+                          next[key] = message;
+                        } else {
+                          delete next[key];
+                        }
                         return next;
                       });
-                      patch(index, { sellPrice: parsed.value });
                     }}
-                    className={inputClass}
-                    placeholder="0.00"
-                    aria-invalid={!hasSellPrice(item) || moneyErrors[`sell-${item.id}`] ? true : undefined}
-                    aria-describedby={
-                      !hasSellPrice(item) ? `sell-hint-${item.id}` : undefined
-                    }
+                    onCommit={(nextValue) => patch(index, { sellPrice: nextValue })}
                   />
-                  {moneyErrors[`sell-${item.id}`] ? (
-                    <p className="mt-1 text-xs text-[#f0c4c0]" role="alert">
-                      {moneyErrors[`sell-${item.id}`]}
-                    </p>
-                  ) : null}
                   {!hasSellPrice(item) ? (
                     <p
                       id={`sell-hint-${item.id}`}
@@ -302,7 +338,7 @@ export function QuoteLines({
                       Enter a sell price above zero before quoting.
                     </p>
                   ) : null}
-                </Field>
+                </div>
                 <Field label="Lead time (days)">
                   <input
                     type="number"

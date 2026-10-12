@@ -4,10 +4,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { MAX_QUOTE_ITEM_ID } from "@/lib/quotes";
 import {
-  parseEditableQty,
-  qtyDraftIsComplete,
   qtyKeyReplacesDraft,
   sanitizeQtyDraft,
+  validateEditableQty,
 } from "@/lib/ui/editable-qty";
 import type { PartLifecycleInfo } from "@/types";
 
@@ -33,50 +32,69 @@ function TrayQtyInput({
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const replaceOnType = useRef(true);
 
   function commit(raw: string) {
-    onCommit(parseEditableQty(raw));
+    const validated = validateEditableQty(raw);
+    if (!validated.ok) {
+      setError(validated.error);
+      setDraft(null);
+      replaceOnType.current = true;
+      return;
+    }
+    setError(null);
+    onCommit(validated.qty);
     setDraft(null);
     replaceOnType.current = true;
   }
 
   return (
-    <input
-      id={id}
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      autoComplete="off"
-      aria-label={label}
-      value={draft ?? String(value)}
-      onFocus={() => {
-        setDraft(String(value));
-        replaceOnType.current = true;
-      }}
-      onChange={(event) => {
-        const next = sanitizeQtyDraft(event.target.value);
-        setDraft(next);
-        replaceOnType.current = false;
-        if (qtyDraftIsComplete(next)) {
-          onCommit(parseEditableQty(next));
-        }
-      }}
-      onBlur={() => commit(draft ?? String(value))}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          event.currentTarget.blur();
-          return;
-        }
-        if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
-          event.preventDefault();
+    <div>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="off"
+        aria-label={label}
+        aria-invalid={error ? true : undefined}
+        value={draft ?? String(value)}
+        onFocus={() => {
+          setDraft(String(value));
+          replaceOnType.current = true;
+        }}
+        onChange={(event) => {
+          const next = sanitizeQtyDraft(event.target.value);
+          setDraft(next);
           replaceOnType.current = false;
-          setDraft(event.key);
-          onCommit(parseEditableQty(event.key));
-        }
-      }}
-      className="spares-field h-11 w-14 rounded-2xl border-0 px-2 text-center text-[16px] tabular-nums outline-none"
-    />
+          if (!next.trim()) {
+            setError(null);
+            return;
+          }
+          const validated = validateEditableQty(next);
+          setError(validated.ok ? null : validated.error);
+        }}
+        onBlur={() => commit(draft ?? String(value))}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+            return;
+          }
+          if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
+            event.preventDefault();
+            replaceOnType.current = false;
+            setDraft(event.key);
+          }
+        }}
+        className="spares-field h-11 w-14 rounded-2xl border-0 px-2 text-center text-[16px] tabular-nums outline-none"
+      />
+      {error ? (
+        <p className="mt-0.5 text-[10px] leading-tight text-[#f0c4c0]" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -138,7 +156,6 @@ export function ManualQuoteLines({
   function addLine() {
     const id = lineId(partNumber, description);
     const name = description.trim() || partNumber.trim();
-    const nextQty = Number.parseInt(qty, 10);
     if (!id || !name) {
       setError("Add a part number or description.");
       return;
@@ -147,10 +164,12 @@ export function ManualQuoteLines({
       setError("Part number or description is too long.");
       return;
     }
-    if (!Number.isInteger(nextQty) || nextQty < 1) {
-      setError("Quantity must be at least 1.");
+    const qtyValidated = validateEditableQty(qty);
+    if (!qtyValidated.ok) {
+      setError(qtyValidated.error);
       return;
     }
+    const nextQty = qtyValidated.qty;
     if (lines.some((line) => line.id === id)) {
       setError("That part is already on this quote.");
       return;

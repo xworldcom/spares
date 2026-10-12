@@ -106,6 +106,7 @@ import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
 import {
   applyDemoTenantB1Migration,
   applyDemoTenantB2StageQuotesMigration,
+  applyDemoQuote26HealMigration,
   applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
@@ -1756,6 +1757,11 @@ async function runDemoTenantMigration(
   const staffB = applyDemoTenantStaffBMigration(next);
   if (staffB.changed) {
     next = staffB.db;
+    changed = true;
+  }
+  const q26 = applyDemoQuote26HealMigration(next);
+  if (q26.changed) {
+    next = q26.db;
     changed = true;
   }
   return { db: next, changed };

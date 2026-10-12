@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
@@ -24,7 +24,14 @@ import {
 import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
 import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
 import { useRequestGeneration } from "@/lib/ui/request-generation";
-import type { Quote, QuoteStatus, QuotesListResponse, Role } from "@/lib/api/types";
+import type { Quote, QuotesListResponse, Role } from "@/lib/api/types";
+import {
+  hrefWithQuotesListQuery,
+  QUOTES_Q_QUERY,
+  QUOTES_STATUS_QUERY,
+  quotesStatusFromParam,
+  type QuotesStatusFilter,
+} from "@/lib/quotes-list-filter";
 
 export function QuotesList({
   role,
@@ -36,17 +43,37 @@ export function QuotesList({
   initialList?: QuotesListResponse | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const listBase = role === "staff" ? "/staff/quotes" : "/quotes";
   const { refresh } = useQuoteAlerts();
   const [quotes, setQuotes] = useState<Quote[]>(initialList?.quotes ?? []);
   const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<
-    QuoteStatus | "all" | "in_review" | "closed_group"
-  >("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const statusFilter = quotesStatusFromParam(
+    searchParams.get(QUOTES_STATUS_QUERY),
+    role === "staff" ? "staff" : "customer",
+  );
+  const searchQuery = searchParams.get(QUOTES_Q_QUERY) ?? "";
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 250);
+
+  const replaceListQuery = useCallback(
+    (patch: Record<string, string | undefined>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(patch)) {
+        const trimmed = value?.trim();
+        if (!trimmed) {
+          next.delete(key);
+        } else {
+          next.set(key, trimmed);
+        }
+      }
+      const qs = next.toString();
+      router.replace(`${listBase}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [listBase, router, searchParams],
+  );
   const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
@@ -97,10 +124,13 @@ export function QuotesList({
     }
     rememberQuotesForNav(quotes);
     for (const quote of quotes.slice(0, 6)) {
-      prefetchAppRoute(router, quoteHref(role, quote));
+      prefetchAppRoute(
+        router,
+        hrefWithQuotesListQuery(quoteHref(role, quote), searchParams),
+      );
       warmQuoteDetail(quote);
     }
-  }, [quotes, role, router]);
+  }, [quotes, role, router, searchParams]);
 
   const visible = useMemo(() => {
     let rows = machineId
@@ -138,7 +168,7 @@ export function QuotesList({
   }, [quotes, machineId, statusFilter, debouncedSearch, role]);
 
   const statusFilters: Array<{
-    value: QuoteStatus | "all" | "in_review" | "closed_group";
+    value: QuotesStatusFilter;
     label: string;
   }> =
     role === "staff"
@@ -180,10 +210,20 @@ export function QuotesList({
   }
 
   if (visible.length === 0) {
+    const searchNoMatch = Boolean(debouncedSearch) && quotes.length > 0;
     const filteredEmpty =
-      !machineId && quotes.length > 0 && statusFilter !== "all";
+      !machineId && quotes.length > 0 && (statusFilter !== "all" || searchNoMatch);
     return (
       <div className="space-y-3">
+        {role === "staff" && !machineId ? (
+          <CatalogSearch
+            id="staff-quotes-search"
+            label="Search quotes"
+            value={searchQuery}
+            onChange={(value) => replaceListQuery({ [QUOTES_Q_QUERY]: value })}
+            placeholder="Quote #, machine, customer…"
+          />
+        ) : null}
         {!machineId ? (
           <div className="flex flex-wrap gap-1.5">
             {statusFilters.map((option) => (
@@ -191,7 +231,12 @@ export function QuotesList({
                 key={option.value}
                 type="button"
                 aria-pressed={statusFilter === option.value}
-                onClick={() => setStatusFilter(option.value)}
+                onClick={() =>
+                  replaceListQuery({
+                    [QUOTES_STATUS_QUERY]:
+                      option.value === "all" ? undefined : option.value,
+                  })
+                }
                 className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
                   statusFilter === option.value ? "btn-primary" : "btn-soft"
                 }`}
@@ -205,7 +250,9 @@ export function QuotesList({
           title={filteredEmpty ? "No quotes match" : "No quotes yet"}
           message={
             filteredEmpty
-              ? "Try another filter or clear the current one."
+              ? searchNoMatch
+                ? "Try another search or clear the box."
+                : "Try another filter or clear the current one."
               : machineId
                 ? "Nothing quoted for this machine yet. Open the model, add parts to the tray, then request a quote."
                 : role === "staff"
@@ -214,13 +261,23 @@ export function QuotesList({
           }
           action={
             filteredEmpty ? (
-              <button
-                type="button"
-                onClick={() => setStatusFilter("all")}
-                className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-              >
-                Clear filters
-              </button>
+              searchNoMatch ? (
+                <button
+                  type="button"
+                  onClick={() => replaceListQuery({ [QUOTES_Q_QUERY]: undefined })}
+                  className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+                >
+                  Clear search
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => replaceListQuery({ [QUOTES_STATUS_QUERY]: undefined })}
+                  className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+                >
+                  Clear filters
+                </button>
+              )
             ) : user?.role === "customer" && !machineId ? (
               <Link
                 href="/machines"
@@ -242,7 +299,7 @@ export function QuotesList({
           id="staff-quotes-search"
           label="Search quotes"
           value={searchQuery}
-          onChange={setSearchQuery}
+          onChange={(value) => replaceListQuery({ [QUOTES_Q_QUERY]: value })}
           placeholder="Quote #, machine, customer…"
         />
       ) : null}
@@ -253,7 +310,12 @@ export function QuotesList({
               key={option.value}
               type="button"
               aria-pressed={statusFilter === option.value}
-              onClick={() => setStatusFilter(option.value)}
+              onClick={() =>
+                replaceListQuery({
+                  [QUOTES_STATUS_QUERY]:
+                    option.value === "all" ? undefined : option.value,
+                })
+              }
               className={`inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium ${
                 statusFilter === option.value ? "btn-primary" : "btn-soft"
               }`}
@@ -275,7 +337,7 @@ export function QuotesList({
         return (
           <li key={quote.id}>
             <PrefetchLink
-              href={quoteHref(role, quote)}
+              href={hrefWithQuotesListQuery(quoteHref(role, quote), searchParams)}
               warm={() => warmQuoteDetail(quote)}
               className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-white/4 sm:items-center"
             >

@@ -670,9 +670,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           ? overlayFrame
             ? "fixed inset-x-0 z-40 flex flex-col overscroll-none"
             : "fixed inset-x-0 bottom-0 z-40 flex flex-col overscroll-none top-[var(--spares-header)]"
-          : fullscreen
-            ? "flex h-full min-h-0 flex-col overscroll-none"
-            : "machine-viewer overflow-hidden sm:rounded-[28px]"
+          : "machine-viewer flex min-h-0 flex-col overflow-hidden sm:rounded-[28px]"
       }
       style={
         overlay && overlayFrame
@@ -688,6 +686,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       }}
     >
       <div
+        ref={viewerLayoutRef}
         className="relative min-h-0 flex-1"
         data-machine-viewer-layout=""
       >
@@ -699,7 +698,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             explode={explode}
             fitKey={viewerFitKey}
             resetKey={viewerResetKey}
-            viewerFullscreen={fullscreen}
             layoutRootRef={viewerLayoutRef}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}

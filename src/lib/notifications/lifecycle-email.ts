@@ -73,7 +73,7 @@ export function createLifecycleEmailMailer(mailer?: ChatEmailMailer): LifecycleE
         return;
       }
       console.info(JSON.stringify({ tag: "lifecycle-email-notify", to: input.to, partNumber: input.partNumber }));
-      const path = input.role === "staff" ? "/staff/parts" : "/notifications";
+      const path = input.role === "staff" ? "/staff/parts" : "/part-alerts";
       const appUrl = `${publicAppOrigin()}${path}?q=${encodeURIComponent(input.partNumber)}`;
       const built = buildPartObsoleteEmail({
         partNumber: input.partNumber,

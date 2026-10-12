@@ -327,8 +327,10 @@ describe("status and visibility", () => {
     assert.equal(pricesVisibleToCustomer("delivered"), true);
   });
 
-  it("lets staff edit tracking at ordered or shipped", () => {
-    assert.equal(canEditTracking("confirmed"), false);
+  it("lets staff edit tracking from PO received through shipped", () => {
+    assert.equal(canEditTracking("quoted"), false);
+    assert.equal(canEditTracking("po_received"), true);
+    assert.equal(canEditTracking("confirmed"), true);
     assert.equal(canEditTracking("ordered"), true);
     assert.equal(canEditTracking("shipped"), true);
     assert.equal(canEditTracking("delivered"), false);

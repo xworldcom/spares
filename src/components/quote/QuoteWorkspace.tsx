@@ -22,6 +22,7 @@ import { formatDay } from "@/components/quote/quote-format";
 import { ErrorState } from "@/components/states/ErrorState";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { errorMessage } from "@/lib/api/errors";
+import { quotesListQueryString } from "@/lib/quotes-list-filter";
 import {
   getQuote,
   postQuoteActivity,
@@ -375,7 +376,8 @@ export function QuoteWorkspace({
         })
       : null;
 
-  const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
+  const listHrefBase = role === "staff" ? "/staff/quotes" : "/quotes";
+  const listHref = `${listHrefBase}${quotesListQueryString(searchParams)}`;
   const displayStatus = pendingStatus ?? quote.status;
   const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
   const fulfillment = quoteFulfillmentVisibility(quote, role, displayStatus);
@@ -621,7 +623,7 @@ export function QuoteWorkspace({
           />
         ) : null}
       </div>
-      {role === "staff" && pricingLocked ? (
+      {role === "staff" && pricingLocked && !staffReadOnly ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/4 px-4 py-3">
           <p className="text-sm text-[var(--spares-muted)]">
             Pricing is locked after PO received.

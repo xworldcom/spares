@@ -62,7 +62,7 @@ export function LifecycleNotificationsPanel({
           : await fetchLifecycleNotifications({ fresh, background });
         setRows(data.notifications);
       } catch (cause) {
-        setError(errorMessage(cause, "Could not load notifications."));
+        setError(errorMessage(cause, "Could not load part alerts."));
         if (!background) {
           setRows([]);
         }
@@ -108,7 +108,7 @@ export function LifecycleNotificationsPanel({
     user?.role === "staff" ? "/staff/parts" : "/machines";
 
   if (loading && rows.length === 0) {
-    return <LoadingState label="Loading notifications…" />;
+    return <LoadingState label="Loading part alerts…" />;
   }
 
   if (error && rows.length === 0) {
