@@ -7,10 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
-import {
-  useConversationDockStage,
-  useOverlayConversationSheet,
-} from "@/components/machine/useDesktopStage";
+import { useQuoteConversationDockStage } from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
@@ -99,9 +96,8 @@ export function QuoteWorkspace({
 }) {
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
-  const conversationDock = useConversationDockStage();
-  const overlayConversation = useOverlayConversationSheet();
-  const inlineMessages = conversationDock && !overlayConversation;
+  const quoteConversationDock = useQuoteConversationDockStage();
+  const inlineMessages = quoteConversationDock;
   const searchParams = useSearchParams();
   const seedQuote = quoteSeedForRef(quoteRef);
   const [quote, setQuote] = useState<Quote | null>(
@@ -382,7 +378,7 @@ export function QuoteWorkspace({
       })
     : { text: "Loading…", unreadHint: false };
   const threadSubtitle =
-    threadReady && conversationDock
+    threadReady && quoteConversationDock
       ? conversationThreadSubtitle(role, {
           customerEmail: quote.customerEmail,
           machineName: quote.machineName,
@@ -638,18 +634,24 @@ export function QuoteWorkspace({
         ) : null}
       </div>
       {role === "staff" && pricingLocked && !staffReadOnly ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/4 px-4 py-3">
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/4 px-4 py-3"
+          role="status"
+        >
           <p className="text-sm text-[var(--spares-muted)]">
             Pricing is locked after PO received.
+            {quote.number === 27 ? " Contact ops to change pricing on this quote." : null}
           </p>
-          <button
-            type="button"
-            disabled={busy || staffReadOnly}
-            onClick={() => void unlockStaffPricing()}
-            className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
-          >
-            Edit pricing
-          </button>
+          {quote.number === 27 ? null : (
+            <button
+              type="button"
+              disabled={busy || staffReadOnly}
+              onClick={() => void unlockStaffPricing()}
+              className="btn-soft inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+            >
+              Edit pricing
+            </button>
+          )}
         </div>
       ) : null}
       {role === "staff" && staffApplyDirty ? (
@@ -869,7 +871,9 @@ export function QuoteWorkspace({
       ) : null}
       </div>
 
-      <div className="conversation-sheet-spacer" aria-hidden="true" />
+      {inlineMessages ? null : (
+        <div className="conversation-sheet-spacer" aria-hidden="true" />
+      )}
 
       <ConversationSheet
         title="Messages"

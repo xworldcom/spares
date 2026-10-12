@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
@@ -452,37 +453,34 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     rehydrateTrayLinesFromStorage();
   }, [rehydrateTrayLinesFromStorage]);
 
+  const showUndoRemove = useCallback((removed: TrayLine) => {
+    if (undoRemoveTimer.current != null) {
+      window.clearTimeout(undoRemoveTimer.current);
+    }
+    undoRemoveRef.current = removed;
+    setUndoRemove(removed);
+    undoRemoveTimer.current = window.setTimeout(() => {
+      setUndoRemove(null);
+      undoRemoveRef.current = null;
+      undoRemoveTimer.current = null;
+    }, UNDO_REMOVE_MS);
+  }, []);
+
   const removeTrayLine = useCallback(
     (partId: string) => {
-      let removedLine: TrayLine | null = null;
-      setLines((current) => {
-        const removed = current.find((line) => line.part.id === partId);
-        if (!removed) {
-          return current;
-        }
-        removedLine = removed;
-        const next = current.filter((line) => line.part.id !== partId);
-        if (next.length === 0) {
-          setTrayNote("");
-        }
-        commitTrayLinesToStorage(next, true);
-        return next;
-      });
-      if (!removedLine) {
+      const removed = lines.find((line) => line.part.id === partId);
+      if (!removed) {
         return;
       }
-      if (undoRemoveTimer.current != null) {
-        window.clearTimeout(undoRemoveTimer.current);
+      const next = lines.filter((line) => line.part.id !== partId);
+      if (next.length === 0) {
+        setTrayNote("");
       }
-      undoRemoveRef.current = removedLine;
-      setUndoRemove(removedLine);
-      undoRemoveTimer.current = window.setTimeout(() => {
-        setUndoRemove(null);
-        undoRemoveRef.current = null;
-        undoRemoveTimer.current = null;
-      }, UNDO_REMOVE_MS);
+      commitTrayLinesToStorage(next, true);
+      setLines(next);
+      showUndoRemove(removed);
     },
-    [commitTrayLinesToStorage],
+    [lines, commitTrayLinesToStorage, showUndoRemove],
   );
 
   const undoTrayRemove = useCallback(() => {
@@ -702,14 +700,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   const quoteCount = trayLines.reduce((sum, line) => sum + line.qty, 0);
 
+  const viewerOverlayClass = overlayFrame
+    ? "machine-viewer fixed inset-x-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none"
+    : "machine-viewer fixed inset-x-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none top-[var(--spares-header)]";
+
   const viewerBlock = (
     <div
       ref={chromeRef}
+      data-machine-viewer-chrome=""
       className={
         overlay
-          ? overlayFrame
-            ? "fixed inset-x-0 z-40 flex flex-col overscroll-none"
-            : "fixed inset-x-0 bottom-0 z-40 flex flex-col overscroll-none top-[var(--spares-header)]"
+          ? viewerOverlayClass
           : "machine-viewer flex min-h-0 flex-col overflow-hidden sm:rounded-[28px]"
       }
       style={
@@ -1046,13 +1047,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       <DocumentTitle title={machine.name} />
       <h1 className="sr-only">{machine.name}</h1>
       {isCustomer ? <QuoteAddToast message={addToast} /> : null}
-      {isCustomer && undoRemove ? (
-        <QuoteUndoToast
-          label={undoRemove.part.name}
-          onUndo={undoTrayRemove}
-          onDismiss={clearUndoRemove}
-        />
-      ) : null}
+      {isCustomer && undoRemove && hydrated
+        ? createPortal(
+            <QuoteUndoToast
+              label={undoRemove.part.name}
+              onUndo={undoTrayRemove}
+              onDismiss={clearUndoRemove}
+            />,
+            document.body,
+          )
+        : null}
 
       <div
         ref={staffSplitView ? staffSplit.containerRef : undefined}

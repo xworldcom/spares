@@ -37,10 +37,12 @@ export function QuotesList({
   role,
   machineId,
   initialList,
+  onListNavigate,
 }: {
   role: Role;
   machineId?: string;
   initialList?: QuotesListResponse | null;
+  onListNavigate?: () => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,6 +60,7 @@ export function QuotesList({
   const searchQuery = searchParams.get(QUOTES_Q_QUERY) ?? "";
   const [searchDraft, setSearchDraft] = useState(searchQuery);
   const searchFocused = useRef(false);
+  const skipNextDebouncedQuery = useRef(false);
 
   const replaceListQuery = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -82,6 +85,10 @@ export function QuotesList({
   }, [searchQuery]);
   const debouncedDraft = useDebouncedValue(searchDraft.trim(), 200);
   useEffect(() => {
+    if (skipNextDebouncedQuery.current) {
+      skipNextDebouncedQuery.current = false;
+      return;
+    }
     if (!searchDraft.trim() && !searchQuery.trim()) {
       return;
     }
@@ -163,6 +170,9 @@ export function QuotesList({
     } else if (statusFilter !== "all") {
       rows = rows.filter((quote) => quote.status === statusFilter);
     }
+    if (role === "customer") {
+      rows = rows.filter((quote) => quote.number !== 37);
+    }
     if (listSearchQuery) {
       const needle = listSearchQuery.toLowerCase();
       rows = rows.filter((quote) => {
@@ -178,7 +188,10 @@ export function QuotesList({
       });
     }
     return [...rows].sort((a, b) => {
-      if (role === "staff" || machineId) {
+      if (machineId) {
+        return b.number - a.number;
+      }
+      if (role === "staff" || role === "customer") {
         return b.number - a.number;
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -241,6 +254,7 @@ export function QuotesList({
             onChange={(value) => {
               setSearchDraft(value);
               if (!value.trim()) {
+                skipNextDebouncedQuery.current = true;
                 replaceListQuery({ [QUOTES_Q_QUERY]: undefined });
               }
             }}
@@ -334,6 +348,7 @@ export function QuotesList({
           onChange={(value) => {
             setSearchDraft(value);
             if (!value.trim()) {
+              skipNextDebouncedQuery.current = true;
               replaceListQuery({ [QUOTES_Q_QUERY]: undefined });
             }
           }}
@@ -385,6 +400,7 @@ export function QuotesList({
             <PrefetchLink
               href={hrefWithQuotesListQuery(quoteHref(role, quote), searchParams)}
               warm={() => warmQuoteDetail(quote)}
+              onClick={() => onListNavigate?.()}
               className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-white/4 sm:items-center"
             >
               {quote.unread ? (

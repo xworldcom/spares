@@ -215,12 +215,12 @@ function QtyField({
               onPreview?.(null);
             }
           }}
-          onBlur={() => {
-            const raw = draft ?? String(value);
+          onBlur={(event) => {
+            const raw = event.currentTarget.value;
             const validated = validateEditableQty(raw);
             if (!validated.ok) {
               setError(validated.error);
-              setDraft(null);
+              setDraft(raw.trim() ? raw : null);
               onPreview?.(null);
               return;
             }

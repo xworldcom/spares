@@ -711,8 +711,8 @@ export function useSnapSheet({
     setThreadDockedState(true);
     if (closeProfile === "quote") {
       if (sheet === "full") {
-        clearCloseTranslate("reply");
-        settleTo("reply");
+        clearCloseTranslate("peek");
+        settleToVisualPeek();
         return;
       }
       if (sheet === "reply") {
@@ -736,13 +736,8 @@ export function useSnapSheet({
       setOpen(false);
       return;
     }
-    if (sheet === "full") {
-      setOpen(true);
-      clearCloseTranslate("reply");
-      settleTo("reply");
-      return;
-    }
-    if (sheet === "reply") {
+    if (sheet === "full" || sheet === "reply") {
+      clearCloseTranslate("peek");
       settleToVisualPeek();
       return;
     }
@@ -1180,7 +1175,11 @@ export function useSnapSheet({
       const ty = drag.current.liveTy;
       const mid = max / 2;
       if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
-        settleCloseTo(ty < mid ? "reply" : "out");
+        if (ty < mid) {
+          settleToVisualPeek();
+        } else {
+          settleCloseTo("out");
+        }
         return;
       }
       if (velocity > 0.35 || ty > mid + 12) {
@@ -1188,10 +1187,14 @@ export function useSnapSheet({
         return;
       }
       if (velocity < -0.35 || ty < mid - 12) {
-        settleCloseTo("reply");
+        settleToVisualPeek();
         return;
       }
-      settleCloseTo(ty >= mid ? "out" : "reply");
+      if (ty >= mid) {
+        settleCloseTo("out");
+      } else {
+        settleToVisualPeek();
+      }
       return;
     }
     settleSheet(dy, drag.current.from);

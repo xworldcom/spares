@@ -6,7 +6,9 @@ Staff **View part** links render in the 3D chrome when the machine has announced
 
 ## Item 7 @1440
 
-Messages use **phone overlay snap** (`.snap-sheet-handle` visible) below **1536px** width. Open Messages (peek/reply) before Close assertions.
+**Quote detail:** inline Messages column from **1280px** (`useQuoteConversationDockStage`) — gate v3 asserts `.conversation-sheet.is-inline` @1440, not overlay handle.
+
+**Care / tickets:** overlay snap below **1536px** — open Messages before Close assertions @390.
 
 ## sam-close-ticket9 @390
 

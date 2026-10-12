@@ -13,6 +13,8 @@ import {
   applyDemoTenantB2StageQuotesMigration,
   applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
+  applyDemoRv428DemoPolishMigration,
+  DEMO_TICKET_REALISTIC_TITLES_10_16,
   DEMO_TENANT_STAFF_B,
 } from "./demo-tenant-data-migration.ts";
 import { DEMO_STAGE_QUOTE_IDS } from "./demo-stage-quote-seed.ts";
@@ -273,6 +275,26 @@ describe("demo tenant v1 migration (auto)", () => {
     const second = applyDemoTenantStaffBMigration(first.db);
     assert.equal(second.changed, false);
     delete process.env.SPARES_ALLOW_SEED;
+  });
+
+  it("retitles demo tickets 10–16 and hides quote 37 from customers", () => {
+    const seed = {
+      tickets: [
+        { id: "t10", number: 10, title: "Ack dismiss preview", status: "open" },
+        { id: "t14", number: 14, title: "Short thread pin Absolute v5", status: "open" },
+        { id: "t16", number: 16, title: "Long thread scroll Absolute v6", status: "open" },
+      ],
+      quotes: [{ id: "q37", number: 37, status: "requested", note: "testing junk", items: [] }],
+    };
+    const first = applyDemoRv428DemoPolishMigration(seed);
+    assert.ok(first.changed);
+    assert.equal(first.db.tickets[0]?.title, DEMO_TICKET_REALISTIC_TITLES_10_16[10]);
+    assert.equal(first.db.tickets[1]?.title, DEMO_TICKET_REALISTIC_TITLES_10_16[14]);
+    assert.equal(first.db.tickets[2]?.title, DEMO_TICKET_REALISTIC_TITLES_10_16[16]);
+    assert.equal(first.db.quotes[0]?.hiddenFromCustomer, true);
+    assert.equal(first.db.quotes[0]?.note, undefined);
+    const second = applyDemoRv428DemoPolishMigration(first.db);
+    assert.equal(second.changed, false);
   });
 
   it("heals the Harware fixture machine name typo", async () => {

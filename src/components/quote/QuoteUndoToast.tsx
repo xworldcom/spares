@@ -10,9 +10,19 @@ export function QuoteUndoToast({
   onDismiss: () => void;
 }) {
   return (
-    <div className="quote-undo-toast" role="status" aria-live="polite">
+    <div
+      className="quote-undo-toast"
+      data-quote-undo-toast=""
+      role="status"
+      aria-live="polite"
+    >
       <span className="quote-undo-toast-text">Removed · {label}</span>
-      <button type="button" className="quote-undo-toast-action" onClick={onUndo}>
+      <button
+        type="button"
+        className="quote-undo-toast-action"
+        aria-label="Undo remove"
+        onClick={onUndo}
+      >
         Undo
       </button>
       <button

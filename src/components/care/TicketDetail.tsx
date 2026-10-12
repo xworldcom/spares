@@ -18,8 +18,8 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { invalidateWarmRead } from "@/lib/api/warm-read";
-import { errorMessage } from "@/lib/api/errors";
-import { isApiError } from "@/lib/api/errors";
+import { errorMessage, isApiError, NETWORK_TIMEOUT_MESSAGE } from "@/lib/api/errors";
+import { isAbortError } from "@/lib/api/fetch-deadline";
 import {
   isRecordConflictError,
   recordConflictMetaFromError,
@@ -203,6 +203,22 @@ export function TicketDetail({
     setFreshnessError,
   );
 
+  function ticketStatusNetworkError(cause: unknown): string | null {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return "You appear to be offline. Check your connection and try again.";
+    }
+    if (isAbortError(cause)) {
+      return NETWORK_TIMEOUT_MESSAGE;
+    }
+    if (isApiError(cause) && cause.status === 0) {
+      return cause.message;
+    }
+    if (cause instanceof TypeError && /fetch|network|load failed/i.test(cause.message)) {
+      return "Could not reach OEE360. Check your network and try again.";
+    }
+    return null;
+  }
+
   async function applyStatusPatch(
     status: TicketStatus,
     recordVersion: number,
@@ -259,15 +275,25 @@ export function TicketDetail({
           }
           return;
         }
-        if (isTimeoutLikeError(cause) || isApiError(cause) && cause.status === 0) {
-          const fresh = await getTicketFresh(ticket.id);
-          setTicket(fresh);
-          onTicketListPatch?.(fresh);
-          if (fresh.status === status) {
-            return;
+        const networkError = ticketStatusNetworkError(cause);
+        if (networkError) {
+          setFreshnessError(null);
+          setError(networkError);
+          return;
+        }
+        if (isTimeoutLikeError(cause)) {
+          const fresh = await getTicketFresh(ticket.id).catch(() => null);
+          if (fresh) {
+            setTicket(fresh);
+            onTicketListPatch?.(fresh);
+            if (fresh.status === status) {
+              return;
+            }
           }
           setError(
-            "That took too long. Your view is updated — try the status change once more.",
+            fresh
+              ? "That took too long. Your view is updated — try the status change once more."
+              : "Could not reach OEE360. Check your network and try again.",
           );
           return;
         }
@@ -380,7 +406,16 @@ export function TicketDetail({
             status={ticket.status}
             editable={staff}
             pending={busy || detailLoading}
-            onChange={staff && !detailLoading ? onStatus : undefined}
+            onChange={
+              staff
+                ? (next) => {
+                    if (detailLoading || busy) {
+                      return;
+                    }
+                    void onStatus(next);
+                  }
+                : undefined
+            }
           />
         </div>
       ) : (

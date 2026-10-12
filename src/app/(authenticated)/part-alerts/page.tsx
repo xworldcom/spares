@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { RouteDocumentTitle } from "@/components/nav/RouteDocumentTitle";
 import { LifecycleNotificationsPanel } from "@/components/notifications/LifecycleNotificationsPanel";
 import { LoadingState } from "@/components/states/LoadingState";
 import { getCurrentUser } from "@/lib/auth";
@@ -7,6 +9,10 @@ import { derivedListEtagForScope } from "@/lib/derived-list-cache";
 import { loadLifecycleNotificationsForSession } from "@/lib/lifecycle-notifications-list-server";
 import { lifecycleNotificationsScopeKey } from "@/lib/list-scope";
 import { tenantIdForUser } from "@/lib/tenant";
+
+export const metadata: Metadata = {
+  title: "Part alerts",
+};
 
 export default async function PartAlertsPage() {
   const user = await getCurrentUser();
@@ -21,6 +27,7 @@ export default async function PartAlertsPage() {
 
   return (
     <RequireAuth>
+      <RouteDocumentTitle title="Part alerts" />
       <div className="space-y-4">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight">Part alerts</h1>
