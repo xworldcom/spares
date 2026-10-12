@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { Part } from "@/lib/api/types";
+import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { PartDetailSheet } from "@/components/machine/PartDetailSheet";
 import { partSheetMetaLine, partSheetVisible } from "@/lib/ui/part-sheet";
@@ -36,6 +39,8 @@ export function SelectedPartSheet({
   /** List + quote peek: lift the chip above the tray so the next row stays tappable. */
   quoteTrayPeek?: boolean;
 }) {
+  const { user } = useAuth();
+  const staff = user?.role === "staff";
   const ready = useHydrated();
   const open = partSheetVisible(part?.id);
   const canAct = open && ready;
@@ -160,6 +165,14 @@ export function SelectedPartSheet({
           >
             ×
           </button>
+          {staff ? (
+            <Link
+              href={staffPartLifecycleViewHref(part.id)}
+              className="btn-primary inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[12px] font-semibold"
+            >
+              View part
+            </Link>
+          ) : null}
           <button
             type="button"
             data-part-sheet-control=""

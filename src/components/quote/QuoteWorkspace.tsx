@@ -175,13 +175,17 @@ export function QuoteWorkspace({
         }
         applyQuote(next);
         setError(null);
+        setFreshnessError(null);
       })
       .catch((cause: unknown) => {
         if (!isCurrent(generation)) {
           return;
         }
-        setError(errorMessage(cause, "Could not load this quote."));
-        if (!seed) {
+        const message = errorMessage(cause, "Could not load this quote.");
+        if (seed) {
+          setFreshnessError(message);
+        } else {
+          setError(message);
           setQuote(null);
         }
         setLoadedRef(quoteRef);
@@ -690,9 +694,14 @@ export function QuoteWorkspace({
         </p>
       ) : null}
       {freshnessError ? (
-        <p className="text-sm text-[#f0c4c0]" role="alert">
-          {freshnessError}
-        </p>
+        <ErrorState
+          title="Could not refresh this quote"
+          message={freshnessError}
+          onRetry={() => {
+            setFreshnessError(null);
+            setLoadAttempt((attempt) => attempt + 1);
+          }}
+        />
       ) : null}
       <div className="min-h-[3.25rem]" aria-live="polite">
         {notice && !(role === "staff" && staffApplyDirty) ? (

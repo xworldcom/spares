@@ -50,6 +50,7 @@ function StaffMoneyInput({
   value,
   inputId,
   error,
+  disabled = false,
   onError,
   onCommit,
   onPreview,
@@ -58,6 +59,7 @@ function StaffMoneyInput({
   value?: number;
   inputId: string;
   error?: string;
+  disabled?: boolean;
   onError: (message: string | null) => void;
   onCommit: (value?: number) => void;
   onPreview?: (value: number | undefined | null) => void;
@@ -65,6 +67,9 @@ function StaffMoneyInput({
   const [draft, setDraft] = useState<string | null>(null);
 
   function commit(raw: string) {
+    if (disabled) {
+      return;
+    }
     const trimmed = raw.trim();
     if (!trimmed && value !== undefined) {
       setDraft(null);
@@ -89,11 +94,18 @@ function StaffMoneyInput({
         id={inputId}
         type="text"
         inputMode="decimal"
+        disabled={disabled}
         value={draft ?? (value !== undefined ? value.toFixed(2) : "")}
         onFocus={() => {
+          if (disabled) {
+            return;
+          }
           setDraft(value !== undefined ? value.toFixed(2) : "");
         }}
         onChange={(event) => {
+          if (disabled) {
+            return;
+          }
           setDraft(event.target.value);
           if (!event.target.value.trim()) {
             onError(null);
@@ -354,12 +366,12 @@ export function QuoteLines({
                   }}
                   onPreview={(qty) => setLinePreviewField(item.id, "qty", qty)}
                 />
-                {pricingEditable ? (
-                  <>
+                <>
                 <StaffMoneyInput
                   label="Supplier cost"
                   inputId={`cost-${item.id}`}
                   value={item.supplierCost}
+                  disabled={!pricingEditable}
                   error={moneyErrors[`cost-${item.id}`]}
                   onError={(message) => {
                     const key = `cost-${item.id}`;
@@ -386,6 +398,7 @@ export function QuoteLines({
                     label="Sell price"
                     inputId={`sell-${item.id}`}
                     value={item.sellPrice}
+                    disabled={!pricingEditable}
                     error={moneyErrors[`sell-${item.id}`]}
                     onError={(message) => {
                       const key = `sell-${item.id}`;
@@ -453,12 +466,15 @@ export function QuoteLines({
                     className={inputClass}
                   />
                 </Field>
-                  </>
-                ) : (
-                  <p className="col-span-2 text-sm text-[#e8c27a] sm:col-span-3">
+                {!pricingEditable ? (
+                  <p
+                    className="col-span-2 text-sm text-[#e8c27a] sm:col-span-3"
+                    role="status"
+                  >
                     Pricing is locked after PO received.
                   </p>
-                )}
+                ) : null}
+                </>
               </div>
             ) : (
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">

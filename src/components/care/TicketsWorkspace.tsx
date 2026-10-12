@@ -469,7 +469,7 @@ export function TicketsWorkspace({
       ticketId={ticketId}
       seedTicket={selected}
       backHref={listHrefWithQuery}
-      embedded={conversationDock}
+      embedded={conversationDock && desktop}
       onUpdated={refresh}
       onTicketListPatch={patchTicketInList}
     />

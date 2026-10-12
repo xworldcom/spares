@@ -9,8 +9,8 @@ export const DESKTOP_STAGE = "(min-width: 1024px)";
  * Side-docked quote tray and inline Care/quote Messages column — pointer-primary
  * desktops only. Coarse-pointer tablets (iPad) keep the bottom overlay sheet.
  */
-/** Inline Messages column only on wide desktops — 1440×900 keeps overlay Close paths (#421 item 7). */
-export const CONVERSATION_DOCK_STAGE = "(min-width: 1441px) and (pointer: fine)";
+/** Inline Messages column on xl+ desktops — 1440×900 keeps overlay + snap handle (#421 item 7). */
+export const CONVERSATION_DOCK_STAGE = "(min-width: 1536px) and (pointer: fine)";
 
 function subscribeMedia(query: string, onChange: () => void) {
   const media = window.matchMedia(query);
