@@ -14,6 +14,7 @@ Use hub path **`/care/tickets/{id}`** (not machine-scoped). Harness: `node scrip
 
 Care ticket detail uses overlay snap below 1536px; confirm viewport width before querying `.snap-sheet-handle`.
 
-## Item 5 — `/staff/quotes` title
+## Item 5 — `document.title` (staff lists)
 
-SSR metadata `Quotes · OEE360` plus client `DocumentTitle`; wait for title to match `/Quotes · OEE360/` not bare `OEE360`.
+- **`/staff/quotes`:** SSR `metadata.title: "Quotes"` + `DocumentTitle`; expect `Quotes · OEE360`.
+- **`/staff/tickets`** (redirects to hub): SSR `metadata.title: "All tickets"` on staff + `/care/tickets` layout; `DocumentTitle` outside Suspense. WebKit @390: wait for `All tickets · OEE360`, not bare `OEE360`.
