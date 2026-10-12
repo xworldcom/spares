@@ -58,6 +58,7 @@ export function QuotesList({
   const searchQuery = searchParams.get(QUOTES_Q_QUERY) ?? "";
   const [searchDraft, setSearchDraft] = useState(searchQuery);
   const searchFocused = useRef(false);
+  const skipNextDebouncedQuery = useRef(false);
 
   const replaceListQuery = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -82,6 +83,10 @@ export function QuotesList({
   }, [searchQuery]);
   const debouncedDraft = useDebouncedValue(searchDraft.trim(), 200);
   useEffect(() => {
+    if (skipNextDebouncedQuery.current) {
+      skipNextDebouncedQuery.current = false;
+      return;
+    }
     if (!searchDraft.trim() && !searchQuery.trim()) {
       return;
     }
@@ -241,6 +246,7 @@ export function QuotesList({
             onChange={(value) => {
               setSearchDraft(value);
               if (!value.trim()) {
+                skipNextDebouncedQuery.current = true;
                 replaceListQuery({ [QUOTES_Q_QUERY]: undefined });
               }
             }}
@@ -334,6 +340,7 @@ export function QuotesList({
           onChange={(value) => {
             setSearchDraft(value);
             if (!value.trim()) {
+              skipNextDebouncedQuery.current = true;
               replaceListQuery({ [QUOTES_Q_QUERY]: undefined });
             }
           }}

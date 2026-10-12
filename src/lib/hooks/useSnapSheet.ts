@@ -711,8 +711,8 @@ export function useSnapSheet({
     setThreadDockedState(true);
     if (closeProfile === "quote") {
       if (sheet === "full") {
-        clearCloseTranslate("reply");
-        settleTo("reply");
+        clearCloseTranslate("peek");
+        settleToVisualPeek();
         return;
       }
       if (sheet === "reply") {

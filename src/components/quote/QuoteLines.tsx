@@ -220,7 +220,7 @@ function QtyField({
             const validated = validateEditableQty(raw);
             if (!validated.ok) {
               setError(validated.error);
-              setDraft(null);
+              setDraft(raw.trim() ? raw : null);
               onPreview?.(null);
               return;
             }

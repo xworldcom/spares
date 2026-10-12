@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { NewTicketForm } from "@/components/care/NewTicketForm";
@@ -124,6 +125,9 @@ export function TicketsWorkspace({
     scope === "machine" ? machineId ?? null : hubMachineFromUrl ?? null,
   );
   const searchQuery = searchParams.get(CARE_TICKETS_Q_QUERY) ?? "";
+  const [searchDraft, setSearchDraft] = useState(searchQuery);
+  const searchFocused = useRef(false);
+  const skipNextDebouncedQuery = useRef(false);
   const ticketsPageTitle = (() => {
     const base = workListTitle(
       "tickets",
@@ -247,7 +251,7 @@ export function TicketsWorkspace({
       return;
     }
     window.scrollTo(0, 0);
-  }, [desktop, pathname, showList]);
+  }, [desktop, pathname, showList, ticketId]);
   const machineScopedTickets = hubMachineFilter
     ? tickets.filter((ticket) => ticket.machineId === hubMachineFilter)
     : tickets;
@@ -281,14 +285,38 @@ export function TicketsWorkspace({
     [listHref, machineId, router, scope, searchParams, ticketId],
   );
 
+  useEffect(() => {
+    if (!searchFocused.current) {
+      setSearchDraft(searchQuery);
+    }
+  }, [searchQuery]);
+  const debouncedSearchDraft = useDebouncedValue(searchDraft.trim(), 200);
+  useEffect(() => {
+    if (skipNextDebouncedQuery.current) {
+      skipNextDebouncedQuery.current = false;
+      return;
+    }
+    if (!searchDraft.trim() && !searchQuery.trim()) {
+      return;
+    }
+    if (debouncedSearchDraft === searchQuery.trim()) {
+      return;
+    }
+    replaceListQuery({ [CARE_TICKETS_Q_QUERY]: debouncedSearchDraft || undefined });
+  }, [debouncedSearchDraft, replaceListQuery, searchDraft, searchQuery]);
+  const listSearchQuery =
+    searchDraft.trim() !== searchQuery.trim()
+      ? searchDraft.trim()
+      : debouncedSearchDraft;
+
   const visibleTickets = useMemo(
     () =>
       filterAndSortCareTickets(machineScopedTickets, {
-        query: searchQuery,
+        query: listSearchQuery,
         status: statusFilter,
         sort: sortKey,
       }),
-    [machineScopedTickets, searchQuery, sortKey, statusFilter],
+    [machineScopedTickets, listSearchQuery, sortKey, statusFilter],
   );
 
   const selected = ticketId
@@ -377,10 +405,23 @@ export function TicketsWorkspace({
             <CatalogSearch
               id="care-tickets-search"
               label="Search tickets"
-              value={searchQuery}
-              onChange={(value) =>
-                replaceListQuery({ [CARE_TICKETS_Q_QUERY]: value })
-              }
+              value={searchDraft}
+              onChange={(value) => {
+                setSearchDraft(value);
+                if (!value.trim()) {
+                  skipNextDebouncedQuery.current = true;
+                  replaceListQuery({ [CARE_TICKETS_Q_QUERY]: undefined });
+                }
+              }}
+              onFocus={() => {
+                searchFocused.current = true;
+              }}
+              onBlur={() => {
+                searchFocused.current = false;
+                if (searchDraft.trim() === searchQuery.trim()) {
+                  setSearchDraft(searchQuery);
+                }
+              }}
               placeholder="Search tickets"
             />
             <div className="tickets-workspace-filter-row">

@@ -273,15 +273,12 @@ export function MobileTabBar() {
                 type="button"
                 aria-expanded={machinesMenuOpen}
                 onClick={() => {
-                  if (moreOpen) {
-                    closeOverlayMenus();
-                    router.push("/machines");
+                  closeOverlayMenus();
+                  if (staffMachinesActive && !machinesMenuOpen) {
+                    setMachinesForPath(pathname);
                     return;
                   }
-                  setMoreForPath(null);
-                  setMachinesForPath((current) =>
-                    current === pathname ? null : pathname,
-                  );
+                  router.push("/machines");
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
                 className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${

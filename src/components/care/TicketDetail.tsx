@@ -259,15 +259,28 @@ export function TicketDetail({
           }
           return;
         }
-        if (isTimeoutLikeError(cause) || isApiError(cause) && cause.status === 0) {
-          const fresh = await getTicketFresh(ticket.id);
-          setTicket(fresh);
-          onTicketListPatch?.(fresh);
-          if (fresh.status === status) {
-            return;
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.onLine === false
+        ) {
+          setError(
+            "You appear to be offline. Check your connection and try again.",
+          );
+          return;
+        }
+        if (isTimeoutLikeError(cause) || (isApiError(cause) && cause.status === 0)) {
+          const fresh = await getTicketFresh(ticket.id).catch(() => null);
+          if (fresh) {
+            setTicket(fresh);
+            onTicketListPatch?.(fresh);
+            if (fresh.status === status) {
+              return;
+            }
           }
           setError(
-            "That took too long. Your view is updated — try the status change once more.",
+            fresh
+              ? "That took too long. Your view is updated — try the status change once more."
+              : "Could not reach OEE360. Check your network and try again.",
           );
           return;
         }
