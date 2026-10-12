@@ -11,6 +11,10 @@ import {
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { PerspectiveCamera, Vector3 } from "three";
 import {
+  addFullscreenChangeListener,
+  documentFullscreenElement,
+} from "@/lib/ui/document-fullscreen";
+import {
   applyOrbitSnapshot,
   isValidOrbitSnapshot,
   snapshotOrbit,
@@ -23,6 +27,7 @@ type ViewerCameraOwnerProps = {
   layoutRootRef: RefObject<HTMLDivElement | null>;
   fitKey: number;
   resetKey: number;
+  viewerFullscreen: boolean;
   assemblyKey: string;
   modelSrc: string;
 };
@@ -43,6 +48,7 @@ export function ViewerCameraOwner({
   layoutRootRef,
   fitKey,
   resetKey,
+  viewerFullscreen,
   assemblyKey,
   modelSrc,
 }: ViewerCameraOwnerProps) {
@@ -199,6 +205,24 @@ export function ViewerCameraOwner({
     return true;
   }, [camera, controls, invalidate, syncViewport]);
 
+  const refitAfterFullscreenExit = useCallback(() => {
+    if (!applyCanonical()) {
+      return;
+    }
+    let frame = 0;
+    const settle = () => {
+      frame += 1;
+      if (frame < 3) {
+        requestAnimationFrame(settle);
+        return;
+      }
+      syncViewport();
+      applyCanonical();
+      invalidate();
+    };
+    requestAnimationFrame(settle);
+  }, [applyCanonical, invalidate, syncViewport]);
+
   const commitCanonicalReady = useCallback(
     (snap: ViewerOrbitSnapshot) => {
       if (!(camera instanceof PerspectiveCamera) || !controls) {
@@ -326,6 +350,59 @@ export function ViewerCameraOwner({
     lastResetKey.current = resetKey;
     applyCanonical();
   }, [applyCanonical, resetKey]);
+
+  useLayoutEffect(() => {
+    let alive = true;
+    let frame = 0;
+    let pass = 0;
+    function step() {
+      if (!alive) {
+        return;
+      }
+      pass += 1;
+      if (pass < 4) {
+        frame = requestAnimationFrame(step);
+        return;
+      }
+      if (!syncViewport()) {
+        return;
+      }
+      if (viewerFullscreen) {
+        refitToContainer();
+        return;
+      }
+      if (canonicalReady.current) {
+        refitAfterFullscreenExit();
+      }
+    }
+    frame = requestAnimationFrame(step);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(frame);
+    };
+  }, [refitAfterFullscreenExit, refitToContainer, syncViewport, viewerFullscreen]);
+
+  useLayoutEffect(() => {
+    function onFullscreenChange() {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (!syncViewport()) {
+              return;
+            }
+            if (documentFullscreenElement()) {
+              refitToContainer();
+              return;
+            }
+            if (canonicalReady.current) {
+              refitAfterFullscreenExit();
+            }
+          });
+        });
+      });
+    }
+    return addFullscreenChangeListener(onFullscreenChange);
+  }, [refitAfterFullscreenExit, refitToContainer, syncViewport]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;

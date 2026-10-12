@@ -698,6 +698,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             explode={explode}
             fitKey={viewerFitKey}
             resetKey={viewerResetKey}
+            viewerFullscreen={fullscreen}
             layoutRootRef={viewerLayoutRef}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}

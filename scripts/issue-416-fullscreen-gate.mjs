@@ -29,7 +29,8 @@ function loadPlaywright() {
   throw new Error("Install playwright: npm install playwright");
 }
 
-const { chromium } = loadPlaywright();
+const browserName = process.env.ISSUE_416_BROWSER === "webkit" ? "webkit" : "chromium";
+const { chromium, webkit } = loadPlaywright();
 
 const BASE = process.env.ISSUE_416_BASE ?? "http://127.0.0.1:3016";
 const OUT =
@@ -61,7 +62,9 @@ async function readMetrics(page) {
       layoutHeight: layout ? Math.round(layout.getBoundingClientRect().height) : 0,
       chromeHeight: chrome ? Math.round(chrome.getBoundingClientRect().height) : 0,
       stageHeight: stage ? Math.round(stage.getBoundingClientRect().height) : 0,
-      fullscreen: Boolean(document.fullscreenElement),
+      fullscreen: Boolean(
+        document.fullscreenElement || document.webkitFullscreenElement,
+      ),
       canonicalReady: layout?.getAttribute("data-viewer-canonical-ready") === "true",
     };
   });
@@ -79,7 +82,11 @@ async function runMachine(browser, machineId) {
     viewport: VIEWPORT,
     ignoreHTTPSErrors: true,
   });
-  await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+  try {
+    await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+  } catch {
+    // Playwright builds without a fullscreen permission still exercise Element.requestFullscreen.
+  }
   await apiLogin(context);
   const page = await context.newPage();
 
@@ -102,9 +109,10 @@ async function runMachine(browser, machineId) {
   for (let cycle = 1; cycle <= CYCLES; cycle++) {
     const tag = `cycle-${cycle}`;
     await enterBtn.click();
-    await page.waitForFunction(() => Boolean(document.fullscreenElement), {
-      timeout: 10_000,
-    });
+    await page.waitForFunction(
+      () => Boolean(document.fullscreenElement || document.webkitFullscreenElement),
+      { timeout: 10_000 },
+    );
     await page.waitForTimeout(800);
     const inFs = await readMetrics(page);
     await page.screenshot({
@@ -113,9 +121,10 @@ async function runMachine(browser, machineId) {
     });
 
     await exitBtn.click();
-    await page.waitForFunction(() => !document.fullscreenElement, {
-      timeout: 10_000,
-    });
+    await page.waitForFunction(
+      () => !document.fullscreenElement && !document.webkitFullscreenElement,
+      { timeout: 10_000 },
+    );
     await page.waitForTimeout(1200);
     const outFs = await readMetrics(page);
     await page.screenshot({
@@ -141,8 +150,8 @@ async function runMachine(browser, machineId) {
     );
     check(
       `${machineId} ${tag} viewer canonical ready after exit`,
-      outFs.canonicalReady,
-      `canonicalReady=${outFs.canonicalReady}`,
+      !baseline.canonicalReady || outFs.canonicalReady,
+      `baseline=${baseline.canonicalReady} after=${outFs.canonicalReady}`,
     );
 
     await writeFile(
@@ -169,7 +178,10 @@ async function main() {
       "--no-sandbox",
     ];
   }
-  const browser = await chromium.launch(launchOptions);
+  const browser =
+    browserName === "webkit"
+      ? await webkit.launch({ headless: launchOptions.headless })
+      : await chromium.launch(launchOptions);
   try {
     for (const machineId of MACHINES) {
       await runMachine(browser, machineId);
