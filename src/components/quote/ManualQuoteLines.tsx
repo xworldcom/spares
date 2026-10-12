@@ -4,7 +4,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { MAX_QUOTE_ITEM_ID } from "@/lib/quotes";
 import {
+  qtyDecimalKey,
+  qtyInputFullySelected,
   qtyKeyReplacesDraft,
+  queueQtyCaretEnd,
   sanitizeQtyDraft,
   validateEditableQty,
 } from "@/lib/ui/editable-qty";
@@ -96,22 +99,29 @@ function TrayQtyInput({
             event.currentTarget.blur();
             return;
           }
-          if (
-            (event.key === "." || event.key === ",") &&
-            replaceOnType.current
-          ) {
+          const input = event.currentTarget;
+          const fullSelection = qtyInputFullySelected(input);
+          const baseForDecimal = draft ?? String(value);
+          const appendDecimal =
+            replaceOnType.current ||
+            fullSelection ||
+            /^\d+$/.test(baseForDecimal);
+          if (qtyDecimalKey(event.key) && appendDecimal) {
             event.preventDefault();
             const base = draft ?? String(value);
             replaceOnType.current = false;
-            const next = `${base}.`;
+            const next = base.includes(".") ? base : `${base}.`;
             setDraft(next);
-            setError(validateEditableQty(next).ok ? null : "Whole numbers only.");
+            const validated = validateEditableQty(next);
+            setError(validated.ok ? null : "Whole numbers only.");
+            queueQtyCaretEnd(input, next.length);
             return;
           }
           if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
             event.preventDefault();
             replaceOnType.current = false;
             setDraft(event.key);
+            queueQtyCaretEnd(input, event.key.length);
           }
         }}
         className="spares-field h-11 w-14 rounded-2xl border-0 px-2 text-center text-[16px] tabular-nums outline-none"

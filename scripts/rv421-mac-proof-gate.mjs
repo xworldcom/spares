@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v15d) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v15e) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,7 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v15d";
+const GATE_HARNESS_VERSION = "v15e";
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -146,8 +146,147 @@ function record(row, folder, browser, viewport, pass, detail, shots = []) {
   console.log(pass ? "PASS" : "FAIL", row, browser, viewport, detail);
 }
 
+/** Run one gate row; record ABORT/FAIL and continue the matrix on throw. */
+async function safeStep(row, folder, browserName, viewport, fn) {
+  try {
+    await fn();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const kind = /timeout|timed out/i.test(msg) ? "ABORT" : "FAIL";
+    record(row, folder, browserName, viewport, false, `${kind}: ${msg.replace(/\s+/g, " ").slice(0, 320)}`);
+  }
+}
+
+const PIVOT_ROW_ORDER = [
+  "sam-qty-decimal-15",
+  "sam-qty-invalid-refocus",
+  "sam-more-machines-onetap",
+  "sam-messages-close-scroll",
+  "sam-care-sort-stable",
+  "sam-care-header-stable",
+  "sam-ticket-search-t9",
+  "bea-inline-messages-no-handle",
+  "7-desktop-q26",
+  "7",
+  "sam-close-q26",
+  "sam-close-q29",
+  "sam-close-ticket9",
+  "2",
+  "sam-qty-minus3",
+  "3",
+  "sam-search-clear",
+  "5",
+  "1",
+  "4",
+  "6",
+  "8",
+  "10",
+  "bea-h1-care-sheet",
+  "bea-phone-3d-fs",
+  "9",
+];
+
+function pivotCellForRun(run) {
+  if (!run) {
+    return "—";
+  }
+  if (run.pass) {
+    return "PASS";
+  }
+  if (typeof run.detail === "string" && run.detail.startsWith("ABORT:")) {
+    return "ABORT";
+  }
+  return "FAIL";
+}
+
+function buildPivotMarkdown(provenance, gateStatus, generatedAt) {
+  const lookup = new Map();
+  for (const r of runs) {
+    lookup.set(`${r.row}|${r.browser}|${r.viewport}`, r);
+  }
+  const colKeys = [];
+  for (const b of browsers) {
+    for (const vp of viewports) {
+      colKeys.push({ browser: b === "chrome" ? "chrome" : b, vp, label: `${b}@${vp}` });
+    }
+  }
+  const lines = [
+    `# rv430 Mac proof pivot (${GATE_HARNESS_VERSION})`,
+    "",
+    ...provenanceMarkdown(provenance),
+    "",
+    `**Gate:** **${gateStatus}**`,
+    `**Generated:** ${generatedAt}`,
+    "",
+    "| Row | " + colKeys.map((c) => c.label).join(" | ") + " |",
+    "|-----|" + colKeys.map(() => "--------").join("|") + "|",
+  ];
+  const rowIds = [...new Set([...PIVOT_ROW_ORDER, ...runs.map((r) => r.row)])];
+  for (const rowId of rowIds) {
+    const cells = colKeys.map(({ browser, vp }) =>
+      pivotCellForRun(lookup.get(`${rowId}|${browser}|${vp}`)),
+    );
+    lines.push(`| ${rowId} | ${cells.join(" | ")} |`);
+  }
+  lines.push("", "Detail table: see `RESULTS.md` in this folder.");
+  return lines.join("\n");
+}
+
+async function flushGateResults(exitCode = 1) {
+  await mkdir(OUT, { recursive: true });
+  const provenance = collectRunProvenance();
+  const gateStatus = runs.length > 0 && runs.every((r) => r.pass) ? "PASS" : "FAIL";
+  const generatedAt = new Date().toISOString();
+  const summary = {
+    macCheckoutHead: provenance.macCheckoutHead,
+    homeRv421BatchBundle: provenance.homeRv421BatchBundle,
+    projectStoreBundle: provenance.projectStoreBundle,
+    harnessVersion: provenance.harnessVersion,
+    gateStatus,
+    runs,
+    generatedAt,
+  };
+  await writeFile(join(OUT, "proof-summary.json"), JSON.stringify(summary, null, 2));
+
+  const lines = [
+    "# rv421 Mac proof gate — RESULTS",
+    "",
+    ...provenanceMarkdown(provenance),
+    "",
+    `**Gate:** **${gateStatus}**`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (${GATE_HARNESS_VERSION})`,
+    `**Generated:** ${generatedAt}`,
+    "",
+    "| Row | Result | RCA / notes | Proof folder |",
+    "|-----|--------|-------------|--------------|",
+  ];
+  const seen = new Set();
+  for (const r of runs) {
+    const key = `${r.row}-${r.browser}-${r.viewport}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const result = r.pass ? "PASS" : r.detail?.startsWith("ABORT:") ? "ABORT" : "FAIL";
+    lines.push(
+      `| ${r.row} | **${result}** | ${String(r.detail).replace(/\|/g, "/")} | [${r.folder}/](./${r.folder}/) |`,
+    );
+  }
+  lines.push("", "Raw log: `proof-summary.json` in this folder.");
+  const resultsBody = lines.join("\n");
+  const pivotBody = buildPivotMarkdown(provenance, gateStatus, generatedAt);
+  await writeFile(join(OUT, "RESULTS.md"), resultsBody);
+  const pivotName = `RESULTS-rv430-${GATE_HARNESS_VERSION}-${provenance.macCheckoutShortSha}.md`;
+  await writeFile(join(OUT, pivotName), pivotBody);
+  console.log(JSON.stringify({ gateStatus, rows: runs.length, pivot: pivotName }, null, 2));
+  process.exit(exitCode);
+}
+
 async function openQuoteMessages(page, quoteRef) {
   await page.goto(`${BASE}/staff/quotes/${quoteRef}`, { waitUntil: "domcontentloaded" });
+  const inline = page.locator(".conversation-sheet.is-inline");
+  await inline.waitFor({ state: "visible", timeout: 20_000 }).catch(() => {});
+  if (await inline.isVisible().catch(() => false)) {
+    return;
+  }
   const handle = page.locator(".snap-sheet-handle").first();
   if (await handle.isVisible().catch(() => false)) {
     await handle.click({ timeout: 20_000 });
@@ -429,6 +568,7 @@ async function runRows(browserName, launch) {
     const page = await context.newPage();
 
     // Row 2 / sam-qty-minus3 — invalid qty keeps error, no silent commit to 1
+    await safeStep("2", "money-qty", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     await page.locator("ul a, ul button").first().click({ timeout: 20_000 });
     const qty = page.getByLabel("Qty").first();
@@ -439,8 +579,10 @@ async function runRows(browserName, launch) {
     const qtyPass = qtyErr && qtyVal.includes("-3");
     record("2", "money-qty", browserName, vp, qtyPass, `blur=${qtyVal} qtyErr=${qtyErr}`);
     record("sam-qty-minus3", "money-qty", browserName, vp, qtyPass, `blur=${qtyVal} qtyErr=${qtyErr}`);
+    });
 
     // Row 3 Q27 lock + copy
+    await safeStep("3", "quotes", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes/27`, { waitUntil: "domcontentloaded" });
     const sellDisabled = await page
       .locator('[id^="sell-"]')
@@ -456,8 +598,10 @@ async function runRows(browserName, launch) {
     const q27Pass = sellDisabled && lockCopy && !editPricingVisible;
     record("3", "quotes", browserName, vp, q27Pass, `sellDisabled=${sellDisabled} lockCopy=${lockCopy}`);
     record("3-q27-pricing-lock", "quotes", browserName, vp, q27Pass, `editPricing=${editPricingVisible}`);
+    });
 
     // sam-search-clear
+    await safeStep("sam-search-clear", "quotes", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     const search = page.locator("#staff-quotes-search").or(page.getByLabel("Search quotes"));
     await search.first().waitFor({ state: "visible", timeout: 12_000 });
@@ -468,8 +612,10 @@ async function runRows(browserName, launch) {
     const url = page.url();
     const cleared = !url.includes("q=zzqxj") && (await search.first().inputValue()) === "";
     record("sam-search-clear", "quotes", browserName, vp, cleared, `cleared=${cleared}`);
+    });
 
     // Row 5 titles
+    await safeStep("5", "document-title", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "networkidle" });
     const tQuotes = await page.title();
     await page.goto(`${BASE}/staff/tickets`, { waitUntil: "networkidle" });
@@ -480,8 +626,10 @@ async function runRows(browserName, launch) {
       /(all tickets|tickets)/i.test(tTickets) &&
       /oee360/i.test(tTickets);
     record("5", "document-title", browserName, vp, titlePass, `${tQuotes}|${tTickets}`);
+    });
 
     // Row 7 phone close @390 only; desktop quote uses inline column @1440
+    await safeStep("7", "phone-sheets", browserName, vp, async () => {
     if (vp < 1024) {
       for (const [row, ref] of [
         ["sam-close-q26", "26"],
@@ -508,8 +656,10 @@ async function runRows(browserName, launch) {
         inline ? "quote-inline-column" : "overlay",
       );
     }
+    });
 
     // Row 1 / 6331k32 — obsolete lifecycle label on staff parts
+    await safeStep("1", "6331k32-active", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/parts`, { waitUntil: "domcontentloaded" });
     const searchParts = page.getByLabel(/search/i).first();
     if (await searchParts.isVisible().catch(() => false)) {
@@ -523,9 +673,11 @@ async function runRows(browserName, launch) {
       .catch(() => false);
     record("1", "6331k32-active", browserName, vp, obsoleteLabel, `obsolete=${obsoleteLabel}`);
     record("6331k32-lifecycle", "6331k32-active", browserName, vp, obsoleteLabel, `obsolete=${obsoleteLabel}`);
+    });
 
     // Row 4 offline — staff ticket status shows error when network fails
     if (vp < 1024) {
+    await safeStep("4", "offline", browserName, vp, async () => {
       await context.route("**/api/tickets/**", (route) => {
         if (route.request().method() === "PATCH") {
           return route.abort("failed");
@@ -551,10 +703,12 @@ async function runRows(browserName, launch) {
       const offlineCopy = await offlineAlert.first().isVisible().catch(() => false);
       record("4", "offline", browserName, vp, offlineCopy, `offlineCopy=${offlineCopy}`);
       await context.unroute("**/api/tickets/**");
+    });
     }
 
     // Row 6 — Recently updated sort surfaces ticket 9 before 34
     if (vp >= 1024) {
+    await safeStep("6", "care-recent-sort", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets?sort=updated`, { waitUntil: "domcontentloaded" });
       const items = await page.locator(".tickets-workspace-list a, .tickets-workspace-list button").allInnerTexts();
       const joined = items.join("\n");
@@ -562,9 +716,11 @@ async function runRows(browserName, launch) {
       const i34 = joined.search(/\b34\b|Ticket\s*34/i);
       const orderOk = i9 >= 0 && (i34 < 0 || i9 < i34);
       record("6", "care-recent-sort", browserName, vp, orderOk, `i9=${i9} i34=${i34}`);
+    });
     }
 
     // Row 8 view part
+    await safeStep("8", "machines-m", browserName, vp, async () => {
     await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(1500);
     const viewPart = await page
@@ -574,9 +730,11 @@ async function runRows(browserName, launch) {
       .catch(() => false);
     record("8", "machines-m", browserName, vp, viewPart, `viewPart=${viewPart}`);
     record("bea-m5-view-part", "bea-smoke", browserName, vp, viewPart, `viewPart=${viewPart}`);
+    });
 
     // Row 10 — palletizer viewer loads; no duplicate account email line
     if (vp >= 1024) {
+    await safeStep("10", "also", browserName, vp, async () => {
       await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
       await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
       const viewerH = await page
@@ -587,15 +745,19 @@ async function runRows(browserName, launch) {
       const emailLines = await page.locator('[role="menu"] >> text=/@/').count().catch(() => 0);
       const row10 = viewerH > 400 && emailLines <= 1;
       record("10", "also", browserName, vp, row10, `viewerH=${viewerH} emailLines=${emailLines}`);
+    });
     }
 
     // Bea func5 matrix (subset) — bea-phone-3d-fs / bea-h1-care-sheet run as customer @390 (v14)
     if (vp < 1024) {
+    await safeStep("bea-q35-tracking", "bea-smoke", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/35`, { waitUntil: "domcontentloaded" });
       const tracking = await page.getByRole("heading", { name: /^tracking$/i }).isVisible().catch(() => false);
       record("bea-q35-tracking", "bea-smoke", browserName, vp, tracking, `tracking=${tracking}`);
+    });
     }
     if (vp >= 1024) {
+    await safeStep("bea-fs-strip-15px", "bea-smoke", browserName, vp, async () => {
       await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
       await page.locator("canvas").first().waitFor({ timeout: 60_000 }).catch(() => {});
       await clickEnterViewerFullscreen(page);
@@ -651,16 +813,20 @@ async function runRows(browserName, launch) {
         /part alerts/i.test(tAlerts) && /oee360/i.test(tAlerts),
         tAlerts,
       );
+    });
     }
 
     // sam-stepper-label @390
     if (vp < 1024) {
+    await safeStep("sam-stepper-label", "sam-stepper-label", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
       const fullLabel = await page.locator(".quote-progress-label-full").first().isVisible().catch(() => false);
       record("sam-stepper-label", "sam-stepper-label", browserName, vp, fullLabel, `fullLabel=${fullLabel}`);
+    });
     }
 
     // v13 — live prod re-verify (#430) staff rows
+    await safeStep("sam-qty-decimal-15", "money-qty", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     await page.locator("ul a, ul button").first().click({ timeout: 20_000 });
     const qtyDec = page.getByLabel("Qty").first();
@@ -675,7 +841,9 @@ async function runRows(browserName, launch) {
       .catch(() => false);
     const decPass = decVal.includes("1.5") && decErr;
     record("sam-qty-decimal-15", "money-qty", browserName, vp, decPass, `val=${decVal} err=${decErr}`);
+    });
 
+    await safeStep("sam-qty-invalid-refocus", "money-qty", browserName, vp, async () => {
     const qtyRef = page.getByLabel("Qty").first();
     await qtyRef.fill("-3");
     await qtyRef.blur();
@@ -694,8 +862,10 @@ async function runRows(browserName, launch) {
       refVal.includes("-3") && refErr,
       `val=${refVal}`,
     );
+    });
 
     if (vp < 1024) {
+    await safeStep("sam-more-machines-onetap", "staff-nav", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/parts`, { waitUntil: "domcontentloaded" });
       await page.getByRole("button", { name: /^more$/i }).click();
       await page.getByRole("button", { name: /^machines$/i }).click();
@@ -708,7 +878,9 @@ async function runRows(browserName, launch) {
         /\/machines/.test(page.url()),
         page.url(),
       );
+    });
 
+    await safeStep("sam-messages-close-scroll", "phone-sheets", browserName, vp, async () => {
       await openQuoteMessages(page, "26");
       await expandConversationSheet(page);
       const cardMsg = page.locator(".conversation-sheet").first();
@@ -726,7 +898,9 @@ async function runRows(browserName, launch) {
         hScroll <= Math.max(hClose * 1.12, hClose + 28),
         `hClose=${Math.round(hClose)} hScroll=${Math.round(hScroll)}`,
       );
+    });
 
+    await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
       const sortBoxBefore = await page.locator(".tickets-workspace-sort-select").boundingBox();
       await page.locator("#care-tickets-search").fill("pal");
@@ -745,7 +919,9 @@ async function runRows(browserName, launch) {
         Boolean(sortStable),
         `before=${sortBoxBefore?.x},${sortBoxBefore?.y}`,
       );
+    });
 
+    await safeStep("sam-care-header-stable", "care-layout", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
       const headBefore = await page.locator(".tickets-workspace-toolbar").boundingBox();
       await page
@@ -767,16 +943,20 @@ async function runRows(browserName, launch) {
         Boolean(headerStable),
         `dy=${headBefore && headAfter ? Math.round(headAfter.y - headBefore.y) : "na"}`,
       );
+    });
     }
 
     if (vp >= 1024) {
+    await safeStep("sam-ticket-search-t9", "care-search", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
       await page.locator("#care-tickets-search").fill("T9");
       await page.waitForTimeout(450);
       const t9Text = await page.locator(".tickets-workspace-list").innerText();
       const t9visible = /\b9\b/.test(t9Text) && /ticket/i.test(t9Text);
       record("sam-ticket-search-t9", "care-search", browserName, vp, t9visible, `t9=${t9visible}`);
+    });
 
+    await safeStep("bea-inline-messages-no-handle", "quote-messages", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
       const inlineMsgs = await page.locator(".conversation-sheet.is-inline").isVisible().catch(() => false);
       const handleHidden = await page
@@ -792,12 +972,14 @@ async function runRows(browserName, launch) {
         inlineMsgs && handleHidden,
         `inline=${inlineMsgs} handleHidden=${handleHidden}`,
       );
+    });
     }
 
     await context.close();
   }
 
   // Customer rows 9 demo hide — separate context
+  await safeStep("9", "demo-hide-badge", browserName, 1440, async () => {
   const cust = await browser.newContext({ viewport: viewportSize(1440) });
   await apiLogin(cust, CUSTOMER);
   const cp = await cust.newPage();
@@ -940,8 +1122,11 @@ async function runRows(browserName, launch) {
   );
   await clickExitViewerFullscreen(cp);
   await cust.close();
+  });
 
-  await runBeaMandatoryPhone390(browserName, browser);
+  await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
+    await runBeaMandatoryPhone390(browserName, browser);
+  });
 
   await browser.close();
 }
@@ -953,60 +1138,25 @@ async function main() {
     chromium,
     webkit,
   };
-  for (const name of browsers) {
-    const launch = launchers[name];
-    if (!launch) {
-      console.warn("skip unknown browser", name);
-      continue;
+  let fatalError = null;
+  try {
+    for (const name of browsers) {
+      const launch = launchers[name];
+      if (!launch) {
+        console.warn("skip unknown browser", name);
+        continue;
+      }
+      await runRows(name === "chrome" ? "chrome" : name, launch);
     }
-    await runRows(name === "chrome" ? "chrome" : name, launch);
+  } catch (err) {
+    fatalError = err;
+    console.error(err);
   }
-
-  const provenance = collectRunProvenance();
-  const gateStatus = runs.every((r) => r.pass) ? "PASS" : "FAIL";
-  const generatedAt = new Date().toISOString();
-  const summary = {
-    macCheckoutHead: provenance.macCheckoutHead,
-    homeRv421BatchBundle: provenance.homeRv421BatchBundle,
-    projectStoreBundle: provenance.projectStoreBundle,
-    harnessVersion: provenance.harnessVersion,
-    gateStatus,
-    runs,
-    generatedAt,
-  };
-  await writeFile(join(OUT, "proof-summary.json"), JSON.stringify(summary, null, 2));
-
-  const lines = [
-    "# rv421 Mac proof gate — RESULTS",
-    "",
-    ...provenanceMarkdown(provenance),
-    "",
-    `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (${GATE_HARNESS_VERSION})`,
-    `**Generated:** ${generatedAt}`,
-    "",
-    "| Row | Result | RCA / notes | Proof folder |",
-    "|-----|--------|-------------|--------------|",
-  ];
-  const seen = new Set();
-  for (const r of runs) {
-    const key = `${r.row}-${r.browser}-${r.viewport}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    lines.push(
-      `| ${r.row} | **${r.pass ? "PASS" : "FAIL"}** | ${r.detail.replace(/\|/g, "/")} | [${r.folder}/](./${r.folder}/) |`,
-    );
-  }
-  lines.push("", "Raw log: `proof-summary.json` in this folder.");
-  const resultsBody = lines.join("\n");
-  await writeFile(join(OUT, "RESULTS.md"), resultsBody);
-  const pivotName = `RESULTS-rv430-${GATE_HARNESS_VERSION}-${provenance.macCheckoutShortSha}.md`;
-  await writeFile(join(OUT, pivotName), resultsBody);
-  console.log(JSON.stringify({ gateStatus, rows: runs.length }, null, 2));
-  process.exit(gateStatus === "PASS" ? 0 : 1);
+  const gateStatus = runs.length > 0 && runs.every((r) => r.pass) ? "PASS" : "FAIL";
+  await flushGateResults(fatalError ? 1 : gateStatus === "PASS" ? 0 : 1);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
-  process.exit(1);
+  await flushGateResults(1);
 });

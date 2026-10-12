@@ -10,7 +10,10 @@ import {
 } from "@/lib/quotes";
 import {
   qtyDraftIsComplete,
+  qtyDecimalKey,
+  qtyInputFullySelected,
   qtyKeyReplacesDraft,
+  queueQtyCaretEnd,
   sanitizeQtyDraft,
   validateEditableQty,
 } from "@/lib/ui/editable-qty";
@@ -239,22 +242,30 @@ function QtyField({
               event.currentTarget.blur();
               return;
             }
-            if (
-              (event.key === "." || event.key === ",") &&
-              replaceOnType.current
-            ) {
+            const input = event.currentTarget;
+            const fullSelection = qtyInputFullySelected(input);
+            const baseForDecimal = draft ?? String(value);
+            const appendDecimal =
+              replaceOnType.current ||
+              fullSelection ||
+              /^\d+$/.test(baseForDecimal);
+            if (qtyDecimalKey(event.key) && appendDecimal) {
               event.preventDefault();
               const base = draft ?? String(value);
               replaceOnType.current = false;
-              const next = `${base}${event.key === "," ? "." : "."}`;
+              const next = base.includes(".") ? base : `${base}.`;
               setDraft(next);
-              setError(validateEditableQty(next).ok ? null : "Whole numbers only.");
+              const validated = validateEditableQty(next);
+              setError(validated.ok ? null : "Whole numbers only.");
+              onPreview?.(validated.ok ? validated.qty : null);
+              queueQtyCaretEnd(input, next.length);
               return;
             }
             if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
               event.preventDefault();
               replaceOnType.current = false;
               setDraft(event.key);
+              queueQtyCaretEnd(input, event.key.length);
               return;
             }
             if (
