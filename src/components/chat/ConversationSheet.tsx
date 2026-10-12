@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import { useConversationDockStage } from "@/components/machine/useDesktopStage";
 import {
   ConversationSheetProvider,
 } from "@/components/chat/ConversationSheetContext";
@@ -33,7 +33,8 @@ export function ConversationSheet({
   /** Quote phone Messages only — care tickets keep default care close motion. */
   closeProfile?: "care" | "quote";
 }) {
-  const desktop = useDesktopStage();
+  const conversationDock = useConversationDockStage();
+  const inlineLayout = layout === "inline";
   const card = useRef<HTMLElement>(null);
   const {
     sheet,
@@ -54,14 +55,14 @@ export function ConversationSheet({
     cardRef: card,
     open,
     onOpenChange,
-    desktopStage: desktop,
+    desktopStage: inlineLayout && conversationDock,
     scrollBodySelector: ".imsg-thread",
-    inlineLayout: layout === "inline",
+    inlineLayout,
     resetKey: threadKey,
     closeProfile,
   });
 
-  const overlayMobile = layout === "overlay" && !desktop;
+  const overlayMobile = layout === "overlay";
   /** Snap classes follow resting `sheet` — motion phases paint inline during drag/settle. */
   const stageSnap = sheet;
   const expanded =
@@ -70,7 +71,7 @@ export function ConversationSheet({
     (overlayMobile && sheet === "out") ||
     displaySnap === "full" ||
     displaySnap === "reply" ||
-    (layout === "inline" && desktop);
+    (inlineLayout && conversationDock);
   const showToolbar =
     overlayMobile &&
     (sheet === "reply" || sheet === "full" || sheet === "peek" || sheet === "out");

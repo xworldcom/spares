@@ -2,23 +2,45 @@
 
 import { useSyncExternalStore } from "react";
 
-/** Wide layout: side quote dock (customer) and resizable staff split. Width-only so typical desktop viewports qualify. */
+/** Wide layout: ticket split panes, resizable staff machine split. */
 export const DESKTOP_STAGE = "(min-width: 1024px)";
 
-function subscribe(onChange: () => void) {
-  const media = window.matchMedia(DESKTOP_STAGE);
+/**
+ * Side-docked quote tray and inline Care/quote Messages column — pointer-primary
+ * desktops only. Coarse-pointer tablets (iPad) keep the bottom overlay sheet.
+ */
+export const CONVERSATION_DOCK_STAGE = "(min-width: 1024px) and (pointer: fine)";
+
+function subscribeMedia(query: string, onChange: () => void) {
+  const media = window.matchMedia(query);
   media.addEventListener("change", onChange);
   return () => media.removeEventListener("change", onChange);
 }
 
-function getSnapshot() {
+function subscribeDesktop(onChange: () => void) {
+  return subscribeMedia(DESKTOP_STAGE, onChange);
+}
+
+function subscribeConversationDock(onChange: () => void) {
+  return subscribeMedia(CONVERSATION_DOCK_STAGE, onChange);
+}
+
+function matchesDesktop() {
   return window.matchMedia(DESKTOP_STAGE).matches;
 }
 
-function getServerSnapshot() {
-  return false;
+function matchesConversationDock() {
+  return window.matchMedia(CONVERSATION_DOCK_STAGE).matches;
 }
 
 export function useDesktopStage() {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(subscribeDesktop, matchesDesktop, () => false);
+}
+
+export function useConversationDockStage() {
+  return useSyncExternalStore(
+    subscribeConversationDock,
+    matchesConversationDock,
+    () => false,
+  );
 }
