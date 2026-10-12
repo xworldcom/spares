@@ -383,6 +383,8 @@ export function useSnapSheet({
       return;
     }
     const { peekH, replyH, fullH } = heightsForMotion();
+    const maxLive = conversationSheetFullHeightPx();
+    liveHeightPx = Math.max(peekH, Math.min(fullH, maxLive, liveHeightPx));
     const { phaseA, phaseB } = conversationSheetMotionFromHeight(
       liveHeightPx,
       peekH,
@@ -709,15 +711,11 @@ export function useSnapSheet({
     setThreadDockedState(true);
     if (closeProfile === "quote") {
       if (sheet === "full") {
-        clearCloseTranslate("peek");
-        settleToVisualPeek();
+        clearCloseTranslate("reply");
+        settleTo("reply");
         return;
       }
-      if (sheet === "reply") {
-        settleToVisualPeek();
-        return;
-      }
-      if (sheet === "peek") {
+      if (sheet === "reply" || sheet === "peek") {
         settleCloseTo("out");
         return;
       }

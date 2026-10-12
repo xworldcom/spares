@@ -74,4 +74,24 @@ describe("filterAndSortCareTickets", () => {
     });
     assert.deepEqual(sorted.map((row) => row.number), [9, 8]);
   });
+
+  it("ranks exact ticket number first for numeric search", () => {
+    const rows = [
+      ticket({ id: "t29", number: 29, title: "Line 29 fault" }),
+      ticket({ id: "t9", number: 9, title: "Line 9 fault" }),
+      ticket({ id: "t19", number: 19, title: "Line 19 fault" }),
+    ];
+    const sorted = filterAndSortCareTickets(rows, {
+      query: "9",
+      status: "all",
+      sort: "recent",
+    });
+    assert.equal(sorted[0]?.number, 9);
+    const sortedT9 = filterAndSortCareTickets(rows, {
+      query: "T9",
+      status: "all",
+      sort: "recent",
+    });
+    assert.equal(sortedT9[0]?.number, 9);
+  });
 });

@@ -23,6 +23,35 @@ export function careTicketsSortFromParam(
   return value === "updated" ? "updated" : "recent";
 }
 
+function careTicketNumberText(ticket: ServiceTicket): string {
+  return String(ticket.number).trim();
+}
+
+/** Lower rank = better match when sorting search results. */
+export function careTicketSearchRank(ticket: ServiceTicket, query: string): number {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return 0;
+  }
+  const lower = trimmed.toLowerCase();
+  const numberText = careTicketNumberText(ticket).toLowerCase();
+  const ticketRef = lower.match(/^t(?:icket)?\s*#?(\d+)$/i);
+  const refNum = ticketRef?.[1];
+  const hashNum = lower.match(/^#?(\d+)$/);
+  const bareNum = hashNum?.[1] ?? (/^\d+$/.test(lower) ? lower : null);
+  const targetNum = refNum ?? bareNum;
+  if (targetNum && numberText === targetNum) {
+    return 0;
+  }
+  if (targetNum && numberText.includes(targetNum)) {
+    return 1;
+  }
+  if (ticketMatchesCareSearch(ticket, query)) {
+    return 2;
+  }
+  return 99;
+}
+
 function careSearchNeedles(query: string): string[] {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) {
@@ -96,6 +125,13 @@ export function filterAndSortCareTickets(
     return ticket.createdAt;
   }
   sorted.sort((a, b) => {
+    if (q) {
+      const rankA = careTicketSearchRank(a, q);
+      const rankB = careTicketSearchRank(b, q);
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+    }
     const left = sortTimestamp(a);
     const right = sortTimestamp(b);
     return new Date(right).getTime() - new Date(left).getTime();
