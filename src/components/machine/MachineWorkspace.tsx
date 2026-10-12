@@ -10,6 +10,7 @@ import { StaffPartsReview } from "@/components/machine/StaffPartsReview";
 import {
   useConversationDockStage,
   useDesktopStage,
+  useQuoteConversationDockStage,
 } from "@/components/machine/useDesktopStage";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
@@ -113,6 +114,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   );
   const desktopStage = useDesktopStage();
   const conversationDock = useConversationDockStage();
+  const customerTrayDock = useQuoteConversationDockStage();
   const hydrated = useHydrated();
   const viewerLayoutReady = useViewerLayoutReady();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -129,7 +131,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       ? quoteTrayNoteStorageKey(user.tenantId, machineId)
       : null;
   const [trayNote, setTrayNote] = useState("");
-  const customerTrayInViewer = isCustomer && !conversationDock;
+  const customerTrayInViewer = isCustomer && !customerTrayDock;
 
   useEffect(() => {
     if (!overlay || !shouldPinViewerOverlayFrame()) {
@@ -700,26 +702,34 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   const quoteCount = trayLines.reduce((sum, line) => sum + line.qty, 0);
 
-  const viewerOverlayClass = overlayFrame
-    ? "machine-viewer fixed inset-x-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none"
-    : "machine-viewer fixed inset-x-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none top-[var(--spares-header)]";
+  const viewerOverlayClass =
+    "machine-viewer fixed inset-0 z-[85] flex min-h-0 w-screen max-w-none flex-col overflow-hidden overscroll-none";
 
   const viewerBlock = (
     <div
       ref={chromeRef}
       data-machine-viewer-chrome=""
+      data-viewer-fs={fullscreen ? (overlay ? "overlay" : "native") : undefined}
       className={
         overlay
           ? viewerOverlayClass
           : "machine-viewer flex min-h-0 flex-col overflow-hidden sm:rounded-[28px]"
       }
       style={
-        overlay && overlayFrame
-          ? {
-              background: VIEWER_STAGE,
-              top: overlayFrame.topPx,
-              height: overlayFrame.heightPx,
-            }
+        overlay
+          ? overlayFrame
+            ? {
+                background: VIEWER_STAGE,
+                top: overlayFrame.topPx,
+                height: overlayFrame.heightPx,
+                width: "100vw",
+                maxWidth: "100vw",
+              }
+            : {
+                background: VIEWER_STAGE,
+                width: "100vw",
+                maxWidth: "100vw",
+              }
           : { background: VIEWER_STAGE }
       }
       onContextMenu={(event) => {
@@ -1062,9 +1072,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         ref={staffSplitView ? staffSplit.containerRef : undefined}
         className="machine-stage-grid"
         data-tray={
-          isCustomer && trayOpen && !fullscreen && conversationDock ? "open" : "closed"
+          isCustomer && trayOpen && !fullscreen && customerTrayDock ? "open" : "closed"
         }
-        data-customer-desktop={isCustomer && conversationDock ? "true" : undefined}
+        data-customer-desktop={isCustomer && customerTrayDock ? "true" : undefined}
         data-staff-split={staffSplitView ? "true" : undefined}
         style={
           staffSplitView
@@ -1085,7 +1095,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             {staffPartsPanel}
           </>
         ) : null}
-        {isCustomer && conversationDock && !fullscreen ? (
+        {isCustomer && customerTrayDock && !fullscreen ? (
           <div
             className={`quote-tray-dock${trayOpen ? " is-open" : ""}`}
             data-quote-tray=""

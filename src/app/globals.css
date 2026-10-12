@@ -34,6 +34,7 @@
 
 html:has(.spares-app-stage):not(:has(.spares-app-cinematic)) {
   scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 html,
@@ -274,6 +275,12 @@ body {
   cursor: grab;
 }
 
+.quote-sheet .quote-sheet-form {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .quote-sheet-body {
   -webkit-overflow-scrolling: touch;
 }
@@ -447,6 +454,11 @@ body {
 }
 
 /* Conversation sheet — Chunk 1: one SheetSurface, height roll-up (reply → full) */
+.conversation-sheet.is-inline > .snap-sheet-handle,
+.conversation-sheet.is-inline > .quote-sheet-handle {
+  display: none;
+}
+
 .conversation-sheet.snap-sheet {
   z-index: 52;
   display: flex;
@@ -503,6 +515,10 @@ body {
   transform: translate3d(0, var(--sheet-close-ty, 0), 0);
   will-change: transform, height;
   touch-action: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  z-index: 60;
 }
 
 .conversation-sheet:not(.is-inline).is-peek {
@@ -4101,10 +4117,11 @@ body > .quote-undo-toast {
 }
 
 .tickets-workspace-filter-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, max-content) minmax(0, 1fr) 9.75rem;
   align-items: center;
   gap: 0.5rem;
+  min-height: 2.25rem;
 }
 
 .tickets-workspace-filter-row .btn-primary,
@@ -4119,11 +4136,17 @@ body > .quote-undo-toast {
 }
 
 .tickets-workspace-sort {
-  margin-left: auto;
+  grid-column: 5;
+  margin-left: 0;
+  justify-self: end;
+  flex-shrink: 0;
 }
 
 .tickets-workspace-sort-select {
   height: 2.25rem;
+  width: 9.75rem;
+  min-width: 9.75rem;
+  max-width: 9.75rem;
   border-radius: 999px;
   padding: 0 0.75rem;
   font-size: 13px;

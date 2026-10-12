@@ -57,3 +57,31 @@ export function sanitizeQtyDraft(raw: string): string {
 export function qtyKeyReplacesDraft(replaceOnType: boolean, key: string) {
   return replaceOnType && /^\d$/.test(key);
 }
+
+export function qtyInputFullySelected(input: HTMLInputElement): boolean {
+  const len = input.value.length;
+  if (len === 0) {
+    return false;
+  }
+  const start = input.selectionStart ?? len;
+  const end = input.selectionEnd ?? len;
+  return start === 0 && end === len;
+}
+
+/** Collapse selection after controlled keydown so the next key appends instead of replacing. */
+export function queueQtyCaretEnd(input: HTMLInputElement, index?: number) {
+  const at = index ?? input.value.length;
+  const place = () => {
+    try {
+      input.setSelectionRange(at, at);
+    } catch {
+      // Some browsers reject setSelectionRange on certain input types.
+    }
+  };
+  requestAnimationFrame(place);
+  window.setTimeout(place, 0);
+}
+
+export function qtyDecimalKey(key: string) {
+  return key === "." || key === ",";
+}

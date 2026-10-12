@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 Mac proof gate (v7) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v15g) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -15,11 +15,16 @@
  *   RV421_GATE_OUT       default media/rv421-proof under project store
  *   RV421_GATE_BROWSERS  comma list: chrome,webkit (default both)
  *   RV421_GATE_VIEWPORTS comma list: 390,1440 (default both)
+ *   RV421_BATCH_BUNDLE   optional path to project-store bundle for list-heads in RESULTS
  */
+import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
+
+const GATE_HARNESS_VERSION = "v15g";
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -54,14 +59,66 @@ const viewports = (process.env.RV421_GATE_VIEWPORTS || "390,1440")
   .map((s) => Number(s.trim()))
   .filter((n) => n > 0);
 
-let bundleHead = "unknown";
-try {
-  bundleHead = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
-} catch {
-  // detached or shallow
+const runs = [];
+
+function macCheckoutHead() {
+  try {
+    return execSync("git rev-parse HEAD", {
+      encoding: "utf8",
+      cwd: process.cwd(),
+    }).trim();
+  } catch {
+    return "unknown";
+  }
 }
 
-const runs = [];
+function gitBundleListHeads(bundlePath) {
+  if (!bundlePath || !existsSync(bundlePath)) {
+    return { path: bundlePath ?? null, listHeads: "n/a" };
+  }
+  try {
+    const listHeads = execSync(`git bundle list-heads ${JSON.stringify(bundlePath)}`, {
+      encoding: "utf8",
+    }).trim();
+    return { path: bundlePath, listHeads: listHeads || "n/a" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { path: bundlePath, listHeads: `error: ${message}` };
+  }
+}
+
+function collectRunProvenance() {
+  const checkout = macCheckoutHead();
+  const homeRv421BatchBundle = gitBundleListHeads(join(homedir(), "rv421-batch.bundle"));
+  const envBundle = process.env.RV421_BATCH_BUNDLE?.trim();
+  const projectStoreBundle = envBundle ? gitBundleListHeads(envBundle) : null;
+  return {
+    macCheckoutHead: checkout,
+    macCheckoutShortSha: checkout.startsWith("unknown") ? "unknown" : checkout.slice(0, 7),
+    harnessVersion: GATE_HARNESS_VERSION,
+    homeRv421BatchBundle,
+    projectStoreBundle,
+  };
+}
+
+function provenanceMarkdown(provenance) {
+  const lines = [
+    `**Mac checkout HEAD:** \`${provenance.macCheckoutHead}\``,
+    `**~/rv421-batch.bundle list-heads:**`,
+    "```",
+    provenance.homeRv421BatchBundle.listHeads,
+    "```",
+  ];
+  if (provenance.projectStoreBundle) {
+    lines.push(
+      `**RV421_BATCH_BUNDLE (\`${provenance.projectStoreBundle.path}\`) list-heads:**`,
+      "```",
+      provenance.projectStoreBundle.listHeads,
+      "```",
+    );
+  }
+  return lines;
+}
 
 function viewportSize(width) {
   return width >= 1024
@@ -89,8 +146,162 @@ function record(row, folder, browser, viewport, pass, detail, shots = []) {
   console.log(pass ? "PASS" : "FAIL", row, browser, viewport, detail);
 }
 
+/** Run one gate row; record ABORT/FAIL and continue the matrix on throw. */
+async function safeStep(row, folder, browserName, viewport, fn) {
+  try {
+    await fn();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const kind = /timeout|timed out/i.test(msg) ? "ABORT" : "FAIL";
+    record(row, folder, browserName, viewport, false, `${kind}: ${msg.replace(/\s+/g, " ").slice(0, 320)}`);
+  }
+}
+
+const PIVOT_ROW_ORDER = [
+  "sam-qty-decimal-15",
+  "sam-qty-invalid-refocus",
+  "sam-more-machines-onetap",
+  "sam-messages-close-scroll",
+  "sam-care-sort-stable",
+  "sam-care-header-stable",
+  "sam-ticket-search-t9",
+  "bea-inline-messages-no-handle",
+  "7-desktop-q26",
+  "7",
+  "sam-close-q26",
+  "sam-close-q29",
+  "sam-close-ticket9",
+  "2",
+  "sam-qty-minus3",
+  "3",
+  "sam-search-clear",
+  "5",
+  "1",
+  "4",
+  "6",
+  "8",
+  "10",
+  "bea-h1-care-sheet",
+  "bea-phone-3d-fs",
+  "9",
+];
+
+function pivotCellForRun(run) {
+  if (!run) {
+    return "—";
+  }
+  if (run.pass) {
+    return "PASS";
+  }
+  if (typeof run.detail === "string" && run.detail.startsWith("ABORT:")) {
+    return "ABORT";
+  }
+  return "FAIL";
+}
+
+function buildPivotMarkdown(provenance, gateStatus, generatedAt) {
+  const lookup = new Map();
+  for (const r of runs) {
+    lookup.set(`${r.row}|${r.browser}|${r.viewport}`, r);
+  }
+  const colKeys = [];
+  for (const b of browsers) {
+    for (const vp of viewports) {
+      colKeys.push({ browser: b === "chrome" ? "chrome" : b, vp, label: `${b}@${vp}` });
+    }
+  }
+  const lines = [
+    `# rv430 Mac proof pivot (${GATE_HARNESS_VERSION})`,
+    "",
+    ...provenanceMarkdown(provenance),
+    "",
+    `**Gate:** **${gateStatus}**`,
+    `**Generated:** ${generatedAt}`,
+    "",
+    "| Row | " + colKeys.map((c) => c.label).join(" | ") + " |",
+    "|-----|" + colKeys.map(() => "--------").join("|") + "|",
+  ];
+  const rowIds = [...new Set([...PIVOT_ROW_ORDER, ...runs.map((r) => r.row)])];
+  for (const rowId of rowIds) {
+    const cells = colKeys.map(({ browser, vp }) =>
+      pivotCellForRun(lookup.get(`${rowId}|${browser}|${vp}`)),
+    );
+    lines.push(`| ${rowId} | ${cells.join(" | ")} |`);
+  }
+  lines.push("", "Detail table: see `RESULTS.md` in this folder.");
+  return lines.join("\n");
+}
+
+async function flushGateResults(exitCode = 1) {
+  await mkdir(OUT, { recursive: true });
+  const provenance = collectRunProvenance();
+  const gateStatus = runs.length > 0 && runs.every((r) => r.pass) ? "PASS" : "FAIL";
+  const generatedAt = new Date().toISOString();
+  const summary = {
+    macCheckoutHead: provenance.macCheckoutHead,
+    homeRv421BatchBundle: provenance.homeRv421BatchBundle,
+    projectStoreBundle: provenance.projectStoreBundle,
+    harnessVersion: provenance.harnessVersion,
+    gateStatus,
+    runs,
+    generatedAt,
+  };
+  await writeFile(join(OUT, "proof-summary.json"), JSON.stringify(summary, null, 2));
+
+  const lines = [
+    "# rv421 Mac proof gate — RESULTS",
+    "",
+    ...provenanceMarkdown(provenance),
+    "",
+    `**Gate:** **${gateStatus}**`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (${GATE_HARNESS_VERSION})`,
+    `**Generated:** ${generatedAt}`,
+    "",
+    "| Row | Result | RCA / notes | Proof folder |",
+    "|-----|--------|-------------|--------------|",
+  ];
+  const seen = new Set();
+  for (const r of runs) {
+    const key = `${r.row}-${r.browser}-${r.viewport}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const result = r.pass ? "PASS" : r.detail?.startsWith("ABORT:") ? "ABORT" : "FAIL";
+    lines.push(
+      `| ${r.row} | **${result}** | ${String(r.detail).replace(/\|/g, "/")} | [${r.folder}/](./${r.folder}/) |`,
+    );
+  }
+  lines.push("", "Raw log: `proof-summary.json` in this folder.");
+  const resultsBody = lines.join("\n");
+  const pivotBody = buildPivotMarkdown(provenance, gateStatus, generatedAt);
+  await writeFile(join(OUT, "RESULTS.md"), resultsBody);
+  const pivotName = `RESULTS-rv430-${GATE_HARNESS_VERSION}-${provenance.macCheckoutShortSha}.md`;
+  await writeFile(join(OUT, pivotName), pivotBody);
+  console.log(JSON.stringify({ gateStatus, rows: runs.length, pivot: pivotName }, null, 2));
+  process.exit(exitCode);
+}
+
+async function sortSelectOffsetInFilterRow(page) {
+  return page.locator(".tickets-workspace-sort-select").evaluate((el) => {
+    const row = el.closest(".tickets-workspace-filter-row");
+    if (!row) {
+      return null;
+    }
+    const selectRect = el.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    return {
+      x: selectRect.left - rowRect.left,
+      y: selectRect.top - rowRect.top,
+    };
+  });
+}
+
 async function openQuoteMessages(page, quoteRef) {
   await page.goto(`${BASE}/staff/quotes/${quoteRef}`, { waitUntil: "domcontentloaded" });
+  const inline = page.locator(".conversation-sheet.is-inline");
+  await inline.waitFor({ state: "visible", timeout: 20_000 }).catch(() => {});
+  if (await inline.isVisible().catch(() => false)) {
+    return;
+  }
   const handle = page.locator(".snap-sheet-handle").first();
   if (await handle.isVisible().catch(() => false)) {
     await handle.click({ timeout: 20_000 });
@@ -193,7 +404,12 @@ async function readViewerFsMetrics(page) {
       };
     }
     const chromeStyle = getComputedStyle(chrome);
-    const overlay = !native && chromeStyle.position === "fixed";
+    const fsAttr = chrome.getAttribute("data-viewer-fs");
+    const overlay =
+      !native &&
+      (fsAttr === "overlay" ||
+        chromeStyle.position === "fixed" ||
+        chrome.hasAttribute("data-viewer-fs-overlay"));
     const chromeRect = chrome.getBoundingClientRect();
     const layoutRect = layout.getBoundingClientRect();
     return {
@@ -214,6 +430,115 @@ function viewerFsMode(metrics) {
     return "overlay";
   }
   return "none";
+}
+
+async function controlsAboveTabBar(page, selectors) {
+  return page.evaluate((sels) => {
+    const tabbar = document.querySelector(".spares-tabbar");
+    if (!tabbar) {
+      return { ok: false, reason: "no-tabbar" };
+    }
+    const tabTop = tabbar.getBoundingClientRect().top;
+    const hits = {};
+    for (const sel of sels) {
+      const el = document.querySelector(sel);
+      if (!el) {
+        hits[sel] = false;
+        continue;
+      }
+      const rect = el.getBoundingClientRect();
+      hits[sel] = rect.height > 4 && rect.bottom <= tabTop + 1;
+    }
+    return { ok: Object.values(hits).every(Boolean), tabTop, hits };
+  }, selectors);
+}
+
+async function runBeaMandatoryPhone390(browserName, browser) {
+  const context = await browser.newContext({ viewport: viewportSize(390) });
+  if (browserName === "chrome" || browserName === "chromium") {
+    try {
+      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+    } catch {
+      // Playwright builds without fullscreen permission still exercise requestFullscreen.
+    }
+  }
+  await apiLogin(context, CUSTOMER);
+  const page = await context.newPage();
+  const vp = 390;
+
+  await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await clickEnterViewerFullscreen(page);
+  await page.waitForTimeout(750);
+  const inFs = await readViewerFsMetrics(page);
+  const mode = viewerFsMode(inFs);
+  const fsEntered =
+    inFs.native ||
+    (inFs.overlay && inFs.layoutH >= Math.min(360, inFs.innerH * 0.52));
+  record(
+    "bea-phone-3d-fs",
+    "bea-smoke",
+    browserName,
+    vp,
+    fsEntered,
+    `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH}`,
+  );
+  await clickExitViewerFullscreen(page);
+
+  await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
+  await expandConversationSheet(page);
+  const card = page.locator(".conversation-sheet").first();
+  const sheetBox = await card.boundingBox();
+  const hBeforeDrag = await card.evaluate((el) => el.getBoundingClientRect().height);
+  if (sheetBox) {
+    const x = sheetBox.x + sheetBox.width / 2;
+    const yStart = sheetBox.y + 32;
+    const yEnd = sheetBox.y + sheetBox.height * 0.52;
+    await page.mouse.move(x, yStart);
+    await page.mouse.down();
+    await page.mouse.move(x, yEnd, { steps: 16 });
+    await page.mouse.up();
+  }
+  await page.waitForTimeout(900);
+  const stuck = await card.evaluate((el) => {
+    const settling = el.classList.contains("is-settling") || el.classList.contains("is-dragging");
+    const motionLive = el.hasAttribute("data-motion-live");
+    const h = el.getBoundingClientRect().height;
+    const reply = Number.parseFloat(getComputedStyle(el).getPropertyValue("--reply-h"));
+    const full = Number.parseFloat(getComputedStyle(el).getPropertyValue("--full-h"));
+    const mid = (reply + full) / 2;
+    const betweenDetents =
+      Number.isFinite(reply) &&
+      Number.isFinite(full) &&
+      h > reply + 18 &&
+      h < full - 18 &&
+      h > reply + 0.35 * (full - reply) &&
+      h < full - 0.35 * (full - reply);
+    return { settling, motionLive, betweenDetents, h: Math.round(h) };
+  });
+  if (await card.evaluate((el) => el.classList.contains("is-peek"))) {
+    await expandConversationSheet(page);
+    await page.waitForTimeout(400);
+  }
+  const above = await controlsAboveTabBar(page, [
+    ".conversation-sheet-close",
+    ".imsg-send",
+  ]);
+  const h1Pass =
+    !stuck.settling &&
+    !stuck.motionLive &&
+    !stuck.betweenDetents &&
+    above.ok;
+  record(
+    "bea-h1-care-sheet",
+    "bea-smoke",
+    browserName,
+    vp,
+    h1Pass,
+    `stuck=${JSON.stringify(stuck)} above=${JSON.stringify(above)} hBefore=${Math.round(hBeforeDrag)}`,
+  );
+
+  await context.close();
 }
 
 async function clickEnterViewerFullscreen(page) {
@@ -258,6 +583,7 @@ async function runRows(browserName, launch) {
     const page = await context.newPage();
 
     // Row 2 / sam-qty-minus3 — invalid qty keeps error, no silent commit to 1
+    await safeStep("2", "money-qty", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     await page.locator("ul a, ul button").first().click({ timeout: 20_000 });
     const qty = page.getByLabel("Qty").first();
@@ -268,8 +594,10 @@ async function runRows(browserName, launch) {
     const qtyPass = qtyErr && qtyVal.includes("-3");
     record("2", "money-qty", browserName, vp, qtyPass, `blur=${qtyVal} qtyErr=${qtyErr}`);
     record("sam-qty-minus3", "money-qty", browserName, vp, qtyPass, `blur=${qtyVal} qtyErr=${qtyErr}`);
+    });
 
     // Row 3 Q27 lock + copy
+    await safeStep("3", "quotes", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes/27`, { waitUntil: "domcontentloaded" });
     const sellDisabled = await page
       .locator('[id^="sell-"]')
@@ -285,8 +613,10 @@ async function runRows(browserName, launch) {
     const q27Pass = sellDisabled && lockCopy && !editPricingVisible;
     record("3", "quotes", browserName, vp, q27Pass, `sellDisabled=${sellDisabled} lockCopy=${lockCopy}`);
     record("3-q27-pricing-lock", "quotes", browserName, vp, q27Pass, `editPricing=${editPricingVisible}`);
+    });
 
     // sam-search-clear
+    await safeStep("sam-search-clear", "quotes", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     const search = page.locator("#staff-quotes-search").or(page.getByLabel("Search quotes"));
     await search.first().waitFor({ state: "visible", timeout: 12_000 });
@@ -297,8 +627,10 @@ async function runRows(browserName, launch) {
     const url = page.url();
     const cleared = !url.includes("q=zzqxj") && (await search.first().inputValue()) === "";
     record("sam-search-clear", "quotes", browserName, vp, cleared, `cleared=${cleared}`);
+    });
 
     // Row 5 titles
+    await safeStep("5", "document-title", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "networkidle" });
     const tQuotes = await page.title();
     await page.goto(`${BASE}/staff/tickets`, { waitUntil: "networkidle" });
@@ -309,8 +641,10 @@ async function runRows(browserName, launch) {
       /(all tickets|tickets)/i.test(tTickets) &&
       /oee360/i.test(tTickets);
     record("5", "document-title", browserName, vp, titlePass, `${tQuotes}|${tTickets}`);
+    });
 
     // Row 7 phone close @390 only; desktop quote uses inline column @1440
+    await safeStep("7", "phone-sheets", browserName, vp, async () => {
     if (vp < 1024) {
       for (const [row, ref] of [
         ["sam-close-q26", "26"],
@@ -337,8 +671,10 @@ async function runRows(browserName, launch) {
         inline ? "quote-inline-column" : "overlay",
       );
     }
+    });
 
     // Row 1 / 6331k32 — obsolete lifecycle label on staff parts
+    await safeStep("1", "6331k32-active", browserName, vp, async () => {
     await page.goto(`${BASE}/staff/parts`, { waitUntil: "domcontentloaded" });
     const searchParts = page.getByLabel(/search/i).first();
     if (await searchParts.isVisible().catch(() => false)) {
@@ -352,9 +688,11 @@ async function runRows(browserName, launch) {
       .catch(() => false);
     record("1", "6331k32-active", browserName, vp, obsoleteLabel, `obsolete=${obsoleteLabel}`);
     record("6331k32-lifecycle", "6331k32-active", browserName, vp, obsoleteLabel, `obsolete=${obsoleteLabel}`);
+    });
 
     // Row 4 offline — staff ticket status shows error when network fails
     if (vp < 1024) {
+    await safeStep("4", "offline", browserName, vp, async () => {
       await context.route("**/api/tickets/**", (route) => {
         if (route.request().method() === "PATCH") {
           return route.abort("failed");
@@ -380,10 +718,12 @@ async function runRows(browserName, launch) {
       const offlineCopy = await offlineAlert.first().isVisible().catch(() => false);
       record("4", "offline", browserName, vp, offlineCopy, `offlineCopy=${offlineCopy}`);
       await context.unroute("**/api/tickets/**");
+    });
     }
 
     // Row 6 — Recently updated sort surfaces ticket 9 before 34
     if (vp >= 1024) {
+    await safeStep("6", "care-recent-sort", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets?sort=updated`, { waitUntil: "domcontentloaded" });
       const items = await page.locator(".tickets-workspace-list a, .tickets-workspace-list button").allInnerTexts();
       const joined = items.join("\n");
@@ -391,9 +731,11 @@ async function runRows(browserName, launch) {
       const i34 = joined.search(/\b34\b|Ticket\s*34/i);
       const orderOk = i9 >= 0 && (i34 < 0 || i9 < i34);
       record("6", "care-recent-sort", browserName, vp, orderOk, `i9=${i9} i34=${i34}`);
+    });
     }
 
     // Row 8 view part
+    await safeStep("8", "machines-m", browserName, vp, async () => {
     await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(1500);
     const viewPart = await page
@@ -403,9 +745,11 @@ async function runRows(browserName, launch) {
       .catch(() => false);
     record("8", "machines-m", browserName, vp, viewPart, `viewPart=${viewPart}`);
     record("bea-m5-view-part", "bea-smoke", browserName, vp, viewPart, `viewPart=${viewPart}`);
+    });
 
     // Row 10 — palletizer viewer loads; no duplicate account email line
     if (vp >= 1024) {
+    await safeStep("10", "also", browserName, vp, async () => {
       await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
       await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
       const viewerH = await page
@@ -416,33 +760,19 @@ async function runRows(browserName, launch) {
       const emailLines = await page.locator('[role="menu"] >> text=/@/').count().catch(() => 0);
       const row10 = viewerH > 400 && emailLines <= 1;
       record("10", "also", browserName, vp, row10, `viewerH=${viewerH} emailLines=${emailLines}`);
+    });
     }
 
-    // Bea func5 matrix (subset)
+    // Bea func5 matrix (subset) — bea-phone-3d-fs / bea-h1-care-sheet run as customer @390 (v14)
     if (vp < 1024) {
-      await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-      await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-      await clickEnterViewerFullscreen(page);
-      await page.waitForTimeout(600);
-      const inFs = await readViewerFsMetrics(page);
-      const mode = viewerFsMode(inFs);
-      const overlayPin =
-        inFs.native ||
-        (inFs.overlay && inFs.layoutH > 0 && inFs.layoutH <= inFs.innerH * 0.98);
-      record(
-        "bea-phone-3d-fs",
-        "bea-smoke",
-        browserName,
-        vp,
-        overlayPin,
-        `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH}`,
-      );
-      await clickExitViewerFullscreen(page);
+    await safeStep("bea-q35-tracking", "bea-smoke", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/35`, { waitUntil: "domcontentloaded" });
       const tracking = await page.getByRole("heading", { name: /^tracking$/i }).isVisible().catch(() => false);
       record("bea-q35-tracking", "bea-smoke", browserName, vp, tracking, `tracking=${tracking}`);
+    });
     }
     if (vp >= 1024) {
+    await safeStep("bea-fs-strip-15px", "bea-smoke", browserName, vp, async () => {
       await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
       await page.locator("canvas").first().waitFor({ timeout: 60_000 }).catch(() => {});
       await clickEnterViewerFullscreen(page);
@@ -498,65 +828,190 @@ async function runRows(browserName, launch) {
         /part alerts/i.test(tAlerts) && /oee360/i.test(tAlerts),
         tAlerts,
       );
-    }
-
-    if (vp < 1024) {
-      await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-      await expandConversationSheet(page);
-      const card = page.locator(".conversation-sheet").first();
-      const sheetBox = await card.boundingBox();
-      if (sheetBox) {
-        const x = sheetBox.x + sheetBox.width / 2;
-        const yStart = sheetBox.y + 28;
-        const yEnd = sheetBox.y + sheetBox.height * 0.45;
-        await page.mouse.move(x, yStart);
-        await page.mouse.down();
-        await page.mouse.move(x, yEnd, { steps: 14 });
-        await page.mouse.up();
-        await page.waitForTimeout(650);
-      }
-      await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 }).catch(() => {});
-      await page.waitForTimeout(700);
-      const h1Peek = await card.evaluate((el) => el.classList.contains("is-peek"));
-      const composerBottom = await page.evaluate(() => {
-        const composer = document.querySelector(".imsg-composer");
-        if (!composer) {
-          return -1;
-        }
-        const tabbar = document.querySelector(".spares-tabbar");
-        const anchor = tabbar ? tabbar.getBoundingClientRect().top : window.innerHeight;
-        return Math.round(anchor - composer.getBoundingClientRect().bottom);
-      });
-      record(
-        "bea-h1-care-sheet",
-        "bea-smoke",
-        browserName,
-        vp,
-        h1Peek && composerBottom >= -8 && composerBottom < 96,
-        `peek=${h1Peek} composerGap=${composerBottom}`,
-      );
+    });
     }
 
     // sam-stepper-label @390
     if (vp < 1024) {
+    await safeStep("sam-stepper-label", "sam-stepper-label", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
       const fullLabel = await page.locator(".quote-progress-label-full").first().isVisible().catch(() => false);
       record("sam-stepper-label", "sam-stepper-label", browserName, vp, fullLabel, `fullLabel=${fullLabel}`);
+    });
+    }
+
+    // v13 — live prod re-verify (#430) staff rows
+    await safeStep("sam-qty-decimal-15", "money-qty", browserName, vp, async () => {
+    await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
+    await page.locator("ul a, ul button").first().click({ timeout: 20_000 });
+    const qtyDec = page.getByLabel("Qty").first();
+    await qtyDec.fill("1");
+    await qtyDec.click({ clickCount: 3 });
+    await qtyDec.pressSequentially("1.5");
+    const decVal = await qtyDec.inputValue();
+    const decErr = await page
+      .getByRole("alert")
+      .filter({ hasText: /whole numbers/i })
+      .isVisible()
+      .catch(() => false);
+    const decPass = decVal.includes("1.5") && decErr;
+    record("sam-qty-decimal-15", "money-qty", browserName, vp, decPass, `val=${decVal} err=${decErr}`);
+    });
+
+    await safeStep("sam-qty-invalid-refocus", "money-qty", browserName, vp, async () => {
+    const qtyRef = page.getByLabel("Qty").first();
+    await qtyRef.fill("-3");
+    await qtyRef.blur();
+    await qtyRef.focus();
+    const refVal = await qtyRef.inputValue();
+    const refErr = await page
+      .getByRole("alert")
+      .filter({ hasText: /negative/i })
+      .isVisible()
+      .catch(() => false);
+    record(
+      "sam-qty-invalid-refocus",
+      "money-qty",
+      browserName,
+      vp,
+      refVal.includes("-3") && refErr,
+      `val=${refVal}`,
+    );
+    });
+
+    if (vp < 1024) {
+    await safeStep("sam-more-machines-onetap", "staff-nav", browserName, vp, async () => {
+      await page.goto(`${BASE}/staff/parts`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: /^more$/i }).click();
+      await page.getByRole("button", { name: /^machines$/i }).click();
+      await page.waitForURL(/\/machines(?:\/|$|\?)/, { timeout: 15_000 });
+      record(
+        "sam-more-machines-onetap",
+        "staff-nav",
+        browserName,
+        vp,
+        /\/machines/.test(page.url()),
+        page.url(),
+      );
+    });
+
+    await safeStep("sam-messages-close-scroll", "phone-sheets", browserName, vp, async () => {
+      await openQuoteMessages(page, "26");
+      await expandConversationSheet(page);
+      const cardMsg = page.locator(".conversation-sheet").first();
+      const hClose = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
+      await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 });
+      await page.waitForTimeout(650);
+      await page.evaluate(() => window.scrollBy(0, 260));
+      await page.waitForTimeout(450);
+      const hScroll = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
+      record(
+        "sam-messages-close-scroll",
+        "phone-sheets",
+        browserName,
+        vp,
+        hScroll <= Math.max(hClose * 1.12, hClose + 28),
+        `hClose=${Math.round(hClose)} hScroll=${Math.round(hScroll)}`,
+      );
+    });
+
+    await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
+      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      await page.locator(".tickets-workspace-filter-row").waitFor({ state: "visible", timeout: 12_000 });
+      const sortBoxBefore = await sortSelectOffsetInFilterRow(page);
+      await page.locator("#care-tickets-search").fill("pal");
+      await page.waitForTimeout(500);
+      const sortBoxAfter = await sortSelectOffsetInFilterRow(page);
+      const sortStable =
+        sortBoxBefore &&
+        sortBoxAfter &&
+        Math.abs(sortBoxBefore.y - sortBoxAfter.y) < 1 &&
+        Math.abs(sortBoxBefore.x - sortBoxAfter.x) < 2;
+      record(
+        "sam-care-sort-stable",
+        "care-layout",
+        browserName,
+        vp,
+        Boolean(sortStable),
+        `before=${sortBoxBefore?.x},${sortBoxBefore?.y} after=${sortBoxAfter?.x},${sortBoxAfter?.y}`,
+      );
+    });
+
+    await safeStep("sam-care-header-stable", "care-layout", browserName, vp, async () => {
+      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      const headBefore = await page.locator(".tickets-workspace-toolbar").boundingBox();
+      await page
+        .locator(".tickets-workspace-new")
+        .click({ timeout: 8000 })
+        .catch(() => {});
+      await page.waitForTimeout(250);
+      const headAfter = await page.locator(".tickets-workspace-toolbar").boundingBox();
+      const headerStable =
+        headBefore &&
+        headAfter &&
+        Math.abs(headBefore.y - headAfter.y) < 3 &&
+        Math.abs(headBefore.x - headAfter.x) < 3;
+      record(
+        "sam-care-header-stable",
+        "care-layout",
+        browserName,
+        vp,
+        Boolean(headerStable),
+        `dy=${headBefore && headAfter ? Math.round(headAfter.y - headBefore.y) : "na"}`,
+      );
+    });
+    }
+
+    if (vp >= 1024) {
+    await safeStep("sam-ticket-search-t9", "care-search", browserName, vp, async () => {
+      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      await page.locator("#care-tickets-search").fill("T9");
+      await page.waitForTimeout(450);
+      const t9Text = await page.locator(".tickets-workspace-list").innerText();
+      const t9visible = /\b9\b/.test(t9Text) && /ticket/i.test(t9Text);
+      record("sam-ticket-search-t9", "care-search", browserName, vp, t9visible, `t9=${t9visible}`);
+    });
+
+    await safeStep("bea-inline-messages-no-handle", "quote-messages", browserName, vp, async () => {
+      await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
+      const inlineMsgs = await page.locator(".conversation-sheet.is-inline").isVisible().catch(() => false);
+      const handleHidden = await page
+        .locator(".conversation-sheet.is-inline .snap-sheet-handle")
+        .first()
+        .evaluate((el) => getComputedStyle(el).display === "none")
+        .catch(() => true);
+      record(
+        "bea-inline-messages-no-handle",
+        "quote-messages",
+        browserName,
+        vp,
+        inlineMsgs && handleHidden,
+        `inline=${inlineMsgs} handleHidden=${handleHidden}`,
+      );
+    });
     }
 
     await context.close();
   }
 
-  // Customer rows 9 demo hide — separate context
+  // Customer rows — separate context; one safeStep per row so row 9 cannot ABORT on later Add timeout
   const cust = await browser.newContext({ viewport: viewportSize(1440) });
   await apiLogin(cust, CUSTOMER);
   const cp = await cust.newPage();
+
+  await safeStep("9", "demo-hide-badge", browserName, 1440, async () => {
   await cp.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
   const text = await cp.locator("main").innerText();
   const hidePass = !/\bticket\s+(1[7-9]|2[0-6])\b/i.test(text);
   record("9", "demo-hide-badge", browserName, 1440, hidePass, "17-26 hidden");
+  });
+
+  await safeStep("bea-ticket-10-title", "demo-titles", browserName, 1440, async () => {
+  const text = await cp.locator("main").innerText();
   const t10Title = /stack light fault|palletizer infeed photo-eye/i.test(text);
   record("bea-ticket-10-title", "demo-titles", browserName, 1440, t10Title, "ticket10-realistic");
+  });
+  await safeStep("bea-title-customer-quotes", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
   const tQuotesCustomer = await cp.title();
   record(
@@ -567,9 +1022,16 @@ async function runRows(browserName, launch) {
     /quotes/i.test(tQuotesCustomer) && /oee360/i.test(tQuotesCustomer),
     tQuotesCustomer,
   );
+  });
+
+  await safeStep("bea-q37-not-first", "bea-smoke", browserName, 1440, async () => {
+  await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
   const firstQuote = (await cp.locator("ul li").first().innerText().catch(() => "")).slice(0, 80);
   const q37First = /quote\s*37\b/i.test(firstQuote);
   record("bea-q37-not-first", "bea-smoke", browserName, 1440, !q37First, `first=${firstQuote}`);
+  });
+
+  await safeStep("bea-drawer-vs-add", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
   await cp.getByRole("button", { name: /new quote/i }).click({ timeout: 8000 }).catch(() => {});
   await cp.waitForTimeout(400);
@@ -587,7 +1049,11 @@ async function runRows(browserName, launch) {
     !newFormOpen,
     `newFormOpen=${newFormOpen}`,
   );
+  });
+
   const customerTenant = await tenantIdForContext(cust);
+
+  await safeStep("bea-m9-undo-tray", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
   await seedCustomerTray(cp, "palletizer", customerTenant);
   await cp.reload({ waitUntil: "domcontentloaded" });
@@ -616,7 +1082,112 @@ async function runRows(browserName, launch) {
     undoVisible,
     `undo=${undoVisible}`,
   );
+  });
+
+  await safeStep("bea-m9-tray-handle-lines", "bea-smoke", browserName, 1440, async () => {
+  await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await seedCustomerTray(cp, "palletizer", customerTenant);
+  await cp.reload({ waitUntil: "domcontentloaded" });
+  await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
+  const dockedTray = cp.locator(".quote-tray-dock.is-open [data-quote-tray]").first();
+  await dockedTray.waitFor({ state: "visible", timeout: 12_000 }).catch(() => {});
+  const trayFull = await cp
+    .locator(".quote-tray-dock.is-open .quote-sheet.is-full")
+    .isVisible()
+    .catch(() => false);
+  const removeBtn = dockedTray.getByRole("button", { name: /^remove$/i }).first();
+  await removeBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  const removeBox = await removeBtn.boundingBox();
+  const removeVisible =
+    Boolean(removeBox) &&
+    removeBox.y >= 0 &&
+    removeBox.y + removeBox.height <= cp.viewportSize().height;
+  record(
+    "bea-m9-tray-handle-lines",
+    "bea-smoke",
+    browserName,
+    1440,
+    trayFull && removeVisible,
+    `dockFull=${trayFull} removeVisible=${removeVisible}`,
+  );
+  });
+
+  await safeStep("bea-drawer-list-add", "bea-smoke", browserName, 1440, async () => {
+  await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await seedCustomerTray(cp, "palletizer", customerTenant);
+  await cp.reload({ waitUntil: "domcontentloaded" });
+  await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await cp.getByRole("button", { name: /^list$/i }).click({ timeout: 12_000 });
+  const bomPanel = cp.locator("section[data-parts-bom]").first();
+  await bomPanel.waitFor({ state: "visible", timeout: 15_000 });
+  await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
+  const addButtons = bomPanel.getByRole("button", { name: /^add$/i });
+  const addCount = await addButtons.count();
+  const addReachability = [];
+  let allAddReachable = addCount > 0;
+  for (let i = 0; i < addCount; i += 1) {
+    const addBtn = addButtons.nth(i);
+    await addBtn.waitFor({ state: "visible", timeout: 15_000 });
+    const addBox = await addBtn.boundingBox();
+    if (!addBox) {
+      allAddReachable = false;
+      addReachability.push(`${i}=no-box`);
+      continue;
+    }
+    const reachable = await cp.evaluate(
+      ({ x, y }) => {
+        const hit = document.elementFromPoint(x, y);
+        if (!hit) {
+          return false;
+        }
+        const label = hit.closest("button")?.textContent?.trim() ?? "";
+        return /^add$/i.test(label);
+      },
+      { x: addBox.x + addBox.width / 2, y: addBox.y + addBox.height / 2 },
+    );
+    if (!reachable) {
+      allAddReachable = false;
+      addReachability.push(`${i}=blocked`);
+    } else {
+      addReachability.push(`${i}=ok`);
+    }
+  }
+  record(
+    "bea-drawer-list-add",
+    "bea-smoke",
+    browserName,
+    1440,
+    allAddReachable,
+    `addCount=${addCount} ${addReachability.join(",")}`,
+  );
+  });
+
+  await safeStep("bea-fs-viewer-stage", "bea-smoke", browserName, 1440, async () => {
+  await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await clickEnterViewerFullscreen(cp);
+  await cp.waitForTimeout(700);
+  const stageW = await cp.evaluate(() => {
+    const layout = document.querySelector("[data-machine-viewer-layout]");
+    return layout ? Math.round(layout.getBoundingClientRect().width) : 0;
+  });
+  record(
+    "bea-fs-viewer-stage",
+    "bea-smoke",
+    browserName,
+    1440,
+    stageW >= Math.round(1440 * 0.92),
+    `layoutW=${stageW}`,
+  );
+  await clickExitViewerFullscreen(cp);
+  });
+
   await cust.close();
+
+  await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
+    await runBeaMandatoryPhone390(browserName, browser);
+  });
 
   await browser.close();
 }
@@ -628,46 +1199,25 @@ async function main() {
     chromium,
     webkit,
   };
-  for (const name of browsers) {
-    const launch = launchers[name];
-    if (!launch) {
-      console.warn("skip unknown browser", name);
-      continue;
+  let fatalError = null;
+  try {
+    for (const name of browsers) {
+      const launch = launchers[name];
+      if (!launch) {
+        console.warn("skip unknown browser", name);
+        continue;
+      }
+      await runRows(name === "chrome" ? "chrome" : name, launch);
     }
-    await runRows(name === "chrome" ? "chrome" : name, launch);
+  } catch (err) {
+    fatalError = err;
+    console.error(err);
   }
-
-  const gateStatus = runs.every((r) => r.pass) ? "PASS" : "FAIL";
-  const summary = { bundleHead, gateStatus, runs, generatedAt: new Date().toISOString() };
-  await writeFile(join(OUT, "proof-summary.json"), JSON.stringify(summary, null, 2));
-
-  const lines = [
-    "# rv421 Mac proof gate — RESULTS",
-    "",
-    `**Bundle HEAD:** \`${bundleHead}\``,
-    `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v7)`,
-    `**Generated:** ${summary.generatedAt}`,
-    "",
-    "| Row | Result | RCA / notes | Proof folder |",
-    "|-----|--------|-------------|--------------|",
-  ];
-  const seen = new Set();
-  for (const r of runs) {
-    const key = `${r.row}-${r.browser}-${r.viewport}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    lines.push(
-      `| ${r.row} | **${r.pass ? "PASS" : "FAIL"}** | ${r.detail.replace(/\|/g, "/")} | [${r.folder}/](./${r.folder}/) |`,
-    );
-  }
-  lines.push("", "Raw log: `proof-summary.json` in this folder.");
-  await writeFile(join(OUT, "RESULTS.md"), lines.join("\n"));
-  console.log(JSON.stringify({ gateStatus, rows: runs.length }, null, 2));
-  process.exit(gateStatus === "PASS" ? 0 : 1);
+  const gateStatus = runs.length > 0 && runs.every((r) => r.pass) ? "PASS" : "FAIL";
+  await flushGateResults(fatalError ? 1 : gateStatus === "PASS" ? 0 : 1);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
-  process.exit(1);
+  await flushGateResults(1);
 });

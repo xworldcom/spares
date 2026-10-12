@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   parseEditableQty,
   qtyDraftIsComplete,
+  qtyInputFullySelected,
   qtyKeyReplacesDraft,
   sanitizeQtyDraft,
   validateEditableQty,
@@ -75,5 +76,18 @@ describe("editable qty", () => {
     assert.equal(qtyKeyReplacesDraft(true, "25"), false);
     assert.equal(qtyKeyReplacesDraft(false, "2"), false);
     assert.equal(qtyKeyReplacesDraft(true, "Backspace"), false);
+  });
+
+  it("detects full-field selection for decimal append", () => {
+    const input = {
+      value: "1",
+      selectionStart: 0,
+      selectionEnd: 1,
+    } as HTMLInputElement;
+    assert.equal(qtyInputFullySelected(input), true);
+    assert.equal(
+      qtyInputFullySelected({ ...input, selectionStart: 1, selectionEnd: 1 } as HTMLInputElement),
+      false,
+    );
   });
 });

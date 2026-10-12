@@ -30,6 +30,12 @@ describe("ticketMatchesCareSearch", () => {
     assert.equal(ticketMatchesCareSearch(row, "42"), true);
     assert.equal(ticketMatchesCareSearch(row, "nope"), false);
   });
+
+  it("matches ticket number with T prefix", () => {
+    const row = ticket({ id: "t9", number: 9, title: "Infeed fault" });
+    assert.equal(ticketMatchesCareSearch(row, "T9"), true);
+    assert.equal(ticketMatchesCareSearch(row, "ticket 9"), true);
+  });
 });
 
 describe("filterAndSortCareTickets", () => {

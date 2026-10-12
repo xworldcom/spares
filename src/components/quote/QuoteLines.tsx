@@ -10,7 +10,10 @@ import {
 } from "@/lib/quotes";
 import {
   qtyDraftIsComplete,
+  qtyDecimalKey,
+  qtyInputFullySelected,
   qtyKeyReplacesDraft,
+  queueQtyCaretEnd,
   sanitizeQtyDraft,
   validateEditableQty,
 } from "@/lib/ui/editable-qty";
@@ -151,8 +154,8 @@ function QtyField({
     const validated = validateEditableQty(raw);
     if (!validated.ok) {
       setError(validated.error);
-      setDraft(null);
-      replaceOnType.current = true;
+      setDraft(raw.trim() ? raw : null);
+      replaceOnType.current = false;
       return;
     }
     setError(null);
@@ -182,6 +185,14 @@ function QtyField({
           value={draft ?? String(value)}
           onFocus={(event) => {
             const input = event.currentTarget;
+            if (error && draft !== null) {
+              replaceOnType.current = false;
+              requestAnimationFrame(() => {
+                const len = input.value.length;
+                input.setSelectionRange(len, len);
+              });
+              return;
+            }
             setError(null);
             setDraft(String(value));
             replaceOnType.current = true;
@@ -231,10 +242,30 @@ function QtyField({
               event.currentTarget.blur();
               return;
             }
+            const input = event.currentTarget;
+            const fullSelection = qtyInputFullySelected(input);
+            const baseForDecimal = draft ?? String(value);
+            const appendDecimal =
+              replaceOnType.current ||
+              fullSelection ||
+              /^\d+$/.test(baseForDecimal);
+            if (qtyDecimalKey(event.key) && appendDecimal) {
+              event.preventDefault();
+              const base = draft ?? String(value);
+              replaceOnType.current = false;
+              const next = base.includes(".") ? base : `${base}.`;
+              setDraft(next);
+              const validated = validateEditableQty(next);
+              setError(validated.ok ? null : "Whole numbers only.");
+              onPreview?.(validated.ok ? validated.qty : null);
+              queueQtyCaretEnd(input, next.length);
+              return;
+            }
             if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {
               event.preventDefault();
               replaceOnType.current = false;
               setDraft(event.key);
+              queueQtyCaretEnd(input, event.key.length);
               return;
             }
             if (

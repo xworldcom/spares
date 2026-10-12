@@ -33,7 +33,10 @@ function preferNativeFullscreen() {
   if (isEmbedded() || isIos()) {
     return false;
   }
-  if (window.matchMedia("(max-width: 480px)").matches) {
+  if (window.matchMedia("(max-width: 1023px)").matches) {
+    return false;
+  }
+  if (window.matchMedia("(max-width: 1535px)").matches) {
     return false;
   }
   return true;
@@ -84,6 +87,9 @@ export function useViewerFullscreen() {
     }
     setOverlay(true);
     setNative(false);
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
   }, []);
 
   useEffect(() => {
