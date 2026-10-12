@@ -9,10 +9,10 @@ import { listMachines } from "@/lib/api/machines";
 import {
   workListAllHref,
   workListAllLabel,
+  workListBarTitle,
   workListHubHref,
   workListMachineHref,
   workListMachineIdFromSearchParam,
-  workListTitle,
   WORK_LIST_MACHINE_QUERY,
   type WorkListKind,
 } from "@/lib/work-list-scope";
@@ -56,11 +56,11 @@ export function WorkListScopeBar({
   const allHref = workListAllHref(kind, role);
   const allLabel = workListAllLabel(kind);
   const hubFiltered = Boolean(hubMachineId) && !routeScoped;
-  const title = workListTitle(
-    kind,
-    routeScoped || hubFiltered ? machineName : null,
-    routeScoped || hubFiltered,
-  );
+  const title = workListBarTitle(kind, {
+    routeScoped,
+    hubFiltered,
+    machineName,
+  });
   const Heading = headingLevel;
 
   useEffect(() => {

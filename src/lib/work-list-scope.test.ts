@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   workListAllHref,
   workListAllLabel,
+  workListBarTitle,
   workListHubHref,
   workListMachineHref,
   workListTitle,
@@ -67,5 +68,40 @@ describe("workListAllLabel", () => {
   it("matches the hub title for the back link", () => {
     assert.equal(workListAllLabel("quotes"), "All quotes");
     assert.equal(workListAllLabel("tickets"), "All tickets");
+  });
+});
+
+describe("workListBarTitle", () => {
+  it("names the machine on a machine-scoped quotes route (#417)", () => {
+    assert.equal(
+      workListBarTitle("quotes", {
+        routeScoped: true,
+        hubFiltered: false,
+        machineName: "Hardware fixture",
+      }),
+      "Hardware fixture · Quotes",
+    );
+  });
+
+  it("names the machine on a machine-scoped tickets route", () => {
+    assert.equal(
+      workListBarTitle("tickets", {
+        routeScoped: true,
+        hubFiltered: false,
+        machineName: "Palletizer",
+      }),
+      "Palletizer · Tickets",
+    );
+  });
+
+  it("keeps the hub title when neither machine route nor filter applies", () => {
+    assert.equal(
+      workListBarTitle("quotes", {
+        routeScoped: false,
+        hubFiltered: false,
+        machineName: "Hardware fixture",
+      }),
+      "All quotes",
+    );
   });
 });

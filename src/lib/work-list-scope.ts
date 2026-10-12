@@ -62,6 +62,19 @@ export function workListTitle(
   return workListAllLabel(kind);
 }
 
+/** Title for WorkListScopeBar (machine route or hub `?machine=` filter). */
+export function workListBarTitle(
+  kind: WorkListKind,
+  options: {
+    routeScoped: boolean;
+    hubFiltered: boolean;
+    machineName?: string | null;
+  },
+) {
+  const scoped = options.routeScoped || options.hubFiltered;
+  return workListTitle(kind, scoped ? options.machineName : null, scoped);
+}
+
 export function workListAllHref(kind: WorkListKind, role: Role = "customer") {
   if (kind === "tickets") {
     return hubTicketsHref();
