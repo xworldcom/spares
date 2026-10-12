@@ -4,9 +4,9 @@ import type { ConversationSheetSnap } from "./conversation-sheet.ts";
 export function conversationReadVisible(
   snap: ConversationSheetSnap | undefined,
   layout: "overlay" | "inline",
-  desktopStage: boolean,
+  conversationDock: boolean,
 ) {
-  if (layout === "inline" && desktopStage) {
+  if (layout === "inline" && conversationDock) {
     return true;
   }
   if (!snap || snap === "out" || snap === "peek") {

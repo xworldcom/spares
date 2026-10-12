@@ -7,7 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { DESKTOP_STAGE } from "@/components/machine/useDesktopStage";
+import { CONVERSATION_DOCK_STAGE } from "@/components/machine/useDesktopStage";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
@@ -37,9 +37,10 @@ export const SHEET_EASE_MS = 420;
 const DRAG_SLOP = 8;
 const SAMPLE_WINDOW_MS = 90;
 
-function isDesktopStage() {
+function isConversationDockStage() {
   return (
-    typeof window !== "undefined" && window.matchMedia(DESKTOP_STAGE).matches
+    typeof window !== "undefined" &&
+    window.matchMedia(CONVERSATION_DOCK_STAGE).matches
   );
 }
 
@@ -219,7 +220,7 @@ export function QuoteTray({
   const [error, setError] = useState<string | null>(null);
   const { refresh: refreshQuoteAlerts } = useQuoteAlerts();
   const [sheet, setSheet] = useState<Sheet>(() =>
-    initialQuoteSheetSnap(open, isDesktopStage()),
+    initialQuoteSheetSnap(open, isConversationDockStage()),
   );
   const [dragging, setDragging] = useState(false);
   const card = useRef<HTMLElement>(null);
@@ -243,7 +244,7 @@ export function QuoteTray({
     if (!increased) {
       return;
     }
-    if (open && !isDesktopStage()) {
+    if (open && !isConversationDockStage()) {
       setSheet(quoteTraySnapAfterLineAdded(false));
     }
     const node = card.current?.querySelector<HTMLElement>(
@@ -297,7 +298,7 @@ export function QuoteTray({
         if (current !== "out") {
           return current;
         }
-        return initialQuoteSheetSnap(true, isDesktopStage());
+        return initialQuoteSheetSnap(true, isConversationDockStage());
       });
       paintDrag(0);
       setDragging(false);
@@ -365,7 +366,7 @@ export function QuoteTray({
   }
 
   function hide() {
-    if (sheet === "full" && !isDesktopStage()) {
+    if (sheet === "full" && !isConversationDockStage()) {
       setSheet("peek");
       setOpen(true);
       return;
@@ -391,7 +392,7 @@ export function QuoteTray({
   }
 
   function onCardPointerDown(event: ReactPointerEvent<HTMLElement>) {
-    if (isDesktopStage()) {
+    if (isConversationDockStage()) {
       return;
     }
     if (event.button !== 0 && event.pointerType === "mouse") {
@@ -560,7 +561,7 @@ export function QuoteTray({
           if (drag.current.moved) {
             return;
           }
-          if (isDesktopStage()) {
+          if (isConversationDockStage()) {
             hide();
             return;
           }

@@ -5,7 +5,10 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
 import { StaffPartsReview } from "@/components/machine/StaffPartsReview";
-import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import {
+  useConversationDockStage,
+  useDesktopStage,
+} from "@/components/machine/useDesktopStage";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerLayoutReady } from "@/components/machine/useViewerLayoutReady";
@@ -104,6 +107,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     null,
   );
   const desktopStage = useDesktopStage();
+  const conversationDock = useConversationDockStage();
   const hydrated = useHydrated();
   const viewerLayoutReady = useViewerLayoutReady();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -120,7 +124,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       ? quoteTrayNoteStorageKey(user.tenantId, machineId)
       : null;
   const [trayNote, setTrayNote] = useState("");
-  const customerTrayInViewer = isCustomer && !desktopStage;
+  const customerTrayInViewer = isCustomer && !conversationDock;
 
   useEffect(() => {
     if (!overlay || !prefersViewerOverlayFullscreen()) {
@@ -1003,9 +1007,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         ref={staffSplitView ? staffSplit.containerRef : undefined}
         className="machine-stage-grid"
         data-tray={
-          isCustomer && trayOpen && !fullscreen && desktopStage ? "open" : "closed"
+          isCustomer && trayOpen && !fullscreen && conversationDock ? "open" : "closed"
         }
-        data-customer-desktop={isCustomer && desktopStage ? "true" : undefined}
+        data-customer-desktop={isCustomer && conversationDock ? "true" : undefined}
         data-staff-split={staffSplitView ? "true" : undefined}
         style={
           staffSplitView
@@ -1026,7 +1030,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             {staffPartsPanel}
           </>
         ) : null}
-        {isCustomer && desktopStage && !fullscreen ? (
+        {isCustomer && conversationDock && !fullscreen ? (
           <div
             className={`quote-tray-dock${trayOpen ? " is-open" : ""}`}
             data-quote-tray=""

@@ -1,7 +1,7 @@
 "use client";
 
 import { useConversationSheetChrome } from "@/components/chat/ConversationSheetContext";
-import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import { useConversationDockStage } from "@/components/machine/useDesktopStage";
 import { useTicketReadWatermark } from "@/lib/hooks/useTicketReadWatermark";
 import { conversationReadVisible } from "@/lib/ui/conversation-read-visible";
 import type { ServiceTicket } from "@/types";
@@ -20,9 +20,9 @@ export function ConversationReadWatermark({
   layout: "overlay" | "inline";
   onRead: (ticket: ServiceTicket) => void;
 }) {
-  const desktop = useDesktopStage();
+  const conversationDock = useConversationDockStage();
   const chrome = useConversationSheetChrome();
-  const visible = conversationReadVisible(chrome?.snap, layout, desktop);
+  const visible = conversationReadVisible(chrome?.snap, layout, conversationDock);
   useTicketReadWatermark(enabled && visible, ticketId, threadBump, onRead);
   return null;
 }

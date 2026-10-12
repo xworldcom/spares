@@ -355,7 +355,7 @@ body {
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (pointer: fine) {
   .quote-sheet {
     left: auto;
     right: 1.1rem;
@@ -821,7 +821,7 @@ body {
   font-weight: 500;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (pointer: fine) {
   .conversation-sheet:not(.is-inline) {
     left: auto;
     right: 1.1rem;
@@ -1051,7 +1051,7 @@ body {
   scrollbar-width: thin;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (pointer: fine) {
   .machine-context-name {
     display: block;
   }
@@ -3884,6 +3884,52 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   .tickets-workspace-detail .care-stack {
     padding-bottom: calc(var(--peek-h, 5.75rem) + 1rem);
     scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* iPad split ticket list + phone-style overlay Messages in the detail pane */
+@media (min-width: 1024px) and (pointer: coarse) {
+  .tickets-workspace[data-tickets-layout="split"][data-care-chat="overlay"] .tickets-workspace-detail {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"][data-care-chat="overlay"] .care-stack-head {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-bottom: 0.35rem;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--spares-paper) 96%, transparent) 0%,
+      color-mix(in srgb, var(--spares-paper) 88%, transparent) 72%,
+      transparent 100%
+    );
+  }
+
+  .tickets-workspace[data-tickets-layout="split"][data-care-chat="overlay"] .care-ticket-detail {
+    margin-top: 0.45rem;
+    color: var(--spares-muted);
+    font-size: 15px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"][data-care-chat="overlay"]
+    .tickets-workspace-detail
+    .care-stack {
+    padding-bottom: calc(var(--peek-h, 5.75rem) + 1rem);
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .tickets-workspace[data-tickets-layout="split"][data-care-chat="overlay"]
+    .care-stack
+    .conversation-sheet-spacer {
+    display: block;
+    height: calc(var(--reply-h, 17.5rem) + 2.25rem);
   }
 }
 

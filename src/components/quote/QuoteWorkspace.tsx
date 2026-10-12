@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
-import { useDesktopStage } from "@/components/machine/useDesktopStage";
+import { useConversationDockStage } from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
@@ -95,7 +95,7 @@ export function QuoteWorkspace({
 }) {
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
-  const desktop = useDesktopStage();
+  const conversationDock = useConversationDockStage();
   const searchParams = useSearchParams();
   const seedQuote = quoteSeedForRef(quoteRef);
   const [quote, setQuote] = useState<Quote | null>(
@@ -513,7 +513,7 @@ export function QuoteWorkspace({
   return (
     <div
       className="quote-workspace mx-auto w-full max-w-5xl"
-      data-quote-layout={desktop ? "split" : "stack"}
+      data-quote-layout={conversationDock ? "split" : "stack"}
     >
       <div className="quote-workspace-main space-y-5">
       <div className="quote-timeline-handoff-dest space-y-5">
@@ -858,7 +858,7 @@ export function QuoteWorkspace({
         peekLine={peek.text}
         unread={quote.unread}
         threadKey={loadedRef === quoteRef ? quote.id : quoteRef}
-        layout={desktop ? "inline" : "overlay"}
+        layout={conversationDock ? "inline" : "overlay"}
         closeProfile="quote"
       >
         <QuoteActivityFeed
@@ -870,9 +870,9 @@ export function QuoteWorkspace({
           onSend={sendActivity}
           threadKind="quote"
           threadId={quote.id}
-          layout={desktop ? "card" : "sheet"}
+          layout={conversationDock ? "card" : "sheet"}
           title="Messages"
-          subtitle={desktop ? threadSubtitle ?? undefined : undefined}
+          subtitle={conversationDock ? threadSubtitle ?? undefined : undefined}
           customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
           actorDisplayNames={quote.actorDisplayNames}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
