@@ -13,7 +13,7 @@ describe("editable qty", () => {
     const result = validateEditableQty("-3");
     assert.equal(result.ok, false);
     if (!result.ok) {
-      assert.match(result.error, /at least 1/i);
+      assert.match(result.error, /negative/i);
     }
   });
   it("keeps a typed integer ≥ 1", () => {

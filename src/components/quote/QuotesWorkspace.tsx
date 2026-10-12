@@ -5,7 +5,10 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
 import { QuotesList } from "@/components/quote/QuotesList";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
+import { useMachineName } from "@/components/nav/useMachineName";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
+import { workListTitle } from "@/lib/work-list-scope";
 import { workListMachineIdFromSearchParam, WORK_LIST_MACHINE_QUERY } from "@/lib/work-list-scope";
 import type { QuotesListResponse } from "@/lib/api/types";
 import type { Role } from "@/types";
@@ -45,9 +48,16 @@ export function QuotesWorkspace({
   const hubMachineId =
     machineId ??
     workListMachineIdFromSearchParam(searchParams.get(WORK_LIST_MACHINE_QUERY));
+  const machineName = useMachineName(machineId ?? hubMachineId ?? null);
+  const pageTitle = workListTitle(
+    "quotes",
+    scoped || hubMachineId ? machineName : null,
+    scoped || Boolean(hubMachineId),
+  );
 
   return (
     <div className={scoped ? "space-y-4" : "catalog-page"}>
+      <DocumentTitle title={pageTitle} />
       <div className={scoped ? undefined : "catalog-page-intro"}>
         <WorkListScopeBar
           kind="quotes"

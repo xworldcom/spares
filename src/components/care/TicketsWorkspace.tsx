@@ -26,7 +26,9 @@ import {
 } from "@/lib/care";
 import { prefetchAppRoute, warmTicketDetail } from "@/lib/nav/prefetch";
 import { useMachineName } from "@/components/nav/useMachineName";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { WorkListScopeBar } from "@/components/nav/WorkListScopeBar";
+import { workListTitle } from "@/lib/work-list-scope";
 import {
   careTicketsSortFromParam,
   careTicketsStatusFromParam,
@@ -108,6 +110,14 @@ export function TicketsWorkspace({
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
   const listHref = listHrefFor(scope, machineId);
+  const scopedMachineName = useMachineName(
+    scope === "machine" ? machineId ?? null : hubMachineFromUrl ?? null,
+  );
+  const ticketsPageTitle = workListTitle(
+    "tickets",
+    scope === "machine" || hubMachineFromUrl ? scopedMachineName : null,
+    scope === "machine" || Boolean(hubMachineFromUrl),
+  );
   const listHrefWithQuery = `${listHref}${careTicketsListQueryString(searchParams)}`;
   const hubMachineFilter = scope === "hub" ? hubMachineFromUrl : undefined;
   const showMachine = scope === "hub" && !hubMachineFilter;
@@ -281,26 +291,6 @@ export function TicketsWorkspace({
     }
     return [selected, ...visibleTickets];
   }, [selected, statusFilter, visibleTickets]);
-
-  useEffect(() => {
-    if (
-      scope !== "hub" ||
-      !ticketId ||
-      hubMachineFromUrl ||
-      !selected?.machineId ||
-      statusFilter === "all"
-    ) {
-      return;
-    }
-    replaceListQuery({ [WORK_LIST_MACHINE_QUERY]: selected.machineId });
-  }, [
-    hubMachineFromUrl,
-    replaceListQuery,
-    scope,
-    selected?.machineId,
-    statusFilter,
-    ticketId,
-  ]);
 
   const listPanel = (
     <div className="tickets-workspace-list">
@@ -477,6 +467,7 @@ export function TicketsWorkspace({
       className="tickets-workspace"
       data-tickets-layout={desktop ? "split" : ticketId ? "detail" : "list"}
     >
+      <DocumentTitle title={ticketsPageTitle} />
       {showList ? listPanel : null}
       {showDetail ? (
         <div className="tickets-workspace-detail">{detailPanel}</div>

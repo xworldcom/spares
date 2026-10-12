@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatWhen } from "@/components/quote/quote-format";
-import { canUploadPo, invoiceVisible, quotePoNextStep } from "@/lib/quotes";
+import { canUploadPo, invoiceVisible, quoteIsStaffReadOnly, quotePoNextStep } from "@/lib/quotes";
 import { quotePoUrl } from "@/lib/api/quotes";
 import type { Quote, Role } from "@/types";
 
@@ -21,7 +21,8 @@ export function QuotePoPanel({
 }) {
   const [poNumber, setPoNumber] = useState(quote.poNumber ?? "");
   const [file, setFile] = useState<File | null>(null);
-  const allowed = canUploadPo(quote.status, role);
+  const readOnly = role === "staff" && quoteIsStaffReadOnly(quote.status);
+  const allowed = canUploadPo(quote.status, role) && !readOnly;
   const nextStep = quotePoNextStep(quote.status, role);
   const downloadHref = quote.hasPoFile ? quotePoUrl(String(quote.number)) : null;
 

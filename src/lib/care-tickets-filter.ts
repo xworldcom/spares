@@ -60,15 +60,19 @@ export function filterAndSortCareTickets(
     rows = rows.filter((ticket) => ticketMatchesCareSearch(ticket, q));
   }
   const sorted = [...rows];
+  function sortTimestamp(ticket: ServiceTicket) {
+    if (options.sort === "updated") {
+      return (
+        ticket.lastModifiedAt ??
+        ticket.activities.at(-1)?.at ??
+        ticket.createdAt
+      );
+    }
+    return ticket.createdAt;
+  }
   sorted.sort((a, b) => {
-    const left =
-      options.sort === "updated"
-        ? (a.activities.at(-1)?.at ?? a.createdAt)
-        : a.createdAt;
-    const right =
-      options.sort === "updated"
-        ? (b.activities.at(-1)?.at ?? b.createdAt)
-        : b.createdAt;
+    const left = sortTimestamp(a);
+    const right = sortTimestamp(b);
     return new Date(right).getTime() - new Date(left).getTime();
   });
   return sorted;

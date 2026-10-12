@@ -5,6 +5,7 @@ import {
   buildTenantPartCatalog,
   enrichPartsWithLifecycle,
   healDemoPartLifecycle,
+  reconcileCorruptedDemoLifecycleRows,
   lifecycleMapForQuotePartIds,
   parsePartLifecycleBulk,
   publicLifecycle,
@@ -128,6 +129,22 @@ describe("part lifecycle catalog", () => {
     });
     assert.equal(merged[0]?.status, "obsolete");
     assert.equal(merged[0]?.sourceNotes, "NRND");
+  });
+});
+
+describe("reconcileCorruptedDemoLifecycleRows", () => {
+  it("restores demo obsolete row corrupted to active", () => {
+    const rows = reconcileCorruptedDemoLifecycleRows([
+      {
+        id: "tenant-oee360-host::6331K32",
+        tenantId: "tenant-oee360-host",
+        partNumber: "6331K32",
+        status: "active",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    assert.equal(rows[0]?.status, "obsolete");
+    assert.equal(rows[0]?.successorPartNumber, "6331K53");
   });
 });
 

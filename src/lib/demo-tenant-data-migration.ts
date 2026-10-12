@@ -73,9 +73,14 @@ export type DataMigrations = {
   entityShardsV1?: number;
   /** Reset demo quote #26 stuck at PO received with junk tracking (prod heal). */
   demoQuote26HealV1?: number;
+  /** Tickets #27–34 hidden from customers; Q37 note scrub. */
+  demoCustomerHygieneV1?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
+
+/** Hide gate/smoke tickets from customer UI; scrub junk demo quote copy. */
+export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
 
 type DemoMigrationUser = {
   id: string;
@@ -99,12 +104,19 @@ type DemoMigrationMachine = {
   unmatched?: UnmatchedPart[];
 };
 
+type DemoMigrationTicket = {
+  id: string;
+  number: number;
+  hiddenFromCustomer?: boolean;
+};
+
 type DemoMigrationDb = {
   dataMigrations?: DataMigrations;
   users: DemoMigrationUser[];
   machines: DemoMigrationMachine[];
   partLifecycle?: StoredPartLifecycle[];
   quotes?: QuoteRecord[];
+  tickets?: DemoMigrationTicket[];
 };
 
 export type DemoTenantV1ApplyResult = {
@@ -532,6 +544,53 @@ export function applyDemoQuote26HealMigration<T extends DemoMigrationDb & { quot
   return {
     db: { ...marked, quotes: nextQuotes },
     changed: true,
+  };
+}
+
+const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS = new Set(
+  Array.from({ length: 8 }, (_, index) => 27 + index),
+);
+
+/** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */
+export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
+    },
+  } as T;
+  if (db.dataMigrations?.demoCustomerHygieneV1 === DEMO_CUSTOMER_HYGIENE_V1) {
+    return { db, changed: false };
+  }
+  let changed = true;
+  const tickets = (db.tickets ?? []).map((ticket) => {
+    if (!DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS.has(ticket.number)) {
+      return ticket;
+    }
+    if (ticket.hiddenFromCustomer) {
+      return ticket;
+    }
+    changed = true;
+    return { ...ticket, hiddenFromCustomer: true };
+  });
+  const quotes = (db.quotes ?? []).map((quote) => {
+    if (quote.number !== 37) {
+      return quote;
+    }
+    const note = quote.note?.trim().toLowerCase() ?? "";
+    if (!note.includes("testing")) {
+      return quote;
+    }
+    changed = true;
+    const { note: _drop, ...rest } = quote;
+    return rest;
+  });
+  return {
+    db: { ...marked, tickets, quotes },
+    changed,
   };
 }
 

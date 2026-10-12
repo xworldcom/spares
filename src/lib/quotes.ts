@@ -130,7 +130,10 @@ export function quoteStatusRegressionSteps(
 export function quoteStaffPricingLocked(
   quote: Pick<QuoteRecord, "status" | "staffPricingUnlocked">,
 ): boolean {
-  return quoteHasReached(quote.status, "po_received") && !quote.staffPricingUnlocked;
+  if (quote.staffPricingUnlocked) {
+    return false;
+  }
+  return quoteHasReached(quote.status, "quoted");
 }
 
 export function quoteIsStaffReadOnly(status: QuoteStatus) {
@@ -728,6 +731,9 @@ export function parseStaffMoneyField(raw: string): StaffMoneyParseResult {
   const trimmed = raw.trim();
   if (!trimmed) {
     return { ok: true, value: undefined };
+  }
+  if (!/^-?\d*(\.\d{0,2})?$/.test(trimmed.replace(/^\./, "0."))) {
+    return { ok: false, error: "Enter a valid amount (up to 2 decimals)." };
   }
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed)) {
