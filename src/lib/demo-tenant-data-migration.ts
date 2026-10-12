@@ -86,6 +86,8 @@ export type DataMigrations = {
   demoRv421Quote27V1?: number;
   /** Re-apply hardware-fixture demo lifecycle rows when catalog lost them (rv421 item 8). */
   demoRv421HardwareFixtureLifecycleV1?: number;
+  /** Retitle demo tickets #10–#16; force Q37 hidden from customers (rv428). */
+  demoRv428DemoPolishV1?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
@@ -102,6 +104,26 @@ export const DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1 = 1;
 export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
 
 export const DEMO_CUSTOMER_HYGIENE_V4 = 4;
+
+export const DEMO_RV428_DEMO_POLISH_V1 = 1;
+
+const DEMO_TICKET_PLACEHOLDER_TITLE =
+  /^(Ack dismiss preview|Short thread pin(?: Absolute v[56])?|Long thread scroll Absolute v6)$/i;
+
+/** Realistic plant-care titles for sheet-motion demo tickets (threads unchanged). */
+export const DEMO_TICKET_REALISTIC_TITLES_10_16: Readonly<Record<number, string>> = {
+  10: "Stack light fault after jam reset — Zone 2",
+  11: "Palletizer infeed photo-eye drift",
+  12: "Hydraulic lift slow retract after pallet release",
+  13: "Intermittent VFD fault on outfeed conveyor",
+  14: "Spindle lubrication low — operator alert",
+  15: "Drive roller noise after night shift",
+  16: "Gearbox oil analysis — service follow-up",
+};
+
+export function isDemoTicketPlaceholderTitle(title: string | undefined) {
+  return DEMO_TICKET_PLACEHOLDER_TITLE.test((title ?? "").trim());
+}
 
 type DemoMigrationUser = {
   id: string;
@@ -128,6 +150,8 @@ type DemoMigrationMachine = {
 type DemoMigrationTicket = {
   id: string;
   number: number;
+  title?: string;
+  status?: string;
   hiddenFromCustomer?: boolean;
 };
 
@@ -716,6 +740,61 @@ export function applyDemoRv421HardwareFixtureLifecycleMigration<T extends DemoMi
       : {}),
   } as T;
   return { db: next, changed: !hasMarker || additions.length > 0 };
+}
+
+/** Demo tickets #10–#16: replace sheet-motion placeholder titles; hide junk quote #37 from buyers. */
+export function applyDemoRv428DemoPolishMigration<
+  T extends DemoMigrationDb & { quotes?: QuoteRecord[] },
+>(db: T): { db: T; changed: boolean } {
+  if (db.dataMigrations?.demoRv428DemoPolishV1 === DEMO_RV428_DEMO_POLISH_V1) {
+    return { db, changed: false };
+  }
+  let changed = false;
+  const tickets = (db.tickets ?? []).map((ticket) => {
+    if (ticket.number < 10 || ticket.number > 16) {
+      return ticket;
+    }
+    const target = DEMO_TICKET_REALISTIC_TITLES_10_16[ticket.number];
+    if (!target) {
+      return ticket;
+    }
+    const title = ticket.title?.trim() ?? "";
+    if (title === target) {
+      return ticket;
+    }
+    if (!isDemoTicketPlaceholderTitle(title)) {
+      return ticket;
+    }
+    changed = true;
+    return { ...ticket, title: target };
+  });
+  const quotes = (db.quotes ?? []).map((quote) => {
+    if (quote.number !== 37) {
+      return quote;
+    }
+    let next = quote;
+    if (!next.hiddenFromCustomer) {
+      changed = true;
+      next = { ...next, hiddenFromCustomer: true };
+    }
+    const note = next.note?.trim().toLowerCase() ?? "";
+    if (note.includes("testing")) {
+      changed = true;
+      const { note: _drop, ...rest } = next;
+      next = rest;
+    }
+    return next;
+  });
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoRv428DemoPolishV1: DEMO_RV428_DEMO_POLISH_V1,
+    },
+    tickets,
+    quotes,
+  } as T;
+  return { db: marked, changed: changed || true };
 }
 
 /** Ensure demo quote #27 stays PO-stage with staff pricing locked (rv421 Q27 proof). */

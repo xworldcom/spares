@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 Mac proof gate (v3) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 Mac proof gate (v4) — prod-identical disposable store + Bea/Sam flows.
  *
  * Prereq:
  *   node scripts/rv421-mac-proof-seed.mjs
@@ -193,14 +193,132 @@ async function runRows(browserName, launch) {
       );
     }
 
+    // Row 1 / 6331k32 — obsolete lifecycle label on staff parts
+    await page.goto(`${BASE}/staff/parts`, { waitUntil: "domcontentloaded" });
+    const searchParts = page.getByLabel(/search/i).first();
+    if (await searchParts.isVisible().catch(() => false)) {
+      await searchParts.fill("6331K32");
+      await page.waitForTimeout(400);
+    }
+    const obsoleteLabel = await page
+      .getByText(/obsolete|discontinued|successor/i)
+      .first()
+      .isVisible()
+      .catch(() => false);
+    record("1", "6331k32-active", browserName, vp, obsoleteLabel, `obsolete=${obsoleteLabel}`);
+    record("6331k32-lifecycle", "6331k32-active", browserName, vp, obsoleteLabel, `obsolete=${obsoleteLabel}`);
+
+    // Row 4 offline — staff ticket status shows error when network fails
+    if (vp < 1024) {
+      await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
+      await context.route("**/api/tickets/**", (route) => {
+        if (route.request().method() === "PATCH") {
+          return route.abort("failed");
+        }
+        return route.continue();
+      });
+      const statusBtn = page.getByRole("button", { name: /in progress|open|closed/i }).first();
+      if (await statusBtn.isVisible().catch(() => false)) {
+        await statusBtn.click();
+        const opt = page.getByRole("menuitem", { name: /in progress/i }).first();
+        if (await opt.isVisible().catch(() => false)) {
+          await opt.click();
+        }
+      }
+      await page.waitForTimeout(500);
+      const offlineCopy = await page
+        .getByText(/offline|network|could not reach/i)
+        .first()
+        .isVisible()
+        .catch(() => false);
+      record("4", "offline", browserName, vp, offlineCopy, `offlineCopy=${offlineCopy}`);
+      await context.unroute("**/api/tickets/**");
+    }
+
+    // Row 6 — Recently updated sort surfaces ticket 9 before 34
+    if (vp >= 1024) {
+      await page.goto(`${BASE}/care/tickets?sort=updated`, { waitUntil: "domcontentloaded" });
+      const items = await page.locator(".tickets-workspace-list a, .tickets-workspace-list button").allInnerTexts();
+      const joined = items.join("\n");
+      const i9 = joined.search(/\b9\b|Ticket\s*9/i);
+      const i34 = joined.search(/\b34\b|Ticket\s*34/i);
+      const orderOk = i9 >= 0 && (i34 < 0 || i9 < i34);
+      record("6", "care-recent-sort", browserName, vp, orderOk, `i9=${i9} i34=${i34}`);
+    }
+
     // Row 8 view part
     await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1500);
     const viewPart = await page
       .locator("[data-machine-lifecycle-links] a, a[href*='part-lifecycle']")
       .first()
       .isVisible()
       .catch(() => false);
     record("8", "machines-m", browserName, vp, viewPart, `viewPart=${viewPart}`);
+
+    // Row 10 — palletizer viewer loads; no duplicate account email line
+    if (vp >= 1024) {
+      await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+      await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+      const viewerH = await page
+        .locator("[data-machine-viewer-layout]")
+        .evaluate((el) => Math.round(el.getBoundingClientRect().height))
+        .catch(() => 0);
+      await page.getByRole("button", { name: /account|menu/i }).first().click().catch(() => {});
+      const emailLines = await page.locator('[role="menu"] >> text=/@/').count().catch(() => 0);
+      const row10 = viewerH > 400 && emailLines <= 1;
+      record("10", "also", browserName, vp, row10, `viewerH=${viewerH} emailLines=${emailLines}`);
+    }
+
+    // Bea func5 matrix (subset)
+    if (vp < 1024) {
+      await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+      await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+      const fsBtn = page.getByRole("button", { name: /fullscreen|expand/i }).first();
+      if (await fsBtn.isVisible().catch(() => false)) {
+        await fsBtn.click();
+        await page.waitForTimeout(600);
+      }
+      const overlayPin = await page.evaluate(() => {
+        const layout = document.querySelector("[data-machine-viewer-layout]");
+        if (!layout) return false;
+        const h = layout.getBoundingClientRect().height;
+        return h > 0 && h <= window.innerHeight * 0.98;
+      });
+      record("bea-phone-3d-fs", "bea-smoke", browserName, vp, overlayPin, `overlayPin=${overlayPin}`);
+      await page.goto(`${BASE}/staff/quotes/35`, { waitUntil: "domcontentloaded" });
+      const tracking = await page.getByRole("heading", { name: /^tracking$/i }).isVisible().catch(() => false);
+      record("bea-q35-tracking", "bea-smoke", browserName, vp, tracking, `tracking=${tracking}`);
+    }
+    if (vp >= 1024) {
+      await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+      await page.locator("canvas").first().waitFor({ timeout: 60_000 }).catch(() => {});
+      const fsBtn = page.getByRole("button", { name: /fullscreen|expand/i }).first();
+      if (await fsBtn.isVisible().catch(() => false)) {
+        await fsBtn.click();
+        await page.waitForTimeout(400);
+        await fsBtn.click().catch(() => {});
+        await page.waitForTimeout(400);
+      }
+      const layoutTop = await page.evaluate(() => {
+        const node = document.querySelector(".machine-viewer");
+        return node ? Math.round(node.getBoundingClientRect().top) : -1;
+      });
+      record("bea-fs-strip-15px", "bea-smoke", browserName, vp, layoutTop <= 2, `layoutTop=${layoutTop}`);
+      await page.goto(`${BASE}/machines`, { waitUntil: "domcontentloaded" });
+      const tMachines = await page.title();
+      record("bea-title-machines", "bea-smoke", browserName, vp, /machines/i.test(tMachines), tMachines);
+      await page.goto(`${BASE}/part-alerts`, { waitUntil: "domcontentloaded" });
+      const tAlerts = await page.title();
+      record("bea-title-part-alerts", "bea-smoke", browserName, vp, /part alerts/i.test(tAlerts), tAlerts);
+    }
+
+    // sam-stepper-label @390
+    if (vp < 1024) {
+      await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
+      const fullLabel = await page.locator(".quote-progress-label-full").first().isVisible().catch(() => false);
+      record("sam-stepper-label", "sam-stepper-label", browserName, vp, fullLabel, `fullLabel=${fullLabel}`);
+    }
 
     await context.close();
   }
@@ -213,6 +331,12 @@ async function runRows(browserName, launch) {
   const text = await cp.locator("main").innerText();
   const hidePass = !/\bticket\s+(1[7-9]|2[0-6])\b/i.test(text);
   record("9", "demo-hide-badge", browserName, 1440, hidePass, "17-26 hidden");
+  const t10Title = /stack light fault|palletizer infeed photo-eye/i.test(text);
+  record("bea-ticket-10-title", "demo-titles", browserName, 1440, t10Title, "ticket10-realistic");
+  await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
+  const firstQuote = (await cp.locator("ul li").first().innerText().catch(() => "")).slice(0, 80);
+  const q37First = /quote\s*37\b/i.test(firstQuote);
+  record("bea-q37-not-first", "bea-smoke", browserName, 1440, !q37First, `first=${firstQuote}`);
   await cust.close();
 
   await browser.close();
@@ -243,7 +367,7 @@ async function main() {
     "",
     `**Bundle HEAD:** \`${bundleHead}\``,
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v3)`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v4)`,
     `**Generated:** ${summary.generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",

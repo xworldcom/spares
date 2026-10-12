@@ -12,6 +12,7 @@ import {
   MANUAL_CATEGORIES,
   MANUAL_CATEGORY_LABELS,
 } from "@/lib/care";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import type { ManualCategory, PublicMachineManual } from "@/types";
 
 export function ManualsPanel({ machineId }: { machineId: string }) {
@@ -98,6 +99,13 @@ export function ManualsPanel({ machineId }: { machineId: string }) {
 
   return (
     <div className="care-stack">
+      <DocumentTitle title="Manuals" />
+      <header>
+        <h1 className="text-[32px] font-semibold tracking-tight">Manuals</h1>
+        <p className="spares-muted mt-2 text-[15px] leading-relaxed">
+          Operator and maintenance PDFs for this machine.
+        </p>
+      </header>
       {staff ? (
         <form
           className="care-card care-form"

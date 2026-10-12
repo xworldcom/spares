@@ -871,7 +871,9 @@ export function QuoteWorkspace({
       ) : null}
       </div>
 
-      <div className="conversation-sheet-spacer" aria-hidden="true" />
+      {inlineMessages ? null : (
+        <div className="conversation-sheet-spacer" aria-hidden="true" />
+      )}
 
       <ConversationSheet
         title="Messages"

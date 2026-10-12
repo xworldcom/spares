@@ -88,7 +88,9 @@ export function QuotesWorkspace({
         />
       </div>
       {creating ? (
+        <div className="relative z-20">
         <NewQuoteForm
+          key={`new-quote-${hubMachineId ?? "hub"}`}
           role={role}
           initialMachineId={machineId}
           onCreated={() => {
@@ -96,8 +98,14 @@ export function QuotesWorkspace({
           }}
           onCancel={() => setCreating(false)}
         />
+        </div>
       ) : null}
-      <QuotesList role={role} machineId={hubMachineId} initialList={initialList} />
+      <QuotesList
+        role={role}
+        machineId={hubMachineId}
+        initialList={initialList}
+        onListNavigate={() => setCreating(false)}
+      />
     </div>
   );
 }

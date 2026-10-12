@@ -336,6 +336,14 @@ body {
 }
 
 @media (max-width: 1023px) {
+  .spares-app-tabs .conversation-sheet:not(.is-inline) {
+    bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+    max-height: calc(
+      100dvh - var(--spares-header) - var(--spares-tabbar) -
+        env(safe-area-inset-top, 0px) - 0.35rem
+    );
+  }
+
   .machine-viewer .quote-sheet {
     position: fixed;
     z-index: 65;
@@ -703,7 +711,7 @@ body {
 
 .conversation-sheet-toolbar {
   position: relative;
-  z-index: 2;
+  z-index: 12;
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -1189,6 +1197,13 @@ html.spares-embed .spares-app-stage {
 
   .machine-stage {
     min-height: calc(100dvh - var(--spares-header));
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .machine-stage-grid,
+  .machine-viewer {
+    max-width: 100%;
   }
 
   .machine-stage-grid {

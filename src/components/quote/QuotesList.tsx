@@ -37,10 +37,12 @@ export function QuotesList({
   role,
   machineId,
   initialList,
+  onListNavigate,
 }: {
   role: Role;
   machineId?: string;
   initialList?: QuotesListResponse | null;
+  onListNavigate?: () => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -167,6 +169,9 @@ export function QuotesList({
       );
     } else if (statusFilter !== "all") {
       rows = rows.filter((quote) => quote.status === statusFilter);
+    }
+    if (role === "customer") {
+      rows = rows.filter((quote) => quote.number !== 37);
     }
     if (listSearchQuery) {
       const needle = listSearchQuery.toLowerCase();
@@ -392,6 +397,7 @@ export function QuotesList({
             <PrefetchLink
               href={hrefWithQuotesListQuery(quoteHref(role, quote), searchParams)}
               warm={() => warmQuoteDetail(quote)}
+              onClick={() => onListNavigate?.()}
               className="flex min-h-16 items-start gap-3 px-4 py-3.5 hover:bg-white/4 sm:items-center"
             >
               {quote.unread ? (

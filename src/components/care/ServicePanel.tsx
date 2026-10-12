@@ -10,6 +10,7 @@ import { ServiceVisitDetail } from "@/components/care/ServiceVisitDetail";
 import { getMachineUsage, updateMachineUsage } from "@/lib/api/care";
 import { errorMessage } from "@/lib/api/errors";
 import { careHref, serviceVisitHref } from "@/lib/care";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { displayNameFromEmail } from "@/lib/ui/display-name";
 import type { MachineUsage } from "@/types";
 
@@ -151,6 +152,13 @@ export function ServicePanel({
 
   return (
     <div className="care-stack">
+      <DocumentTitle title="Service" />
+      <header>
+        <h1 className="text-[32px] font-semibold tracking-tight">Service</h1>
+        <p className="spares-muted mt-2 text-[15px] leading-relaxed">
+          Service visits and runtime meters for this machine.
+        </p>
+      </header>
       {staff ? (
       <form
         className="care-card care-form"
@@ -159,7 +167,7 @@ export function ServicePanel({
           void onSave();
         }}
       >
-        <h2>Service</h2>
+        <h2 className="text-[19px] font-semibold tracking-tight">Log service</h2>
         <p className="spares-muted text-sm leading-relaxed">
           Customers see these notes after you save.
         </p>

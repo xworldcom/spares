@@ -112,6 +112,7 @@ import {
   applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
   applyDemoRv421HardwareFixtureLifecycleMigration,
+  applyDemoRv428DemoPolishMigration,
 } from "./demo-tenant-data-migration.ts";
 import {
   appendMissingDemoStageQuotes,
@@ -1780,6 +1781,11 @@ async function runDemoTenantMigration(
   const hygiene = applyDemoCustomerHygieneMigration(next);
   if (hygiene.changed) {
     next = hygiene.db;
+    changed = true;
+  }
+  const rv428 = applyDemoRv428DemoPolishMigration(next);
+  if (rv428.changed) {
+    next = rv428.db;
     changed = true;
   }
   return { db: next, changed };
