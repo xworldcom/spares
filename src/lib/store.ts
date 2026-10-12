@@ -64,6 +64,7 @@ import {
   writeTicketShard,
 } from "./entity-record-store.ts";
 import { RecordWriteConflictError } from "./record-conflict.ts";
+import { ticketStatusCasWouldConflict } from "./ticket-status-cas.ts";
 import {
   fieldsOverlap,
   quoteChangedFields,
@@ -101,6 +102,7 @@ import { isProtectedDemoSeedLogin } from "./demo-seed-gate.ts";
 import {
   applyDemoTenantB1Migration,
   applyDemoTenantB2StageQuotesMigration,
+  applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
 import {
@@ -192,6 +194,15 @@ export const SEED_STAFF = {
   email: "staff@spares.local",
   password: "SparesStaff1!",
   role: "staff" as const,
+  name: "Staff A",
+};
+
+export const SEED_STAFF_B = {
+  id: "user-staff-b",
+  email: "staff-b@spares.local",
+  password: "SparesStaff1!",
+  role: "staff" as const,
+  name: "Staff B",
 };
 
 export const SEED_CUSTOMER = {
@@ -752,12 +763,14 @@ async function seedUser(input: {
   email: string;
   password: string;
   role: Role;
+  name?: string;
 }): Promise<StoredUser> {
   return {
     id: input.id,
     email: input.email,
     passwordHash: await hashPassword(input.password),
     role: input.role,
+    ...(input.name ? { name: input.name } : {}),
   };
 }
 
@@ -782,6 +795,7 @@ async function emptyDatabase(): Promise<Database> {
 async function seedDatabase(): Promise<Database> {
   const users: StoredUser[] = [
     await seedUser(SEED_STAFF),
+    await seedUser(SEED_STAFF_B),
     await seedUser(SEED_CUSTOMER),
     ...(await Promise.all(EXTRA_SEED_CUSTOMERS.map((row) => seedUser(row)))),
   ];
@@ -888,13 +902,15 @@ async function ensureBuiltinDemoStaff(db: Database): Promise<Database> {
     const { deletedAt: _removed, ...rest } = current;
     next = rest as StoredUser;
   }
+  const nameOk = Boolean(current.name?.trim()) || !SEED_STAFF.name;
   if (
     !current.deletedAt &&
     current.id === SEED_STAFF.id &&
     current.role === "staff" &&
     (current.tenantId ?? DEFAULT_TENANT_ID) === DEFAULT_TENANT_ID &&
     (current.staffCreatedTenantId ?? DEFAULT_TENANT_ID) === DEFAULT_TENANT_ID &&
-    current.passwordHash === canonical.passwordHash
+    current.passwordHash === canonical.passwordHash &&
+    nameOk
   ) {
     return db;
   }
@@ -906,10 +922,33 @@ async function ensureBuiltinDemoStaff(db: Database): Promise<Database> {
     tenantId: DEFAULT_TENANT_ID,
     staffCreatedTenantId: DEFAULT_TENANT_ID,
     passwordHash: canonical.passwordHash,
+    ...(SEED_STAFF.name ? { name: SEED_STAFF.name } : {}),
   };
   const users = db.users.slice();
   users[index] = patched;
   return { ...db, users };
+}
+
+async function ensureBuiltinDemoStaffB(db: Database): Promise<Database> {
+  if (!isSeedAllowed()) {
+    return db;
+  }
+  const email = normalizeEmail(SEED_STAFF_B.email);
+  if (db.users.some((user) => normalizeEmail(user.email) === email && !user.deletedAt)) {
+    return db;
+  }
+  const seeded = await seedUser(SEED_STAFF_B);
+  return {
+    ...db,
+    users: [
+      ...db.users,
+      {
+        ...seeded,
+        tenantId: DEFAULT_TENANT_ID,
+        staffCreatedTenantId: DEFAULT_TENANT_ID,
+      },
+    ],
+  };
 }
 
 /** Documented demo customer login; only this row is added when missing (never real logins). */
@@ -939,6 +978,7 @@ async function ensureBuiltinDemoCustomer(db: Database): Promise<Database> {
 function stabilizeSeedUsers(db: Database): Database {
   const idByEmail = new Map<string, string>([
     [SEED_STAFF.email, SEED_STAFF.id],
+    [SEED_STAFF_B.email, SEED_STAFF_B.id],
     [SEED_CUSTOMER.email, SEED_CUSTOMER.id],
     ...EXTRA_SEED_CUSTOMERS.map((row) => [row.email, row.id] as const),
   ]);
@@ -1373,7 +1413,9 @@ async function stabilizeCatalogUsers(db: Database): Promise<Database> {
   }
   return await ensureOwnerStaff(
     await ensureBuiltinDemoCustomer(
-      await ensureBuiltinDemoStaff(await ensureExtraCustomers(stabilizeSeedUsers(db))),
+      await ensureBuiltinDemoStaffB(
+        await ensureBuiltinDemoStaff(await ensureExtraCustomers(stabilizeSeedUsers(db))),
+      ),
     ),
   );
 }
@@ -1705,6 +1747,11 @@ async function runDemoTenantMigration(
   const b2 = applyDemoTenantB2StageQuotesMigration(next);
   if (b2.changed) {
     next = b2.db;
+    changed = true;
+  }
+  const staffB = applyDemoTenantStaffBMigration(next);
+  if (staffB.changed) {
+    next = staffB.db;
     changed = true;
   }
   return { db: next, changed };
@@ -4972,19 +5019,23 @@ function mutateTicket(
       prior = current;
       if (options?.lock) {
         const liveVersion = readRecordVersion(current);
-        if (liveVersion !== options.lock.expectedVersion) {
-          let serverFields = ticketChangedFields(options.lock.base, current);
+        if (options.lock.touchedFields.includes("status")) {
+          const clientStatus = options.lock.base.status;
           if (
-            serverFields.length === 0 &&
-            readRecordVersion(options.lock.base) > options.lock.expectedVersion
+            ticketStatusCasWouldConflict(
+              current,
+              {
+                expectedVersion: options.lock.expectedVersion,
+                baseStatus: clientStatus,
+              },
+              options.actor?.id,
+              options.lock.touchedFields,
+            )
           ) {
-            const writerIsSelf =
-              Boolean(options?.actor?.id) &&
-              current.lastModifiedByUserId === options.actor?.id;
-            if (!writerIsSelf) {
-              serverFields = [...options.lock.touchedFields];
-            }
+            throw new RecordWriteConflictError(recordMetaFromRow(current));
           }
+        } else if (liveVersion !== options.lock.expectedVersion) {
+          const serverFields = ticketChangedFields(options.lock.base, current);
           if (
             serverFields.length > 0 &&
             fieldsOverlap(serverFields, options.lock.touchedFields)

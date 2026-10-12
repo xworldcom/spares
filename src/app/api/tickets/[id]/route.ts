@@ -14,6 +14,7 @@ import { readRecordVersion } from "@/lib/record-meta";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";
+import { ticketCasDebugSnapshot } from "@/lib/ticket-status-cas";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
@@ -91,6 +92,17 @@ async function handlePATCH(
     ? body.baseStatus
     : access.ticket.status;
   const clientBase = { ...access.ticket, status: clientBaseStatus };
+  if (process.env.SPARES_TICKET_CAS_DEBUG === "1") {
+    console.info(
+      "[ticket-cas]",
+      JSON.stringify(
+        ticketCasDebugSnapshot(access.ticket, {
+          expectedVersion,
+          baseStatus: clientBaseStatus,
+        }, actor.id),
+      ),
+    );
+  }
   const next = await updateTicketStatus(access.ticket.id, tenantId, body.status, actor, {
     actor: { id: actor.id, email: actor.email, name: access.user.name },
     lock: {
