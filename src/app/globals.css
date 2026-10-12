@@ -821,7 +821,8 @@ body {
   font-weight: 500;
 }
 
-@media (min-width: 1024px) and (pointer: fine) {
+/* Side-tray Messages only on xl+ fine-pointer desktops — 1440 keeps phone snap + handle (#421). */
+@media (min-width: 1536px) and (pointer: fine) {
   .conversation-sheet:not(.is-inline) {
     left: auto;
     right: 1.1rem;

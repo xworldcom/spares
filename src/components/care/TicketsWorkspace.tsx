@@ -10,6 +10,7 @@ import { TicketsList } from "@/components/care/TicketsList";
 import {
   useConversationDockStage,
   useDesktopStage,
+  useOverlayConversationSheet,
 } from "@/components/machine/useDesktopStage";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -110,6 +111,7 @@ export function TicketsWorkspace({
       : undefined;
   const desktop = useDesktopStage();
   const conversationDock = useConversationDockStage();
+  const overlayConversation = useOverlayConversationSheet();
   const { refresh: refreshCareAlerts } = useCareAlerts();
   const hubInitial = scope === "hub" ? initialList : null;
   const [tickets, setTickets] = useState<ServiceTicket[]>(hubInitial?.tickets ?? []);
@@ -469,7 +471,7 @@ export function TicketsWorkspace({
       ticketId={ticketId}
       seedTicket={selected}
       backHref={listHrefWithQuery}
-      embedded={conversationDock && desktop}
+      embedded={conversationDock && desktop && !overlayConversation}
       onUpdated={refresh}
       onTicketListPatch={patchTicketInList}
     />
@@ -486,7 +488,9 @@ export function TicketsWorkspace({
     <div
       className="tickets-workspace"
       data-tickets-layout={desktop ? "split" : ticketId ? "detail" : "list"}
-      data-care-chat={conversationDock ? "inline" : "overlay"}
+      data-care-chat={
+        conversationDock && desktop && !overlayConversation ? "inline" : "overlay"
+      }
     >
       <DocumentTitle title={ticketsPageTitle} />
       {showList ? listPanel : null}

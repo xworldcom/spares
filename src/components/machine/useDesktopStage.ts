@@ -45,3 +45,22 @@ export function useConversationDockStage() {
     () => false,
   );
 }
+
+/** True below xl width — force overlay snap sheet (avoids inline-only Messages on tablet widths). */
+export const OVERLAY_CONVERSATION_SHEET_STAGE = "(max-width: 1535px)";
+
+function subscribeOverlayConversation(onChange: () => void) {
+  return subscribeMedia(OVERLAY_CONVERSATION_SHEET_STAGE, onChange);
+}
+
+function matchesOverlayConversation() {
+  return window.matchMedia(OVERLAY_CONVERSATION_SHEET_STAGE).matches;
+}
+
+export function useOverlayConversationSheet() {
+  return useSyncExternalStore(
+    subscribeOverlayConversation,
+    matchesOverlayConversation,
+    () => true,
+  );
+}

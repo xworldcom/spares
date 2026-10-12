@@ -33,6 +33,11 @@ import { useRecordFreshnessPoll } from "@/lib/hooks/useRecordFreshnessPoll";
 import { ticketRecordEtag } from "@/lib/record-etag";
 import { careHref, ticketHeaderContextLine, ticketRefMatches } from "@/lib/care";
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
+import {
+  useConversationDockStage,
+  useDesktopStage,
+  useOverlayConversationSheet,
+} from "@/components/machine/useDesktopStage";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { mergeActivitiesById } from "@/lib/merge-activities";
 import {
@@ -107,6 +112,10 @@ export function TicketDetail({
   const [freshnessError, setFreshnessError] = useState<string | null>(null);
   const staff = user?.role === "staff";
   const conversationTitle = "Messages";
+  const desktop = useDesktopStage();
+  const conversationDock = useConversationDockStage();
+  const overlayConversation = useOverlayConversationSheet();
+  const inlineMessages = embedded && conversationDock && desktop && !overlayConversation;
 
   const lastTicketIdRef = useRef<string | null>(null);
   const statusPatchFlight = useRef<Promise<void> | null>(null);
@@ -353,7 +362,7 @@ export function TicketDetail({
   return (
     <div className="care-stack" data-care-ticket-detail="">
       <DocumentTitle title={`Ticket ${ticket.number}`} />
-      {!embedded ? (
+      {!inlineMessages ? (
         <Link href={ticketsBack} className="care-back">
           <span aria-hidden="true">‹</span> Tickets
         </Link>
@@ -409,19 +418,19 @@ export function TicketDetail({
           {error}
         </p>
       ) : null}
-      {embedded ? null : <div className="conversation-sheet-spacer" aria-hidden="true" />}
+      {inlineMessages ? null : <div className="conversation-sheet-spacer" aria-hidden="true" />}
       <ConversationSheet
         title={conversationTitle}
         peekLine={peek.text}
         unread={ticket.unread}
         threadKey={ticket.id}
-        layout={embedded ? "inline" : "overlay"}
+        layout={inlineMessages ? "inline" : "overlay"}
       >
         <ConversationReadWatermark
           enabled={watermarkReady}
           ticketId={ticketId}
           threadBump={threadBump}
-          layout={embedded ? "inline" : "overlay"}
+          layout={inlineMessages ? "inline" : "overlay"}
           onRead={(next) => {
             setTicket((current) =>
               current && ticketRefMatches(current, ticketId)
@@ -446,8 +455,8 @@ export function TicketDetail({
           threadKind="ticket"
           threadId={ticket.id}
           title={conversationTitle}
-          subtitle={embedded && threadSubtitle ? threadSubtitle : undefined}
-          layout={embedded ? "card" : "sheet"}
+          subtitle={inlineMessages && threadSubtitle ? threadSubtitle : undefined}
+          layout={inlineMessages ? "card" : "sheet"}
           customerReadReceipts={staff ? ticket.customerReadReceipts : undefined}
           actorDisplayNames={ticket.actorDisplayNames}
           assistantAvailable={staff ? ticket.assistantAvailable : undefined}

@@ -11,8 +11,8 @@ describe("layout stage media queries", () => {
     assert.doesNotMatch(DESKTOP_STAGE, /pointer/);
   });
 
-  it("requires fine pointer before side-docking Care/quote chat", () => {
-    assert.match(CONVERSATION_DOCK_STAGE, /1024/);
+  it("requires xl width and fine pointer before side-docking Care/quote chat", () => {
+    assert.match(CONVERSATION_DOCK_STAGE, /1536/);
     assert.match(CONVERSATION_DOCK_STAGE, /pointer:\s*fine/);
   });
 });

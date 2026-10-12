@@ -57,6 +57,7 @@ import {
   shouldPinViewerOverlayFrame,
   viewerOverlayFramePx,
 } from "@/lib/ui/viewer-pseudo-fullscreen";
+import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
 
 const VIEWER_STAGE = "#12161c";
 
@@ -423,6 +424,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
+  const atRiskPartsOnMachine = useMemo(() => {
+    return joinedParts.filter((part) => {
+      const lifecycle = lifecycleById[part.id];
+      return lifecycle?.status === "obsolete" || lifecycle?.status === "announced";
+    });
+  }, [joinedParts, lifecycleById]);
 
   const clearUndoRemove = useCallback(() => {
     if (undoRemoveTimer.current != null) {
@@ -846,6 +853,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
+          {!isCustomer && atRiskPartsOnMachine.length > 0 && view === "model" ? (
+            <div className="flex flex-wrap gap-2" data-machine-lifecycle-links="">
+              {atRiskPartsOnMachine.map((part) => (
+                <Link
+                  key={part.id}
+                  href={staffPartLifecycleViewHref(part.id)}
+                  className="btn-primary inline-flex h-9 items-center rounded-full px-3 text-[12px] font-semibold"
+                >
+                  View part
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {showViewToggle && hasModel ? (
               <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
