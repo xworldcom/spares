@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v15e) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v15g) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,7 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v15e";
+const GATE_HARNESS_VERSION = "v15g";
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -1119,14 +1119,23 @@ async function runRows(browserName, launch) {
   await cp.reload({ waitUntil: "domcontentloaded" });
   await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
   await cp.getByRole("button", { name: /^list$/i }).click({ timeout: 12_000 });
-  await cp.locator("[data-parts-bom]").waitFor({ state: "visible", timeout: 15_000 });
+  const bomPanel = cp.locator("section[data-parts-bom]").first();
+  await bomPanel.waitFor({ state: "visible", timeout: 15_000 });
   await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
-  const addBtn = cp.locator("[data-parts-bom]").getByRole("button", { name: /^add$/i }).first();
-  await addBtn.waitFor({ state: "visible", timeout: 15_000 });
-  const addBox = await addBtn.boundingBox();
-  let addReachable = false;
-  if (addBox) {
-    addReachable = await cp.evaluate(
+  const addButtons = bomPanel.getByRole("button", { name: /^add$/i });
+  const addCount = await addButtons.count();
+  const addReachability = [];
+  let allAddReachable = addCount > 0;
+  for (let i = 0; i < addCount; i += 1) {
+    const addBtn = addButtons.nth(i);
+    await addBtn.waitFor({ state: "visible", timeout: 15_000 });
+    const addBox = await addBtn.boundingBox();
+    if (!addBox) {
+      allAddReachable = false;
+      addReachability.push(`${i}=no-box`);
+      continue;
+    }
+    const reachable = await cp.evaluate(
       ({ x, y }) => {
         const hit = document.elementFromPoint(x, y);
         if (!hit) {
@@ -1137,14 +1146,20 @@ async function runRows(browserName, launch) {
       },
       { x: addBox.x + addBox.width / 2, y: addBox.y + addBox.height / 2 },
     );
+    if (!reachable) {
+      allAddReachable = false;
+      addReachability.push(`${i}=blocked`);
+    } else {
+      addReachability.push(`${i}=ok`);
+    }
   }
   record(
     "bea-drawer-list-add",
     "bea-smoke",
     browserName,
     1440,
-    addReachable,
-    `reachable=${addReachable}`,
+    allAddReachable,
+    `addCount=${addCount} ${addReachability.join(",")}`,
   );
   });
 
