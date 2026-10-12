@@ -39,7 +39,9 @@ export function recordMetaFromRow(row: {
       row.lastModifiedAt ??
       (typeof row.updatedAt === "string" ? row.updatedAt : new Date(0).toISOString()),
     lastModifiedByUserId: row.lastModifiedByUserId,
-    lastModifiedByName: row.lastModifiedByName,
+    lastModifiedByName:
+      row.lastModifiedByName ??
+      (typeof row.updatedByEmail === "string" ? row.updatedByEmail : undefined),
   };
 }
 
@@ -181,12 +183,26 @@ export function ticketChangedFields(
   return changed;
 }
 
+export function ticketOnlyReadWatermarkChange(
+  before: ServiceTicketRecord,
+  after: ServiceTicketRecord,
+) {
+  const contentSame =
+    before.status === after.status &&
+    before.title === after.title &&
+    before.activities.length === after.activities.length;
+  return contentSame && !jsonEqual(before.lastReadAt, after.lastReadAt);
+}
+
 export function stampTicketRecord(
   before: ServiceTicketRecord,
   after: ServiceTicketRecord,
   actor?: RecordMutationActor,
   at = new Date().toISOString(),
 ): ServiceTicketRecord {
+  if (ticketOnlyReadWatermarkChange(before, after)) {
+    return after;
+  }
   if (
     before.status === after.status &&
     before.title === after.title &&

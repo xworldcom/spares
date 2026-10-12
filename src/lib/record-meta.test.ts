@@ -5,6 +5,7 @@ import {
   quoteChangedFields,
   readRecordVersion,
   stampQuoteRecord,
+  stampTicketRecord,
   ticketChangedFields,
 } from "./record-meta.ts";
 import type { ServiceTicketRecord } from "@/types";
@@ -47,6 +48,31 @@ describe("record-meta", () => {
     });
     assert.equal(readRecordVersion(stamped), 5);
     assert.equal(stamped.lastModifiedByName, "Staff");
+  });
+
+  it("does not bump ticket record version on read-watermark-only edits", () => {
+    const before: ServiceTicketRecord = {
+      id: "t1",
+      number: 9,
+      machineId: "m1",
+      title: "Ticket 9",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      customerEmail: "user@demo.com",
+      customerId: "c1",
+      status: "open",
+      activities: [],
+      lastReadAt: {},
+      recordVersion: 2,
+      lastModifiedByName: "Staff A",
+      lastModifiedByUserId: "staff-a",
+    };
+    const after: ServiceTicketRecord = {
+      ...before,
+      lastReadAt: { staff: "2026-01-02T00:00:00.000Z" },
+    };
+    const stamped = stampTicketRecord(before, after);
+    assert.equal(readRecordVersion(stamped), 2);
+    assert.equal(stamped.lastModifiedByName, "Staff A");
   });
 
   it("does not treat read-watermark version drift as a status conflict", () => {

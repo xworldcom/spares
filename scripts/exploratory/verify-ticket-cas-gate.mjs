@@ -7,17 +7,26 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE = process.env.OEE360_BASE_URL ?? "http://127.0.0.1:3010";
+const IS_LOCAL = /localhost|127\.0\.0\.1/.test(BASE);
 const OUT =
   process.env.CAS_GATE_OUT ??
   path.join(process.cwd(), ".cursor/skills/verify-oee360/.run-state", "cas-gate-proof");
 const STAFF_A = {
-  email: process.env.OEE360_STAFF_A_EMAIL ?? "staff@demo.com",
-  password: process.env.OEE360_STAFF_A_PASSWORD ?? "demo123456",
-  displayName: process.env.OEE360_STAFF_A_NAME ?? "Demo staff",
+  email:
+    process.env.OEE360_STAFF_A_EMAIL ??
+    (IS_LOCAL ? "staff@spares.local" : "staff@demo.com"),
+  password:
+    process.env.OEE360_STAFF_A_PASSWORD ??
+    (IS_LOCAL ? "SparesStaff1!" : "demo123456"),
+  displayName: process.env.OEE360_STAFF_A_NAME ?? (IS_LOCAL ? "Staff A" : "Demo staff"),
 };
 const STAFF_B = {
-  email: process.env.OEE360_STAFF_B_EMAIL ?? "staff-b@demo.com",
-  password: process.env.OEE360_STAFF_B_PASSWORD ?? "demo123456",
+  email:
+    process.env.OEE360_STAFF_B_EMAIL ??
+    (IS_LOCAL ? "staff-b@spares.local" : "staff-b@demo.com"),
+  password:
+    process.env.OEE360_STAFF_B_PASSWORD ??
+    (IS_LOCAL ? "SparesStaff1!" : "demo123456"),
   displayName: "Staff B",
 };
 
@@ -85,7 +94,10 @@ async function waitDetailReady(page) {
 }
 
 async function clickStatus(page, status) {
-  await page.getByRole("button", { name: STATUS_LABELS[status] }).click();
+  await page
+    .locator(".quote-progress-track")
+    .getByRole("button", { name: STATUS_LABELS[status], exact: true })
+    .click();
 }
 
 async function main() {
@@ -96,7 +108,7 @@ async function main() {
     sha: process.env.OEE360_GIT_SHA ?? "pending",
     serverSemantics:
       process.env.CAS_SERVER_SEMANTICS ??
-      "Field-level CAS: stale same-field write 409s; same-writer version drift rebases; client getTicketFresh + single-flight status PATCH",
+      "PATCH carries field snapshot; 409 only same-field + different writer; client adopts PATCH response version",
     scenarios: {},
     pass: false,
   };
@@ -126,9 +138,16 @@ async function main() {
   let ctxB;
   try {
     ctxB = await loginContext(browser, STAFF_B);
-  } catch {
-    ctxB = await loginContext(browser, STAFF_A);
-    report.scenarios.twoSessionNote = "Staff B unavailable; second context uses Staff A (lost-update path still valid).";
+  } catch (cause) {
+    report.scenarios.twoSessionStale = {
+      pass: false,
+      error: `staff-b login required for writer proof: ${cause instanceof Error ? cause.message : cause}`,
+    };
+    report.pass = false;
+    await writeFile(path.join(OUT, "cas-gate-report.json"), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report, null, 2));
+    await browser.close();
+    process.exit(1);
   }
   const apiB = ctxB.request;
   const pageB = await ctxB.newPage();
@@ -136,8 +155,20 @@ async function main() {
   await waitDetailReady(pageB);
   const staleVersion = (await readJson(await apiB.get(`${BASE}/api/tickets/${ticket2.id}`)))?.ticket
     ?.recordVersion;
+  let blockDetailPoll = true;
+  await pageB.route(`**/api/tickets/${ticket2.id}`, (route) => {
+    if (blockDetailPoll && route.request().method() === "GET") {
+      void route.abort();
+      return;
+    }
+    route.continue();
+  });
   await apiA.patch(`${BASE}/api/tickets/${ticket2.id}`, {
-    data: { status: "in_progress", recordVersion: staleVersion },
+    data: {
+      status: "in_progress",
+      recordVersion: staleVersion,
+      baseStatus: "open",
+    },
   });
   const afterA = (await readJson(await apiA.get(`${BASE}/api/tickets/${ticket2.id}`)))?.ticket;
   await clickStatus(pageB, "waiting_on_customer");
@@ -150,16 +181,36 @@ async function main() {
   const mid = (await readJson(await apiB.get(`${BASE}/api/tickets/${ticket2.id}`)))?.ticket;
   const bSilentlyWon = mid?.status === "waiting_on_customer" && afterA?.status === "in_progress";
   const notSomeone = s2Conflict && !/Someone else/i.test(bannerText);
-  const notSelfOnly =
-    s2Conflict && !/updated by staff@demo\.com/i.test(bannerText.toLowerCase());
+  const namesWriterA =
+    s2Conflict &&
+    notSomeone &&
+    !/Staff B/i.test(bannerText) &&
+    (/Demo staff/i.test(bannerText) ||
+      /Staff A/i.test(bannerText) ||
+      /Spares staff/i.test(bannerText) ||
+      /staff@/i.test(bannerText));
 
   if (s2Conflict) {
+    blockDetailPoll = false;
     const refreshBtn = pageB.getByRole("button", { name: /refresh/i });
     if (await refreshBtn.isVisible().catch(() => false)) {
       await refreshBtn.click();
-      await pageB.waitForTimeout(3000);
+      await pageB
+        .waitForResponse(
+          (res) =>
+            res.url().includes(`/api/tickets/${ticket2.id}`) &&
+            res.request().method() === "GET" &&
+            res.ok(),
+          { timeout: 30_000 },
+        )
+        .catch(() => undefined);
     }
     await waitDetailReady(pageB);
+    await pageB
+      .locator(".quote-progress-track")
+      .getByRole("button", { name: STATUS_LABELS.in_progress, exact: true })
+      .waitFor({ state: "visible", timeout: 15_000 })
+      .catch(() => undefined);
     await clickStatus(pageB, "waiting_on_customer");
     await pageB.waitForTimeout(2500);
   }
@@ -174,7 +225,13 @@ async function main() {
     notSomeoneElse: notSomeone,
     afterRefreshStatus: finalB?.status,
     afterRefreshSaved: finalB?.status === "waiting_on_customer",
-    pass: s2Conflict && !bSilentlyWon && notSomeone && finalB?.status === "waiting_on_customer",
+    namesWriterA,
+    pass:
+      s2Conflict &&
+      !bSilentlyWon &&
+      notSomeone &&
+      namesWriterA &&
+      finalB?.status === "waiting_on_customer",
   };
   await pageB.screenshot({ path: path.join(OUT, "s2-after-refresh.png"), fullPage: true });
 

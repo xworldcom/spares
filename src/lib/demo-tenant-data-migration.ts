@@ -55,10 +55,18 @@ export const DEMO_TENANT_STAFF = {
   name: "Demo staff",
 } as const;
 
+export const DEMO_TENANT_STAFF_B = {
+  email: "staff-b@demo.com",
+  name: "Staff B",
+} as const;
+
+export const DEMO_TENANT_DATA_MIGRATION_STAFF_B = 1;
+
 export type DataMigrations = {
   demoTenantV1?: number;
   demoTenantB1?: number;
   demoTenantB2?: number;
+  demoTenantStaffB?: number;
   /** When set, catalog heal runs in memory on read; use scripts/run-catalog-heal-once.mjs to persist. */
   catalogHealDeferredV1?: number;
   /** Hot rows (quotes/tickets/lifecycle) also CAS-write per-record JSON shards. */
@@ -287,6 +295,77 @@ export function applyDemoTenantB2StageQuotesMigration<T extends DemoMigrationDb>
     db: withB2Marker({ ...db, quotes: nextQuotes }) as T,
     changed: true,
     quotesAdded,
+  };
+}
+
+function staffBMarker(db: DemoMigrationDb) {
+  return db.dataMigrations?.demoTenantStaffB === DEMO_TENANT_DATA_MIGRATION_STAFF_B;
+}
+
+function withStaffBMarker<T extends DemoMigrationDb>(db: T): T {
+  return {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoTenantStaffB: DEMO_TENANT_DATA_MIGRATION_STAFF_B,
+    },
+  };
+}
+
+/**
+ * Production demo tenant only: ensure `staff-b@demo.com` exists with the same password
+ * hash as `staff@demo.com` so two-user CAS gates can log in on oee360.com.
+ */
+export function applyDemoTenantStaffBMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean; staffBCreated: boolean } {
+  if (isSeedAllowed()) {
+    return { db, changed: false, staffBCreated: false };
+  }
+  const staffAEmail = normalizeEmail(DEMO_TENANT_STAFF.email);
+  const staffBEmail = normalizeEmail(DEMO_TENANT_STAFF_B.email);
+  const staffA = db.users.find(
+    (user) => normalizeEmail(user.email) === staffAEmail && user.role === "staff" && !user.deletedAt,
+  );
+  const staffBIndex = db.users.findIndex(
+    (user) => normalizeEmail(user.email) === staffBEmail && !user.deletedAt,
+  );
+  if (staffBIndex >= 0) {
+    const existing = db.users[staffBIndex];
+    let users = db.users;
+    let healed = false;
+    if (!existing.name?.trim()) {
+      users = users.slice();
+      users[staffBIndex] = { ...existing, name: DEMO_TENANT_STAFF_B.name };
+      healed = true;
+    }
+    if (staffBMarker(db) && !healed) {
+      return { db, changed: false, staffBCreated: false };
+    }
+    return {
+      db: withStaffBMarker(healed ? { ...db, users } : db) as T,
+      changed: true,
+      staffBCreated: false,
+    };
+  }
+  if (!staffA?.passwordHash) {
+    if (staffBMarker(db)) {
+      return { db, changed: false, staffBCreated: false };
+    }
+    return { db: withStaffBMarker(db) as T, changed: true, staffBCreated: false };
+  }
+  const staffB: DemoMigrationUser = {
+    id: "demo-staff-b",
+    email: DEMO_TENANT_STAFF_B.email,
+    passwordHash: staffA.passwordHash,
+    role: "staff",
+    tenantId: DEFAULT_TENANT_ID,
+    name: DEMO_TENANT_STAFF_B.name,
+  };
+  return {
+    db: withStaffBMarker({ ...db, users: [...db.users, staffB] }) as T,
+    changed: true,
+    staffBCreated: true,
   };
 }
 

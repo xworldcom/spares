@@ -11,7 +11,9 @@ import {
   DEMO_TENANT_DATA_MIGRATION_V1,
   applyDemoTenantB1Migration,
   applyDemoTenantB2StageQuotesMigration,
+  applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
+  DEMO_TENANT_STAFF_B,
 } from "./demo-tenant-data-migration.ts";
 import { DEMO_STAGE_QUOTE_IDS } from "./demo-stage-quote-seed.ts";
 import { setPersistenceForTests } from "./persistence.ts";
@@ -242,6 +244,34 @@ describe("demo tenant v1 migration (auto)", () => {
     const second = applyDemoTenantB2StageQuotesMigration(first.db);
     assert.equal(second.changed, false);
     assert.equal(second.quotesAdded, 0);
+    delete process.env.SPARES_ALLOW_SEED;
+  });
+
+  it("creates staff-b@demo.com with staff-a password hash on production demo catalog", async () => {
+    const seed = {
+      users: [
+        {
+          id: "demo-staff-a",
+          email: "staff@demo.com",
+          passwordHash: "shared-demo-hash",
+          role: "staff" as const,
+          tenantId: DEFAULT_TENANT_ID,
+          name: "Demo staff",
+        },
+      ],
+      machines: [],
+      partLifecycle: [],
+    };
+    process.env.SPARES_ALLOW_SEED = "false";
+    const first = applyDemoTenantStaffBMigration(seed);
+    assert.ok(first.changed);
+    assert.ok(first.staffBCreated);
+    const staffB = first.db.users.find((user) => user.email === DEMO_TENANT_STAFF_B.email);
+    assert.ok(staffB);
+    assert.equal(staffB.passwordHash, "shared-demo-hash");
+    assert.equal(staffB.name, DEMO_TENANT_STAFF_B.name);
+    const second = applyDemoTenantStaffBMigration(first.db);
+    assert.equal(second.changed, false);
     delete process.env.SPARES_ALLOW_SEED;
   });
 
