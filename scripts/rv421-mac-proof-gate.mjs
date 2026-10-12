@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * rv421 / rv428 Mac proof gate (v7) — prod-identical disposable store + Bea/Sam flows.
+ * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
+ * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
  * Prereq:
  *   node scripts/rv421-mac-proof-seed.mjs
@@ -170,6 +172,72 @@ async function waitForDocumentTitle(page, pattern) {
     { timeout: 12_000 },
   );
   return page.title();
+}
+
+async function readViewerFsMetrics(page) {
+  return page.evaluate(() => {
+    const native = Boolean(
+      document.fullscreenElement || document.webkitFullscreenElement,
+    );
+    const chrome = document.querySelector(".machine-viewer");
+    const layout = document.querySelector("[data-machine-viewer-layout]");
+    if (!chrome || !layout) {
+      return {
+        native,
+        overlay: false,
+        layoutH: 0,
+        innerH: window.innerHeight,
+        layoutTop: -1,
+      };
+    }
+    const chromeStyle = getComputedStyle(chrome);
+    const overlay = !native && chromeStyle.position === "fixed";
+    const chromeRect = chrome.getBoundingClientRect();
+    const layoutRect = layout.getBoundingClientRect();
+    return {
+      native,
+      overlay,
+      layoutH: Math.round(layoutRect.height),
+      innerH: window.innerHeight,
+      layoutTop: Math.round(layoutRect.top - chromeRect.top),
+    };
+  });
+}
+
+function viewerFsMode(metrics) {
+  if (metrics.native) {
+    return "native";
+  }
+  if (metrics.overlay) {
+    return "overlay";
+  }
+  return "none";
+}
+
+async function clickEnterViewerFullscreen(page) {
+  const enterBtn = page.getByRole("button", { name: /enter full screen/i }).first();
+  if (await enterBtn.isVisible().catch(() => false)) {
+    await enterBtn.click({ timeout: 10_000 });
+    return;
+  }
+  await page
+    .getByRole("button", { name: /fullscreen|expand/i })
+    .first()
+    .click({ timeout: 10_000 });
+}
+
+async function clickExitViewerFullscreen(page) {
+  const exitBtn = page.getByRole("button", { name: /exit full screen/i }).first();
+  if (await exitBtn.isVisible().catch(() => false)) {
+    await exitBtn.click({ timeout: 10_000 });
+    await page
+      .waitForFunction(
+        () => !document.fullscreenElement && !document.webkitFullscreenElement,
+        { timeout: 10_000 },
+      )
+      .catch(() => {});
+  }
+  await page.waitForTimeout(900);
 }
 
 async function runRows(browserName, launch) {
@@ -350,18 +418,22 @@ async function runRows(browserName, launch) {
     if (vp < 1024) {
       await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
       await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-      const fsBtn = page.getByRole("button", { name: /fullscreen|expand/i }).first();
-      if (await fsBtn.isVisible().catch(() => false)) {
-        await fsBtn.click();
-        await page.waitForTimeout(600);
-      }
-      const overlayPin = await page.evaluate(() => {
-        const layout = document.querySelector("[data-machine-viewer-layout]");
-        if (!layout) return false;
-        const h = layout.getBoundingClientRect().height;
-        return h > 0 && h <= window.innerHeight * 0.98;
-      });
-      record("bea-phone-3d-fs", "bea-smoke", browserName, vp, overlayPin, `overlayPin=${overlayPin}`);
+      await clickEnterViewerFullscreen(page);
+      await page.waitForTimeout(600);
+      const inFs = await readViewerFsMetrics(page);
+      const mode = viewerFsMode(inFs);
+      const overlayPin =
+        inFs.native ||
+        (inFs.overlay && inFs.layoutH > 0 && inFs.layoutH <= inFs.innerH * 0.98);
+      record(
+        "bea-phone-3d-fs",
+        "bea-smoke",
+        browserName,
+        vp,
+        overlayPin,
+        `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH}`,
+      );
+      await clickExitViewerFullscreen(page);
       await page.goto(`${BASE}/staff/quotes/35`, { waitUntil: "domcontentloaded" });
       const tracking = await page.getByRole("heading", { name: /^tracking$/i }).isVisible().catch(() => false);
       record("bea-q35-tracking", "bea-smoke", browserName, vp, tracking, `tracking=${tracking}`);
@@ -369,40 +441,25 @@ async function runRows(browserName, launch) {
     if (vp >= 1024) {
       await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
       await page.locator("canvas").first().waitFor({ timeout: 60_000 }).catch(() => {});
-      const enterFs = page.getByRole("button", { name: /enter full screen/i }).first();
-      const exitFs = page.getByRole("button", { name: /exit full screen/i }).first();
-      const fsSupported =
-        browserName !== "webkit" ||
-        process.env.RV421_WEBKIT_FULLSCREEN === "1";
-      if (fsSupported && (await enterFs.isVisible().catch(() => false))) {
-        await enterFs.click();
-        await page
-          .waitForFunction(
-            () => Boolean(document.fullscreenElement || document.webkitFullscreenElement),
-            { timeout: 10_000 },
-          )
-          .catch(() => {});
-        await page.waitForTimeout(500);
-      }
-      if (fsSupported && (await exitFs.isVisible().catch(() => false))) {
-        await exitFs.click();
-        await page
-          .waitForFunction(
-            () => !document.fullscreenElement && !document.webkitFullscreenElement,
-            { timeout: 10_000 },
-          )
-          .catch(() => {});
-        await page.waitForTimeout(900);
-      }
-      const layoutTop = await page.evaluate(() => {
-        const chrome = document.querySelector(".machine-viewer");
-        const layout = document.querySelector("[data-machine-viewer-layout]");
-        if (!chrome || !layout) {
-          return -1;
-        }
-        return Math.round(layout.getBoundingClientRect().top - chrome.getBoundingClientRect().top);
-      });
-      record("bea-fs-strip-15px", "bea-smoke", browserName, vp, layoutTop <= 2, `layoutTop=${layoutTop}`);
+      await clickEnterViewerFullscreen(page);
+      await page.waitForTimeout(700);
+      const inFs = await readViewerFsMetrics(page);
+      const mode = viewerFsMode(inFs);
+      const entered =
+        inFs.native ||
+        (inFs.overlay && inFs.layoutH > Math.min(400, inFs.innerH * 0.45));
+      await clickExitViewerFullscreen(page);
+      const after = await readViewerFsMetrics(page);
+      const layoutTop = after.layoutTop;
+      const stripOk = entered && layoutTop <= 2 && !after.native && !after.overlay;
+      record(
+        "bea-fs-strip-15px",
+        "bea-smoke",
+        browserName,
+        vp,
+        stripOk,
+        `mode=${mode} entered=${entered} layoutTop=${layoutTop} afterOverlay=${after.overlay}`,
+      );
       await page.goto(`${BASE}/staff/quotes/35`, { waitUntil: "domcontentloaded" });
       const spacerH = await page.evaluate(() => {
         const spacer = document.querySelector(".conversation-sheet-spacer");
