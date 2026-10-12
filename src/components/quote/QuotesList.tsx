@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -57,6 +57,7 @@ export function QuotesList({
   );
   const searchQuery = searchParams.get(QUOTES_Q_QUERY) ?? "";
   const [searchDraft, setSearchDraft] = useState(searchQuery);
+  const searchFocused = useRef(false);
 
   const replaceListQuery = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -75,7 +76,9 @@ export function QuotesList({
     [listBase, router, searchParams],
   );
   useEffect(() => {
-    setSearchDraft(searchQuery);
+    if (!searchFocused.current) {
+      setSearchDraft(searchQuery);
+    }
   }, [searchQuery]);
   const debouncedDraft = useDebouncedValue(searchDraft.trim(), 250);
   useEffect(() => {
@@ -232,6 +235,13 @@ export function QuotesList({
             label="Search quotes"
             value={searchDraft}
             onChange={(value) => setSearchDraft(value)}
+            onFocus={() => {
+              searchFocused.current = true;
+            }}
+            onBlur={() => {
+              searchFocused.current = false;
+              setSearchDraft(searchQuery);
+            }}
             placeholder="Quote #, machine, customer…"
           />
         ) : null}
@@ -311,6 +321,13 @@ export function QuotesList({
           label="Search quotes"
           value={searchDraft}
           onChange={(value) => setSearchDraft(value)}
+          onFocus={() => {
+            searchFocused.current = true;
+          }}
+          onBlur={() => {
+            searchFocused.current = false;
+            setSearchDraft(searchQuery);
+          }}
           placeholder="Quote #, machine, customer…"
         />
       ) : null}

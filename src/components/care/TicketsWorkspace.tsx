@@ -72,7 +72,9 @@ function ticketHrefFor(
     scope === "hub"
       ? hubTicketHref(ticket.id)
       : machineTicketsHref(ticket.machineId, ticket.id);
-  return hrefWithCareTicketsListQuery(base, searchParams);
+  const listParams = new URLSearchParams(searchParams.toString());
+  listParams.delete(WORK_LIST_MACHINE_QUERY);
+  return hrefWithCareTicketsListQuery(base, listParams);
 }
 
 function listHrefFor(scope: TicketsWorkspaceProps["scope"], machineId?: string) {

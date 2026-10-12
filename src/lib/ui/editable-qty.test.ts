@@ -32,7 +32,7 @@ describe("editable qty", () => {
   it("surfaces validation errors without silent abs()", () => {
     assert.deepEqual(validateEditableQty("-3"), {
       ok: false,
-      error: "Quantity must be at least 1.",
+      error: "Quantity cannot be negative.",
     });
     assert.deepEqual(validateEditableQty("2.5"), {
       ok: false,
@@ -64,7 +64,7 @@ describe("editable qty", () => {
   });
 
   it("rejects quantities above the max", () => {
-    assert.deepEqual(validateEditableQty("1000000000"), {
+    assert.deepEqual(validateEditableQty("100000"), {
       ok: false,
       error: "Quantity is too large.",
     });

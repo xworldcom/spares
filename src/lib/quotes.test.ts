@@ -5,6 +5,7 @@ import {
   findQuoteInList,
   canEditTracking,
   canUploadPo,
+  parseStaffMoneyField,
   invoiceVisible,
   quoteFulfillmentVisibility,
   quoteRegressionCleanupPatch,
@@ -313,6 +314,13 @@ describe("status and visibility", () => {
     assert.equal(canUploadPo("ordered"), true);
     assert.equal(canUploadPo("shipped"), true);
     assert.equal(canUploadPo("cancelled"), false);
+    assert.equal(canUploadPo("closed"), false);
+  });
+
+  it("parses staff money drafts with locale-friendly decimals", () => {
+    assert.deepEqual(parseStaffMoneyField("10.00"), { ok: true, value: 10 });
+    assert.deepEqual(parseStaffMoneyField("10,00"), { ok: true, value: 10 });
+    assert.equal(parseStaffMoneyField("12.345").ok, false);
   });
 
   it("locks customer PO edits after PO is received", () => {

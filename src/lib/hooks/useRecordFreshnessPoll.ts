@@ -9,6 +9,7 @@ export function useRecordFreshnessPoll(
   path: string | null,
   etag: string | null | undefined,
   onFresh: () => Promise<void>,
+  onPollError?: (message: string | null) => void,
 ) {
   const etagRef = useRef(etag);
   etagRef.current = etag;
@@ -35,9 +36,16 @@ export function useRecordFreshnessPoll(
         });
         if (response.status === 200) {
           await onFreshRef.current();
+          onPollError?.(null);
+        } else if (response.status >= 500) {
+          onPollError?.("Could not refresh this record. Try again.");
         }
       } catch {
-        // Offline or transient — chat watch still covers updates.
+        onPollError?.(
+          typeof navigator !== "undefined" && navigator.onLine === false
+            ? "You appear to be offline. Check your connection and try again."
+            : "Could not reach OEE360. Check your network and try again.",
+        );
       }
     }
 

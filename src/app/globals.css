@@ -1620,7 +1620,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   width: 100%;
   min-width: 0;
   margin: 0;
-  padding: 0.15rem 0 0;
+  padding: 0.15rem 0.75rem 0 0;
   list-style: none;
   overflow-x: auto;
   overflow-y: hidden;

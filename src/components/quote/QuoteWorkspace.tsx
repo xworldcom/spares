@@ -116,6 +116,7 @@ export function QuoteWorkspace({
   const [itemsTouched, setItemsTouched] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState("");
   const [recordConflict, setRecordConflict] = useState<string | null>(null);
+  const [freshnessError, setFreshnessError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const runLock = useRef<Promise<void>>(Promise.resolve());
   const { begin, isCurrent } = useRequestGeneration();
@@ -262,6 +263,7 @@ export function QuoteWorkspace({
     quote ? `/api/quotes/${quote.id}` : null,
     quote ? quoteRecordEtag(quote) : null,
     pollQuote,
+    setFreshnessError,
   );
 
   useEffect(() => {
@@ -682,6 +684,11 @@ export function QuoteWorkspace({
       {error ? (
         <p className="text-sm text-[#f0c4c0]" role="alert">
           {error}
+        </p>
+      ) : null}
+      {freshnessError ? (
+        <p className="text-sm text-[#f0c4c0]" role="alert">
+          {freshnessError}
         </p>
       ) : null}
       <div className="min-h-[3.25rem]" aria-live="polite">

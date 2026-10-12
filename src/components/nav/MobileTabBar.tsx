@@ -87,6 +87,7 @@ function TabLink({
   label,
   badge,
   badgeAriaLabel,
+  onNavigate,
   children,
 }: {
   href: string;
@@ -94,6 +95,7 @@ function TabLink({
   label: string;
   badge?: number;
   badgeAriaLabel?: string;
+  onNavigate?: () => void;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -106,6 +108,7 @@ function TabLink({
       href={href}
       aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
+      onClick={onNavigate}
       className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
         active ? "text-[var(--spares-ink)]" : "text-[var(--spares-muted)]"
       }`}
@@ -163,6 +166,11 @@ export function MobileTabBar() {
   const machinesMenuOpen = machinesForPath === pathname;
   const staffMachinesActive = machinesFamilyActive(pathname, staffHrefs);
 
+  function closeOverlayMenus() {
+    setMoreForPath(null);
+    setMachinesForPath(null);
+  }
+
   if (!user) {
     return null;
   }
@@ -170,12 +178,12 @@ export function MobileTabBar() {
   return (
     <>
       {machinesMenuOpen ? (
-        <div className="fixed inset-0 z-[55] lg:hidden">
+        <div className="fixed inset-0 z-[80] lg:hidden">
           <button
             type="button"
             aria-label="Close machines menu"
             className="absolute inset-0 bg-black/25"
-            onClick={() => setMachinesForPath(null)}
+            onClick={closeOverlayMenus}
           />
           <div
             className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
@@ -189,12 +197,12 @@ export function MobileTabBar() {
       ) : null}
 
       {moreOpen ? (
-        <div className="fixed inset-0 z-[55] lg:hidden">
+        <div className="fixed inset-0 z-[80] lg:hidden">
           <button
             type="button"
             aria-label="Close more menu"
             className="absolute inset-0 bg-black/25"
-            onClick={() => setMoreForPath(null)}
+            onClick={closeOverlayMenus}
           />
           <div
             className="spares-surface absolute inset-x-3 rounded-[24px] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
@@ -269,6 +277,7 @@ export function MobileTabBar() {
                     current === pathname ? null : pathname,
                   );
                 }}
+                onPointerDown={(event) => event.stopPropagation()}
                 className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
                   staffMachinesActive || machinesMenuOpen
                     ? "text-[var(--spares-ink)]"
@@ -283,6 +292,7 @@ export function MobileTabBar() {
                 hrefs={staffHrefs}
                 label="Care"
                 badge={careUnreadCount}
+                onNavigate={closeOverlayMenus}
               >
                 <CareIcon active={isNavActive(pathname, "/care", staffHrefs)} />
               </TabLink>
@@ -291,6 +301,7 @@ export function MobileTabBar() {
                 hrefs={staffHrefs}
                 label="Quotes"
                 badge={quotesUnreadCount}
+                onNavigate={closeOverlayMenus}
               >
                 <QuotesIcon active={isNavActive(pathname, "/staff/quotes", staffHrefs)} />
               </TabLink>
@@ -298,6 +309,7 @@ export function MobileTabBar() {
                 href={STAFF_PART_ALERTS_HREF}
                 hrefs={staffHrefs}
                 label="Part alerts"
+                onNavigate={closeOverlayMenus}
                 badge={lifecycleUnreadCount}
                 badgeAriaLabel={
                   lifecycleUnreadCount > 0
@@ -316,6 +328,7 @@ export function MobileTabBar() {
                   setMachinesForPath(null);
                   setMoreForPath((current) => (current === pathname ? null : pathname));
                 }}
+                onPointerDown={(event) => event.stopPropagation()}
                 className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
                   moreActive || moreOpen ? "text-[var(--spares-ink)]" : "text-[var(--spares-muted)]"
                 }`}
@@ -326,7 +339,12 @@ export function MobileTabBar() {
             </>
           ) : (
             <>
-              <TabLink href="/machines" hrefs={customerHrefs} label="Machines">
+              <TabLink
+                href="/machines"
+                hrefs={customerHrefs}
+                label="Machines"
+                onNavigate={closeOverlayMenus}
+              >
                 <MachinesIcon active={isNavActive(pathname, "/machines", customerHrefs)} />
               </TabLink>
               <TabLink
@@ -334,6 +352,7 @@ export function MobileTabBar() {
                 hrefs={customerHrefs}
                 label="Care"
                 badge={careUnreadCount}
+                onNavigate={closeOverlayMenus}
               >
                 <CareIcon active={isNavActive(pathname, "/care", customerHrefs)} />
               </TabLink>
@@ -342,6 +361,7 @@ export function MobileTabBar() {
                 hrefs={customerHrefs}
                 label="Quotes"
                 badge={quotesUnreadCount}
+                onNavigate={closeOverlayMenus}
               >
                 <QuotesIcon active={isNavActive(pathname, "/quotes", customerHrefs)} />
               </TabLink>
@@ -349,6 +369,7 @@ export function MobileTabBar() {
                 href={CUSTOMER_PART_ALERTS_HREF}
                 hrefs={customerHrefs}
                 label="Part alerts"
+                onNavigate={closeOverlayMenus}
                 badge={lifecycleUnreadCount}
                 badgeAriaLabel={
                   lifecycleUnreadCount > 0
