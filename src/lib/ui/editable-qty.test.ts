@@ -55,6 +55,21 @@ describe("editable qty", () => {
     assert.equal(sanitizeQtyDraft("-"), "-");
   });
 
+  it("keeps a decimal point so 1.5 is rejected instead of becoming 15", () => {
+    assert.equal(sanitizeQtyDraft("1.5"), "1.5");
+    assert.deepEqual(validateEditableQty("1.5"), {
+      ok: false,
+      error: "Whole numbers only.",
+    });
+  });
+
+  it("rejects quantities above the max", () => {
+    assert.deepEqual(validateEditableQty("1000000000"), {
+      ok: false,
+      error: "Quantity is too large.",
+    });
+  });
+
   it("replaces the focused qty on the first typed digit", () => {
     assert.equal(qtyKeyReplacesDraft(true, "2"), true);
     assert.equal(qtyKeyReplacesDraft(true, "25"), false);

@@ -1,7 +1,6 @@
 "use client";
 
 import type { PartLifecycleStatus } from "@/types";
-import { staffPartLifecycleHref } from "@/lib/ui/part-lifecycle-url";
 
 type Props = {
   machineIds: string[];
@@ -56,17 +55,16 @@ export function PartLifecycleMachinesUsed({
           return (
             <span key={machineId}>
               {index > 0 ? " · " : null}
-              <a
-                href={staffPartLifecycleHref({ status, machineId, q: query })}
+              <button
+                type="button"
                 className="underline-offset-2 hover:underline"
                 onClick={(event) => {
-                  event.preventDefault();
                   event.stopPropagation();
                   onFilterMachine(machineId);
                 }}
               >
                 {name}
-              </a>
+              </button>
             </span>
           );
         })}

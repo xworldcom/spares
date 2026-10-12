@@ -695,11 +695,17 @@ export function useSnapSheet({
         settleTo("reply");
         return;
       }
-      if (sheet === "reply") {
-        settleCloseTo("out");
-        return;
-      }
-      settleCloseTo("out");
+      steppedAtRef.current = performance.now();
+      setThreadDockedState(true);
+      const max = lockCloseOffset();
+      setSheet("out");
+      clearMotionPaint("out");
+      clearCloseTranslate("out");
+      cardRef.current?.style.setProperty("--sheet-close-rest-ty", `${max}px`);
+      cardRef.current?.style.setProperty("--sheet-close-ty", `${max}px`);
+      cardRef.current?.setAttribute("data-close-translate", "");
+      closeSettleRef.current = true;
+      setOpen(false);
       return;
     }
     if (sheet !== "reply") {

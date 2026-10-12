@@ -35,6 +35,7 @@ import {
   quoteItemsEqual,
   quotePricingComplete,
   quoteStaffPricingLocked,
+  quoteStatusRegressionSteps,
   shippedActivityText,
   statusActivityText,
   trackingUpdatedActivityText,
@@ -257,8 +258,21 @@ async function handlePATCH(
       return error(parsed.error, 400);
     }
     const targetStatus = status ?? access.quote.status;
-    if (!canEditTracking(targetStatus)) {
-      return error("Tracking can be edited until the quote is delivered", 400);
+    const regressing =
+      status !== undefined &&
+      quoteStatusRegressionSteps(access.quote.status, status) > 0;
+    const clearingShipments =
+      parsed.shipments.every((row) => !row.trackingNumber.trim()) &&
+      access.quote.shipments.some((row) => row.trackingNumber.trim());
+    if (
+      !canEditTracking(targetStatus) &&
+      !regressing &&
+      !clearingShipments
+    ) {
+      return error(
+        "Tracking can be changed after PO received and before delivery.",
+        400,
+      );
     }
     shipments = parsed.shipments.map((row) => ({
       ...row,

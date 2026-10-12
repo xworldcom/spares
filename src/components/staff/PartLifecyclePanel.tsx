@@ -116,6 +116,7 @@ export function PartLifecyclePanel({
   const [saving, setSaving] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkNotice, setBulkNotice] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<Set<string>>(new Set());
   const [highlightPart, setHighlightPart] = useState(
     () => searchParams.get("highlight")?.trim() ?? "",
@@ -123,54 +124,62 @@ export function PartLifecyclePanel({
 
   const initialLoadSkipped = useRef(hasDefaultInitial);
 
-  const load = useCallback(async (): Promise<StaffPartCatalogRow[] | null> => {
-    const generation = loadGenerationRef.current + 1;
-    loadGenerationRef.current = generation;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const filtersDefault = isDefaultPartLifecycleFilters({
-      status,
-      machineId,
-      q: debouncedQuery,
-    });
-    if (filtersDefault && initialList && initialLoadSkipped.current) {
-      initialLoadSkipped.current = false;
-      return initialList.parts;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchStaffPartLifecycle(
-        {
-          status,
-          machineId: machineId || undefined,
-          q: debouncedQuery || undefined,
-        },
-        { signal: controller.signal },
-      );
-      if (loadGenerationRef.current !== generation) {
+  const load = useCallback(
+    async (options?: { background?: boolean }): Promise<StaffPartCatalogRow[] | null> => {
+      const background = options?.background ?? false;
+      const generation = loadGenerationRef.current + 1;
+      loadGenerationRef.current = generation;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const filtersDefault = isDefaultPartLifecycleFilters({
+        status,
+        machineId,
+        q: debouncedQuery,
+      });
+      if (filtersDefault && initialList && initialLoadSkipped.current) {
+        initialLoadSkipped.current = false;
+        return initialList.parts;
+      }
+      if (!background) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const data = await fetchStaffPartLifecycle(
+          {
+            status,
+            machineId: machineId || undefined,
+            q: debouncedQuery || undefined,
+          },
+          { signal: controller.signal },
+        );
+        if (loadGenerationRef.current !== generation) {
+          return null;
+        }
+        setParts(data.parts);
+        setStatusCounts(data.statusCounts ?? EMPTY_STATUS_COUNTS);
+        setMachines(data.machines);
+        return data.parts;
+      } catch (cause) {
+        if (controller.signal.aborted) {
+          return null;
+        }
+        if (loadGenerationRef.current !== generation) {
+          return null;
+        }
+        if (!background) {
+          setError(errorMessage(cause, "Could not load parts."));
+        }
         return null;
+      } finally {
+        if (!background && loadGenerationRef.current === generation) {
+          setLoading(false);
+        }
       }
-      setParts(data.parts);
-      setStatusCounts(data.statusCounts ?? EMPTY_STATUS_COUNTS);
-      setMachines(data.machines);
-      return data.parts;
-    } catch (cause) {
-      if (controller.signal.aborted) {
-        return null;
-      }
-      if (loadGenerationRef.current !== generation) {
-        return null;
-      }
-      setError(errorMessage(cause, "Could not load parts."));
-      return null;
-    } finally {
-      if (loadGenerationRef.current === generation) {
-        setLoading(false);
-      }
-    }
-  }, [debouncedQuery, initialList, machineId, status]);
+    },
+    [debouncedQuery, initialList, machineId, status],
+  );
 
   useEffect(() => {
     void load();
@@ -286,7 +295,9 @@ export function PartLifecyclePanel({
           : current,
       );
       setDraft(draftFromRow({ ...selected, lifecycle: savedLifecycle }));
-      void load();
+      setSaveNotice("Saved lifecycle.");
+      window.setTimeout(() => setSaveNotice(null), 4000);
+      void load({ background: true });
       void refreshLifecycleAlerts();
     } catch (cause) {
       setError(errorMessage(cause, "Could not save."));
@@ -319,7 +330,7 @@ export function PartLifecyclePanel({
       );
       setBulkNotice(`Marked ${touched.size} ${touched.size === 1 ? "part" : "parts"} ${label.toLowerCase()}.`);
       window.setTimeout(() => setBulkNotice(null), 4000);
-      await load();
+      void load({ background: true });
       void refreshLifecycleAlerts();
       setSelectedNumbers(new Set());
     } catch (cause) {
@@ -538,26 +549,28 @@ export function PartLifecyclePanel({
                     className="mt-1"
                     aria-label={`Select ${row.partNumber}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        selected?.partNumber === row.partNumber ||
-                        confirmDiscard()
-                      ) {
-                        setSelected(row);
-                      }
-                    }}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <span className="block truncate text-[15px] font-medium">{row.name}</span>
-                    <span
-                      className={`block truncate font-mono text-xs ${
-                        active ? "row-on-ink-muted" : "spares-muted"
-                      }`}
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          selected?.partNumber === row.partNumber ||
+                          confirmDiscard()
+                        ) {
+                          setSelected(row);
+                        }
+                      }}
+                      className="w-full text-left"
                     >
-                      {row.partNumber}
-                    </span>
+                      <span className="block truncate text-[15px] font-medium">{row.name}</span>
+                      <span
+                        className={`block truncate font-mono text-xs ${
+                          active ? "row-on-ink-muted" : "spares-muted"
+                        }`}
+                      >
+                        {row.partNumber}
+                      </span>
+                    </button>
                     <PartLifecycleMachinesUsed
                       machineIds={row.machineIds}
                       machineNames={row.machineNames}
@@ -572,7 +585,7 @@ export function PartLifecyclePanel({
                         setMachineId(nextMachineId);
                       }}
                     />
-                  </button>
+                  </div>
                   <span className="shrink-0 text-right text-[12px] font-medium">
                     {statusLabel(row.lifecycle.status)}
                   </span>
@@ -683,6 +696,11 @@ export function PartLifecyclePanel({
               className="spares-field mt-1 w-full rounded-2xl border-0 px-3 py-2 text-[15px] outline-none"
             />
           </label>
+          {saveNotice ? (
+            <p className="text-sm text-[#e8c27a]" role="status">
+              {saveNotice}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"

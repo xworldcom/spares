@@ -106,6 +106,8 @@ function FileDrop({
         type="file"
         accept={accept}
         className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
         onChange={(event) => onFile(event.target.files?.[0] ?? null)}
       />
     </label>

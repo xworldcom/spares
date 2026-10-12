@@ -71,7 +71,11 @@ export type DataMigrations = {
   catalogHealDeferredV1?: number;
   /** Hot rows (quotes/tickets/lifecycle) also CAS-write per-record JSON shards. */
   entityShardsV1?: number;
+  /** Reset demo quote #26 stuck at PO received with junk tracking (prod heal). */
+  demoQuote26HealV1?: number;
 };
+
+export const DEMO_QUOTE_26_HEAL_V1 = 1;
 
 type DemoMigrationUser = {
   id: string;
@@ -480,6 +484,54 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
       buyerGranted,
       buyerCreated: false,
     },
+  };
+}
+
+/** One-shot: unstick demo quote #26 (PO received + orphan tracking blocks regression). */
+export function applyDemoQuote26HealMigration<T extends DemoMigrationDb & { quotes?: QuoteRecord[] }>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoQuote26HealV1: DEMO_QUOTE_26_HEAL_V1,
+    },
+  } as T;
+  if (db.dataMigrations?.demoQuote26HealV1 === DEMO_QUOTE_26_HEAL_V1) {
+    return { db, changed: false };
+  }
+  const quotes = db.quotes ?? [];
+  const index = quotes.findIndex((row) => row.number === 26);
+  if (index < 0) {
+    return { db: marked, changed: true };
+  }
+  const quote = quotes[index];
+  const stuck =
+    quote.status === "po_received" &&
+    (quote.shipments.some((row) => row.trackingNumber.trim()) ||
+      quote.items.some((item) => typeof item.sellPrice === "number"));
+  if (!stuck) {
+    return { db: marked, changed: true };
+  }
+  const healedItems = quote.items.map((item) => ({
+    id: item.id,
+    qty: 1,
+    ...(item.name ? { name: item.name } : {}),
+  }));
+  const { invoiceNumber: _dropInvoice, ...rest } = quote;
+  const healed: QuoteRecord = {
+    ...rest,
+    status: "requested",
+    items: healedItems,
+    shipments: [],
+    staffPricingUnlocked: false,
+  };
+  const nextQuotes = quotes.slice();
+  nextQuotes[index] = healed;
+  return {
+    db: { ...marked, quotes: nextQuotes },
+    changed: true,
   };
 }
 

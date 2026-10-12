@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { prefetchLifecycleNotifications } from "@/lib/api/lifecycle-notifications";
 import {
+  CUSTOMER_PART_ALERTS_HREF,
+  STAFF_PART_ALERTS_HREF,
+} from "@/lib/nav/part-alerts-routes";
+import {
   prefetchAppRoute,
   warmCareHubLists,
   warmQuotesList,
@@ -11,13 +15,19 @@ import {
   warmTicketsList,
 } from "@/lib/nav/prefetch";
 
-const CUSTOMER_TAB_ROUTES = ["/machines", "/care/tickets", "/quotes"] as const;
+const CUSTOMER_TAB_ROUTES = [
+  "/machines",
+  "/care/tickets",
+  "/quotes",
+  CUSTOMER_PART_ALERTS_HREF,
+] as const;
 const STAFF_TAB_ROUTES = [
   "/machines",
   "/care/tickets",
   "/staff/directory",
   "/staff/parts",
   "/staff/quotes",
+  STAFF_PART_ALERTS_HREF,
 ] as const;
 
 export function useSignedInTabPrefetch(role?: string) {

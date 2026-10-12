@@ -37,7 +37,11 @@ export function QuoteTrackingPanel({
   onSave: () => void;
 }) {
   const editable = role === "staff" && canEditTracking(quote.status);
-  const rows = editable ? drafts : quote.shipments.filter((row) => row.trackingNumber.trim());
+  function trackingRowVisible(row: QuoteShipment) {
+    const number = row.trackingNumber.trim();
+    return Boolean(number) && number.toUpperCase() !== "REMOVED";
+  }
+  const rows = editable ? drafts : quote.shipments.filter(trackingRowVisible);
   const readyDrafts = drafts.filter((row) => row.trackingNumber.trim());
   const persistedHasTracking = quote.shipments.some((row) => row.trackingNumber.trim());
   const dirty = editable && shipmentsSignature(drafts) !== shipmentsSignature(quote.shipments);

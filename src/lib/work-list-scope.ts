@@ -53,7 +53,8 @@ export function workListTitle(
 ) {
   const name = machineName?.trim();
   if (name) {
-    return `${name} ${workListNoun(kind)}`;
+    const noun = kind === "quotes" ? "Quotes" : "Tickets";
+    return `${name} · ${noun}`;
   }
   if (scoped) {
     return kind === "quotes" ? "Quotes" : "Tickets";

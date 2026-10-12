@@ -27,7 +27,10 @@ export function validateEditableQty(
   if (parsed < 1) {
     return { ok: false, error: "Quantity must be at least 1." };
   }
-  return { ok: true, qty: Math.min(parsed, 999_999_999) };
+  if (parsed > 999_999_999) {
+    return { ok: false, error: "Quantity is too large." };
+  }
+  return { ok: true, qty: parsed };
 }
 
 /** True when the draft is a complete integer ≥ 1 (safe to write through). */
@@ -35,15 +38,22 @@ export function qtyDraftIsComplete(raw: string): boolean {
   return validateEditableQty(raw).ok;
 }
 
-/** Keep digits; preserve a leading minus so staff see validation instead of silent abs(). */
+/** Keep digits and one decimal separator so validation can reject decimals (not strip to 15). */
 export function sanitizeQtyDraft(raw: string): string {
   const trimmed = raw.trim();
   const negative = trimmed.startsWith("-");
-  const digits = trimmed.replace(/[^\d]/g, "");
-  if (negative && !digits) {
-    return "-";
+  let body = trimmed.slice(negative ? 1 : 0).replace(/[^\d.]/g, "");
+  const dot = body.indexOf(".");
+  if (dot >= 0) {
+    body = `${body.slice(0, dot + 1)}${body.slice(dot + 1).replace(/\./g, "")}`;
   }
-  return negative ? `-${digits}` : digits;
+  if (negative) {
+    if (!body) {
+      return "-";
+    }
+    return `-${body}`;
+  }
+  return body;
 }
 
 /** First digit after focus replaces the current qty (Fern: typing replaces). */

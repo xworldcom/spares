@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-
-const POLL_MS = 3_500;
+import { RECORD_FRESHNESS_POLL_MS } from "@/lib/hooks/conversation-poll-constants";
 
 /** Lightweight If-None-Match poll when a record is open (complements chat watch). */
 export function useRecordFreshnessPoll(
@@ -17,17 +16,19 @@ export function useRecordFreshnessPoll(
   onFreshRef.current = onFresh;
 
   useEffect(() => {
-    if (!enabled || !path) {
+    if (!enabled || path == null || path === "") {
       return;
     }
+    const fetchPath: string = path;
     let cancelled = false;
-    const timer = window.setInterval(async () => {
+
+    async function checkFresh() {
       if (cancelled || document.visibilityState === "hidden") {
         return;
       }
       const tag = etagRef.current;
       try {
-        const response = await fetch(path, {
+        const response = await fetch(fetchPath, {
           credentials: "include",
           cache: "no-store",
           headers: tag ? { "If-None-Match": tag } : undefined,
@@ -38,10 +39,23 @@ export function useRecordFreshnessPoll(
       } catch {
         // Offline or transient — chat watch still covers updates.
       }
-    }, POLL_MS);
+    }
+
+    const timer = window.setInterval(() => {
+      void checkFresh();
+    }, RECORD_FRESHNESS_POLL_MS);
+
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void checkFresh();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [enabled, path]);
 }

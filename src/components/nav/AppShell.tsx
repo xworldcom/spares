@@ -22,15 +22,20 @@ import { isNavActive } from "@/lib/nav-active";
 import { useSignedInTabPrefetch } from "@/components/nav/useSignedInTabPrefetch";
 import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
+import { AccountBubbleMenu } from "@/components/nav/AccountBubbleMenu";
+import {
+  CUSTOMER_PART_ALERTS_HREF,
+  STAFF_PART_ALERTS_HREF,
+} from "@/lib/nav/part-alerts-routes";
 
-const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes", "/notifications"] as const;
+const CUSTOMER_NAV_HREFS = ["/machines", "/care", "/quotes", CUSTOMER_PART_ALERTS_HREF] as const;
 const STAFF_NAV_HREFS = [
   "/machines",
   "/machines/new",
   "/care",
   "/staff/directory",
   "/staff/parts",
-  "/staff/notifications",
+  STAFF_PART_ALERTS_HREF,
   "/staff/activity",
   "/staff/quotes",
   "/staff/bugs",
@@ -42,16 +47,19 @@ function NavLink({
   href,
   hrefs,
   children,
+  ariaLabel,
 }: {
   href: string;
   hrefs: readonly string[];
   children: React.ReactNode;
+  ariaLabel?: string;
 }) {
   const pathname = usePathname();
   const active = isNavActive(pathname, href, hrefs);
   return (
     <Link
       href={href}
+      aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
       className={
         active
@@ -69,19 +77,27 @@ function NavLinkWithBadge({
   hrefs,
   label,
   unreadCount,
+  badgeAriaLabel,
 }: {
   href: string;
   hrefs: readonly string[];
   label: string;
   unreadCount: number;
+  badgeAriaLabel?: string;
 }) {
+  const ariaLabel =
+    badgeAriaLabel ??
+    (unreadCount > 0 ? `${label}, ${unreadCount} unread` : undefined);
   return (
     <span className="relative inline-flex">
-      <NavLink href={href} hrefs={hrefs}>
+      <NavLink href={href} hrefs={hrefs} ariaLabel={ariaLabel}>
         {label}
       </NavLink>
       {unreadCount > 0 ? (
-        <span className="btn-accent absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
+        <span
+          className="btn-accent absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
+          aria-hidden="true"
+        >
           {unreadCount > 9 ? "9+" : unreadCount}
         </span>
       ) : null}
@@ -239,12 +255,6 @@ export function AppShell({
                 label="Care"
                 unreadCount={careUnreadCount}
               />
-              <NavLinkWithBadge
-                href={user.role === "staff" ? "/staff/notifications" : "/notifications"}
-                hrefs={navHrefs}
-                label="Notifications"
-                unreadCount={lifecycleUnreadCount}
-              />
               {user.role === "staff" ? (
                 <>
                   <NavLink href="/staff/directory" hrefs={navHrefs}>
@@ -264,6 +274,17 @@ export function AppShell({
                     label="Quotes"
                     unreadCount={quotesUnreadCount}
                   />
+                  <NavLinkWithBadge
+                    href={STAFF_PART_ALERTS_HREF}
+                    hrefs={navHrefs}
+                    label="Part alerts"
+                    unreadCount={lifecycleUnreadCount}
+                    badgeAriaLabel={
+                      lifecycleUnreadCount > 0
+                        ? `Part alerts, ${lifecycleUnreadCount} unread obsolete part alerts`
+                        : undefined
+                    }
+                  />
                   <NavLink href="/staff/bugs" hrefs={navHrefs}>
                     Bug reports
                   </NavLink>
@@ -282,12 +303,25 @@ export function AppShell({
                   ) : null}
                 </>
               ) : (
-                <NavLinkWithBadge
-                  href="/quotes"
-                  hrefs={navHrefs}
-                  label="Quotes"
-                  unreadCount={quotesUnreadCount}
-                />
+                <>
+                  <NavLinkWithBadge
+                    href="/quotes"
+                    hrefs={navHrefs}
+                    label="Quotes"
+                    unreadCount={quotesUnreadCount}
+                  />
+                  <NavLinkWithBadge
+                    href={CUSTOMER_PART_ALERTS_HREF}
+                    hrefs={navHrefs}
+                    label="Part alerts"
+                    unreadCount={lifecycleUnreadCount}
+                    badgeAriaLabel={
+                      lifecycleUnreadCount > 0
+                        ? `Part alerts, ${lifecycleUnreadCount} unread obsolete part alerts`
+                        : undefined
+                    }
+                  />
+                </>
               )}
             </nav>
           ) : !signedIn && !resolvingSession && pathname !== "/inquire" ? (
@@ -311,14 +345,8 @@ export function AppShell({
               Private
             </span>
             <BugReportControl />
-            {signedIn ? (
-              <button
-                type="button"
-                onClick={() => setLogoutConfirmOpen(true)}
-                className="spares-muted inline-flex h-11 items-center px-3 text-sm font-medium transition-colors duration-200 hover:text-[var(--spares-ink)]"
-              >
-                Sign out
-              </button>
+            {signedIn && user ? (
+              <AccountBubbleMenu user={user} onSignOut={() => setLogoutConfirmOpen(true)} />
             ) : resolvingSession || pathname === "/login" ? null : cinematic && pathname !== "/" ? null : (
               <Link
                 href="/login"

@@ -14,6 +14,10 @@ import {
 } from "@/components/nav/MachinesNavMenu";
 import { isNavActive } from "@/lib/nav-active";
 import { ACTIVITY_LOG_ENABLED } from "@/lib/activity-log-public";
+import {
+  CUSTOMER_PART_ALERTS_HREF,
+  STAFF_PART_ALERTS_HREF,
+} from "@/lib/nav/part-alerts-routes";
 
 function MachinesIcon({ active }: { active: boolean }) {
   return (
@@ -54,6 +58,19 @@ function QuotesIcon({ active }: { active: boolean }) {
   );
 }
 
+function PartAlertsIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
+      <path
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.7}
+        d="M12 3a5.5 5.5 0 0 0-5.5 5.5v2.25L4.5 13v1.5h15V13l-2-2.25V8.5A5.5 5.5 0 0 0 12 3zm0 18a2.25 2.25 0 0 0 2.15-1.6H9.85A2.25 2.25 0 0 0 12 21z"
+      />
+    </svg>
+  );
+}
+
 function MoreIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
@@ -69,19 +86,25 @@ function TabLink({
   hrefs,
   label,
   badge,
+  badgeAriaLabel,
   children,
 }: {
   href: string;
   hrefs: readonly string[];
   label: string;
   badge?: number;
+  badgeAriaLabel?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const active = isNavActive(pathname, href, hrefs);
+  const ariaLabel =
+    badgeAriaLabel ??
+    (badge && badge > 0 ? `${label}, ${badge} unread` : undefined);
   return (
     <Link
       href={href}
+      aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
       className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[11px] font-semibold ${
         active ? "text-[var(--spares-ink)]" : "text-[var(--spares-muted)]"
@@ -108,7 +131,12 @@ export function MobileTabBar() {
   const [moreForPath, setMoreForPath] = useState<string | null>(null);
   const [machinesForPath, setMachinesForPath] = useState<string | null>(null);
 
-  const customerHrefs = ["/machines", "/care", "/quotes", "/notifications"] as const;
+  const customerHrefs = [
+    "/machines",
+    "/care",
+    "/quotes",
+    CUSTOMER_PART_ALERTS_HREF,
+  ] as const;
   const staffHrefs = [
     // keep in sync with AppShell STAFF_NAV_HREFS
     "/machines",
@@ -116,7 +144,7 @@ export function MobileTabBar() {
     "/care",
     "/staff/directory",
     "/staff/parts",
-    "/staff/notifications",
+    STAFF_PART_ALERTS_HREF,
     "/staff/activity",
     "/staff/quotes",
     "/staff/bugs",
@@ -185,17 +213,6 @@ export function MobileTabBar() {
               className="flex min-h-12 items-center rounded-2xl px-4 text-[16px] font-medium"
             >
               Part lifecycle
-            </Link>
-            <Link
-              href="/staff/notifications"
-              className="flex min-h-12 items-center justify-between gap-2 rounded-2xl px-4 text-[16px] font-medium"
-            >
-              Notifications
-              {lifecycleUnreadCount > 0 ? (
-                <span className="rounded-full bg-[#e8c27a] px-2 py-0.5 text-[11px] font-semibold text-black tabular-nums">
-                  {lifecycleUnreadCount}
-                </span>
-              ) : null}
             </Link>
             {ACTIVITY_LOG_ENABLED ? (
               <Link
@@ -277,6 +294,21 @@ export function MobileTabBar() {
               >
                 <QuotesIcon active={isNavActive(pathname, "/staff/quotes", staffHrefs)} />
               </TabLink>
+              <TabLink
+                href={STAFF_PART_ALERTS_HREF}
+                hrefs={staffHrefs}
+                label="Part alerts"
+                badge={lifecycleUnreadCount}
+                badgeAriaLabel={
+                  lifecycleUnreadCount > 0
+                    ? `Part alerts, ${lifecycleUnreadCount} unread obsolete part alerts`
+                    : undefined
+                }
+              >
+                <PartAlertsIcon
+                  active={isNavActive(pathname, STAFF_PART_ALERTS_HREF, staffHrefs)}
+                />
+              </TabLink>
               <button
                 type="button"
                 aria-expanded={moreOpen}
@@ -314,12 +346,19 @@ export function MobileTabBar() {
                 <QuotesIcon active={isNavActive(pathname, "/quotes", customerHrefs)} />
               </TabLink>
               <TabLink
-                href="/notifications"
+                href={CUSTOMER_PART_ALERTS_HREF}
                 hrefs={customerHrefs}
-                label="Alerts"
+                label="Part alerts"
                 badge={lifecycleUnreadCount}
+                badgeAriaLabel={
+                  lifecycleUnreadCount > 0
+                    ? `Part alerts, ${lifecycleUnreadCount} unread obsolete part alerts`
+                    : undefined
+                }
               >
-                <CareIcon active={isNavActive(pathname, "/notifications", customerHrefs)} />
+                <PartAlertsIcon
+                  active={isNavActive(pathname, CUSTOMER_PART_ALERTS_HREF, customerHrefs)}
+                />
               </TabLink>
             </>
           )}

@@ -36,8 +36,14 @@ export function useViewerFullscreen() {
   const [native, setNative] = useState(false);
 
   const exit = useCallback(() => {
+    const node = chromeRef.current;
     if (typeof document !== "undefined" && document.fullscreenElement) {
       void document.exitFullscreen().catch(() => undefined);
+    }
+    if (node) {
+      node.style.height = "";
+      node.style.width = "";
+      node.style.maxHeight = "";
     }
     setOverlay(false);
     setNative(false);
@@ -65,6 +71,12 @@ export function useViewerFullscreen() {
   useEffect(() => {
     function onFullscreenChange() {
       if (!document.fullscreenElement) {
+        const node = chromeRef.current;
+        if (node) {
+          node.style.height = "";
+          node.style.width = "";
+          node.style.maxHeight = "";
+        }
         setNative(false);
       }
     }

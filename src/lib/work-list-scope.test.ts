@@ -39,8 +39,8 @@ describe("workListTitle", () => {
   });
 
   it("puts the machine name in the scoped title", () => {
-    assert.equal(workListTitle("quotes", "Palletizer"), "Palletizer quotes");
-    assert.equal(workListTitle("tickets", "Palletizer"), "Palletizer tickets");
+    assert.equal(workListTitle("quotes", "Palletizer"), "Palletizer · Quotes");
+    assert.equal(workListTitle("tickets", "Palletizer"), "Palletizer · Tickets");
   });
 
   it("treats blank machine names as the hub title", () => {

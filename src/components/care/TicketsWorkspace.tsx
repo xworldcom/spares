@@ -45,6 +45,10 @@ import { useRequestGeneration } from "@/lib/ui/request-generation";
 import type { TicketsListResponse } from "@/lib/api/types";
 import type { ServiceTicket } from "@/types";
 import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
+import {
+  careTicketsListQueryString,
+  hrefWithCareTicketsListQuery,
+} from "@/lib/care-tickets-list-query";
 
 const ACCESSIBLE_TICKETS_PATH = "/api/tickets";
 const ACCESSIBLE_TICKETS_WARM_KEY = "tickets:accessible";
@@ -57,11 +61,16 @@ type TicketsWorkspaceProps = {
   listEtag?: string | null;
 };
 
-function ticketHrefFor(scope: TicketsWorkspaceProps["scope"], ticket: ServiceTicket) {
-  if (scope === "hub") {
-    return hubTicketHref(ticket.id);
-  }
-  return machineTicketsHref(ticket.machineId, ticket.id);
+function ticketHrefFor(
+  scope: TicketsWorkspaceProps["scope"],
+  ticket: ServiceTicket,
+  searchParams: URLSearchParams,
+) {
+  const base =
+    scope === "hub"
+      ? hubTicketHref(ticket.id)
+      : machineTicketsHref(ticket.machineId, ticket.id);
+  return hrefWithCareTicketsListQuery(base, searchParams);
 }
 
 function listHrefFor(scope: TicketsWorkspaceProps["scope"], machineId?: string) {
@@ -99,6 +108,7 @@ export function TicketsWorkspace({
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
   const listHref = listHrefFor(scope, machineId);
+  const listHrefWithQuery = `${listHref}${careTicketsListQueryString(searchParams)}`;
   const hubMachineFilter = scope === "hub" ? hubMachineFromUrl : undefined;
   const showMachine = scope === "hub" && !hubMachineFilter;
   const machineName = useMachineName(
@@ -153,10 +163,10 @@ export function TicketsWorkspace({
     }
     const likely = tickets.slice(0, 6);
     for (const ticket of likely) {
-      prefetchAppRoute(router, ticketHrefFor(scope, ticket));
+      prefetchAppRoute(router, ticketHrefFor(scope, ticket, searchParams));
       warmTicketDetail(ticket.id);
     }
-  }, [loading, router, scope, tickets]);
+  }, [loading, router, scope, searchParams, tickets]);
 
   function refresh() {
     invalidateListEtag("/api/tickets");
@@ -200,7 +210,7 @@ export function TicketsWorkspace({
       scope === "hub"
         ? hubTicketHref(id)
         : machineTicketsHref(createdMachineId, id);
-    router.push(href);
+    router.push(hrefWithCareTicketsListQuery(href, searchParams));
     refresh();
   }
 
@@ -433,7 +443,7 @@ export function TicketsWorkspace({
                   ? selected.id
                   : undefined
               }
-              hrefFor={(ticket) => ticketHrefFor(scope, ticket)}
+              hrefFor={(ticket) => ticketHrefFor(scope, ticket, searchParams)}
               emptyTitle="No tickets yet"
               emptyMessage="Open one when something needs service."
             />
@@ -448,7 +458,7 @@ export function TicketsWorkspace({
       machineId={selected?.machineId ?? machineId ?? ""}
       ticketId={ticketId}
       seedTicket={selected}
-      backHref={listHref}
+      backHref={listHrefWithQuery}
       embedded={desktop}
       onUpdated={refresh}
       onTicketListPatch={patchTicketInList}

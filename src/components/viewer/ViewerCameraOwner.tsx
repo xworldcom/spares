@@ -23,7 +23,6 @@ type ViewerCameraOwnerProps = {
   layoutRootRef: RefObject<HTMLDivElement | null>;
   fitKey: number;
   resetKey: number;
-  viewerFullscreen: boolean;
   assemblyKey: string;
   modelSrc: string;
 };
@@ -44,12 +43,11 @@ export function ViewerCameraOwner({
   layoutRootRef,
   fitKey,
   resetKey,
-  viewerFullscreen,
   assemblyKey,
   modelSrc,
 }: ViewerCameraOwnerProps) {
   const bounds = useBounds();
-  const { gl, camera, invalidate } = useThree();
+  const { gl, camera, invalidate, set } = useThree();
   const controls = useThree((state) => state.controls as OrbitControlsImpl | null);
   const canonicalPose = useRef<ViewerOrbitSnapshot | null>(null);
   const canonicalReady = useRef(false);
@@ -84,8 +82,9 @@ export function ViewerCameraOwner({
     if (!root) {
       return null;
     }
-    const width = root.clientWidth;
-    const height = root.clientHeight;
+    const rect = root.getBoundingClientRect();
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
     if (width < 1 || height < 1) {
       return null;
     }
@@ -100,8 +99,14 @@ export function ViewerCameraOwner({
     if (!size) {
       return false;
     }
-    return syncRendererViewport(gl, camera, size.width, size.height);
-  }, [camera, gl, readSize]);
+    if (!syncRendererViewport(gl, camera, size.width, size.height)) {
+      return false;
+    }
+    set({
+      size: { width: size.width, height: size.height, top: 0, left: 0 },
+    });
+    return true;
+  }, [camera, gl, readSize, set]);
 
   const fitMargin = useCallback(() => {
     const layout = readSize();
@@ -193,24 +198,6 @@ export function ViewerCameraOwner({
     invalidate();
     return true;
   }, [camera, controls, invalidate, syncViewport]);
-
-  const refitAfterFullscreenExit = useCallback(() => {
-    if (!applyCanonical()) {
-      return;
-    }
-    let frame = 0;
-    const settle = () => {
-      frame += 1;
-      if (frame < 3) {
-        requestAnimationFrame(settle);
-        return;
-      }
-      syncViewport();
-      applyCanonical();
-      invalidate();
-    };
-    requestAnimationFrame(settle);
-  }, [applyCanonical, invalidate, syncViewport]);
 
   const commitCanonicalReady = useCallback(
     (snap: ViewerOrbitSnapshot) => {
@@ -361,65 +348,12 @@ export function ViewerCameraOwner({
     };
     const observer = new ResizeObserver(onResize);
     observer.observe(root);
+    onResize();
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [applyCanonical, invalidate, layoutRootRef, syncViewport]);
-
-  useLayoutEffect(() => {
-    let alive = true;
-    let frame = 0;
-    let pass = 0;
-    function step() {
-      if (!alive) {
-        return;
-      }
-      pass += 1;
-      if (pass < 4) {
-        frame = requestAnimationFrame(step);
-        return;
-      }
-      if (!syncViewport()) {
-        return;
-      }
-      if (viewerFullscreen) {
-        refitToContainer();
-        return;
-      }
-      if (canonicalReady.current) {
-        refitAfterFullscreenExit();
-      }
-    }
-    frame = requestAnimationFrame(step);
-    return () => {
-      alive = false;
-      cancelAnimationFrame(frame);
-    };
-  }, [refitAfterFullscreenExit, refitToContainer, syncViewport, viewerFullscreen]);
-
-  useLayoutEffect(() => {
-    function onFullscreenChange() {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (!syncViewport()) {
-              return;
-            }
-            if (document.fullscreenElement) {
-              refitToContainer();
-              return;
-            }
-            if (canonicalReady.current) {
-              refitAfterFullscreenExit();
-            }
-          });
-        });
-      });
-    }
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, [refitAfterFullscreenExit, refitToContainer, syncViewport]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;

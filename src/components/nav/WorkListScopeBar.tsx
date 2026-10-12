@@ -56,7 +56,11 @@ export function WorkListScopeBar({
   const allHref = workListAllHref(kind, role);
   const allLabel = workListAllLabel(kind);
   const hubFiltered = Boolean(hubMachineId) && !routeScoped;
-  const title = workListTitle(kind, hubFiltered ? machineName : null, hubFiltered);
+  const title = workListTitle(
+    kind,
+    routeScoped || hubFiltered ? machineName : null,
+    routeScoped || hubFiltered,
+  );
   const Heading = headingLevel;
 
   useEffect(() => {
@@ -120,7 +124,7 @@ export function WorkListScopeBar({
     <div className="work-list-scope">
       {routeScoped || hubFiltered ? (
         <PrefetchLink href={backHref} className="work-list-scope-back">
-          <span aria-hidden="true">‹</span> {allLabel}
+          <span aria-hidden="true">←</span> {allLabel}
         </PrefetchLink>
       ) : null}
       <div className="work-list-scope-row">
