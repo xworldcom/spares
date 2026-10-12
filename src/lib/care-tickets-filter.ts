@@ -23,9 +23,27 @@ export function careTicketsSortFromParam(
   return value === "updated" ? "updated" : "recent";
 }
 
+function careSearchNeedles(query: string): string[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) {
+    return [];
+  }
+  const needles = new Set<string>([trimmed]);
+  const ticketRef = trimmed.match(/^t(?:icket)?\s*#?(\d+)$/i);
+  if (ticketRef?.[1]) {
+    needles.add(ticketRef[1]);
+    needles.add(`#${ticketRef[1]}`);
+  }
+  const hashNum = trimmed.match(/^#(\d+)$/);
+  if (hashNum?.[1]) {
+    needles.add(hashNum[1]);
+  }
+  return [...needles];
+}
+
 export function ticketMatchesCareSearch(ticket: ServiceTicket, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (!needle) {
+  const needles = careSearchNeedles(query);
+  if (needles.length === 0) {
     return true;
   }
   const hay = [
@@ -38,7 +56,14 @@ export function ticketMatchesCareSearch(ticket: ServiceTicket, query: string): b
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-  return hay.includes(needle);
+  const numberText = String(ticket.number).toLowerCase();
+  return needles.some(
+    (needle) =>
+      hay.includes(needle) ||
+      needle === numberText ||
+      needle === `#${numberText}` ||
+      needle.replace(/^#/, "") === numberText,
+  );
 }
 
 export function filterAndSortCareTickets(

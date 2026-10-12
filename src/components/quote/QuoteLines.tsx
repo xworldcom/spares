@@ -151,8 +151,8 @@ function QtyField({
     const validated = validateEditableQty(raw);
     if (!validated.ok) {
       setError(validated.error);
-      setDraft(null);
-      replaceOnType.current = true;
+      setDraft(raw.trim() ? raw : null);
+      replaceOnType.current = false;
       return;
     }
     setError(null);
@@ -182,6 +182,14 @@ function QtyField({
           value={draft ?? String(value)}
           onFocus={(event) => {
             const input = event.currentTarget;
+            if (error && draft !== null) {
+              replaceOnType.current = false;
+              requestAnimationFrame(() => {
+                const len = input.value.length;
+                input.setSelectionRange(len, len);
+              });
+              return;
+            }
             setError(null);
             setDraft(String(value));
             replaceOnType.current = true;
@@ -229,6 +237,18 @@ function QtyField({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.currentTarget.blur();
+              return;
+            }
+            if (
+              (event.key === "." || event.key === ",") &&
+              replaceOnType.current
+            ) {
+              event.preventDefault();
+              const base = draft ?? String(value);
+              replaceOnType.current = false;
+              const next = `${base}${event.key === "," ? "." : "."}`;
+              setDraft(next);
+              setError(validateEditableQty(next).ok ? null : "Whole numbers only.");
               return;
             }
             if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {

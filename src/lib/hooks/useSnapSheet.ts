@@ -613,12 +613,10 @@ export function useSnapSheet({
       }
       paintDetentHeightVars();
     };
-    window.addEventListener("scroll", refresh, { passive: true });
     const vv = window.visualViewport;
     vv?.addEventListener("resize", refresh);
     vv?.addEventListener("scroll", refresh);
     return () => {
-      window.removeEventListener("scroll", refresh);
       vv?.removeEventListener("resize", refresh);
       vv?.removeEventListener("scroll", refresh);
     };

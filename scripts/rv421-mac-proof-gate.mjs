@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 Mac proof gate (v7) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v13) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -544,6 +544,140 @@ async function runRows(browserName, launch) {
       record("sam-stepper-label", "sam-stepper-label", browserName, vp, fullLabel, `fullLabel=${fullLabel}`);
     }
 
+    // v13 — live prod re-verify (#430) staff rows
+    await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
+    await page.locator("ul a, ul button").first().click({ timeout: 20_000 });
+    const qtyDec = page.getByLabel("Qty").first();
+    await qtyDec.fill("1");
+    await qtyDec.click({ clickCount: 3 });
+    await qtyDec.press("1.5");
+    const decVal = await qtyDec.inputValue();
+    const decErr = await page
+      .getByRole("alert")
+      .filter({ hasText: /whole numbers/i })
+      .isVisible()
+      .catch(() => false);
+    const decPass = decVal.includes("1.5") && decErr;
+    record("sam-qty-decimal-15", "money-qty", browserName, vp, decPass, `val=${decVal} err=${decErr}`);
+
+    const qtyRef = page.getByLabel("Qty").first();
+    await qtyRef.fill("-3");
+    await qtyRef.blur();
+    await qtyRef.focus();
+    const refVal = await qtyRef.inputValue();
+    const refErr = await page
+      .getByRole("alert")
+      .filter({ hasText: /negative/i })
+      .isVisible()
+      .catch(() => false);
+    record(
+      "sam-qty-invalid-refocus",
+      "money-qty",
+      browserName,
+      vp,
+      refVal.includes("-3") && refErr,
+      `val=${refVal}`,
+    );
+
+    if (vp < 1024) {
+      await page.goto(`${BASE}/staff/parts`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: /^more$/i }).click();
+      await page.getByRole("button", { name: /^machines$/i }).click();
+      await page.waitForURL(/\/machines(?:\/|$|\?)/, { timeout: 15_000 });
+      record(
+        "sam-more-machines-onetap",
+        "staff-nav",
+        browserName,
+        vp,
+        /\/machines/.test(page.url()),
+        page.url(),
+      );
+
+      await openQuoteMessages(page, "26");
+      await expandConversationSheet(page);
+      const cardMsg = page.locator(".conversation-sheet").first();
+      const hClose = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
+      await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 });
+      await page.waitForTimeout(650);
+      await page.evaluate(() => window.scrollBy(0, 260));
+      await page.waitForTimeout(450);
+      const hScroll = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
+      record(
+        "sam-messages-close-scroll",
+        "phone-sheets",
+        browserName,
+        vp,
+        hScroll <= Math.max(hClose * 1.12, hClose + 28),
+        `hClose=${Math.round(hClose)} hScroll=${Math.round(hScroll)}`,
+      );
+
+      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      const sortBoxBefore = await page.locator(".tickets-workspace-sort-select").boundingBox();
+      await page.locator("#care-tickets-search").fill("pal");
+      await page.waitForTimeout(350);
+      const sortBoxAfter = await page.locator(".tickets-workspace-sort-select").boundingBox();
+      const sortStable =
+        sortBoxBefore &&
+        sortBoxAfter &&
+        Math.abs(sortBoxBefore.y - sortBoxAfter.y) < 2 &&
+        Math.abs(sortBoxBefore.x - sortBoxAfter.x) < 4;
+      record(
+        "sam-care-sort-stable",
+        "care-layout",
+        browserName,
+        vp,
+        Boolean(sortStable),
+        `before=${sortBoxBefore?.x},${sortBoxBefore?.y}`,
+      );
+
+      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      const headBefore = await page.locator(".tickets-workspace-toolbar").boundingBox();
+      await page
+        .locator(".tickets-workspace-new")
+        .click({ timeout: 8000 })
+        .catch(() => {});
+      await page.waitForTimeout(250);
+      const headAfter = await page.locator(".tickets-workspace-toolbar").boundingBox();
+      const headerStable =
+        headBefore &&
+        headAfter &&
+        Math.abs(headBefore.y - headAfter.y) < 3 &&
+        Math.abs(headBefore.x - headAfter.x) < 3;
+      record(
+        "sam-care-header-stable",
+        "care-layout",
+        browserName,
+        vp,
+        Boolean(headerStable),
+        `dy=${headBefore && headAfter ? Math.round(headAfter.y - headBefore.y) : "na"}`,
+      );
+    }
+
+    if (vp >= 1024) {
+      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      await page.locator("#care-tickets-search").fill("T9");
+      await page.waitForTimeout(450);
+      const t9Text = await page.locator(".tickets-workspace-list").innerText();
+      const t9visible = /\b9\b/.test(t9Text) && /ticket/i.test(t9Text);
+      record("sam-ticket-search-t9", "care-search", browserName, vp, t9visible, `t9=${t9visible}`);
+
+      await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
+      const inlineMsgs = await page.locator(".conversation-sheet.is-inline").isVisible().catch(() => false);
+      const handleHidden = await page
+        .locator(".conversation-sheet.is-inline .snap-sheet-handle")
+        .first()
+        .evaluate((el) => getComputedStyle(el).display === "none")
+        .catch(() => true);
+      record(
+        "bea-inline-messages-no-handle",
+        "quote-messages",
+        browserName,
+        vp,
+        inlineMsgs && handleHidden,
+        `inline=${inlineMsgs} handleHidden=${handleHidden}`,
+      );
+    }
+
     await context.close();
   }
 
@@ -616,6 +750,75 @@ async function runRows(browserName, launch) {
     undoVisible,
     `undo=${undoVisible}`,
   );
+  await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await seedCustomerTray(cp, "palletizer", customerTenant);
+  await cp.reload({ waitUntil: "domcontentloaded" });
+  await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
+  const trayHandle = cp.locator(".quote-sheet-handle").first();
+  await trayHandle.click({ timeout: 8000 });
+  await cp.waitForTimeout(500);
+  const trayFull = await cp.locator(".quote-sheet.is-full").isVisible().catch(() => false);
+  const removeBtn = cp.locator("[data-quote-tray] button").filter({ hasText: /^remove$/i }).first();
+  const removeBox = await removeBtn.boundingBox();
+  const removeVisible =
+    Boolean(removeBox) &&
+    removeBox.y >= 0 &&
+    removeBox.y + removeBox.height <= cp.viewportSize().height;
+  record(
+    "bea-m9-tray-handle-lines",
+    "bea-smoke",
+    browserName,
+    1440,
+    trayFull && removeVisible,
+    `full=${trayFull} removeVisible=${removeVisible}`,
+  );
+  await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await cp.getByRole("button", { name: /^list$/i }).click({ timeout: 8000 });
+  await seedCustomerTray(cp, "palletizer", customerTenant);
+  await cp.reload({ waitUntil: "domcontentloaded" });
+  await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
+  const addBtn = cp.getByRole("button", { name: /^add$/i }).first();
+  await addBtn.waitFor({ state: "visible", timeout: 12_000 });
+  const addBox = await addBtn.boundingBox();
+  let addReachable = false;
+  if (addBox) {
+    addReachable = await cp.evaluate(
+      ({ x, y }) => {
+        const hit = document.elementFromPoint(x, y);
+        if (!hit) {
+          return false;
+        }
+        const label = hit.closest("button")?.textContent?.trim() ?? "";
+        return /^add$/i.test(label);
+      },
+      { x: addBox.x + addBox.width / 2, y: addBox.y + addBox.height / 2 },
+    );
+  }
+  record(
+    "bea-drawer-list-add",
+    "bea-smoke",
+    browserName,
+    1440,
+    addReachable,
+    `reachable=${addReachable}`,
+  );
+  await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await clickEnterViewerFullscreen(cp);
+  await cp.waitForTimeout(700);
+  const stageW = await cp.evaluate(() => {
+    const layout = document.querySelector("[data-machine-viewer-layout]");
+    return layout ? Math.round(layout.getBoundingClientRect().width) : 0;
+  });
+  record(
+    "bea-fs-viewer-stage",
+    "bea-smoke",
+    browserName,
+    1440,
+    stageW >= Math.round(1440 * 0.92),
+    `layoutW=${stageW}`,
+  );
+  await clickExitViewerFullscreen(cp);
   await cust.close();
 
   await browser.close();
@@ -646,7 +849,7 @@ async function main() {
     "",
     `**Bundle HEAD:** \`${bundleHead}\``,
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v7)`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v13)`,
     `**Generated:** ${summary.generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",

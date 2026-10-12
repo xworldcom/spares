@@ -39,8 +39,8 @@ function TrayQtyInput({
     const validated = validateEditableQty(raw);
     if (!validated.ok) {
       setError(validated.error);
-      setDraft(null);
-      replaceOnType.current = true;
+      setDraft(raw.trim() ? raw : null);
+      replaceOnType.current = false;
       return;
     }
     setError(null);
@@ -61,6 +61,11 @@ function TrayQtyInput({
         aria-invalid={error ? true : undefined}
         value={draft ?? String(value)}
         onFocus={() => {
+          if (error && draft !== null) {
+            replaceOnType.current = false;
+            return;
+          }
+          setError(null);
           setDraft(String(value));
           replaceOnType.current = true;
         }}
@@ -75,10 +80,32 @@ function TrayQtyInput({
           const validated = validateEditableQty(next);
           setError(validated.ok ? null : validated.error);
         }}
-        onBlur={() => commit(draft ?? String(value))}
+        onBlur={() => {
+          const raw = draft ?? String(value);
+          const validated = validateEditableQty(raw);
+          if (!validated.ok) {
+            setError(validated.error);
+            setDraft(raw.trim() ? raw : null);
+            replaceOnType.current = false;
+            return;
+          }
+          commit(raw);
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.currentTarget.blur();
+            return;
+          }
+          if (
+            (event.key === "." || event.key === ",") &&
+            replaceOnType.current
+          ) {
+            event.preventDefault();
+            const base = draft ?? String(value);
+            replaceOnType.current = false;
+            const next = `${base}.`;
+            setDraft(next);
+            setError(validateEditableQty(next).ok ? null : "Whole numbers only.");
             return;
           }
           if (qtyKeyReplacesDraft(replaceOnType.current, event.key)) {

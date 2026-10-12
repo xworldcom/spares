@@ -273,6 +273,11 @@ export function MobileTabBar() {
                 type="button"
                 aria-expanded={machinesMenuOpen}
                 onClick={() => {
+                  if (moreOpen) {
+                    closeOverlayMenus();
+                    router.push("/machines");
+                    return;
+                  }
                   closeOverlayMenus();
                   if (staffMachinesActive && !machinesMenuOpen) {
                     setMachinesForPath(pathname);
