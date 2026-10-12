@@ -4118,9 +4118,10 @@ body > .quote-undo-toast {
 
 .tickets-workspace-filter-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
+  min-height: 2.25rem;
 }
 
 .tickets-workspace-filter-row .btn-primary,
@@ -4142,6 +4143,9 @@ body > .quote-undo-toast {
 
 .tickets-workspace-sort-select {
   height: 2.25rem;
+  width: 9.75rem;
+  min-width: 9.75rem;
+  max-width: 9.75rem;
   border-radius: 999px;
   padding: 0 0.75rem;
   font-size: 13px;

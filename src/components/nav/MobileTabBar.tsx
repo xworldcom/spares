@@ -264,7 +264,9 @@ export function MobileTabBar() {
 
       <nav
         aria-label="Primary"
-        className="spares-tabbar fixed inset-x-0 bottom-0 z-[70] border-t border-white/8 backdrop-blur-md lg:hidden"
+        className={`spares-tabbar fixed inset-x-0 bottom-0 border-t border-white/8 backdrop-blur-md lg:hidden ${
+          moreOpen || machinesMenuOpen ? "z-[90]" : "z-[70]"
+        }`}
       >
         <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1">
           {user.role === "staff" ? (

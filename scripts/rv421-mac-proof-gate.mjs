@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v14) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v15) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -678,8 +678,8 @@ async function runRows(browserName, launch) {
       const sortStable =
         sortBoxBefore &&
         sortBoxAfter &&
-        Math.abs(sortBoxBefore.y - sortBoxAfter.y) < 2 &&
-        Math.abs(sortBoxBefore.x - sortBoxAfter.x) < 4;
+        Math.abs(sortBoxBefore.y - sortBoxAfter.y) < 1 &&
+        Math.abs(sortBoxBefore.x - sortBoxAfter.x) < 2;
       record(
         "sam-care-sort-stable",
         "care-layout",
@@ -812,12 +812,16 @@ async function runRows(browserName, launch) {
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
   await seedCustomerTray(cp, "palletizer", customerTenant);
   await cp.reload({ waitUntil: "domcontentloaded" });
+  await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
   await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
-  const trayHandle = cp.locator(".quote-sheet-handle").first();
-  await trayHandle.click({ timeout: 8000 });
-  await cp.waitForTimeout(500);
-  const trayFull = await cp.locator(".quote-sheet.is-full").isVisible().catch(() => false);
-  const removeBtn = cp.locator("[data-quote-tray] button").filter({ hasText: /^remove$/i }).first();
+  const dockedTray = cp.locator(".quote-tray-dock.is-open [data-quote-tray]").first();
+  await dockedTray.waitFor({ state: "visible", timeout: 12_000 }).catch(() => {});
+  const trayFull = await cp
+    .locator(".quote-tray-dock.is-open .quote-sheet.is-full")
+    .isVisible()
+    .catch(() => false);
+  const removeBtn = dockedTray.getByRole("button", { name: /^remove$/i }).first();
+  await removeBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
   const removeBox = await removeBtn.boundingBox();
   const removeVisible =
     Boolean(removeBox) &&
@@ -829,7 +833,7 @@ async function runRows(browserName, launch) {
     browserName,
     1440,
     trayFull && removeVisible,
-    `full=${trayFull} removeVisible=${removeVisible}`,
+    `dockFull=${trayFull} removeVisible=${removeVisible}`,
   );
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
   await cp.getByRole("button", { name: /^list$/i }).click({ timeout: 8000 });
@@ -910,7 +914,7 @@ async function main() {
     "",
     `**Bundle HEAD:** \`${bundleHead}\``,
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v14)`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v15)`,
     `**Generated:** ${summary.generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",
