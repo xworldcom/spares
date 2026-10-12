@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v15c) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v15d) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,7 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v15";
+const GATE_HARNESS_VERSION = "v15d";
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -666,7 +666,7 @@ async function runRows(browserName, launch) {
     const qtyDec = page.getByLabel("Qty").first();
     await qtyDec.fill("1");
     await qtyDec.click({ clickCount: 3 });
-    await qtyDec.press("1.5");
+    await qtyDec.pressSequentially("1.5");
     const decVal = await qtyDec.inputValue();
     const decErr = await page
       .getByRole("alert")
