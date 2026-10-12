@@ -268,7 +268,11 @@ export function TicketDetail({
           );
           return;
         }
-        if (isTimeoutLikeError(cause) || (isApiError(cause) && cause.status === 0)) {
+        if (isApiError(cause) && cause.status === 0) {
+          setError(cause.message);
+          return;
+        }
+        if (isTimeoutLikeError(cause)) {
           const fresh = await getTicketFresh(ticket.id).catch(() => null);
           if (fresh) {
             setTicket(fresh);

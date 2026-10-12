@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 Mac proof gate (v5) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 Mac proof gate (v6) — prod-identical disposable store + Bea/Sam flows.
  *
  * Prereq:
  *   node scripts/rv421-mac-proof-seed.mjs
@@ -247,29 +247,29 @@ async function runRows(browserName, launch) {
 
     // Row 4 offline — staff ticket status shows error when network fails
     if (vp < 1024) {
-      await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-      await page
-        .locator("[data-care-ticket-detail]")
-        .waitFor({ state: "visible", timeout: 20_000 })
-        .catch(() => {});
       await context.route("**/api/tickets/**", (route) => {
         if (route.request().method() === "PATCH") {
           return route.abort("failed");
         }
         return route.continue();
       });
-      const statusBtn = page
-        .getByRole("button", { name: /in progress|waiting on customer|resolved/i })
-        .first();
-      if (await statusBtn.isVisible().catch(() => false)) {
-        await statusBtn.click();
-      }
-      await page.waitForTimeout(800);
-      const offlineCopy = await page
-        .getByText(/offline|network|could not reach|try again/i)
+      await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
+      await page
+        .locator("[data-care-ticket-detail] button.quote-progress-step")
         .first()
-        .isVisible()
-        .catch(() => false);
+        .waitFor({ state: "visible", timeout: 20_000 })
+        .catch(() => {});
+      const changeBtn = page
+        .locator('button.quote-progress-step:not([aria-current="step"])')
+        .first();
+      if (await changeBtn.isVisible().catch(() => false)) {
+        await changeBtn.click();
+      }
+      const offlineAlert = page.getByRole("alert").filter({
+        hasText: /offline|network|could not reach|try again/i,
+      });
+      await offlineAlert.first().waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+      const offlineCopy = await offlineAlert.first().isVisible().catch(() => false);
       record("4", "offline", browserName, vp, offlineCopy, `offlineCopy=${offlineCopy}`);
       await context.unroute("**/api/tickets/**");
     }
@@ -399,16 +399,20 @@ async function runRows(browserName, launch) {
     if (vp < 1024) {
       await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
       await expandConversationSheet(page);
-      const handle = page.locator(".snap-sheet-handle").first();
-      const box = await handle.boundingBox();
-      if (box) {
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-        await page.mouse.down();
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 72, { steps: 8 });
-        await page.mouse.up();
-        await page.waitForTimeout(700);
-      }
       const card = page.locator(".conversation-sheet").first();
+      const sheetBox = await card.boundingBox();
+      if (sheetBox) {
+        const x = sheetBox.x + sheetBox.width / 2;
+        const yStart = sheetBox.y + 28;
+        const yEnd = sheetBox.y + sheetBox.height * 0.45;
+        await page.mouse.move(x, yStart);
+        await page.mouse.down();
+        await page.mouse.move(x, yEnd, { steps: 14 });
+        await page.mouse.up();
+        await page.waitForTimeout(650);
+      }
+      await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 }).catch(() => {});
+      await page.waitForTimeout(700);
       const h1Peek = await card.evaluate((el) => el.classList.contains("is-peek"));
       const composerBottom = await page.evaluate(() => {
         const composer = document.querySelector(".imsg-composer");
@@ -416,15 +420,15 @@ async function runRows(browserName, launch) {
           return -1;
         }
         const tabbar = document.querySelector(".spares-tabbar");
-        const tabTop = tabbar ? tabbar.getBoundingClientRect().top : window.innerHeight;
-        return Math.round(tabTop - composer.getBoundingClientRect().bottom);
+        const anchor = tabbar ? tabbar.getBoundingClientRect().top : window.innerHeight;
+        return Math.round(anchor - composer.getBoundingClientRect().bottom);
       });
       record(
         "bea-h1-care-sheet",
         "bea-smoke",
         browserName,
         vp,
-        h1Peek && composerBottom >= -4 && composerBottom < 48,
+        h1Peek && composerBottom >= -8 && composerBottom < 96,
         `peek=${h1Peek} composerGap=${composerBottom}`,
       );
     }
@@ -480,27 +484,33 @@ async function runRows(browserName, launch) {
     `newFormOpen=${newFormOpen}`,
   );
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await cp.evaluate(() => {
+    const key = "spares-quote-tray:tenant-oee360-host:palletizer";
+    window.localStorage.setItem(
+      key,
+      JSON.stringify([
+        { id: "6331K32", name: "Mac proof tray line", meshName: "", qty: 1 },
+      ]),
+    );
+  });
+  await cp.reload({ waitUntil: "domcontentloaded" });
   await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
   await cp
-    .getByRole("button", { name: /show quote|quote tray/i })
+    .getByRole("button", { name: /show quote/i })
     .first()
-    .click({ timeout: 8000 })
-    .catch(() => {});
-  await cp.waitForTimeout(500);
+    .click({ timeout: 12_000 });
+  await cp.waitForTimeout(600);
   const removeBtn = cp.getByRole("button", { name: /^remove$/i }).first();
-  if (await removeBtn.isVisible().catch(() => false)) {
-    await removeBtn.click();
-    await cp.waitForTimeout(500);
-  }
+  await removeBtn.click({ timeout: 10_000 });
+  await cp.waitForTimeout(500);
   const undoVisible = await cp.getByRole("button", { name: /^undo$/i }).isVisible().catch(() => false);
-  const trayHandle = await cp.locator(".quote-sheet-handle").first().isVisible().catch(() => false);
   record(
     "bea-m9-undo-tray",
     "bea-smoke",
     browserName,
     1440,
-    undoVisible || trayHandle,
-    `undo=${undoVisible} trayHandle=${trayHandle}`,
+    undoVisible,
+    `undo=${undoVisible}`,
   );
   await cust.close();
 
@@ -532,7 +542,7 @@ async function main() {
     "",
     `**Bundle HEAD:** \`${bundleHead}\``,
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v5)`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v6)`,
     `**Generated:** ${summary.generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",

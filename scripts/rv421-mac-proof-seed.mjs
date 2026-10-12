@@ -23,14 +23,25 @@ const prodBase = (process.env.OEE360_BASE_URL || "https://oee360.com").replace(/
 
 mkdirSync(join(outDir, "files"), { recursive: true });
 
+function copyCatalogFile(srcRoot, srcName, destName) {
+  const src = join(srcRoot, srcName);
+  if (!existsSync(src)) {
+    return false;
+  }
+  cpSync(src, join(outDir, destName));
+  return true;
+}
+
 function copyFromSnapshot(srcRoot) {
-  const names = ["db.json", "care.json", "activity.json", "platform-settings.json"];
-  for (const name of names) {
-    const src = join(srcRoot, name);
-    if (!existsSync(src)) {
-      continue;
-    }
-    cpSync(src, join(outDir, name));
+  const catalogFiles = [
+    { src: "db.json", dest: "db.json" },
+    { src: "database.json", dest: "db.json" },
+    { src: "care.json", dest: "care.json" },
+    { src: "activity.json", dest: "activity.json" },
+    { src: "platform-settings.json", dest: "platform-settings.json" },
+  ];
+  for (const { src, dest } of catalogFiles) {
+    copyCatalogFile(srcRoot, src, dest);
   }
   const shards = join(srcRoot, "entity-shards");
   if (existsSync(shards)) {
@@ -118,6 +129,9 @@ async function pullViaBlob() {
   }
   const pulled = join(outDir, "_blob-pull", stamp);
   copyFromSnapshot(pulled);
+  if (!existsSync(join(outDir, "db.json")) && existsSync(join(pulled, "database.json"))) {
+    copyCatalogFile(pulled, "database.json", "db.json");
+  }
   return existsSync(join(outDir, "db.json"));
 }
 
