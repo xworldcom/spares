@@ -397,7 +397,16 @@ export function TicketDetail({
             status={ticket.status}
             editable={staff}
             pending={busy || detailLoading}
-            onChange={staff && !detailLoading ? onStatus : undefined}
+            onChange={
+              staff
+                ? (next) => {
+                    if (detailLoading || busy) {
+                      return;
+                    }
+                    void onStatus(next);
+                  }
+                : undefined
+            }
           />
         </div>
       ) : (

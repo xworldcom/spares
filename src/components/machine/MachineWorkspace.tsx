@@ -706,8 +706,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       className={
         overlay
           ? overlayFrame
-            ? "fixed inset-x-0 z-40 flex flex-col overscroll-none"
-            : "fixed inset-x-0 bottom-0 z-40 flex flex-col overscroll-none top-[var(--spares-header)]"
+            ? "machine-viewer fixed inset-x-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none"
+            : "machine-viewer fixed inset-x-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none top-[var(--spares-header)]"
           : "machine-viewer flex min-h-0 flex-col overflow-hidden sm:rounded-[28px]"
       }
       style={

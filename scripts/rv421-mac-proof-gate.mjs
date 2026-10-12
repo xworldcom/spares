@@ -284,7 +284,10 @@ async function runRows(browserName, launch) {
 
     // sam-search-clear
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
-    const search = page.getByLabel("Search quotes");
+    let search = page.getByLabel("Search quotes");
+    if (!(await search.isVisible().catch(() => false))) {
+      search = page.locator("#staff-quotes-search");
+    }
     await search.waitFor({ state: "visible", timeout: 12_000 });
     await search.fill("zzqxj");
     await page.waitForTimeout(350);
