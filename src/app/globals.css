@@ -3270,6 +3270,11 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
 }
 
+body > .quote-undo-toast {
+  z-index: 120;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
 .quote-undo-toast {
   position: fixed;
   z-index: 80;

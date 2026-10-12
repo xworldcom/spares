@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 Mac proof gate (v6) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 Mac proof gate (v7) — prod-identical disposable store + Bea/Sam flows.
  *
  * Prereq:
  *   node scripts/rv421-mac-proof-seed.mjs
@@ -89,10 +89,41 @@ function record(row, folder, browser, viewport, pass, detail, shots = []) {
 
 async function openQuoteMessages(page, quoteRef) {
   await page.goto(`${BASE}/staff/quotes/${quoteRef}`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /messages/i }).first().click({ timeout: 20_000 });
+  const handle = page.locator(".snap-sheet-handle").first();
+  if (await handle.isVisible().catch(() => false)) {
+    await handle.click({ timeout: 20_000 });
+  } else {
+    await page.getByRole("button", { name: /messages/i }).first().click({ timeout: 20_000 });
+  }
   await page.locator(".snap-sheet-handle, .conversation-sheet.is-inline").first().waitFor({
     timeout: 15_000,
   });
+}
+
+async function tenantIdForContext(context) {
+  const res = await context.request.get(`${BASE}/api/auth/me`);
+  if (!res.ok()) {
+    return "tenant-oee360-host";
+  }
+  const body = await res.json();
+  return body.user?.tenantId?.trim() || "tenant-oee360-host";
+}
+
+async function seedCustomerTray(page, machineSlug, tenantId) {
+  await page.evaluate(
+    ({ key, line }) => {
+      window.localStorage.setItem(key, JSON.stringify([line]));
+    },
+    {
+      key: `spares-quote-tray:${tenantId}:${machineSlug}`,
+      line: {
+        id: "6331K32",
+        name: "Mac proof tray line",
+        meshName: "",
+        qty: 1,
+      },
+    },
+  );
 }
 
 async function expandConversationSheet(page) {
@@ -168,7 +199,11 @@ async function runRows(browserName, launch) {
 
     // Row 3 Q27 lock + copy
     await page.goto(`${BASE}/staff/quotes/27`, { waitUntil: "domcontentloaded" });
-    const sellDisabled = await page.locator("#sell-").first().isDisabled().catch(() => false);
+    const sellDisabled = await page
+      .locator('[id^="sell-"]')
+      .first()
+      .isDisabled()
+      .catch(() => false);
     await page.getByText(/locked after PO/i).first().waitFor({ state: "visible", timeout: 12_000 }).catch(() => {});
     const lockCopy = await page.getByText(/locked after PO/i).first().isVisible().catch(() => false);
     const editPricingVisible = await page
@@ -182,6 +217,7 @@ async function runRows(browserName, launch) {
     // sam-search-clear
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
     const search = page.getByLabel("Search quotes");
+    await search.waitFor({ state: "visible", timeout: 12_000 });
     await search.fill("zzqxj");
     await page.waitForTimeout(350);
     await search.fill("");
@@ -335,20 +371,27 @@ async function runRows(browserName, launch) {
       await page.locator("canvas").first().waitFor({ timeout: 60_000 }).catch(() => {});
       const enterFs = page.getByRole("button", { name: /enter full screen/i }).first();
       const exitFs = page.getByRole("button", { name: /exit full screen/i }).first();
-      if (await enterFs.isVisible().catch(() => false)) {
+      const fsSupported =
+        browserName !== "webkit" ||
+        process.env.RV421_WEBKIT_FULLSCREEN === "1";
+      if (fsSupported && (await enterFs.isVisible().catch(() => false))) {
         await enterFs.click();
-        await page.waitForFunction(
-          () => Boolean(document.fullscreenElement || document.webkitFullscreenElement),
-          { timeout: 10_000 },
-        ).catch(() => {});
+        await page
+          .waitForFunction(
+            () => Boolean(document.fullscreenElement || document.webkitFullscreenElement),
+            { timeout: 10_000 },
+          )
+          .catch(() => {});
         await page.waitForTimeout(500);
       }
-      if (await exitFs.isVisible().catch(() => false)) {
+      if (fsSupported && (await exitFs.isVisible().catch(() => false))) {
         await exitFs.click();
-        await page.waitForFunction(
-          () => !document.fullscreenElement && !document.webkitFullscreenElement,
-          { timeout: 10_000 },
-        ).catch(() => {});
+        await page
+          .waitForFunction(
+            () => !document.fullscreenElement && !document.webkitFullscreenElement,
+            { timeout: 10_000 },
+          )
+          .catch(() => {});
         await page.waitForTimeout(900);
       }
       const layoutTop = await page.evaluate(() => {
@@ -483,27 +526,23 @@ async function runRows(browserName, launch) {
     !newFormOpen,
     `newFormOpen=${newFormOpen}`,
   );
+  const customerTenant = await tenantIdForContext(cust);
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-  await cp.evaluate(() => {
-    const key = "spares-quote-tray:tenant-oee360-host:palletizer";
-    window.localStorage.setItem(
-      key,
-      JSON.stringify([
-        { id: "6331K32", name: "Mac proof tray line", meshName: "", qty: 1 },
-      ]),
-    );
-  });
+  await seedCustomerTray(cp, "palletizer", customerTenant);
   await cp.reload({ waitUntil: "domcontentloaded" });
   await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-  await cp
-    .getByRole("button", { name: /show quote/i })
-    .first()
-    .click({ timeout: 12_000 });
-  await cp.waitForTimeout(600);
-  const removeBtn = cp.getByRole("button", { name: /^remove$/i }).first();
-  await removeBtn.click({ timeout: 10_000 });
-  await cp.waitForTimeout(500);
-  const undoVisible = await cp.getByRole("button", { name: /^undo$/i }).isVisible().catch(() => false);
+  const quoteChip = cp.getByRole("button", { name: /show quote/i }).first();
+  await quoteChip.waitFor({ state: "visible", timeout: 15_000 });
+  await quoteChip.click();
+  await cp.locator(".quote-tray-dock.is-open [data-quote-tray]").waitFor({
+    state: "visible",
+    timeout: 12_000,
+  });
+  const tray = cp.locator(".quote-tray-dock.is-open [data-quote-tray]");
+  await tray.getByRole("button", { name: /^remove$/i }).click({ timeout: 10_000 });
+  const undoBtn = cp.locator("[data-quote-undo-toast] .quote-undo-toast-action");
+  await undoBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  const undoVisible = await undoBtn.isVisible().catch(() => false);
   record(
     "bea-m9-undo-tray",
     "bea-smoke",
@@ -542,7 +581,7 @@ async function main() {
     "",
     `**Bundle HEAD:** \`${bundleHead}\``,
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v6)`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v7)`,
     `**Generated:** ${summary.generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",
