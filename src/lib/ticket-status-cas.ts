@@ -1,5 +1,4 @@
-import type { ServiceTicketRecord } from "@/types";
-import type { TicketStatus } from "./care.ts";
+import type { ServiceTicketRecord, TicketStatus } from "@/types";
 import {
   fieldsOverlap,
   readRecordVersion,
