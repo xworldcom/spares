@@ -515,6 +515,10 @@ body {
   transform: translate3d(0, var(--sheet-close-ty, 0), 0);
   will-change: transform, height;
   touch-action: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  z-index: 60;
 }
 
 .conversation-sheet:not(.is-inline).is-peek {

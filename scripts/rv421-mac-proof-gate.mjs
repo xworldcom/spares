@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v13) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v14) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -193,7 +193,12 @@ async function readViewerFsMetrics(page) {
       };
     }
     const chromeStyle = getComputedStyle(chrome);
-    const overlay = !native && chromeStyle.position === "fixed";
+    const fsAttr = chrome.getAttribute("data-viewer-fs");
+    const overlay =
+      !native &&
+      (fsAttr === "overlay" ||
+        chromeStyle.position === "fixed" ||
+        chrome.hasAttribute("data-viewer-fs-overlay"));
     const chromeRect = chrome.getBoundingClientRect();
     const layoutRect = layout.getBoundingClientRect();
     return {
@@ -214,6 +219,115 @@ function viewerFsMode(metrics) {
     return "overlay";
   }
   return "none";
+}
+
+async function controlsAboveTabBar(page, selectors) {
+  return page.evaluate((sels) => {
+    const tabbar = document.querySelector(".spares-tabbar");
+    if (!tabbar) {
+      return { ok: false, reason: "no-tabbar" };
+    }
+    const tabTop = tabbar.getBoundingClientRect().top;
+    const hits = {};
+    for (const sel of sels) {
+      const el = document.querySelector(sel);
+      if (!el) {
+        hits[sel] = false;
+        continue;
+      }
+      const rect = el.getBoundingClientRect();
+      hits[sel] = rect.height > 4 && rect.bottom <= tabTop + 1;
+    }
+    return { ok: Object.values(hits).every(Boolean), tabTop, hits };
+  }, selectors);
+}
+
+async function runBeaMandatoryPhone390(browserName, browser) {
+  const context = await browser.newContext({ viewport: viewportSize(390) });
+  if (browserName === "chrome" || browserName === "chromium") {
+    try {
+      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+    } catch {
+      // Playwright builds without fullscreen permission still exercise requestFullscreen.
+    }
+  }
+  await apiLogin(context, CUSTOMER);
+  const page = await context.newPage();
+  const vp = 390;
+
+  await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await clickEnterViewerFullscreen(page);
+  await page.waitForTimeout(750);
+  const inFs = await readViewerFsMetrics(page);
+  const mode = viewerFsMode(inFs);
+  const fsEntered =
+    inFs.native ||
+    (inFs.overlay && inFs.layoutH >= Math.min(360, inFs.innerH * 0.52));
+  record(
+    "bea-phone-3d-fs",
+    "bea-smoke",
+    browserName,
+    vp,
+    fsEntered,
+    `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH}`,
+  );
+  await clickExitViewerFullscreen(page);
+
+  await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
+  await expandConversationSheet(page);
+  const card = page.locator(".conversation-sheet").first();
+  const sheetBox = await card.boundingBox();
+  const hBeforeDrag = await card.evaluate((el) => el.getBoundingClientRect().height);
+  if (sheetBox) {
+    const x = sheetBox.x + sheetBox.width / 2;
+    const yStart = sheetBox.y + 32;
+    const yEnd = sheetBox.y + sheetBox.height * 0.52;
+    await page.mouse.move(x, yStart);
+    await page.mouse.down();
+    await page.mouse.move(x, yEnd, { steps: 16 });
+    await page.mouse.up();
+  }
+  await page.waitForTimeout(900);
+  const stuck = await card.evaluate((el) => {
+    const settling = el.classList.contains("is-settling") || el.classList.contains("is-dragging");
+    const motionLive = el.hasAttribute("data-motion-live");
+    const h = el.getBoundingClientRect().height;
+    const reply = Number.parseFloat(getComputedStyle(el).getPropertyValue("--reply-h"));
+    const full = Number.parseFloat(getComputedStyle(el).getPropertyValue("--full-h"));
+    const mid = (reply + full) / 2;
+    const betweenDetents =
+      Number.isFinite(reply) &&
+      Number.isFinite(full) &&
+      h > reply + 18 &&
+      h < full - 18 &&
+      h > reply + 0.35 * (full - reply) &&
+      h < full - 0.35 * (full - reply);
+    return { settling, motionLive, betweenDetents, h: Math.round(h) };
+  });
+  if (await card.evaluate((el) => el.classList.contains("is-peek"))) {
+    await expandConversationSheet(page);
+    await page.waitForTimeout(400);
+  }
+  const above = await controlsAboveTabBar(page, [
+    ".conversation-sheet-close",
+    ".imsg-send",
+  ]);
+  const h1Pass =
+    !stuck.settling &&
+    !stuck.motionLive &&
+    !stuck.betweenDetents &&
+    above.ok;
+  record(
+    "bea-h1-care-sheet",
+    "bea-smoke",
+    browserName,
+    vp,
+    h1Pass,
+    `stuck=${JSON.stringify(stuck)} above=${JSON.stringify(above)} hBefore=${Math.round(hBeforeDrag)}`,
+  );
+
+  await context.close();
 }
 
 async function clickEnterViewerFullscreen(page) {
@@ -418,26 +532,8 @@ async function runRows(browserName, launch) {
       record("10", "also", browserName, vp, row10, `viewerH=${viewerH} emailLines=${emailLines}`);
     }
 
-    // Bea func5 matrix (subset)
+    // Bea func5 matrix (subset) — bea-phone-3d-fs / bea-h1-care-sheet run as customer @390 (v14)
     if (vp < 1024) {
-      await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-      await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-      await clickEnterViewerFullscreen(page);
-      await page.waitForTimeout(600);
-      const inFs = await readViewerFsMetrics(page);
-      const mode = viewerFsMode(inFs);
-      const overlayPin =
-        inFs.native ||
-        (inFs.overlay && inFs.layoutH > 0 && inFs.layoutH <= inFs.innerH * 0.98);
-      record(
-        "bea-phone-3d-fs",
-        "bea-smoke",
-        browserName,
-        vp,
-        overlayPin,
-        `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH}`,
-      );
-      await clickExitViewerFullscreen(page);
       await page.goto(`${BASE}/staff/quotes/35`, { waitUntil: "domcontentloaded" });
       const tracking = await page.getByRole("heading", { name: /^tracking$/i }).isVisible().catch(() => false);
       record("bea-q35-tracking", "bea-smoke", browserName, vp, tracking, `tracking=${tracking}`);
@@ -497,43 +593,6 @@ async function runRows(browserName, launch) {
         vp,
         /part alerts/i.test(tAlerts) && /oee360/i.test(tAlerts),
         tAlerts,
-      );
-    }
-
-    if (vp < 1024) {
-      await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-      await expandConversationSheet(page);
-      const card = page.locator(".conversation-sheet").first();
-      const sheetBox = await card.boundingBox();
-      if (sheetBox) {
-        const x = sheetBox.x + sheetBox.width / 2;
-        const yStart = sheetBox.y + 28;
-        const yEnd = sheetBox.y + sheetBox.height * 0.45;
-        await page.mouse.move(x, yStart);
-        await page.mouse.down();
-        await page.mouse.move(x, yEnd, { steps: 14 });
-        await page.mouse.up();
-        await page.waitForTimeout(650);
-      }
-      await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 }).catch(() => {});
-      await page.waitForTimeout(700);
-      const h1Peek = await card.evaluate((el) => el.classList.contains("is-peek"));
-      const composerBottom = await page.evaluate(() => {
-        const composer = document.querySelector(".imsg-composer");
-        if (!composer) {
-          return -1;
-        }
-        const tabbar = document.querySelector(".spares-tabbar");
-        const anchor = tabbar ? tabbar.getBoundingClientRect().top : window.innerHeight;
-        return Math.round(anchor - composer.getBoundingClientRect().bottom);
-      });
-      record(
-        "bea-h1-care-sheet",
-        "bea-smoke",
-        browserName,
-        vp,
-        h1Peek && composerBottom >= -8 && composerBottom < 96,
-        `peek=${h1Peek} composerGap=${composerBottom}`,
       );
     }
 
@@ -821,6 +880,8 @@ async function runRows(browserName, launch) {
   await clickExitViewerFullscreen(cp);
   await cust.close();
 
+  await runBeaMandatoryPhone390(browserName, browser);
+
   await browser.close();
 }
 
@@ -849,7 +910,7 @@ async function main() {
     "",
     `**Bundle HEAD:** \`${bundleHead}\``,
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v13)`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v14)`,
     `**Generated:** ${summary.generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",

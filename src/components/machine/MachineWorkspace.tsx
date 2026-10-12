@@ -709,6 +709,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     <div
       ref={chromeRef}
       data-machine-viewer-chrome=""
+      data-viewer-fs={fullscreen ? (overlay ? "overlay" : "native") : undefined}
       className={
         overlay
           ? viewerOverlayClass

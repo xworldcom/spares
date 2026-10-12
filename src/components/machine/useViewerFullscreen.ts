@@ -87,6 +87,9 @@ export function useViewerFullscreen() {
     }
     setOverlay(true);
     setNative(false);
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
   }, []);
 
   useEffect(() => {

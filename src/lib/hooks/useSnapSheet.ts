@@ -1105,14 +1105,26 @@ export function useSnapSheet({
   function settleSheet(dy: number, from: SnapSheetSnap) {
     const velocity = liveVelocity();
     const { peekH, replyH, fullH } = heightsForMotion();
+    const normalizedFrom = from === "peek" ? "reply" : from;
     const currentH = conversationSheetDragHeight({
-      from: from === "peek" ? "reply" : from,
+      from: normalizedFrom,
       startH: drag.current.startH,
       dy,
       peekH,
       replyH,
       fullH,
     });
+    const restingH = heightForSnap(normalizedFrom, cardRef.current);
+    const displaced = Math.abs(currentH - restingH) > 12;
+    if (
+      displaced ||
+      Math.abs(dy) > 12 ||
+      Math.abs(velocity) > 0.25 ||
+      cardRef.current?.hasAttribute("data-motion-live")
+    ) {
+      settleTo(nearestSnap(currentH, velocity, cardRef.current));
+      return;
+    }
     if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
       if (dy < -12 || velocity < -0.2) {
         settleTo(stepToward(from === "out" ? "reply" : from, "up"));
