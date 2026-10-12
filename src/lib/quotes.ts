@@ -130,7 +130,10 @@ export function quoteStatusRegressionSteps(
 export function quoteStaffPricingLocked(
   quote: Pick<QuoteRecord, "status" | "staffPricingUnlocked">,
 ): boolean {
-  return quoteHasReached(quote.status, "po_received") && !quote.staffPricingUnlocked;
+  if (quote.staffPricingUnlocked) {
+    return false;
+  }
+  return quoteHasReached(quote.status, "quoted");
 }
 
 export function quoteIsStaffReadOnly(status: QuoteStatus) {
@@ -582,6 +585,9 @@ export function isTrackingCarrier(value: unknown): value is TrackingCarrier {
 }
 
 export function canUploadPo(status: QuoteStatus, role: Role = "staff") {
+  if (status === "closed" || status === "cancelled") {
+    return false;
+  }
   if (!PO_ELIGIBLE.has(status)) {
     return false;
   }
@@ -723,11 +729,27 @@ export type StaffMoneyParseResult =
   | { ok: true; value?: number }
   | { ok: false; error: string };
 
+/** Normalize mobile/locale drafts (comma decimals, NBSP, currency symbols). */
+export function normalizeStaffMoneyDraft(raw: string): string {
+  let text = raw.replace(/\u00a0/g, " ").trim();
+  text = text.replace(/[$€£¥]/g, "").replace(/\s+/g, "");
+  if (text.includes(",") && !text.includes(".")) {
+    text = text.replace(",", ".");
+  }
+  if (text.startsWith(".")) {
+    text = `0${text}`;
+  }
+  return text;
+}
+
 /** Staff money fields: 2 decimal places, reject negatives and NaN. */
 export function parseStaffMoneyField(raw: string): StaffMoneyParseResult {
-  const trimmed = raw.trim();
+  const trimmed = normalizeStaffMoneyDraft(raw);
   if (!trimmed) {
     return { ok: true, value: undefined };
+  }
+  if (!/^\d+(\.\d{0,2})?$/.test(trimmed)) {
+    return { ok: false, error: "Enter a valid amount (up to 2 decimals)." };
   }
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed)) {

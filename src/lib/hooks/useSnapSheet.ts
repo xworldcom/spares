@@ -695,6 +695,11 @@ export function useSnapSheet({
         settleTo("reply");
         return;
       }
+      if (sheet === "reply") {
+        clearCloseTranslate("peek");
+        settleTo("peek");
+        return;
+      }
       steppedAtRef.current = performance.now();
       setThreadDockedState(true);
       const max = lockCloseOffset();
@@ -708,12 +713,17 @@ export function useSnapSheet({
       setOpen(false);
       return;
     }
-    if (sheet !== "reply") {
+    if (sheet === "full") {
       setOpen(true);
-      setSheet("reply");
-      clearMotionPaint("reply");
       clearCloseTranslate("reply");
-      lockCloseOffset();
+      settleTo("reply");
+      return;
+    }
+    if (sheet === "reply") {
+      setOpen(true);
+      clearCloseTranslate("peek");
+      settleTo("peek");
+      return;
     }
     settleCloseTo("out");
   }

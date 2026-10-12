@@ -5,6 +5,8 @@ export function CatalogSearch({
   onChange,
   placeholder,
   disabled,
+  onFocus,
+  onBlur,
 }: {
   id: string;
   label: string;
@@ -12,6 +14,8 @@ export function CatalogSearch({
   onChange: (value: string) => void;
   placeholder: string;
   disabled?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }) {
   const showClear = value.length > 0 && !disabled;
 
@@ -29,6 +33,8 @@ export function CatalogSearch({
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
           placeholder={placeholder}
           className="catalog-search-input"
         />

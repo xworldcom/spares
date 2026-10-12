@@ -107,6 +107,7 @@ import {
   applyDemoTenantB1Migration,
   applyDemoTenantB2StageQuotesMigration,
   applyDemoQuote26HealMigration,
+  applyDemoCustomerHygieneMigration,
   applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
 } from "./demo-tenant-data-migration.ts";
@@ -1762,6 +1763,11 @@ async function runDemoTenantMigration(
   const q26 = applyDemoQuote26HealMigration(next);
   if (q26.changed) {
     next = q26.db;
+    changed = true;
+  }
+  const hygiene = applyDemoCustomerHygieneMigration(next);
+  if (hygiene.changed) {
+    next = hygiene.db;
     changed = true;
   }
   return { db: next, changed };

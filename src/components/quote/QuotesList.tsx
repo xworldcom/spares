@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -56,7 +56,8 @@ export function QuotesList({
     role === "staff" ? "staff" : "customer",
   );
   const searchQuery = searchParams.get(QUOTES_Q_QUERY) ?? "";
-  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 250);
+  const [searchDraft, setSearchDraft] = useState(searchQuery);
+  const searchFocused = useRef(false);
 
   const replaceListQuery = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -74,6 +75,19 @@ export function QuotesList({
     },
     [listBase, router, searchParams],
   );
+  useEffect(() => {
+    if (!searchFocused.current) {
+      setSearchDraft(searchQuery);
+    }
+  }, [searchQuery]);
+  const debouncedDraft = useDebouncedValue(searchDraft.trim(), 250);
+  useEffect(() => {
+    if (debouncedDraft === searchQuery.trim()) {
+      return;
+    }
+    replaceListQuery({ [QUOTES_Q_QUERY]: debouncedDraft || undefined });
+  }, [debouncedDraft, replaceListQuery, searchQuery]);
+  const debouncedSearch = debouncedDraft;
   const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
@@ -219,8 +233,15 @@ export function QuotesList({
           <CatalogSearch
             id="staff-quotes-search"
             label="Search quotes"
-            value={searchQuery}
-            onChange={(value) => replaceListQuery({ [QUOTES_Q_QUERY]: value })}
+            value={searchDraft}
+            onChange={(value) => setSearchDraft(value)}
+            onFocus={() => {
+              searchFocused.current = true;
+            }}
+            onBlur={() => {
+              searchFocused.current = false;
+              setSearchDraft(searchQuery);
+            }}
             placeholder="Quote #, machine, customer…"
           />
         ) : null}
@@ -298,8 +319,15 @@ export function QuotesList({
         <CatalogSearch
           id="staff-quotes-search"
           label="Search quotes"
-          value={searchQuery}
-          onChange={(value) => replaceListQuery({ [QUOTES_Q_QUERY]: value })}
+          value={searchDraft}
+          onChange={(value) => setSearchDraft(value)}
+          onFocus={() => {
+            searchFocused.current = true;
+          }}
+          onBlur={() => {
+            searchFocused.current = false;
+            setSearchDraft(searchQuery);
+          }}
           placeholder="Quote #, machine, customer…"
         />
       ) : null}

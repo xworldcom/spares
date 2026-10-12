@@ -14,20 +14,17 @@ export function validateEditableQty(
   if (!trimmed) {
     return { ok: false, error: "Enter a quantity." };
   }
-  if (trimmed.startsWith("-")) {
-    const parsed = Number(trimmed);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      return { ok: false, error: "Quantity must be at least 1." };
-    }
+  if (trimmed.startsWith("-") || /-\d/.test(trimmed)) {
+    return { ok: false, error: "Quantity cannot be negative." };
   }
   const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed)) {
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
     return { ok: false, error: "Whole numbers only." };
   }
   if (parsed < 1) {
     return { ok: false, error: "Quantity must be at least 1." };
   }
-  if (parsed > 999_999_999) {
+  if (parsed > 99_999) {
     return { ok: false, error: "Quantity is too large." };
   }
   return { ok: true, qty: parsed };

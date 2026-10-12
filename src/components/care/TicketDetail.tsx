@@ -103,6 +103,7 @@ export function TicketDetail({
   const [detailLoading, setDetailLoading] = useState(() => !seedTicket);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [freshnessError, setFreshnessError] = useState<string | null>(null);
   const staff = user?.role === "staff";
   const conversationTitle = "Messages";
 
@@ -189,6 +190,7 @@ export function TicketDetail({
     ticket ? `/api/tickets/${ticket.id}` : null,
     ticket ? ticketRecordEtag(ticket) : null,
     pollTicket,
+    setFreshnessError,
   );
 
   async function applyStatusPatch(
@@ -393,6 +395,11 @@ export function TicketDetail({
           }}
           onDismiss={() => setRecordConflict(null)}
         />
+      ) : null}
+      {freshnessError ? (
+        <p className="text-sm text-[#f0c4c0]" role="alert">
+          {freshnessError}
+        </p>
       ) : null}
 
       {error ? (

@@ -350,6 +350,78 @@ export function demoLifecyclePartNumbers() {
   return DEMO_LIFECYCLE.map((row) => normalizePartNumber(row.partNumber));
 }
 
+const LIFECYCLE_STATUS_RANK: Record<PartLifecycleStatus, number> = {
+  unknown: 0,
+  active: 1,
+  announced: 2,
+  obsolete: 3,
+};
+
+function demoLifecycleSeedByPartNumber() {
+  return new Map(
+    DEMO_LIFECYCLE.map((row) => [normalizePartNumber(row.partNumber), row]),
+  );
+}
+
+/** Collapse duplicate PN rows (stale CAS writers) — keep the strongest lifecycle signal. */
+export function dedupePartLifecycleRows(
+  rows: readonly StoredPartLifecycle[],
+): StoredPartLifecycle[] {
+  const byPart = new Map<string, StoredPartLifecycle>();
+  for (const row of rows) {
+    const key = `${row.tenantId}::${normalizePartNumber(row.partNumber)}`;
+    const existing = byPart.get(key);
+    if (!existing) {
+      byPart.set(key, row);
+      continue;
+    }
+    const keepExisting =
+      LIFECYCLE_STATUS_RANK[existing.status] >= LIFECYCLE_STATUS_RANK[row.status];
+    byPart.set(key, keepExisting ? existing : row);
+  }
+  return [...byPart.values()];
+}
+
+/**
+ * Prod regression (#420): demo PN rows were overwritten to `active` while seed expects
+ * obsolete/announced with discontinuation dates. Restore seed fields when a demo PN
+ * looks like a corrupted default (active/unknown without demo dates).
+ */
+export function reconcileCorruptedDemoLifecycleRows(
+  rows: readonly StoredPartLifecycle[],
+  tenantId: string = DEFAULT_TENANT_ID,
+): StoredPartLifecycle[] {
+  const seeds = demoLifecycleSeedByPartNumber();
+  const now = new Date().toISOString();
+  return rows.map((row) => {
+    if (row.tenantId !== tenantId) {
+      return row;
+    }
+    const seed = seeds.get(normalizePartNumber(row.partNumber));
+    if (!seed) {
+      return row;
+    }
+    const corrupted =
+      (row.status === "active" || row.status === "unknown") &&
+      seed.status !== "active" &&
+      Boolean(seed.discontinuationDate) &&
+      !row.discontinuationDate;
+    if (!corrupted) {
+      return row;
+    }
+    return {
+      ...row,
+      status: seed.status,
+      discontinuationDate: seed.discontinuationDate,
+      ...(seed.lastTimeBuyDate ? { lastTimeBuyDate: seed.lastTimeBuyDate } : {}),
+      ...(seed.successorPartNumber ? { successorPartNumber: seed.successorPartNumber } : {}),
+      sourceNotes: seed.sourceNotes,
+      updatedAt: now,
+      updatedByEmail: row.updatedByEmail ?? "heal@spares.local",
+    };
+  });
+}
+
 /** Missing demo rows for `tenantId`; never overwrites a row staff already edited. */
 export function missingDemoLifecycleRows(
   existing: StoredPartLifecycle[] | undefined,
@@ -385,8 +457,15 @@ export function healDemoPartLifecycle<T extends { partLifecycle?: StoredPartLife
     return db;
   }
   const tenantId = DEFAULT_TENANT_ID;
+  const base: T = {
+    ...db,
+    partLifecycle: reconcileCorruptedDemoLifecycleRows(
+      dedupePartLifecycleRows(db.partLifecycle ?? []),
+      tenantId,
+    ),
+  };
   const existing = new Set(
-    (db.partLifecycle ?? [])
+    (base.partLifecycle ?? [])
       .filter((row) => row.tenantId === tenantId)
       .map((row) => normalizePartNumber(row.partNumber)),
   );
@@ -407,11 +486,11 @@ export function healDemoPartLifecycle<T extends { partLifecycle?: StoredPartLife
     });
   }
   if (additions.length === 0) {
-    return db;
+    return base;
   }
   return {
-    ...db,
-    partLifecycle: [...(db.partLifecycle ?? []), ...additions],
+    ...base,
+    partLifecycle: [...(base.partLifecycle ?? []), ...additions],
   };
 }
 

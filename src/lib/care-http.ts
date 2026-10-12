@@ -74,6 +74,9 @@ export async function requireTicketAccess(idOrNumber: string): Promise<TicketAcc
   if (!machine || !canAccessCareMachine(user, machine, org.sites, org.customers)) {
     return { error: error("Ticket not found", 404) };
   }
+  if (user.role === "customer" && ticket.hiddenFromCustomer) {
+    return { error: error("Ticket not found", 404) };
+  }
   return { user, ticket, machine };
 }
 

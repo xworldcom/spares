@@ -63,6 +63,12 @@ function StaffMoneyInput({
   const [draft, setDraft] = useState<string | null>(null);
 
   function commit(raw: string) {
+    const trimmed = raw.trim();
+    if (!trimmed && value !== undefined) {
+      setDraft(null);
+      onError(null);
+      return;
+    }
     const parsed = parseStaffMoneyField(raw);
     if (!parsed.ok) {
       onError(parsed.error);
@@ -86,10 +92,14 @@ function StaffMoneyInput({
         }}
         onChange={(event) => {
           setDraft(event.target.value);
+          if (!event.target.value.trim()) {
+            onError(null);
+            return;
+          }
           const parsed = parseStaffMoneyField(event.target.value);
-          if (!parsed.ok && event.target.value.trim()) {
+          if (!parsed.ok) {
             onError(parsed.error);
-          } else if (parsed.ok) {
+          } else {
             onError(null);
           }
         }}

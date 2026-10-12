@@ -358,6 +358,8 @@ export type ServiceTicketRecord = {
   lastModifiedAt?: string;
   lastModifiedByUserId?: string;
   lastModifiedByName?: string;
+  /** Demo / staff-only threads — hidden from customer list and deep links. */
+  hiddenFromCustomer?: boolean;
 };
 
 /** Customer read receipt on a Care ticket (staff-only in API responses). */

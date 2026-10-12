@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { listMachines } from "@/lib/api/machines";
 import { isNavActive } from "@/lib/nav-active";
 
 const MACHINE_FAMILY_HREFS = ["/machines", "/machines/new"] as const;
@@ -30,9 +31,27 @@ export function StaffMachinesDesktopNav({ hrefs }: { hrefs: readonly string[] })
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number } | null>(null);
+  const [machines, setMachines] = useState<Array<{ id: string; name: string }>>([]);
   const familyActive = machinesFamilyActive(pathname, hrefs);
   const listActive = isNavActive(pathname, "/machines", hrefs);
   const uploadActive = isNavActive(pathname, "/machines/new", hrefs);
+
+  useEffect(() => {
+    if (!open || machines.length > 0) {
+      return;
+    }
+    let cancelled = false;
+    listMachines()
+      .then((rows) => {
+        if (!cancelled) {
+          setMachines(rows.map((row) => ({ id: row.id, name: row.name })));
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [machines.length, open]);
 
   useEffect(() => {
     if (!open) {
@@ -130,6 +149,30 @@ export function StaffMachinesDesktopNav({ hrefs }: { hrefs: readonly string[] })
               >
                 Upload
               </Link>
+              {machines.length > 0 ? (
+                <div
+                  className="my-1 border-t border-white/10 pt-1"
+                  role="group"
+                  aria-label="Your machines"
+                >
+                  {machines.map((machine) => {
+                    const href = `/machines/${machine.id}`;
+                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                    return (
+                      <Link
+                        key={machine.id}
+                        href={href}
+                        role="menuitem"
+                        aria-current={active ? "page" : undefined}
+                        className={menuItemClass(active)}
+                        onClick={() => setOpen(false)}
+                      >
+                        {machine.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>,
             document.body,
           )
