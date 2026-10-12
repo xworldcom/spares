@@ -15,11 +15,16 @@
  *   RV421_GATE_OUT       default media/rv421-proof under project store
  *   RV421_GATE_BROWSERS  comma list: chrome,webkit (default both)
  *   RV421_GATE_VIEWPORTS comma list: 390,1440 (default both)
+ *   RV421_BATCH_BUNDLE   optional path to project-store bundle for list-heads in RESULTS
  */
+import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
+
+const GATE_HARNESS_VERSION = "v15";
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -54,14 +59,66 @@ const viewports = (process.env.RV421_GATE_VIEWPORTS || "390,1440")
   .map((s) => Number(s.trim()))
   .filter((n) => n > 0);
 
-let bundleHead = "unknown";
-try {
-  bundleHead = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
-} catch {
-  // detached or shallow
+const runs = [];
+
+function macCheckoutHead() {
+  try {
+    return execSync("git rev-parse HEAD", {
+      encoding: "utf8",
+      cwd: process.cwd(),
+    }).trim();
+  } catch {
+    return "unknown";
+  }
 }
 
-const runs = [];
+function gitBundleListHeads(bundlePath) {
+  if (!bundlePath || !existsSync(bundlePath)) {
+    return { path: bundlePath ?? null, listHeads: "n/a" };
+  }
+  try {
+    const listHeads = execSync(`git bundle list-heads ${JSON.stringify(bundlePath)}`, {
+      encoding: "utf8",
+    }).trim();
+    return { path: bundlePath, listHeads: listHeads || "n/a" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { path: bundlePath, listHeads: `error: ${message}` };
+  }
+}
+
+function collectRunProvenance() {
+  const checkout = macCheckoutHead();
+  const homeRv421BatchBundle = gitBundleListHeads(join(homedir(), "rv421-batch.bundle"));
+  const envBundle = process.env.RV421_BATCH_BUNDLE?.trim();
+  const projectStoreBundle = envBundle ? gitBundleListHeads(envBundle) : null;
+  return {
+    macCheckoutHead: checkout,
+    macCheckoutShortSha: checkout.startsWith("unknown") ? "unknown" : checkout.slice(0, 7),
+    harnessVersion: GATE_HARNESS_VERSION,
+    homeRv421BatchBundle,
+    projectStoreBundle,
+  };
+}
+
+function provenanceMarkdown(provenance) {
+  const lines = [
+    `**Mac checkout HEAD:** \`${provenance.macCheckoutHead}\``,
+    `**~/rv421-batch.bundle list-heads:**`,
+    "```",
+    provenance.homeRv421BatchBundle.listHeads,
+    "```",
+  ];
+  if (provenance.projectStoreBundle) {
+    lines.push(
+      `**RV421_BATCH_BUNDLE (\`${provenance.projectStoreBundle.path}\`) list-heads:**`,
+      "```",
+      provenance.projectStoreBundle.listHeads,
+      "```",
+    );
+  }
+  return lines;
+}
 
 function viewportSize(width) {
   return width >= 1024
@@ -905,17 +962,28 @@ async function main() {
     await runRows(name === "chrome" ? "chrome" : name, launch);
   }
 
+  const provenance = collectRunProvenance();
   const gateStatus = runs.every((r) => r.pass) ? "PASS" : "FAIL";
-  const summary = { bundleHead, gateStatus, runs, generatedAt: new Date().toISOString() };
+  const generatedAt = new Date().toISOString();
+  const summary = {
+    macCheckoutHead: provenance.macCheckoutHead,
+    homeRv421BatchBundle: provenance.homeRv421BatchBundle,
+    projectStoreBundle: provenance.projectStoreBundle,
+    harnessVersion: provenance.harnessVersion,
+    gateStatus,
+    runs,
+    generatedAt,
+  };
   await writeFile(join(OUT, "proof-summary.json"), JSON.stringify(summary, null, 2));
 
   const lines = [
     "# rv421 Mac proof gate — RESULTS",
     "",
-    `**Bundle HEAD:** \`${bundleHead}\``,
+    ...provenanceMarkdown(provenance),
+    "",
     `**Gate:** **${gateStatus}**`,
-    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (v15)`,
-    `**Generated:** ${summary.generatedAt}`,
+    `**Harness:** \`scripts/rv421-mac-proof-gate.mjs\` (${GATE_HARNESS_VERSION})`,
+    `**Generated:** ${generatedAt}`,
     "",
     "| Row | Result | RCA / notes | Proof folder |",
     "|-----|--------|-------------|--------------|",
@@ -930,7 +998,10 @@ async function main() {
     );
   }
   lines.push("", "Raw log: `proof-summary.json` in this folder.");
-  await writeFile(join(OUT, "RESULTS.md"), lines.join("\n"));
+  const resultsBody = lines.join("\n");
+  await writeFile(join(OUT, "RESULTS.md"), resultsBody);
+  const pivotName = `RESULTS-rv430-${GATE_HARNESS_VERSION}-${provenance.macCheckoutShortSha}.md`;
+  await writeFile(join(OUT, pivotName), resultsBody);
   console.log(JSON.stringify({ gateStatus, rows: runs.length }, null, 2));
   process.exit(gateStatus === "PASS" ? 0 : 1);
 }
