@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   formatMoney,
   hasSellPrice,
@@ -52,6 +52,7 @@ function StaffMoneyInput({
   error,
   onError,
   onCommit,
+  onPreview,
 }: {
   label: string;
   value?: number;
@@ -59,6 +60,7 @@ function StaffMoneyInput({
   error?: string;
   onError: (message: string | null) => void;
   onCommit: (value?: number) => void;
+  onPreview?: (value: number | undefined | null) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -77,6 +79,7 @@ function StaffMoneyInput({
     }
     onError(null);
     onCommit(parsed.value);
+    onPreview?.(null);
     setDraft(null);
   }
 
@@ -94,13 +97,16 @@ function StaffMoneyInput({
           setDraft(event.target.value);
           if (!event.target.value.trim()) {
             onError(null);
+            onPreview?.(undefined);
             return;
           }
           const parsed = parseStaffMoneyField(event.target.value);
           if (!parsed.ok) {
             onError(parsed.error);
+            onPreview?.(null);
           } else {
             onError(null);
+            onPreview?.(parsed.value);
           }
         }}
         onBlur={() => commit(draft ?? (value !== undefined ? value.toFixed(2) : ""))}
@@ -118,9 +124,11 @@ function StaffMoneyInput({
 function QtyField({
   value,
   onCommit,
+  onPreview,
 }: {
   value: number;
   onCommit: (qty: number) => void;
+  onPreview?: (qty: number | null) => void;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
@@ -137,6 +145,7 @@ function QtyField({
     }
     setError(null);
     onCommit(validated.qty);
+    onPreview?.(null);
     setDraft(null);
     replaceOnType.current = true;
   }
@@ -161,6 +170,7 @@ function QtyField({
           value={draft ?? String(value)}
           onFocus={(event) => {
             const input = event.currentTarget;
+            setError(null);
             setDraft(String(value));
             replaceOnType.current = true;
             requestAnimationFrame(() => selectQtyInput(input));
@@ -181,13 +191,16 @@ function QtyField({
             replaceOnType.current = false;
             if (!next.trim()) {
               setError(null);
+              onPreview?.(null);
               return;
             }
             const validated = validateEditableQty(next);
             if (validated.ok) {
               setError(null);
+              onPreview?.(validated.qty);
             } else {
               setError(validated.error);
+              onPreview?.(null);
             }
           }}
           onBlur={() => {
@@ -196,6 +209,7 @@ function QtyField({
             if (!validated.ok) {
               setError(validated.error);
               setDraft(null);
+              onPreview?.(null);
               return;
             }
             commit(raw);
@@ -237,6 +251,7 @@ export function QuoteLines({
   editable,
   pricingEditable = editable,
   onChange,
+  onPricingPreviewChange,
 }: {
   items: QuoteItem[];
   role: Role;
@@ -244,8 +259,40 @@ export function QuoteLines({
   editable: boolean;
   pricingEditable?: boolean;
   onChange?: (items: QuoteItem[]) => void;
+  onPricingPreviewChange?: (active: boolean) => void;
 }) {
   const [moneyErrors, setMoneyErrors] = useState<Record<string, string>>({});
+  const [previewByLine, setPreviewByLine] = useState<
+    Record<string, Partial<Pick<QuoteItem, "qty" | "sellPrice" | "supplierCost">>>
+  >({});
+
+  useEffect(() => {
+    onPricingPreviewChange?.(Object.keys(previewByLine).length > 0);
+  }, [onPricingPreviewChange, previewByLine]);
+
+  function setLinePreviewField(
+    lineId: string,
+    field: "qty" | "sellPrice" | "supplierCost",
+    value: number | undefined | null,
+  ) {
+    setPreviewByLine((current) => {
+      const row = { ...(current[lineId] ?? {}) };
+      if (value === null || value === undefined) {
+        delete row[field];
+      } else {
+        row[field] = value;
+      }
+      if (Object.keys(row).length === 0) {
+        if (!(lineId in current)) {
+          return current;
+        }
+        const next = { ...current };
+        delete next[lineId];
+        return next;
+      }
+      return { ...current, [lineId]: row };
+    });
+  }
 
   function patch(index: number, update: Partial<QuoteItem>) {
     onChange?.(
@@ -255,12 +302,17 @@ export function QuoteLines({
     );
   }
 
-  const total = quoteSellTotal(items);
+  const resolvedItems = items.map((item) => ({
+    ...item,
+    ...previewByLine[item.id],
+  }));
+  const total = quoteSellTotal(resolvedItems);
 
   return (
     <div className="space-y-3">
       {items.map((item, index) => {
-        const line = lineSellTotal(item);
+        const resolved = resolvedItems[index] ?? item;
+        const line = lineSellTotal(resolved);
         return (
           <article
             key={item.id}
@@ -296,7 +348,11 @@ export function QuoteLines({
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <QtyField
                   value={item.qty}
-                  onCommit={(qty) => patch(index, { qty })}
+                  onCommit={(qty) => {
+                    setLinePreviewField(item.id, "qty", null);
+                    patch(index, { qty });
+                  }}
+                  onPreview={(qty) => setLinePreviewField(item.id, "qty", qty)}
                 />
                 {pricingEditable ? (
                   <>
@@ -317,7 +373,13 @@ export function QuoteLines({
                       return next;
                     });
                   }}
-                  onCommit={(nextValue) => patch(index, { supplierCost: nextValue })}
+                  onCommit={(nextValue) => {
+                    setLinePreviewField(item.id, "supplierCost", null);
+                    patch(index, { supplierCost: nextValue });
+                  }}
+                  onPreview={(nextValue) =>
+                    setLinePreviewField(item.id, "supplierCost", nextValue)
+                  }
                 />
                 <div>
                   <StaffMoneyInput
@@ -337,7 +399,13 @@ export function QuoteLines({
                         return next;
                       });
                     }}
-                    onCommit={(nextValue) => patch(index, { sellPrice: nextValue })}
+                    onCommit={(nextValue) => {
+                      setLinePreviewField(item.id, "sellPrice", null);
+                      patch(index, { sellPrice: nextValue });
+                    }}
+                    onPreview={(nextValue) =>
+                      setLinePreviewField(item.id, "sellPrice", nextValue)
+                    }
                   />
                   {!hasSellPrice(item) ? (
                     <p

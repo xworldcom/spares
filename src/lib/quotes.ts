@@ -675,6 +675,11 @@ export function quotePoNextStep(status: QuoteStatus, role: Role): string | null 
   if (status === "cancelled") {
     return null;
   }
+  if (status === "closed") {
+    return role === "staff"
+      ? "This quote is closed. Reopen it to change PO or invoice fields."
+      : "This quote is closed.";
+  }
   if (!canUploadPo(status)) {
     return "PO number and PDF upload open after this quote is issued.";
   }

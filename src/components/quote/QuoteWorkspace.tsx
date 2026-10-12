@@ -115,6 +115,7 @@ export function QuoteWorkspace({
     steps: number;
   } | null>(null);
   const [itemsTouched, setItemsTouched] = useState(false);
+  const [pricingPreviewActive, setPricingPreviewActive] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState("");
   const [recordConflict, setRecordConflict] = useState<string | null>(null);
   const [freshnessError, setFreshnessError] = useState<string | null>(null);
@@ -395,7 +396,7 @@ export function QuoteWorkspace({
     role === "staff" && quoteIsStaffReadOnly(quote.status);
   const pricingLocked =
     role === "staff" && quoteStaffPricingLocked(quote);
-  const staffApplyDirty = statusDirty || itemsDirty;
+  const staffApplyDirty = statusDirty || itemsDirty || pricingPreviewActive;
   const quoteRecordVersion = quote.recordVersion ?? 1;
   function withQuoteVersion<T extends object>(patch: T) {
     return { ...patch, recordVersion: quoteRecordVersion };
@@ -719,6 +720,7 @@ export function QuoteWorkspace({
             setItemsTouched(true);
             setItems(next);
           }}
+          onPricingPreviewChange={setPricingPreviewActive}
         />
       </section>
 

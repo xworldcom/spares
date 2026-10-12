@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
@@ -125,6 +125,7 @@ function TabLink({
 }
 
 export function MobileTabBar() {
+  const router = useRouter();
   const { user } = useAuth();
   const { unreadCount: careUnreadCount } = useCareAlerts();
   const { unreadCount: quotesUnreadCount } = useQuoteAlerts();
@@ -272,6 +273,11 @@ export function MobileTabBar() {
                 type="button"
                 aria-expanded={machinesMenuOpen}
                 onClick={() => {
+                  if (moreOpen) {
+                    closeOverlayMenus();
+                    router.push("/machines");
+                    return;
+                  }
                   setMoreForPath(null);
                   setMachinesForPath((current) =>
                     current === pathname ? null : pathname,

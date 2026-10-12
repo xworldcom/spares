@@ -120,11 +120,16 @@ export function TicketsWorkspace({
   const scopedMachineName = useMachineName(
     scope === "machine" ? machineId ?? null : hubMachineFromUrl ?? null,
   );
-  const ticketsPageTitle = workListTitle(
-    "tickets",
-    scope === "machine" || hubMachineFromUrl ? scopedMachineName : null,
-    scope === "machine" || Boolean(hubMachineFromUrl),
-  );
+  const searchQuery = searchParams.get(CARE_TICKETS_Q_QUERY) ?? "";
+  const ticketsPageTitle = (() => {
+    const base = workListTitle(
+      "tickets",
+      scope === "machine" || hubMachineFromUrl ? scopedMachineName : null,
+      scope === "machine" || Boolean(hubMachineFromUrl),
+    );
+    const q = searchQuery.trim();
+    return q ? `${base} · Search` : base;
+  })();
   const listHrefWithQuery = `${listHref}${careTicketsListQueryString(searchParams)}`;
   const hubMachineFilter = scope === "hub" ? hubMachineFromUrl : undefined;
   const showMachine = scope === "hub" && !hubMachineFilter;
@@ -233,6 +238,13 @@ export function TicketsWorkspace({
 
   const showList = desktop || !ticketId;
   const showDetail = desktop || Boolean(ticketId);
+
+  useEffect(() => {
+    if (desktop || !showList) {
+      return;
+    }
+    window.scrollTo(0, 0);
+  }, [desktop, pathname, showList]);
   const machineScopedTickets = hubMachineFilter
     ? tickets.filter((ticket) => ticket.machineId === hubMachineFilter)
     : tickets;
@@ -243,7 +255,6 @@ export function TicketsWorkspace({
   const sortKey = careTicketsSortFromParam(
     searchParams.get(CARE_TICKETS_SORT_QUERY),
   );
-  const searchQuery = searchParams.get(CARE_TICKETS_Q_QUERY) ?? "";
 
   const replaceListQuery = useCallback(
     (patch: Record<string, string | undefined>) => {

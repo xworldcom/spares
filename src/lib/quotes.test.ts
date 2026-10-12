@@ -459,6 +459,7 @@ describe("status and visibility", () => {
     );
     assert.equal(quotePoNextStep("po_received", "staff"), null);
     assert.equal(quotePoNextStep("cancelled", "staff"), null);
+    assert.match(quotePoNextStep("closed", "staff") ?? "", /closed/i);
   });
 });
 

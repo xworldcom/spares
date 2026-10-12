@@ -2444,6 +2444,23 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
     min-width: 3.35rem;
   }
 
+  .quote-workspace .quote-progress-step[data-state="current"] {
+    flex: 0 0 4.75rem;
+    min-width: 4.75rem;
+  }
+
+  .quote-workspace .quote-progress-step[data-state="current"] .quote-progress-label-short {
+    display: none;
+  }
+
+  .quote-workspace .quote-progress-step[data-state="current"] .quote-progress-label-full {
+    display: block;
+    max-width: 100%;
+    font-size: 9px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
   .quote-workspace .quote-progress-label-short {
     font-size: 9px;
   }

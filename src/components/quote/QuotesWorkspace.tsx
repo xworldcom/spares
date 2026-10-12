@@ -57,7 +57,7 @@ export function QuotesWorkspace({
 
   return (
     <div className={scoped ? "space-y-4" : "catalog-page"}>
-      <DocumentTitle title={pageTitle} />
+      {machineId ? <DocumentTitle title={pageTitle} /> : null}
       <div className={scoped ? undefined : "catalog-page-intro"}>
         <WorkListScopeBar
           kind="quotes"
