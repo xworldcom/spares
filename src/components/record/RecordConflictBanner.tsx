@@ -10,6 +10,7 @@ export function RecordConflictBanner({ message, onRefresh, onDismiss }: Props) {
   return (
     <div
       className="record-conflict-banner flex flex-col gap-2 rounded-2xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-50"
+      data-record-conflict-banner=""
       role="status"
       aria-live="polite"
     >

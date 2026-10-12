@@ -429,8 +429,12 @@ describe("status and visibility", () => {
 });
 
 describe("parseShipments", () => {
-  it("requires a tracking number and fills carrier URLs", () => {
-    assert.equal(parseShipments([]).ok, false);
+  it("allows an empty array to clear tracking and validates rows", () => {
+    const cleared = parseShipments([]);
+    assert.equal(cleared.ok, true);
+    if (cleared.ok) {
+      assert.equal(cleared.shipments.length, 0);
+    }
     const parsed = parseShipments([{ trackingNumber: "1Z999", carrier: "UPS" }]);
     assert.equal(parsed.ok, true);
     if (parsed.ok) {

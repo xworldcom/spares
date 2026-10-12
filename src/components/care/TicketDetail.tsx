@@ -11,11 +11,12 @@ import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
-  getTicket,
+  getTicketFresh,
   postTicketActivity,
   setTicketAssistantPaused,
   updateTicketStatus,
 } from "@/lib/api/care";
+import { invalidateWarmRead } from "@/lib/api/warm-read";
 import { errorMessage } from "@/lib/api/errors";
 import {
   isRecordConflictError,
@@ -28,6 +29,10 @@ import { careHref, ticketHeaderContextLine, ticketRefMatches } from "@/lib/care"
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
 import { useConversationWatch } from "@/lib/hooks/useConversationWatch";
 import { mergeActivitiesById } from "@/lib/merge-activities";
+import {
+  mergeTicketPollState,
+  ticketPollMetaInSync,
+} from "@/lib/ui/merge-ticket-poll";
 import type { ChatAttachment, ServiceTicket, TicketCustomerReadReceipt, TicketStatus } from "@/types";
 
 function TicketDetailSkeleton() {
@@ -112,7 +117,7 @@ export function TicketDetail({
     setError(null);
     setDetailLoading(true);
     let cancelled = false;
-    getTicket(ticketId)
+    getTicketFresh(ticketId)
       .then((next) => {
         if (cancelled) {
           return;
@@ -138,7 +143,7 @@ export function TicketDetail({
   }, [ticketId, reloadKey, refreshCareAlerts]);
 
   const pollTicket = useCallback(async () => {
-    const next = await getTicket(ticketId);
+    const next = await getTicketFresh(ticketId);
     if (!ticket || !ticketRefMatches(ticket, ticketId)) {
       setTicket(next);
       void refreshCareAlerts();
@@ -151,25 +156,13 @@ export function TicketDetail({
       ticket.unread === next.unread &&
       ticket.assistantPaused === next.assistantPaused &&
       ticket.assistantAvailable === next.assistantAvailable &&
-      ticket.recordVersion === next.recordVersion &&
-      sameReadReceipts(ticket.customerReadReceipts, next.customerReadReceipts)
+      sameReadReceipts(ticket.customerReadReceipts, next.customerReadReceipts) &&
+      ticketPollMetaInSync(ticket, next)
     ) {
       return;
     }
     void refreshCareAlerts();
-    const merged = {
-      ...ticket,
-      status: next.status,
-      activities,
-      unread: next.unread,
-      customerReadReceipts: next.customerReadReceipts,
-      assistantPaused: next.assistantPaused,
-      assistantAvailable: next.assistantAvailable,
-      recordVersion: next.recordVersion,
-      lastModifiedAt: next.lastModifiedAt,
-      lastModifiedByName: next.lastModifiedByName,
-      actorDisplayNames: next.actorDisplayNames,
-    };
+    const merged = mergeTicketPollState(ticket, next, activities);
     setTicket(merged);
     onTicketListPatch?.(merged);
   }, [ticket, ticketId, refreshCareAlerts, onTicketListPatch]);
@@ -320,8 +313,8 @@ export function TicketDetail({
           <TicketStatusStrip
             status={ticket.status}
             editable={staff}
-            pending={busy}
-            onChange={staff ? onStatus : undefined}
+            pending={busy || detailLoading}
+            onChange={staff && !detailLoading ? onStatus : undefined}
           />
         </div>
       ) : (
@@ -332,7 +325,18 @@ export function TicketDetail({
           message={recordConflict}
           onRefresh={() => {
             setRecordConflict(null);
-            setReloadKey((key) => key + 1);
+            invalidateWarmRead(`ticket:${ticketId}`);
+            if (ticket.id) {
+              invalidateWarmRead(`ticket:${ticket.id}`);
+            }
+            void getTicketFresh(ticketId)
+              .then((next) => {
+                setTicket(next);
+                onTicketListPatch?.(next);
+              })
+              .catch(() => {
+                setReloadKey((key) => key + 1);
+              });
           }}
           onDismiss={() => setRecordConflict(null)}
         />

@@ -97,14 +97,7 @@ export function TicketsWorkspace({
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
   const listHref = listHrefFor(scope, machineId);
-  const seedSelected =
-    ticketId && tickets.length > 0
-      ? tickets.find((ticket) => ticketRefMatches(ticket, ticketId)) ?? null
-      : null;
-  const hubMachineFilter =
-    scope === "hub"
-      ? hubMachineFromUrl ?? seedSelected?.machineId
-      : undefined;
+  const hubMachineFilter = scope === "hub" ? hubMachineFromUrl : undefined;
   const showMachine = scope === "hub" && !hubMachineFilter;
   const machineName = useMachineName(
     scope === "machine" ? (machineId ?? null) : null,
@@ -115,7 +108,11 @@ export function TicketsWorkspace({
 
   useEffect(() => {
     const generation = begin();
-    const skipHubFetch = scope === "hub" && Boolean(hubInitial) && reloadKey === 0;
+    const skipHubFetch =
+      scope === "hub" &&
+      Boolean(hubInitial) &&
+      (hubInitial?.tickets?.length ?? 0) > 0 &&
+      reloadKey === 0;
     const background = reloadKey > 0;
     if (!skipHubFetch && !background) {
       setLoading(true);
@@ -173,7 +170,8 @@ export function TicketsWorkspace({
         if (
           row.unread === patch.unread &&
           row.viewerReadAt === patch.viewerReadAt &&
-          row.status === patch.status
+          row.status === patch.status &&
+          row.recordVersion === patch.recordVersion
         ) {
           return row;
         }
@@ -183,6 +181,9 @@ export function TicketsWorkspace({
           unread: patch.unread,
           viewerReadAt: patch.viewerReadAt,
           status: patch.status,
+          recordVersion: patch.recordVersion,
+          lastModifiedAt: patch.lastModifiedAt,
+          lastModifiedByName: patch.lastModifiedByName,
         };
       });
       return changed ? next : rows;
@@ -268,11 +269,24 @@ export function TicketsWorkspace({
   }, [selected, statusFilter, visibleTickets]);
 
   useEffect(() => {
-    if (scope !== "hub" || !ticketId || hubMachineFromUrl || !selected?.machineId) {
+    if (
+      scope !== "hub" ||
+      !ticketId ||
+      hubMachineFromUrl ||
+      !selected?.machineId ||
+      statusFilter === "all"
+    ) {
       return;
     }
     replaceListQuery({ [WORK_LIST_MACHINE_QUERY]: selected.machineId });
-  }, [hubMachineFromUrl, replaceListQuery, scope, selected?.machineId, ticketId]);
+  }, [
+    hubMachineFromUrl,
+    replaceListQuery,
+    scope,
+    selected?.machineId,
+    statusFilter,
+    ticketId,
+  ]);
 
   const listPanel = (
     <div className="tickets-workspace-list">
