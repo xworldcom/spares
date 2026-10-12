@@ -18,6 +18,10 @@ import { errorMessage } from "@/lib/api/errors";
 import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 import { formatWhen } from "@/components/quote/quote-format";
 import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
+import {
+  machinePartViewHref,
+  staffPartLifecycleViewHref,
+} from "@/lib/ui/part-lifecycle-url";
 
 function machineLabel(row: LifecycleNotification) {
   return row.machineNames.length > 0 ? row.machineNames.join(" · ") : "—";
@@ -104,8 +108,16 @@ export function LifecycleNotificationsPanel({
     }
   }
 
-  const partsHref =
-    user?.role === "staff" ? "/staff/parts" : "/machines";
+  function viewPartHref(row: LifecycleNotification) {
+    if (user?.role === "staff") {
+      return staffPartLifecycleViewHref(row.partNumber);
+    }
+    const machineId = row.machineIds[0];
+    if (machineId) {
+      return machinePartViewHref(machineId, row.partNumber);
+    }
+    return "/machines";
+  }
 
   if (loading && rows.length === 0) {
     return <LoadingState label="Loading part alerts…" />;
@@ -175,7 +187,7 @@ export function LifecycleNotificationsPanel({
               ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
-                  href={`${partsHref}?q=${encodeURIComponent(row.partNumber)}&highlight=${encodeURIComponent(row.partNumber)}`}
+                  href={viewPartHref(row)}
                   className="btn-primary inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold"
                   onClick={() => void openRow(row)}
                 >

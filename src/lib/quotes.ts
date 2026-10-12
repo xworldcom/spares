@@ -133,7 +133,7 @@ export function quoteStaffPricingLocked(
   if (quote.staffPricingUnlocked) {
     return false;
   }
-  return quoteHasReached(quote.status, "quoted");
+  return quoteHasReached(quote.status, "po_received");
 }
 
 export function quoteIsStaffReadOnly(status: QuoteStatus) {

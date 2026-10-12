@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { QUOTES_Q_QUERY } from "@/lib/quotes-list-filter";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NewQuoteForm } from "@/components/quote/NewQuoteForm";
@@ -43,6 +44,7 @@ export function QuotesWorkspace({
   initialList?: QuotesListResponse | null;
 }) {
   const searchParams = useSearchParams();
+  const hubSearchQuery = searchParams.get(QUOTES_Q_QUERY) ?? "";
   const [creating, setCreating] = useState(false);
   const scoped = Boolean(machineId);
   const hubMachineId =
@@ -54,10 +56,18 @@ export function QuotesWorkspace({
     scoped || hubMachineId ? machineName : null,
     scoped || Boolean(hubMachineId),
   );
+  const hubListTitle = (() => {
+    const q = hubSearchQuery.trim();
+    return q ? `${pageTitle} · Search` : pageTitle;
+  })();
 
   return (
     <div className={scoped ? "space-y-4" : "catalog-page"}>
-      {machineId ? <DocumentTitle title={pageTitle} /> : null}
+      {machineId ? (
+        <DocumentTitle title={pageTitle} />
+      ) : (
+        <DocumentTitle title={hubListTitle} />
+      )}
       <div className={scoped ? undefined : "catalog-page-intro"}>
         <WorkListScopeBar
           kind="quotes"

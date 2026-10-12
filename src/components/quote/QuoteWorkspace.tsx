@@ -517,7 +517,7 @@ export function QuoteWorkspace({
       className="quote-workspace mx-auto w-full max-w-5xl"
       data-quote-layout={conversationDock ? "split" : "stack"}
     >
-      {quote ? <DocumentTitle title={quoteTitle(quote)} /> : null}
+      <DocumentTitle title={quote ? quoteTitle(quote) : "Quote"} />
       <div className="quote-workspace-main space-y-5">
       <div className="quote-timeline-handoff-dest space-y-5">
         <div>

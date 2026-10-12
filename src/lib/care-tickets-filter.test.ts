@@ -19,6 +19,7 @@ function ticket(partial: Partial<ServiceTicket> & Pick<ServiceTicket, "id">): Se
     activities: partial.activities ?? [],
     unread: partial.unread ?? false,
     viewerReadAt: partial.viewerReadAt,
+    ...(partial.lastModifiedAt ? { lastModifiedAt: partial.lastModifiedAt } : {}),
   };
 }
 
@@ -43,5 +44,28 @@ describe("filterAndSortCareTickets", () => {
       sort: "recent",
     });
     assert.deepEqual(open.map((row) => row.id), ["a"]);
+  });
+
+  it("sorts by lastModifiedAt when sort is updated", () => {
+    const rows = [
+      ticket({
+        id: "old",
+        number: 8,
+        createdAt: "2026-10-01T00:00:00.000Z",
+        lastModifiedAt: "2026-10-02T00:00:00.000Z",
+      }),
+      ticket({
+        id: "nine",
+        number: 9,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        lastModifiedAt: "2026-10-12T00:00:00.000Z",
+      }),
+    ];
+    const sorted = filterAndSortCareTickets(rows, {
+      query: "",
+      status: "all",
+      sort: "updated",
+    });
+    assert.deepEqual(sorted.map((row) => row.number), [9, 8]);
   });
 });

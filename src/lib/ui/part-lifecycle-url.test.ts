@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   partLifecycleFiltersFromSearch,
   staffPartLifecycleHref,
+  staffPartLifecycleViewHref,
+  machinePartViewHref,
 } from "./part-lifecycle-url.ts";
 
 describe("partLifecycleFiltersFromSearch", () => {
@@ -23,6 +25,17 @@ describe("partLifecycleFiltersFromSearch", () => {
     assert.equal(
       staffPartLifecycleHref(filters),
       "/staff/parts?status=obsolete&machine=m1&q=bearing",
+    );
+  });
+
+  it("builds view-part deep links", () => {
+    assert.equal(
+      staffPartLifecycleViewHref("6331K32"),
+      "/staff/parts?q=6331K32&highlight=6331K32",
+    );
+    assert.equal(
+      machinePartViewHref("m1", "6331K32"),
+      "/machines/m1?part=6331K32",
     );
   });
 

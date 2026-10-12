@@ -25,8 +25,6 @@ import { rememberQuotesForNav } from "@/lib/nav/quote-list-seed";
 import { prefetchAppRoute, warmQuoteDetail } from "@/lib/nav/prefetch";
 import { useRequestGeneration } from "@/lib/ui/request-generation";
 import type { Quote, QuotesListResponse, Role } from "@/lib/api/types";
-import { DocumentTitle } from "@/components/nav/DocumentTitle";
-import { workListTitle } from "@/lib/work-list-scope";
 import {
   hrefWithQuotesListQuery,
   QUOTES_Q_QUERY,
@@ -94,11 +92,6 @@ export function QuotesList({
   }, [debouncedDraft, replaceListQuery, searchDraft, searchQuery]);
   const listSearchQuery =
     searchDraft.trim() !== searchQuery.trim() ? searchDraft.trim() : debouncedDraft;
-  const listPageTitle = (() => {
-    const base = workListTitle("quotes", machineId ? undefined : null, Boolean(machineId));
-    const q = listSearchQuery.trim();
-    return q ? `${base} · Search` : base;
-  })();
   const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
@@ -333,7 +326,6 @@ export function QuotesList({
 
   return (
     <div className="space-y-3">
-      {!machineId ? <DocumentTitle title={listPageTitle} /> : null}
       {role === "staff" && !machineId ? (
         <CatalogSearch
           id="staff-quotes-search"

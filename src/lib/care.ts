@@ -327,6 +327,17 @@ export function customerReadReceiptsForTicket(
   );
 }
 
+/** Latest activity timestamp for list sort when `lastModifiedAt` is missing on the row. */
+export function ticketListLastModifiedAt(ticket: ServiceTicketRecord): string {
+  let latest = ticket.lastModifiedAt ?? ticket.createdAt;
+  for (const activity of ticket.activities) {
+    if (activity.at > latest) {
+      latest = activity.at;
+    }
+  }
+  return latest;
+}
+
 /** Slim row for ticket list endpoints — no message thread. */
 export function toPublicTicketListRow(
   ticket: ServiceTicketRecord,
@@ -348,7 +359,7 @@ export function toPublicTicketListRow(
     viewerReadAt: ticket.lastReadAt[user.id],
     assistantPaused: ticket.assistantPaused,
     assistantEscalatedAt: ticket.assistantEscalatedAt,
-    ...(ticket.lastModifiedAt ? { lastModifiedAt: ticket.lastModifiedAt } : {}),
+    lastModifiedAt: ticketListLastModifiedAt(ticket),
     ...(ticket.lastModifiedByName ? { lastModifiedByName: ticket.lastModifiedByName } : {}),
   };
   if (options?.assistantAvailable !== undefined && user.role === "staff") {

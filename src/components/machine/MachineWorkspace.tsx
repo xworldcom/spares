@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
@@ -71,6 +72,7 @@ function ExpandIcon() {
 }
 
 export function MachineWorkspace({ machineId }: { machineId: string }) {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const isCustomer = user?.role === "customer";
   const [machine, setMachine] = useState<MachineDetail | null>(null);
@@ -205,6 +207,21 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       cancelled = true;
     };
   }, [machineId, reloadKey, user?.role]);
+
+  useEffect(() => {
+    const partKey = searchParams.get("part")?.trim();
+    if (!partKey || !machine) {
+      return;
+    }
+    const needle = partKey.toLowerCase();
+    const match =
+      machine.parts.find((part) => part.id.toLowerCase() === needle) ??
+      machine.parts.find((part) => part.id.toLowerCase().includes(needle));
+    if (match) {
+      setSelectedPart(match);
+      setView("model");
+    }
+  }, [machine, searchParams]);
 
   useEffect(() => {
     setLines([]);

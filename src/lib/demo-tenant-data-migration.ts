@@ -79,6 +79,8 @@ export type DataMigrations = {
   demoCustomerHygieneV2?: number;
   /** Re-apply hide when v2 flag was set before rows were marked. */
   demoCustomerHygieneV3?: number;
+  /** Demo quote #27 PO-stage pricing lock for Mac rv421 proofs. */
+  demoRv421Quote27V1?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
@@ -87,6 +89,8 @@ export const DEMO_QUOTE_26_HEAL_V1 = 1;
 export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
 
 export const DEMO_CUSTOMER_HYGIENE_V2 = 2;
+
+export const DEMO_RV421_QUOTE_27_V1 = 1;
 
 export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
 
@@ -637,6 +641,56 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
   return {
     db: { ...marked, tickets, quotes },
     changed: changed || needsV1 || needsV2 || needsV3,
+  };
+}
+
+/** Ensure demo quote #27 stays PO-stage with staff pricing locked (rv421 Q27 proof). */
+export function applyDemoRv421Quote27Migration<T extends DemoMigrationDb & { quotes?: QuoteRecord[] }>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoRv421Quote27V1: DEMO_RV421_QUOTE_27_V1,
+    },
+  } as T;
+  if (db.dataMigrations?.demoRv421Quote27V1 === DEMO_RV421_QUOTE_27_V1) {
+    return { db, changed: false };
+  }
+  const quotes = db.quotes ?? [];
+  const index = quotes.findIndex((row) => row.number === 27);
+  if (index < 0) {
+    return { db: marked, changed: true };
+  }
+  const quote = quotes[index];
+  let next: QuoteRecord = { ...quote };
+  let touched = false;
+  if (next.staffPricingUnlocked) {
+    next = { ...next, staffPricingUnlocked: false };
+    touched = true;
+  }
+  const poStage =
+    next.status === "po_received" ||
+    next.status === "confirmed" ||
+    next.status === "ordered" ||
+    next.status === "shipped" ||
+    next.status === "delivered";
+  if (
+    !poStage &&
+    next.status !== "closed" &&
+    next.status !== "cancelled"
+  ) {
+    next = { ...next, status: "po_received" };
+    touched = true;
+  }
+  const nextQuotes = quotes.slice();
+  if (touched) {
+    nextQuotes[index] = next;
+  }
+  return {
+    db: { ...marked, quotes: nextQuotes },
+    changed: true,
   };
 }
 

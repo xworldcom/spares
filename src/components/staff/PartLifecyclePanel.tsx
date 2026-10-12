@@ -212,8 +212,12 @@ export function PartLifecyclePanel({
       return;
     }
     urlFiltersRef.current = next;
-    router.replace(staffPartLifecycleHref(next), { scroll: false });
-  }, [status, machineId, debouncedQuery, router]);
+    const highlight = searchParams.get("highlight")?.trim();
+    router.replace(
+      staffPartLifecycleHref(next, highlight ? { highlight } : undefined),
+      { scroll: false },
+    );
+  }, [status, machineId, debouncedQuery, router, searchParams]);
 
   useEffect(() => {
     if (selected) {
