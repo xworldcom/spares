@@ -19,6 +19,8 @@ import { markTicketRead, updateTicketStatus } from "@/lib/store";
 type PatchBody = {
   status?: unknown;
   recordVersion?: unknown;
+  /** Status the client had when recordVersion was read (detect same-field overwrite). */
+  baseStatus?: unknown;
 };
 
 export async function GET(
@@ -85,10 +87,14 @@ async function handlePATCH(
     typeof body.recordVersion === "number" && body.recordVersion >= 1
       ? body.recordVersion
       : readRecordVersion(access.ticket);
+  const clientBaseStatus = isTicketStatus(body.baseStatus)
+    ? body.baseStatus
+    : access.ticket.status;
+  const clientBase = { ...access.ticket, status: clientBaseStatus };
   const next = await updateTicketStatus(access.ticket.id, tenantId, body.status, actor, {
     actor: { id: actor.id, email: actor.email, name: access.user.name },
     lock: {
-      base: access.ticket,
+      base: clientBase,
       expectedVersion,
       touchedFields: ["status"],
     },

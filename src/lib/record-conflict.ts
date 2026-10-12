@@ -1,4 +1,5 @@
 import type { RecordMeta } from "./record-meta.ts";
+import { messageSenderDisplayName } from "./ui/message-sender-display.ts";
 
 export const RECORD_CONFLICT_CODE = "record-conflict";
 
@@ -8,6 +9,7 @@ export type RecordConflictBody = {
   recordVersion: number;
   lastModifiedAt: string;
   lastModifiedByName: string;
+  lastModifiedByUserId?: string;
 };
 
 export class RecordWriteConflictError extends Error {
@@ -20,8 +22,19 @@ export class RecordWriteConflictError extends Error {
   }
 }
 
+function writerLabel(meta: RecordMeta) {
+  const raw = meta.lastModifiedByName?.trim();
+  if (raw && !raw.includes("@")) {
+    return raw;
+  }
+  if (raw?.includes("@")) {
+    return messageSenderDisplayName({ email: raw, name: undefined });
+  }
+  return "Someone else";
+}
+
 export function recordConflictMessage(entityLabel: string, meta: RecordMeta) {
-  const who = meta.lastModifiedByName?.trim() || "Someone else";
+  const who = writerLabel(meta);
   const when = formatConflictWhen(meta.lastModifiedAt);
   return `This ${entityLabel} was updated by ${who} ${when}. Refresh to see their changes, or keep editing and try again.`;
 }
@@ -51,7 +64,8 @@ export function recordConflictResponse(entityLabel: string, meta: RecordMeta) {
     code: RECORD_CONFLICT_CODE,
     recordVersion: meta.recordVersion,
     lastModifiedAt: meta.lastModifiedAt,
-    lastModifiedByName: meta.lastModifiedByName?.trim() || "Someone else",
+    lastModifiedByName: writerLabel(meta),
+    lastModifiedByUserId: meta.lastModifiedByUserId,
   };
   return Response.json(body, {
     status: 409,

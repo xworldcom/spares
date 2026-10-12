@@ -18,10 +18,15 @@ import {
 } from "@/lib/api/care";
 import { invalidateWarmRead } from "@/lib/api/warm-read";
 import { errorMessage } from "@/lib/api/errors";
+import { isApiError } from "@/lib/api/errors";
 import {
   isRecordConflictError,
   recordConflictMetaFromError,
 } from "@/lib/api/record-conflict";
+import {
+  isTimeoutLikeError,
+  recordConflictWriterIsSelf,
+} from "@/lib/api/record-conflict-self";
 import { RecordConflictBanner } from "@/components/record/RecordConflictBanner";
 import { useRecordFreshnessPoll } from "@/lib/hooks/useRecordFreshnessPoll";
 import { ticketRecordEtag } from "@/lib/record-etag";
@@ -102,6 +107,7 @@ export function TicketDetail({
   const conversationTitle = "Messages";
 
   const lastTicketIdRef = useRef<string | null>(null);
+  const statusPatchFlight = useRef<Promise<void> | null>(null);
 
   // Paint list row when switching tickets — not when the list row patches read state.
   useEffect(() => {
@@ -185,37 +191,84 @@ export function TicketDetail({
     pollTicket,
   );
 
+  async function applyStatusPatch(
+    status: TicketStatus,
+    recordVersion: number,
+    baseStatus: TicketStatus,
+  ) {
+    const next = await updateTicketStatus(ticket!.id, status, {
+      recordVersion,
+      baseStatus,
+    });
+    setTicket(next);
+    onTicketListPatch?.(next);
+    onUpdated?.();
+  }
+
   async function onStatus(status: TicketStatus) {
-    if (!ticket) {
+    if (!ticket || !user) {
+      return;
+    }
+    if (statusPatchFlight.current) {
+      return;
+    }
+    if (ticket.status === status) {
       return;
     }
     setBusy(true);
     setError(null);
     setRecordConflict(null);
-    try {
-      const next = await updateTicketStatus(ticket.id, status, {
-        recordVersion: ticket.recordVersion ?? 1,
-      });
-      setTicket(next);
-      onTicketListPatch?.(next);
-      onUpdated?.();
-    } catch (cause) {
-      if (isRecordConflictError(cause)) {
-        const meta = recordConflictMetaFromError(cause);
-        setRecordConflict(cause.message);
-        if (meta && meta.recordVersion >= 1) {
-          setTicket((current) =>
-            current && ticketRefMatches(current, ticketId)
-              ? { ...current, recordVersion: meta.recordVersion }
-              : current,
-          );
+    const run = async () => {
+      const snapshot = ticket;
+      const version = snapshot.recordVersion ?? 1;
+      const baseStatus = snapshot.status;
+      try {
+        await applyStatusPatch(status, version, baseStatus);
+      } catch (cause) {
+        if (isRecordConflictError(cause) && recordConflictWriterIsSelf(cause, user)) {
+          const fresh = await getTicketFresh(snapshot.id);
+          setTicket(fresh);
+          onTicketListPatch?.(fresh);
+          if (fresh.status === status) {
+            return;
+          }
+          await applyStatusPatch(status, fresh.recordVersion ?? 1, fresh.status);
+          return;
         }
-        return;
+        if (isRecordConflictError(cause)) {
+          const meta = recordConflictMetaFromError(cause);
+          setRecordConflict(cause.message);
+          if (meta && meta.recordVersion >= 1) {
+            setTicket((current) =>
+              current && ticketRefMatches(current, ticketId)
+                ? { ...current, recordVersion: meta.recordVersion }
+                : current,
+            );
+          }
+          return;
+        }
+        if (isTimeoutLikeError(cause) || isApiError(cause) && cause.status === 0) {
+          const fresh = await getTicketFresh(ticket.id);
+          setTicket(fresh);
+          onTicketListPatch?.(fresh);
+          if (fresh.status === status) {
+            return;
+          }
+          setError(
+            "That took too long. Your view is updated — try the status change once more.",
+          );
+          return;
+        }
+        setError(errorMessage(cause, "Could not update status."));
       }
-      setError(errorMessage(cause, "Could not update status."));
-    } finally {
-      setBusy(false);
-    }
+    };
+    statusPatchFlight.current = run()
+      .catch(() => undefined)
+      .finally(() => {
+        statusPatchFlight.current = null;
+        setBusy(false);
+      });
+    await statusPatchFlight.current;
   }
 
   async function onAssistantPaused(paused: boolean) {

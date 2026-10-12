@@ -9,6 +9,7 @@ export class ApiError extends Error {
   readonly recordVersion?: number;
   readonly lastModifiedAt?: string;
   readonly lastModifiedByName?: string;
+  readonly lastModifiedByUserId?: string;
 
   constructor(
     message: string,
@@ -18,6 +19,7 @@ export class ApiError extends Error {
       recordVersion?: number;
       lastModifiedAt?: string;
       lastModifiedByName?: string;
+      lastModifiedByUserId?: string;
     },
   ) {
     super(message);
@@ -27,6 +29,7 @@ export class ApiError extends Error {
     this.recordVersion = recordMeta?.recordVersion;
     this.lastModifiedAt = recordMeta?.lastModifiedAt;
     this.lastModifiedByName = recordMeta?.lastModifiedByName;
+    this.lastModifiedByUserId = recordMeta?.lastModifiedByUserId;
   }
 }
 

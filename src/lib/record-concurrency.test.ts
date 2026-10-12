@@ -123,7 +123,44 @@ describe("record version conflicts", () => {
     );
   });
 
-  it("allows ticket status when the client recordVersion is stale but status did not change on server", async () => {
+  it("allows same-writer status when only the client recordVersion is stale", async () => {
+    seedCatalog();
+    const machines = await listMachines(TENANT);
+    const machineId = machines[0]?.id;
+    assert.ok(machineId);
+    const created = await createTicket(TENANT, {
+      machineId,
+      title: "Self rebase",
+      customerId: "user-customer",
+      customerEmail: "user@demo.com",
+      actor: { id: "staff-a", email: "staff-a@demo.com", role: "staff" },
+    });
+    if ("error" in created) {
+      throw new Error("ticket create failed");
+    }
+    const { ticket } = created;
+    const actor = { id: "staff-a", email: "staff-a@demo.com", role: "staff" as const };
+    const bumped = await updateTicketStatus(ticket.id, TENANT, "in_progress", actor, {
+      actor: { id: actor.id, email: actor.email, name: "Staff A" },
+      lock: {
+        base: ticket,
+        expectedVersion: readRecordVersion(ticket),
+        touchedFields: ["status"],
+      },
+    });
+    assert.ok(bumped);
+    const next = await updateTicketStatus(ticket.id, TENANT, "closed", actor, {
+      actor: { id: actor.id, email: actor.email, name: "Staff A" },
+      lock: {
+        base: bumped,
+        expectedVersion: readRecordVersion(ticket),
+        touchedFields: ["status"],
+      },
+    });
+    assert.equal(next?.status, "closed");
+  });
+
+  it("rejects same-field status when another writer advanced the version", async () => {
     seedCatalog();
     const machines = await listMachines(TENANT);
     const machineId = machines[0]?.id;
@@ -140,7 +177,7 @@ describe("record version conflicts", () => {
     }
     const { ticket } = created;
     const actor = { id: "staff-a", email: "staff-a@demo.com", role: "staff" as const };
-    await updateTicketStatus(ticket.id, TENANT, "in_progress", actor, {
+    const bumped = await updateTicketStatus(ticket.id, TENANT, "in_progress", actor, {
       actor: { id: actor.id, email: actor.email, name: "Staff A" },
       lock: {
         base: ticket,
@@ -148,17 +185,55 @@ describe("record version conflicts", () => {
         touchedFields: ["status"],
       },
     });
-    const fresh = await getTicket(ticket.id, TENANT);
-    assert.ok(fresh);
-    assert.ok(readRecordVersion(fresh) > readRecordVersion(ticket));
-    const next = await updateTicketStatus(ticket.id, TENANT, "closed", actor, {
-      actor: { id: actor.id, email: actor.email, name: "Staff A" },
-      lock: {
-        base: fresh,
-        expectedVersion: readRecordVersion(ticket),
-        touchedFields: ["status"],
-      },
+    assert.ok(bumped);
+    await assert.rejects(
+      () =>
+        updateTicketStatus(ticket.id, TENANT, "closed", actor, {
+          actor: { id: "staff-b", email: "staff-b@demo.com", name: "Staff B" },
+          lock: {
+            base: bumped,
+            expectedVersion: readRecordVersion(ticket),
+            touchedFields: ["status"],
+          },
+        }),
+      (cause: unknown) => cause instanceof RecordWriteConflictError,
+    );
+  });
+
+  it("rejects a second writer when client baseStatus is stale (same-field conflict)", async () => {
+    seedCatalog();
+    const machines = await listMachines(TENANT);
+    const machineId = machines[0]?.id;
+    assert.ok(machineId);
+    const created = await createTicket(TENANT, {
+      machineId,
+      title: "Status race",
+      customerId: "user-customer",
+      customerEmail: "user@demo.com",
+      actor: { id: "staff-a", email: "staff-a@demo.com", role: "staff" },
     });
-    assert.equal(next?.status, "closed");
+    if ("error" in created) {
+      throw new Error("ticket create failed");
+    }
+    const { ticket } = created;
+    const baseVersion = readRecordVersion(ticket);
+    const actorA = { id: "staff-a", email: "staff-a@demo.com", role: "staff" as const };
+    const actorB = { id: "staff-b", email: "staff-b@demo.com", role: "staff" as const };
+    await updateTicketStatus(ticket.id, TENANT, "in_progress", actorA, {
+      actor: { id: actorA.id, email: actorA.email, name: "Staff A" },
+      lock: { base: ticket, expectedVersion: baseVersion, touchedFields: ["status"] },
+    });
+    await assert.rejects(
+      () =>
+        updateTicketStatus(ticket.id, TENANT, "closed", actorB, {
+          actor: { id: actorB.id, email: actorB.email, name: "Staff B" },
+          lock: {
+            base: { ...ticket, status: "open" },
+            expectedVersion: baseVersion,
+            touchedFields: ["status"],
+          },
+        }),
+      (cause: unknown) => cause instanceof RecordWriteConflictError,
+    );
   });
 });

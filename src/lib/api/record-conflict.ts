@@ -12,7 +12,10 @@ export function isRecordConflictError(cause: unknown): cause is ApiError & Recor
 
 export function recordConflictMetaFromError(
   cause: unknown,
-): Pick<RecordConflictBody, "recordVersion" | "lastModifiedAt" | "lastModifiedByName"> | null {
+): Pick<
+  RecordConflictBody,
+  "recordVersion" | "lastModifiedAt" | "lastModifiedByName" | "lastModifiedByUserId"
+> | null {
   if (!isRecordConflictError(cause)) {
     return null;
   }
@@ -20,5 +23,6 @@ export function recordConflictMetaFromError(
     recordVersion: cause.recordVersion ?? 0,
     lastModifiedAt: cause.lastModifiedAt ?? "",
     lastModifiedByName: cause.lastModifiedByName ?? "",
+    lastModifiedByUserId: cause.lastModifiedByUserId,
   };
 }

@@ -4973,7 +4973,18 @@ function mutateTicket(
       if (options?.lock) {
         const liveVersion = readRecordVersion(current);
         if (liveVersion !== options.lock.expectedVersion) {
-          const serverFields = ticketChangedFields(options.lock.base, current);
+          let serverFields = ticketChangedFields(options.lock.base, current);
+          if (
+            serverFields.length === 0 &&
+            readRecordVersion(options.lock.base) > options.lock.expectedVersion
+          ) {
+            const writerIsSelf =
+              Boolean(options?.actor?.id) &&
+              current.lastModifiedByUserId === options.actor?.id;
+            if (!writerIsSelf) {
+              serverFields = [...options.lock.touchedFields];
+            }
+          }
           if (
             serverFields.length > 0 &&
             fieldsOverlap(serverFields, options.lock.touchedFields)
