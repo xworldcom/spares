@@ -280,6 +280,21 @@ async function flushGateResults(exitCode = 1) {
   process.exit(exitCode);
 }
 
+async function sortSelectOffsetInFilterRow(page) {
+  return page.locator(".tickets-workspace-sort-select").evaluate((el) => {
+    const row = el.closest(".tickets-workspace-filter-row");
+    if (!row) {
+      return null;
+    }
+    const selectRect = el.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    return {
+      x: selectRect.left - rowRect.left,
+      y: selectRect.top - rowRect.top,
+    };
+  });
+}
+
 async function openQuoteMessages(page, quoteRef) {
   await page.goto(`${BASE}/staff/quotes/${quoteRef}`, { waitUntil: "domcontentloaded" });
   const inline = page.locator(".conversation-sheet.is-inline");
@@ -902,10 +917,11 @@ async function runRows(browserName, launch) {
 
     await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
-      const sortBoxBefore = await page.locator(".tickets-workspace-sort-select").boundingBox();
+      await page.locator(".tickets-workspace-filter-row").waitFor({ state: "visible", timeout: 12_000 });
+      const sortBoxBefore = await sortSelectOffsetInFilterRow(page);
       await page.locator("#care-tickets-search").fill("pal");
-      await page.waitForTimeout(350);
-      const sortBoxAfter = await page.locator(".tickets-workspace-sort-select").boundingBox();
+      await page.waitForTimeout(500);
+      const sortBoxAfter = await sortSelectOffsetInFilterRow(page);
       const sortStable =
         sortBoxBefore &&
         sortBoxAfter &&
@@ -917,7 +933,7 @@ async function runRows(browserName, launch) {
         browserName,
         vp,
         Boolean(sortStable),
-        `before=${sortBoxBefore?.x},${sortBoxBefore?.y}`,
+        `before=${sortBoxBefore?.x},${sortBoxBefore?.y} after=${sortBoxAfter?.x},${sortBoxAfter?.y}`,
       );
     });
 
@@ -978,17 +994,24 @@ async function runRows(browserName, launch) {
     await context.close();
   }
 
-  // Customer rows 9 demo hide — separate context
-  await safeStep("9", "demo-hide-badge", browserName, 1440, async () => {
+  // Customer rows — separate context; one safeStep per row so row 9 cannot ABORT on later Add timeout
   const cust = await browser.newContext({ viewport: viewportSize(1440) });
   await apiLogin(cust, CUSTOMER);
   const cp = await cust.newPage();
+
+  await safeStep("9", "demo-hide-badge", browserName, 1440, async () => {
   await cp.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
   const text = await cp.locator("main").innerText();
   const hidePass = !/\bticket\s+(1[7-9]|2[0-6])\b/i.test(text);
   record("9", "demo-hide-badge", browserName, 1440, hidePass, "17-26 hidden");
+  });
+
+  await safeStep("bea-ticket-10-title", "demo-titles", browserName, 1440, async () => {
+  const text = await cp.locator("main").innerText();
   const t10Title = /stack light fault|palletizer infeed photo-eye/i.test(text);
   record("bea-ticket-10-title", "demo-titles", browserName, 1440, t10Title, "ticket10-realistic");
+  });
+  await safeStep("bea-title-customer-quotes", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
   const tQuotesCustomer = await cp.title();
   record(
@@ -999,9 +1022,16 @@ async function runRows(browserName, launch) {
     /quotes/i.test(tQuotesCustomer) && /oee360/i.test(tQuotesCustomer),
     tQuotesCustomer,
   );
+  });
+
+  await safeStep("bea-q37-not-first", "bea-smoke", browserName, 1440, async () => {
+  await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
   const firstQuote = (await cp.locator("ul li").first().innerText().catch(() => "")).slice(0, 80);
   const q37First = /quote\s*37\b/i.test(firstQuote);
   record("bea-q37-not-first", "bea-smoke", browserName, 1440, !q37First, `first=${firstQuote}`);
+  });
+
+  await safeStep("bea-drawer-vs-add", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
   await cp.getByRole("button", { name: /new quote/i }).click({ timeout: 8000 }).catch(() => {});
   await cp.waitForTimeout(400);
@@ -1019,7 +1049,11 @@ async function runRows(browserName, launch) {
     !newFormOpen,
     `newFormOpen=${newFormOpen}`,
   );
+  });
+
   const customerTenant = await tenantIdForContext(cust);
+
+  await safeStep("bea-m9-undo-tray", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
   await seedCustomerTray(cp, "palletizer", customerTenant);
   await cp.reload({ waitUntil: "domcontentloaded" });
@@ -1048,6 +1082,9 @@ async function runRows(browserName, launch) {
     undoVisible,
     `undo=${undoVisible}`,
   );
+  });
+
+  await safeStep("bea-m9-tray-handle-lines", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
   await seedCustomerTray(cp, "palletizer", customerTenant);
   await cp.reload({ waitUntil: "domcontentloaded" });
@@ -1074,13 +1111,18 @@ async function runRows(browserName, launch) {
     trayFull && removeVisible,
     `dockFull=${trayFull} removeVisible=${removeVisible}`,
   );
+  });
+
+  await safeStep("bea-drawer-list-add", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-  await cp.getByRole("button", { name: /^list$/i }).click({ timeout: 8000 });
   await seedCustomerTray(cp, "palletizer", customerTenant);
   await cp.reload({ waitUntil: "domcontentloaded" });
+  await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+  await cp.getByRole("button", { name: /^list$/i }).click({ timeout: 12_000 });
+  await cp.locator("[data-parts-bom]").waitFor({ state: "visible", timeout: 15_000 });
   await cp.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
-  const addBtn = cp.getByRole("button", { name: /^add$/i }).first();
-  await addBtn.waitFor({ state: "visible", timeout: 12_000 });
+  const addBtn = cp.locator("[data-parts-bom]").getByRole("button", { name: /^add$/i }).first();
+  await addBtn.waitFor({ state: "visible", timeout: 15_000 });
   const addBox = await addBtn.boundingBox();
   let addReachable = false;
   if (addBox) {
@@ -1104,6 +1146,9 @@ async function runRows(browserName, launch) {
     addReachable,
     `reachable=${addReachable}`,
   );
+  });
+
+  await safeStep("bea-fs-viewer-stage", "bea-smoke", browserName, 1440, async () => {
   await cp.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
   await cp.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
   await clickEnterViewerFullscreen(cp);
@@ -1121,8 +1166,9 @@ async function runRows(browserName, launch) {
     `layoutW=${stageW}`,
   );
   await clickExitViewerFullscreen(cp);
-  await cust.close();
   });
+
+  await cust.close();
 
   await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
     await runBeaMandatoryPhone390(browserName, browser);

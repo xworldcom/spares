@@ -4117,8 +4117,8 @@ body > .quote-undo-toast {
 }
 
 .tickets-workspace-filter-row {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(3, max-content) minmax(0, 1fr) 9.75rem;
   align-items: center;
   gap: 0.5rem;
   min-height: 2.25rem;
@@ -4136,9 +4136,10 @@ body > .quote-undo-toast {
 }
 
 .tickets-workspace-sort {
-  margin-left: auto;
+  grid-column: 5;
+  margin-left: 0;
+  justify-self: end;
   flex-shrink: 0;
-  align-self: flex-end;
 }
 
 .tickets-workspace-sort-select {
