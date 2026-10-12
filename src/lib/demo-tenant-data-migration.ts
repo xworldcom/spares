@@ -9,6 +9,7 @@ import {
 } from "./demo-stage-quote-seed.ts";
 import { isSeedAllowed } from "./production-env.ts";
 import { FIXTURE_MACHINE_IDS, buildFixtureMachineById } from "./seed-fixtures.ts";
+import { isDemoCustomerHiddenTicketNumber } from "./demo-customer-visibility.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 import { nextQuoteNumber } from "./quotes.ts";
 import type { QuoteRecord } from "../types/index.ts";
@@ -79,6 +80,8 @@ export type DataMigrations = {
   demoCustomerHygieneV2?: number;
   /** Re-apply hide when v2 flag was set before rows were marked. */
   demoCustomerHygieneV3?: number;
+  /** Undo v2 over-hide (#9–16); hide only 1–8 and 17–34. */
+  demoCustomerHygieneV4?: number;
   /** Demo quote #27 PO-stage pricing lock for Mac rv421 proofs. */
   demoRv421Quote27V1?: number;
   /** Re-apply hardware-fixture demo lifecycle rows when catalog lost them (rv421 item 8). */
@@ -97,6 +100,8 @@ export const DEMO_RV421_QUOTE_27_V1 = 1;
 export const DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1 = 1;
 
 export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
+
+export const DEMO_CUSTOMER_HYGIENE_V4 = 4;
 
 type DemoMigrationUser = {
   id: string;
@@ -571,6 +576,12 @@ const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2 = new Set(
   Array.from({ length: 26 }, (_, index) => index + 1),
 );
 
+const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V4 = new Set(
+  Array.from({ length: 34 }, (_, index) => index + 1).filter((number) =>
+    isDemoCustomerHiddenTicketNumber(number),
+  ),
+);
+
 function hideDemoTicketsForCustomers<T extends DemoMigrationTicket>(
   tickets: T[],
   hiddenNumbers: ReadonlySet<number>,
@@ -589,6 +600,30 @@ function hideDemoTicketsForCustomers<T extends DemoMigrationTicket>(
   return { tickets: next, changed };
 }
 
+function reconcileDemoCustomerTicketVisibility<T extends DemoMigrationTicket>(
+  tickets: T[],
+  hiddenNumbers: ReadonlySet<number>,
+): { tickets: T[]; changed: boolean } {
+  let changed = false;
+  const next = tickets.map((ticket) => {
+    const shouldHide = hiddenNumbers.has(ticket.number);
+    if (shouldHide) {
+      if (ticket.hiddenFromCustomer) {
+        return ticket;
+      }
+      changed = true;
+      return { ...ticket, hiddenFromCustomer: true };
+    }
+    if (!ticket.hiddenFromCustomer) {
+      return ticket;
+    }
+    changed = true;
+    const { hiddenFromCustomer: _drop, ...rest } = ticket;
+    return rest as T;
+  });
+  return { tickets: next, changed };
+}
+
 /** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */
 export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
   db: T,
@@ -596,7 +631,8 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
   const needsV1 = db.dataMigrations?.demoCustomerHygieneV1 !== DEMO_CUSTOMER_HYGIENE_V1;
   const needsV2 = db.dataMigrations?.demoCustomerHygieneV2 !== DEMO_CUSTOMER_HYGIENE_V2;
   const needsV3 = db.dataMigrations?.demoCustomerHygieneV3 !== DEMO_CUSTOMER_HYGIENE_V3;
-  if (!needsV1 && !needsV2 && !needsV3) {
+  const needsV4 = db.dataMigrations?.demoCustomerHygieneV4 !== DEMO_CUSTOMER_HYGIENE_V4;
+  if (!needsV1 && !needsV2 && !needsV3 && !needsV4) {
     return { db, changed: false };
   }
   let changed = false;
@@ -616,6 +652,11 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
     tickets = v3.tickets;
     changed = changed || v3.changed;
   }
+  if (needsV4) {
+    const v4 = reconcileDemoCustomerTicketVisibility(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V4);
+    tickets = v4.tickets;
+    changed = changed || v4.changed;
+  }
   const marked = {
     ...db,
     dataMigrations: {
@@ -623,6 +664,7 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
       demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
       demoCustomerHygieneV2: DEMO_CUSTOMER_HYGIENE_V2,
       demoCustomerHygieneV3: DEMO_CUSTOMER_HYGIENE_V3,
+      demoCustomerHygieneV4: DEMO_CUSTOMER_HYGIENE_V4,
     },
   } as T;
   const quotes = (db.quotes ?? []).map((quote) => {
@@ -644,7 +686,7 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
   });
   return {
     db: { ...marked, tickets, quotes },
-    changed: changed || needsV1 || needsV2 || needsV3,
+    changed: changed || needsV1 || needsV2 || needsV3 || needsV4,
   };
 }
 

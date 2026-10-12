@@ -2,11 +2,22 @@ import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 const CAS_GATE_TITLE = /^(CAS s[123] |cas gate test)/i;
 
+/** Gate/smoke ticket numbers hidden from demo customers (not #9–16 story tickets). */
+export function isDemoCustomerHiddenTicketNumber(number: number): boolean {
+  if (number >= 1 && number <= 8) {
+    return true;
+  }
+  if (number >= 17 && number <= 34) {
+    return true;
+  }
+  return false;
+}
+
 export function isDemoGateTicketTitle(title: string | undefined) {
   return CAS_GATE_TITLE.test((title ?? "").trim());
 }
 
-/** Demo host: gate/smoke tickets hidden from customer Care (persisted flag or catalog rules). */
+/** Demo host: gate/smoke tickets hidden from customer Care (catalog rules; ignore stale v2 flags). */
 export function ticketHiddenFromCustomer(
   ticket: {
     hiddenFromCustomer?: boolean;
@@ -16,15 +27,15 @@ export function ticketHiddenFromCustomer(
   },
   tenantId: string,
 ): boolean {
-  if (ticket.hiddenFromCustomer) {
-    return true;
-  }
   const rowTenant = ticket.tenantId ?? tenantId;
   if (rowTenant !== DEFAULT_TENANT_ID) {
     return false;
   }
-  if (typeof ticket.number === "number" && ticket.number >= 1 && ticket.number <= 26) {
+  if (typeof ticket.number === "number" && isDemoCustomerHiddenTicketNumber(ticket.number)) {
     return true;
   }
-  return isDemoGateTicketTitle(ticket.title);
+  if (isDemoGateTicketTitle(ticket.title)) {
+    return true;
+  }
+  return false;
 }
