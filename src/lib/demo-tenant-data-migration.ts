@@ -81,6 +81,8 @@ export type DataMigrations = {
   demoCustomerHygieneV3?: number;
   /** Demo quote #27 PO-stage pricing lock for Mac rv421 proofs. */
   demoRv421Quote27V1?: number;
+  /** Re-apply hardware-fixture demo lifecycle rows when catalog lost them (rv421 item 8). */
+  demoRv421HardwareFixtureLifecycleV1?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
@@ -91,6 +93,8 @@ export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
 export const DEMO_CUSTOMER_HYGIENE_V2 = 2;
 
 export const DEMO_RV421_QUOTE_27_V1 = 1;
+
+export const DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1 = 1;
 
 export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
 
@@ -642,6 +646,34 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
     db: { ...marked, tickets, quotes },
     changed: changed || needsV1 || needsV2 || needsV3,
   };
+}
+
+/** Ensure hardware-fixture demo lifecycle rows exist (6331K32 obsolete, 5972K325 announced). */
+export function applyDemoRv421HardwareFixtureLifecycleMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marker = DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1;
+  const hasMarker = db.dataMigrations?.demoRv421HardwareFixtureLifecycleV1 === marker;
+  const additions = missingDemoLifecycleRows(
+    db.partLifecycle,
+    DEFAULT_TENANT_ID,
+    new Date().toISOString(),
+    "migration@oee360.com",
+  );
+  if (additions.length === 0 && hasMarker) {
+    return { db, changed: false };
+  }
+  const next = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoRv421HardwareFixtureLifecycleV1: marker,
+    },
+    ...(additions.length > 0
+      ? { partLifecycle: [...(db.partLifecycle ?? []), ...additions] }
+      : {}),
+  } as T;
+  return { db: next, changed: !hasMarker || additions.length > 0 };
 }
 
 /** Ensure demo quote #27 stays PO-stage with staff pricing locked (rv421 Q27 proof). */

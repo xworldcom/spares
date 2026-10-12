@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OEE360",
+  title: {
+    default: "OEE360",
+    template: "%s · OEE360",
+  },
   description:
     "Private spare parts, quotes, and machine care.",
   robots: {

@@ -431,7 +431,9 @@ body {
     --sheet-x: calc(100% + 0.75rem);
   }
 
-  .quote-sheet-handle {
+  /* Quote tray dock only — conversation snap keeps .quote-sheet-handle visible @1024–1535 (#421). */
+  .quote-sheet:not(.conversation-sheet) > .quote-sheet-handle,
+  .quote-tray-dock .quote-sheet-handle {
     display: none;
   }
 }

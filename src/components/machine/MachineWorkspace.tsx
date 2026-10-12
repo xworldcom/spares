@@ -265,8 +265,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     writePersistedTrayNote(trayNoteStorageKey, trayNote);
   }, [trayNote, trayNoteStorageKey, linesKey, trayStorageKey]);
 
-  const lineIdsKey = lines.map((line) => line.part.id).join("\n");
-  const lifecycleIdsKey = [lineIdsKey, selectedPart?.id ?? ""].filter(Boolean).join("\n");
+  const lifecycleIdsKey = useMemo(() => {
+    const ids = new Set<string>();
+    for (const part of machine?.parts ?? []) {
+      ids.add(part.id);
+    }
+    for (const line of lines) {
+      ids.add(line.part.id);
+    }
+    if (selectedPart?.id) {
+      ids.add(selectedPart.id);
+    }
+    return [...ids].join("\n");
+  }, [machine?.parts, lines, selectedPart?.id]);
 
   const selectedPartForSheet = useMemo(() => {
     if (!selectedPart) {

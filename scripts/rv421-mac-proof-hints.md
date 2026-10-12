@@ -10,4 +10,10 @@ Messages use **phone overlay snap** (`.snap-sheet-handle` visible) below **1536p
 
 ## sam-close-ticket9 @390
 
+Use hub path **`/care/tickets/{id}`** (not machine-scoped). Harness: `node scripts/rv421-sam-close-ticket9.mjs`.
+
 Care ticket detail uses overlay snap below 1536px; confirm viewport width before querying `.snap-sheet-handle`.
+
+## Item 5 — `/staff/quotes` title
+
+SSR metadata `Quotes · OEE360` plus client `DocumentTitle`; wait for title to match `/Quotes · OEE360/` not bare `OEE360`.

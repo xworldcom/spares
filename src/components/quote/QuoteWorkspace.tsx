@@ -7,7 +7,10 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
-import { useConversationDockStage } from "@/components/machine/useDesktopStage";
+import {
+  useConversationDockStage,
+  useOverlayConversationSheet,
+} from "@/components/machine/useDesktopStage";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
 import { conversationThreadSubtitle } from "@/lib/ui/conversation-thread-subtitle";
@@ -97,6 +100,8 @@ export function QuoteWorkspace({
   const { user } = useAuth();
   const { refresh } = useQuoteAlerts();
   const conversationDock = useConversationDockStage();
+  const overlayConversation = useOverlayConversationSheet();
+  const inlineMessages = conversationDock && !overlayConversation;
   const searchParams = useSearchParams();
   const seedQuote = quoteSeedForRef(quoteRef);
   const [quote, setQuote] = useState<Quote | null>(
@@ -519,7 +524,7 @@ export function QuoteWorkspace({
   return (
     <div
       className="quote-workspace mx-auto w-full max-w-5xl"
-      data-quote-layout={conversationDock ? "split" : "stack"}
+      data-quote-layout={inlineMessages ? "split" : "stack"}
     >
       <DocumentTitle title={quote ? quoteTitle(quote) : "Quote"} />
       <div className="quote-workspace-main space-y-5">
@@ -871,7 +876,7 @@ export function QuoteWorkspace({
         peekLine={peek.text}
         unread={quote.unread}
         threadKey={loadedRef === quoteRef ? quote.id : quoteRef}
-        layout={conversationDock ? "inline" : "overlay"}
+        layout={inlineMessages ? "inline" : "overlay"}
         closeProfile="quote"
       >
         <QuoteActivityFeed
@@ -883,9 +888,9 @@ export function QuoteWorkspace({
           onSend={sendActivity}
           threadKind="quote"
           threadId={quote.id}
-          layout={conversationDock ? "card" : "sheet"}
+          layout={inlineMessages ? "card" : "sheet"}
           title="Messages"
-          subtitle={conversationDock ? threadSubtitle ?? undefined : undefined}
+          subtitle={inlineMessages ? threadSubtitle ?? undefined : undefined}
           customerReadReceipts={role === "staff" ? quote.customerReadReceipts : undefined}
           actorDisplayNames={quote.actorDisplayNames}
           assistantAvailable={role === "staff" ? quote.assistantAvailable : undefined}
