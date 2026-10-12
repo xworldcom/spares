@@ -334,6 +334,15 @@ async function runRows(browserName, launch) {
   const t10Title = /stack light fault|palletizer infeed photo-eye/i.test(text);
   record("bea-ticket-10-title", "demo-titles", browserName, 1440, t10Title, "ticket10-realistic");
   await cp.goto(`${BASE}/quotes`, { waitUntil: "domcontentloaded" });
+  const tQuotesCustomer = await cp.title();
+  record(
+    "bea-title-customer-quotes",
+    "bea-smoke",
+    browserName,
+    1440,
+    /quotes/i.test(tQuotesCustomer) && /oee360/i.test(tQuotesCustomer),
+    tQuotesCustomer,
+  );
   const firstQuote = (await cp.locator("ul li").first().innerText().catch(() => "")).slice(0, 80);
   const q37First = /quote\s*37\b/i.test(firstQuote);
   record("bea-q37-not-first", "bea-smoke", browserName, 1440, !q37First, `first=${firstQuote}`);

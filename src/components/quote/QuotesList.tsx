@@ -188,7 +188,10 @@ export function QuotesList({
       });
     }
     return [...rows].sort((a, b) => {
-      if (role === "staff" || machineId) {
+      if (machineId) {
+        return b.number - a.number;
+      }
+      if (role === "staff" || role === "customer") {
         return b.number - a.number;
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
