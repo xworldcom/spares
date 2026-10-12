@@ -28,7 +28,7 @@ function writerLabel(meta: RecordMeta) {
     return raw;
   }
   if (raw?.includes("@")) {
-    return raw.split("@")[0]?.replace(/\./g, " ").trim() || raw;
+    return messageSenderDisplayName({ email: raw, name: undefined });
   }
   return "Someone else";
 }

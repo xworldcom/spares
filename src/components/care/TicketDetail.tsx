@@ -191,8 +191,15 @@ export function TicketDetail({
     pollTicket,
   );
 
-  async function applyStatusPatch(status: TicketStatus, recordVersion: number) {
-    const next = await updateTicketStatus(ticket!.id, status, { recordVersion });
+  async function applyStatusPatch(
+    status: TicketStatus,
+    recordVersion: number,
+    baseStatus: TicketStatus,
+  ) {
+    const next = await updateTicketStatus(ticket!.id, status, {
+      recordVersion,
+      baseStatus,
+    });
     setTicket(next);
     onTicketListPatch?.(next);
     onUpdated?.();
@@ -212,18 +219,20 @@ export function TicketDetail({
     setError(null);
     setRecordConflict(null);
     const run = async () => {
-      const version = ticket.recordVersion ?? 1;
+      const snapshot = ticket;
+      const version = snapshot.recordVersion ?? 1;
+      const baseStatus = snapshot.status;
       try {
-        await applyStatusPatch(status, version);
+        await applyStatusPatch(status, version, baseStatus);
       } catch (cause) {
         if (isRecordConflictError(cause) && recordConflictWriterIsSelf(cause, user)) {
-          const fresh = await getTicketFresh(ticket.id);
+          const fresh = await getTicketFresh(snapshot.id);
           setTicket(fresh);
           onTicketListPatch?.(fresh);
           if (fresh.status === status) {
             return;
           }
-          await applyStatusPatch(status, fresh.recordVersion ?? 1);
+          await applyStatusPatch(status, fresh.recordVersion ?? 1, fresh.status);
           return;
         }
         if (isRecordConflictError(cause)) {
