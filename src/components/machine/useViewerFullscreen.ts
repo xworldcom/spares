@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  addFullscreenChangeListener,
+  documentFullscreenElement,
+  exitDocumentFullscreen,
+  requestElementFullscreen,
+} from "@/lib/ui/document-fullscreen";
 
 function isEmbedded() {
   if (typeof window === "undefined") {
@@ -35,25 +41,31 @@ export function useViewerFullscreen() {
   const [overlay, setOverlay] = useState(false);
   const [native, setNative] = useState(false);
 
-  const exit = useCallback(() => {
+  const clearChromeLayoutStyles = useCallback(() => {
     const node = chromeRef.current;
-    if (typeof document !== "undefined" && document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => undefined);
+    if (!node) {
+      return;
     }
-    if (node) {
-      node.style.height = "";
-      node.style.width = "";
-      node.style.maxHeight = "";
-    }
+    node.style.height = "";
+    node.style.width = "";
+    node.style.maxHeight = "";
+  }, []);
+
+  const exit = useCallback(() => {
+    exitDocumentFullscreen();
+    clearChromeLayoutStyles();
+    requestAnimationFrame(() => {
+      clearChromeLayoutStyles();
+      window.dispatchEvent(new Event("resize"));
+    });
     setOverlay(false);
     setNative(false);
-  }, []);
+  }, [clearChromeLayoutStyles]);
 
   const enter = useCallback(() => {
     const node = chromeRef.current;
-    if (node && preferNativeFullscreen() && node.requestFullscreen) {
-      void node
-        .requestFullscreen()
+    if (node && preferNativeFullscreen()) {
+      void requestElementFullscreen(node)
         .then(() => {
           setNative(true);
           setOverlay(false);
@@ -70,13 +82,12 @@ export function useViewerFullscreen() {
 
   useEffect(() => {
     function onFullscreenChange() {
-      if (!document.fullscreenElement) {
-        const node = chromeRef.current;
-        if (node) {
-          node.style.height = "";
-          node.style.width = "";
-          node.style.maxHeight = "";
-        }
+      if (!documentFullscreenElement()) {
+        clearChromeLayoutStyles();
+        requestAnimationFrame(() => {
+          clearChromeLayoutStyles();
+          window.dispatchEvent(new Event("resize"));
+        });
         setNative(false);
       }
     }
@@ -86,13 +97,13 @@ export function useViewerFullscreen() {
         setOverlay(false);
       }
     }
-    document.addEventListener("fullscreenchange", onFullscreenChange);
+    const removeFullscreenListener = addFullscreenChangeListener(onFullscreenChange);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      removeFullscreenListener();
       document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [clearChromeLayoutStyles]);
 
   return {
     chromeRef,
