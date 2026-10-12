@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { useCareAlerts } from "@/components/care/CareAlerts";
@@ -102,6 +102,7 @@ export function TicketsWorkspace({
     scope === "hub" ? listEtag : null,
   );
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const hubMachineFromUrl =
     scope === "hub"

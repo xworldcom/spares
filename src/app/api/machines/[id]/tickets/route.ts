@@ -10,6 +10,7 @@ import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/l
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import { scheduleAssistantReply } from "@/lib/assistant/schedule";
+import { ticketHiddenFromCustomer } from "@/lib/demo-customer-visibility.ts";
 import { createTicket, listTickets } from "@/lib/store";
 
 type CreateBody = {
@@ -27,7 +28,11 @@ export async function GET(
     return access.error;
   }
   const tenantId = userTenantId(access.user);
-  const tickets = await listTickets(tenantId, access.machine.id);
+  const tickets = (await listTickets(tenantId, access.machine.id)).filter(
+    (ticket) =>
+      access.user.role === "staff" ||
+      !ticketHiddenFromCustomer(ticket, tenantId),
+  );
   const publicTickets = tickets.map((ticket) =>
     toPublicTicket(ticket, access.user, access.machine.name),
   );

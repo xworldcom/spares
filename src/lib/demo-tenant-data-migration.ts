@@ -77,6 +77,8 @@ export type DataMigrations = {
   demoCustomerHygieneV1?: number;
   /** Tickets #1–26 hidden from customers (gate/smoke); extends v1. */
   demoCustomerHygieneV2?: number;
+  /** Re-apply hide when v2 flag was set before rows were marked. */
+  demoCustomerHygieneV3?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
@@ -85,6 +87,8 @@ export const DEMO_QUOTE_26_HEAL_V1 = 1;
 export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
 
 export const DEMO_CUSTOMER_HYGIENE_V2 = 2;
+
+export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
 
 type DemoMigrationUser = {
   id: string;
@@ -583,7 +587,8 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
 ): { db: T; changed: boolean } {
   const needsV1 = db.dataMigrations?.demoCustomerHygieneV1 !== DEMO_CUSTOMER_HYGIENE_V1;
   const needsV2 = db.dataMigrations?.demoCustomerHygieneV2 !== DEMO_CUSTOMER_HYGIENE_V2;
-  if (!needsV1 && !needsV2) {
+  const needsV3 = db.dataMigrations?.demoCustomerHygieneV3 !== DEMO_CUSTOMER_HYGIENE_V3;
+  if (!needsV1 && !needsV2 && !needsV3) {
     return { db, changed: false };
   }
   let changed = false;
@@ -598,12 +603,18 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
     tickets = v2.tickets;
     changed = changed || v2.changed;
   }
+  if (needsV3) {
+    const v3 = hideDemoTicketsForCustomers(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2);
+    tickets = v3.tickets;
+    changed = changed || v3.changed;
+  }
   const marked = {
     ...db,
     dataMigrations: {
       ...db.dataMigrations,
       demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
       demoCustomerHygieneV2: DEMO_CUSTOMER_HYGIENE_V2,
+      demoCustomerHygieneV3: DEMO_CUSTOMER_HYGIENE_V3,
     },
   } as T;
   const quotes = (db.quotes ?? []).map((quote) => {
@@ -625,7 +636,7 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
   });
   return {
     db: { ...marked, tickets, quotes },
-    changed: changed || needsV1 || needsV2,
+    changed: changed || needsV1 || needsV2 || needsV3,
   };
 }
 

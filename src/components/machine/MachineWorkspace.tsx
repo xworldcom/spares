@@ -53,7 +53,7 @@ import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { dismissPartSheetAfterQuoteAdd } from "@/lib/ui/quote-tray-open-policy";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 import {
-  prefersViewerOverlayFullscreen,
+  shouldPinViewerOverlayFrame,
   viewerOverlayFramePx,
 } from "@/lib/ui/viewer-pseudo-fullscreen";
 
@@ -128,7 +128,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const customerTrayInViewer = isCustomer && !conversationDock;
 
   useEffect(() => {
-    if (!overlay || !prefersViewerOverlayFullscreen()) {
+    if (!overlay || !shouldPinViewerOverlayFrame()) {
       setOverlayFrame(null);
       return;
     }

@@ -8,6 +8,17 @@ export function prefersViewerOverlayFullscreen() {
   return /iP(hone|ad|od)/.test(navigator.userAgent);
 }
 
+/** Pin overlay viewer with visualViewport (phones + iOS; native FS often no-ops on 3D). */
+export function shouldPinViewerOverlayFrame() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (prefersViewerOverlayFullscreen()) {
+    return true;
+  }
+  return window.matchMedia("(max-width: 480px)").matches;
+}
+
 /** Pin the viewer overlay to the visual viewport below the site header (iOS URL bar). */
 export function viewerOverlayFramePx() {
   if (typeof window === "undefined") {

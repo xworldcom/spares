@@ -33,6 +33,9 @@ function preferNativeFullscreen() {
   if (isEmbedded() || isIos()) {
     return false;
   }
+  if (window.matchMedia("(max-width: 480px)").matches) {
+    return false;
+  }
   return true;
 }
 
@@ -49,6 +52,9 @@ export function useViewerFullscreen() {
     node.style.height = "";
     node.style.width = "";
     node.style.maxHeight = "";
+    node.style.top = "";
+    node.style.bottom = "";
+    node.style.position = "";
   }, []);
 
   const exit = useCallback(() => {
