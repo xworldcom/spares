@@ -31,6 +31,13 @@ describe("ticketMatchesCareSearch", () => {
     assert.equal(ticketMatchesCareSearch(row, "nope"), false);
   });
 
+  it("matches ticket number exactly for numeric-only query", () => {
+    const nine = ticket({ id: "t9", number: 9, title: "Fault" });
+    const twentyNine = ticket({ id: "t29", number: 29, title: "Fault" });
+    assert.equal(ticketMatchesCareSearch(nine, "9"), true);
+    assert.equal(ticketMatchesCareSearch(twentyNine, "9"), false);
+  });
+
   it("matches ticket number with T prefix", () => {
     const row = ticket({ id: "t9", number: 9, title: "Infeed fault" });
     assert.equal(ticketMatchesCareSearch(row, "T9"), true);

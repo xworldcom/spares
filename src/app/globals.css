@@ -380,6 +380,12 @@ body {
   }
 }
 
+html.viewer-immersive-fs .spares-header,
+html.viewer-immersive-fs .spares-tabbar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (min-width: 1024px) and (pointer: fine) {
   .quote-sheet {
     left: auto;
@@ -4108,6 +4114,15 @@ body > .quote-undo-toast {
   flex-direction: column;
   gap: 0.65rem;
   margin-bottom: 0.75rem;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@media (max-width: 1023px) {
+  .care-tickets-shell .tickets-workspace-list {
+    max-width: 100%;
+    overflow-x: clip;
+  }
 }
 
 /* Queue filters stack vertically: catalog-search flex-basis 16rem is for row toolbars only. */

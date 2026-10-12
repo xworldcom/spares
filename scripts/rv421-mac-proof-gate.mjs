@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v16) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v16b) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,10 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v16";
+const GATE_HARNESS_VERSION = "v16b";
+
+const PEEK_BAND_MAX_H = 130;
+const CLOSE_GROW_TOLERANCE_PX = 8;
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -358,27 +361,93 @@ async function expandConversationSheet(page) {
   }
 }
 
-async function assertCloseSettlesPeek(page, row, folder, browser, vp) {
-  await expandConversationSheet(page);
+async function conversationSheetMetrics(page) {
   const card = page.locator(".conversation-sheet").first();
-  const beforeH = await card.evaluate((el) => el.getBoundingClientRect().height);
+  return card.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      h: Math.round(rect.height),
+      peek: el.classList.contains("is-peek"),
+      reply: el.classList.contains("is-reply"),
+      full: el.classList.contains("is-full"),
+      out: el.classList.contains("is-out"),
+    };
+  });
+}
+
+/** Sam live: Messages sheet resting in peek band (~60–92px) before Close. */
+async function ensureMessagesPeekBand(page) {
+  const card = page.locator(".conversation-sheet").first();
+  await card.waitFor({ state: "visible", timeout: 15_000 });
+  const handle = page.locator(".snap-sheet-handle").first();
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const m = await conversationSheetMetrics(page);
+    if ((m.peek || m.h <= PEEK_BAND_MAX_H) && m.h > 24) {
+      return { ok: true, ...m };
+    }
+    if (m.out) {
+      await handle.click({ timeout: 8000 }).catch(() => {});
+      await page.waitForTimeout(450);
+      continue;
+    }
+    if (m.full) {
+      await handle.click({ timeout: 8000 }).catch(() => {});
+      await page.waitForTimeout(450);
+      continue;
+    }
+    if (m.reply && m.h > PEEK_BAND_MAX_H) {
+      const closeBtn = page.getByRole("button", { name: /^close$/i });
+      if (await closeBtn.isVisible().catch(() => false)) {
+        await closeBtn.click({ timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(550);
+        continue;
+      }
+      await handle.click({ timeout: 8000 }).catch(() => {});
+      await page.waitForTimeout(450);
+      continue;
+    }
+    await handle.click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(450);
+  }
+  const m = await conversationSheetMetrics(page);
+  const ok = (m.peek || m.h <= PEEK_BAND_MAX_H) && m.h > 24;
+  return { ok, ...m };
+}
+
+/**
+ * Sam live Close from peek band: must not grow (~60→140); Close stays visible; optional scroll stable.
+ */
+async function assertSamCloseFromPeekBand(page, row, folder, browser, vp, { scrollAfter = false } = {}) {
+  const band = await ensureMessagesPeekBand(page);
+  const card = page.locator(".conversation-sheet").first();
+  const hBefore = band.h;
   const closeBtn = page.getByRole("button", { name: /^close$/i });
   const closeBefore = await closeBtn.isVisible().catch(() => false);
+  const bandOk = band.ok && hBefore <= PEEK_BAND_MAX_H;
   await closeBtn.click({ timeout: 8000 });
   await page.waitForTimeout(700);
-  let afterH = await card.evaluate((el) => el.getBoundingClientRect().height);
-  let peek = await card.evaluate((el) => el.classList.contains("is-peek"));
-  const out = await card.evaluate((el) => el.classList.contains("is-out"));
-  const grew = afterH > beforeH + 10;
-  const closeAfter = await closeBtn.isVisible().catch(() => false);
-  if (!peek && !out && afterH > 160 && !grew) {
-    await closeBtn.click({ timeout: 8000 }).catch(() => {});
-    await page.waitForTimeout(700);
-    afterH = await card.evaluate((el) => el.getBoundingClientRect().height);
-    peek = await card.evaluate((el) => el.classList.contains("is-peek"));
+  const afterClose = await conversationSheetMetrics(page);
+  const hAfterClose = afterClose.h;
+  const grewOnClose = hAfterClose > hBefore + CLOSE_GROW_TOLERANCE_PX;
+  const closeAfterClick = await closeBtn.isVisible().catch(() => false);
+  let hAfterScroll = hAfterClose;
+  let scrollStable = true;
+  if (scrollAfter) {
+    await page.evaluate(() => window.scrollBy(0, 260));
+    await page.waitForTimeout(450);
+    hAfterScroll = (await conversationSheetMetrics(page)).h;
+    const closeAfterScroll = await closeBtn.isVisible().catch(() => false);
+    scrollStable =
+      hAfterScroll <= Math.max(hAfterClose + 12, hAfterClose * 1.08) &&
+      hAfterScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 12 &&
+      closeAfterScroll;
   }
-  const shrank = peek || out || afterH < Math.min(beforeH * 0.72, beforeH - 12);
-  const pass = closeBefore && shrank && !grew && (peek || out || closeAfter || afterH < 120);
+  const pass =
+    bandOk &&
+    closeBefore &&
+    !grewOnClose &&
+    (closeAfterClick || afterClose.out) &&
+    (!scrollAfter || scrollStable);
   const shots = [await shot(page, folder, `${row}-${browser}-${vp}-close.png`)];
   record(
     row,
@@ -386,9 +455,24 @@ async function assertCloseSettlesPeek(page, row, folder, browser, vp) {
     browser,
     vp,
     pass,
-    `peek=${peek} out=${out} grew=${grew} h=${Math.round(afterH)} closeAfter=${closeAfter}`,
+    `band=${bandOk} hBefore=${hBefore} hAfter=${hAfterClose} grew=${grewOnClose} closeAfter=${closeAfterClick} scroll=${scrollAfter ? `hScroll=${hAfterScroll} stable=${scrollStable}` : "n/a"}`,
     shots,
   );
+}
+
+async function horizontalOverflowPx(page, selector) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) {
+      return { found: false, overflow: 0 };
+    }
+    return {
+      found: true,
+      overflow: Math.max(0, Math.round(el.scrollWidth - el.clientWidth)),
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    };
+  }, selector);
 }
 
 async function waitForDocumentTitle(page, pattern) {
@@ -489,17 +573,24 @@ async function sheetBottomAboveTabBar(page, sheetSelector = ".conversation-sheet
 
 async function viewerChromeHiddenForFs(page) {
   return page.evaluate(() => {
+    const immersive = document.documentElement.classList.contains("viewer-immersive-fs");
     const tab = document.querySelector(".spares-tabbar");
     const header = document.querySelector(".spares-header");
     if (!tab || !header) {
-      return false;
+      return immersive;
     }
     const tabBox = tab.getBoundingClientRect();
     const headBox = header.getBoundingClientRect();
     const tabHidden =
-      getComputedStyle(tab).visibility === "hidden" || tabBox.height < 2 || tabBox.bottom < 4;
+      immersive ||
+      getComputedStyle(tab).visibility === "hidden" ||
+      tabBox.height < 2 ||
+      tabBox.bottom < 4;
     const headHidden =
-      getComputedStyle(header).visibility === "hidden" || headBox.height < 2 || headBox.bottom < 4;
+      immersive ||
+      getComputedStyle(header).visibility === "hidden" ||
+      headBox.height < 2 ||
+      headBox.bottom < 4;
     return tabHidden && headHidden;
   });
 }
@@ -566,8 +657,11 @@ async function evaluateCareH1AfterDrag(page, card) {
   return { pass, stuck, sheetEdge, above, closeVisible };
 }
 
-async function runBeaMandatoryPhone390(browserName, browser) {
-  const context = await browser.newContext({ viewport: viewportSize(390) });
+async function newCustomerPhone390Context(browser, browserName) {
+  const context = await browser.newContext({
+    viewport: viewportSize(390),
+    hasTouch: true,
+  });
   if (browserName === "chrome" || browserName === "chromium") {
     try {
       await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
@@ -576,64 +670,106 @@ async function runBeaMandatoryPhone390(browserName, browser) {
     }
   }
   await apiLogin(context, CUSTOMER);
-  const page = await context.newPage();
-  const vp = 390;
+  return context;
+}
 
-  await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-  await clickEnterViewerFullscreen(page);
-  await page.waitForTimeout(750);
-  const inFs = await readViewerFsMetrics(page);
-  const mode = viewerFsMode(inFs);
-  const chromeHidden = await viewerChromeHiddenForFs(page);
-  const fsEntered =
-    (inFs.native || inFs.overlay) &&
-    chromeHidden &&
-    inFs.layoutH >= Math.round(inFs.innerH * 0.86);
-  record(
-    "bea-phone-3d-fs",
-    "bea-smoke",
-    browserName,
-    vp,
-    fsEntered,
-    `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH} chromeHidden=${chromeHidden}`,
-  );
-  await clickExitViewerFullscreen(page);
-
-  const customerTenant = await tenantIdForContext(context);
-
-  await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-  await seedCustomerTray(page, "palletizer", customerTenant);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-  await page.getByRole("button", { name: /show quote/i }).first().click({ timeout: 12_000 });
-  const quoteSheet = page.locator(".machine-viewer .quote-sheet").first();
+async function openCustomerQuoteTrayExpanded(page) {
+  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 });
+  const quoteChip = page.locator("button[data-quote-tray]").first();
+  await quoteChip.waitFor({ state: "visible", timeout: 20_000 });
+  await quoteChip.click({ timeout: 12_000 });
+  const quoteSheet = page.locator(".machine-viewer .quote-sheet, .quote-sheet").first();
   await quoteSheet.waitFor({ state: "visible", timeout: 12_000 });
-  const handle = quoteSheet.locator(".quote-sheet-handle").first();
-  await handle.click({ timeout: 8000 });
-  await page.waitForTimeout(500);
-  const removeBtn = quoteSheet.getByRole("button", { name: /^remove$/i }).first();
-  await removeBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
-  const removeBox = await removeBtn.boundingBox();
-  const vpH = page.viewportSize()?.height ?? 844;
-  const removeInView =
-    Boolean(removeBox) && removeBox.y >= 0 && removeBox.y + removeBox.height <= vpH + 1;
-  const sheetEdgeM9 = await sheetBottomAboveTabBar(page, ".machine-viewer .quote-sheet");
-  await removeBtn.click({ timeout: 8000 }).catch(() => {});
-  const undoBtn = page.locator("[data-quote-undo-toast] .quote-undo-toast-action");
-  await undoBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
-  const undoBox = await undoBtn.boundingBox();
-  const undoInView =
-    Boolean(undoBox) && undoBox.y >= 0 && undoBox.y + undoBox.height <= vpH + 1;
-  record(
-    "bea-m9-phone-390",
-    "bea-smoke",
-    browserName,
-    vp,
-    removeInView && sheetEdgeM9.ok && undoInView,
-    `removeInView=${removeInView} edge=${JSON.stringify(sheetEdgeM9)} undoInView=${undoInView}`,
-  );
+  const handle = quoteSheet.locator('[data-quote-target="handle"], .quote-sheet-handle').first();
+  const isFull = await quoteSheet.evaluate((el) => el.classList.contains("is-full"));
+  if (!isFull) {
+    await handle.click({ force: true, timeout: 10_000 });
+    await page.waitForTimeout(550);
+  }
+  return quoteSheet;
+}
 
+async function runBeaPhone3dFs390(browserName, browser) {
+  const vp = 390;
+  const context = await newCustomerPhone390Context(browser, browserName);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+    await clickEnterViewerFullscreen(page);
+    await page.waitForTimeout(750);
+    const inFs = await readViewerFsMetrics(page);
+    const mode = viewerFsMode(inFs);
+    const chromeHidden = await viewerChromeHiddenForFs(page);
+    const fsEntered =
+      (inFs.native || inFs.overlay) &&
+      chromeHidden &&
+      inFs.layoutH >= Math.round(inFs.innerH * 0.86);
+    record(
+      "bea-phone-3d-fs",
+      "bea-smoke",
+      browserName,
+      vp,
+      fsEntered,
+      `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH} chromeHidden=${chromeHidden}`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function runBeaM9Phone390(browserName, browser) {
+  const vp = 390;
+  const context = await newCustomerPhone390Context(browser, browserName);
+  const page = await context.newPage();
+  try {
+    const customerTenant = await tenantIdForContext(context);
+    await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+    await seedCustomerTray(page, "palletizer", customerTenant);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const quoteSheet = await openCustomerQuoteTrayExpanded(page);
+    const hExpanded = await quoteSheet.evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    const removeBtn = quoteSheet.getByRole("button", { name: /^remove$/i }).first();
+    await removeBtn.waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+    const removeBox = await removeBtn.boundingBox();
+    const vpH = page.viewportSize()?.height ?? 844;
+    const removeInView =
+      Boolean(removeBox) && removeBox.y >= 0 && removeBox.y + removeBox.height <= vpH + 1;
+    const sheetEdgeM9 = await sheetBottomAboveTabBar(page, ".machine-viewer .quote-sheet, .quote-sheet");
+    await removeBtn.click({ timeout: 8000 }).catch(() => {});
+    const undoBtn = page.locator("[data-quote-undo-toast] .quote-undo-toast-action");
+    await undoBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+    const undoBox = await undoBtn.boundingBox();
+    const undoInView =
+      Boolean(undoBox) && undoBox.y >= 0 && undoBox.y + undoBox.height <= vpH + 1;
+    record(
+      "bea-m9-phone-390",
+      "bea-smoke",
+      browserName,
+      vp,
+      hExpanded > 120 && removeInView && sheetEdgeM9.ok && undoInView,
+      `expandedH=${hExpanded} removeInView=${removeInView} edge=${JSON.stringify(sheetEdgeM9)} undoInView=${undoInView}`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    record(
+      "bea-m9-phone-390",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 280)}`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function runBeaH1CareSheet390(browserName, browser) {
+  const vp = 390;
+  const context = await newCustomerPhone390Context(browser, browserName);
+  const page = await context.newPage();
+  try {
   await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
   await expandConversationSheet(page);
   const card = page.locator(".conversation-sheet").first();
@@ -675,8 +811,19 @@ async function runBeaMandatoryPhone390(browserName, browser) {
       "no-sheet-box",
     );
   }
-
-  await context.close();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    record(
+      "bea-h1-care-sheet",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 280)}`,
+    );
+  } finally {
+    await context.close();
+  }
 }
 
 async function clickEnterViewerFullscreen(page) {
@@ -709,7 +856,10 @@ async function runRows(browserName, launch) {
   const browser = await launch.launch({ headless: true });
   for (const vp of viewports) {
     const size = viewportSize(vp);
-    const context = await browser.newContext({ viewport: size });
+    const context = await browser.newContext({
+      viewport: size,
+      hasTouch: vp < 1024,
+    });
     if (browserName === "chrome" || browserName === "chromium") {
       try {
         await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
@@ -794,7 +944,13 @@ async function runRows(browserName, launch) {
         } else {
           await openQuoteMessages(page, ref);
         }
-        await assertCloseSettlesPeek(page, row, row.replace("sam-close-", "sam-close-"), browserName, vp);
+        await assertSamCloseFromPeekBand(
+          page,
+          row,
+          row.replace("sam-close-", "sam-close-"),
+          browserName,
+          vp,
+        );
       }
     } else {
       await openQuoteMessages(page, "26");
@@ -1037,21 +1193,29 @@ async function runRows(browserName, launch) {
       let scrollPass = true;
       for (const ref of ["26", "29"]) {
         await openQuoteMessages(page, ref);
-        await expandConversationSheet(page);
-        const cardMsg = page.locator(".conversation-sheet").first();
-        const hOpen = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
+        const band = await ensureMessagesPeekBand(page);
+        const hBefore = band.h;
         const closeBtn = page.getByRole("button", { name: /^close$/i });
+        const closeBefore = await closeBtn.isVisible().catch(() => false);
         await closeBtn.click({ timeout: 8000 });
         await page.waitForTimeout(650);
-        const hClose = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
-        const grewOnClose = hClose > hOpen + 10;
+        const metricsAfterClose = await conversationSheetMetrics(page);
+        const hAfterClose = metricsAfterClose.h;
+        const grewOnClose = hAfterClose > hBefore + CLOSE_GROW_TOLERANCE_PX;
+        const closeAfterClick = await closeBtn.isVisible().catch(() => false);
         await page.evaluate(() => window.scrollBy(0, 260));
         await page.waitForTimeout(450);
-        const hScroll = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
+        const afterScroll = await conversationSheetMetrics(page);
+        const hScroll = afterScroll.h;
+        const closeAfterScroll = await closeBtn.isVisible().catch(() => false);
         const stable =
+          band.ok &&
+          closeBefore &&
           !grewOnClose &&
-          hScroll <= Math.max(hClose * 1.08, hClose + 16) &&
-          hScroll <= Math.max(hOpen * 1.08, hOpen + 16);
+          (closeAfterClick || metricsAfterClose.out) &&
+          hScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 12 &&
+          hScroll <= Math.max(hAfterClose + 12, hAfterClose * 1.08) &&
+          (closeAfterScroll || afterScroll.out);
         if (!stable) {
           scrollPass = false;
         }
@@ -1062,38 +1226,58 @@ async function runRows(browserName, launch) {
         browserName,
         vp,
         scrollPass,
-        `q26+q29 close+scroll stable=${scrollPass}`,
+        `q26+q29 peek-close+scroll stable=${scrollPass}`,
       );
     });
 
     await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
       await page.locator(".tickets-workspace-filter-row").waitFor({ state: "visible", timeout: 12_000 });
+      const listTopBefore = await page
+        .locator(".tickets-workspace-list")
+        .boundingBox()
+        .catch(() => null);
       const sortBoxBefore = await sortSelectOffsetInFilterRow(page);
+      const overflowBefore = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
+      const listOverflowBefore = await horizontalOverflowPx(page, ".tickets-workspace-list");
       const search = page.locator("#care-tickets-search");
       await search.focus();
-      await page.waitForTimeout(220);
+      await page.waitForTimeout(280);
       const sortBoxFocus = await sortSelectOffsetInFilterRow(page);
-      await search.fill("pal");
-      await page.waitForTimeout(500);
-      const sortBoxAfter = await sortSelectOffsetInFilterRow(page);
+      const overflowFocus = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
+      const listOverflowFocus = await horizontalOverflowPx(page, ".tickets-workspace-list");
+      const listTopFocus = await page
+        .locator(".tickets-workspace-list")
+        .boundingBox()
+        .catch(() => null);
       const focusStable =
         sortBoxBefore &&
         sortBoxFocus &&
         Math.abs(sortBoxBefore.y - sortBoxFocus.y) < 1 &&
-        Math.abs(sortBoxBefore.x - sortBoxFocus.x) < 2;
+        Math.abs(sortBoxBefore.x - sortBoxFocus.x) < 2 &&
+        (!listTopBefore ||
+          !listTopFocus ||
+          Math.abs(listTopBefore.y - listTopFocus.y) < 2);
+      const noOverflowOnFocus =
+        overflowFocus.overflow <= 1 &&
+        listOverflowFocus.overflow <= 1;
+      await search.fill("pal");
+      await page.waitForTimeout(500);
+      const sortBoxAfter = await sortSelectOffsetInFilterRow(page);
+      const overflowTyped = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
       const sortStable =
         sortBoxFocus &&
         sortBoxAfter &&
         Math.abs(sortBoxFocus.y - sortBoxAfter.y) < 1 &&
-        Math.abs(sortBoxFocus.x - sortBoxAfter.x) < 2;
+        Math.abs(sortBoxFocus.x - sortBoxAfter.x) < 2 &&
+        overflowTyped.overflow <= 1;
       record(
         "sam-care-sort-stable",
         "care-layout",
         browserName,
         vp,
-        Boolean(focusStable && sortStable),
-        `before=${sortBoxBefore?.x},${sortBoxBefore?.y} focus=${sortBoxFocus?.x},${sortBoxFocus?.y} after=${sortBoxAfter?.x},${sortBoxAfter?.y}`,
+        Boolean(focusStable && noOverflowOnFocus && sortStable),
+        `focusStable=${focusStable} overflowFocus=${overflowFocus.overflow}/${listOverflowFocus.overflow} typedOverflow=${overflowTyped.overflow} sort=${sortBoxBefore?.x},${sortBoxBefore?.y}→${sortBoxFocus?.x},${sortBoxFocus?.y}→${sortBoxAfter?.x},${sortBoxAfter?.y}`,
       );
     });
 
@@ -1124,30 +1308,50 @@ async function runRows(browserName, launch) {
 
     await safeStep("sam-ticket-search-t9", "care-search", browserName, vp, async () => {
       let rankedOk = true;
+      let detail = "";
       for (const query of ["T9", "9"]) {
         await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
         await page.locator("#care-tickets-search").fill(query);
-        await page.waitForTimeout(450);
+        await page
+          .locator(".tickets-workspace-list .care-row-title", { hasText: /Ticket\s+9\b/i })
+          .first()
+          .waitFor({ state: "visible", timeout: 6000 })
+          .catch(() => {});
+        await page.waitForTimeout(350);
         const first = await page
-          .locator(".tickets-workspace-list a, .tickets-workspace-list button")
+          .locator(".tickets-workspace-list a.care-row")
           .first()
           .innerText()
           .catch(() => "");
-        const firstIsNine =
-          /\bticket\s*#?\s*0*9\b/i.test(first) ||
-          (/\b9\b/.test(first) && !/\b(?:19|29|39|49|59|69|79|89|99)\b/.test(first));
+        const firstIsNine = /Ticket\s+9\b/i.test(first);
         if (!firstIsNine) {
           rankedOk = false;
+          detail += `q=${query} first=${first.slice(0, 48).replace(/\s+/g, " ")}; `;
         }
       }
-      record("sam-ticket-search-t9", "care-search", browserName, vp, rankedOk, `rankedFirst=${rankedOk}`);
+      record(
+        "sam-ticket-search-t9",
+        "care-search",
+        browserName,
+        vp,
+        rankedOk,
+        rankedOk ? "rankedFirst=true" : detail.trim(),
+      );
     });
 
     if (vp >= 1024) {
 
     await safeStep("bea-inline-messages-no-handle", "quote-messages", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
-      const inlineMsgs = await page.locator(".conversation-sheet.is-inline").isVisible().catch(() => false);
+      await page
+        .locator('[data-quote-layout="split"] .conversation-sheet.is-inline')
+        .first()
+        .waitFor({ state: "visible", timeout: 20_000 })
+        .catch(() => {});
+      const inlineMsgs = await page
+        .locator(".conversation-sheet.is-inline")
+        .isVisible()
+        .catch(() => false);
       const handleHidden = await page
         .locator(".conversation-sheet.is-inline .snap-sheet-handle")
         .first()
@@ -1168,7 +1372,10 @@ async function runRows(browserName, launch) {
   }
 
   // Customer rows — separate context; one safeStep per row so row 9 cannot ABORT on later Add timeout
-  const cust = await browser.newContext({ viewport: viewportSize(1440) });
+  const cust = await browser.newContext({
+    viewport: viewportSize(1440),
+    hasTouch: false,
+  });
   await apiLogin(cust, CUSTOMER);
   const cp = await cust.newPage();
 
@@ -1358,8 +1565,14 @@ async function runRows(browserName, launch) {
 
   await cust.close();
 
+  await safeStep("bea-phone-3d-fs", "bea-smoke", browserName, 390, async () => {
+    await runBeaPhone3dFs390(browserName, browser);
+  });
+  await safeStep("bea-m9-phone-390", "bea-smoke", browserName, 390, async () => {
+    await runBeaM9Phone390(browserName, browser);
+  });
   await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
-    await runBeaMandatoryPhone390(browserName, browser);
+    await runBeaH1CareSheet390(browserName, browser);
   });
 
   await browser.close();

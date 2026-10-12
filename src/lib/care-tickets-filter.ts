@@ -71,6 +71,10 @@ function careSearchNeedles(query: string): string[] {
 }
 
 export function ticketMatchesCareSearch(ticket: ServiceTicket, query: string): boolean {
+  const trimmed = query.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return careTicketNumberText(ticket) === trimmed;
+  }
   const needles = careSearchNeedles(query);
   if (needles.length === 0) {
     return true;
