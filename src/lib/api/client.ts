@@ -1,7 +1,8 @@
 import { ApiError } from "./errors.ts";
 import type { ApiErrorBody } from "./types.ts";
 import { SPARES_BACKGROUND_FETCH } from "./background-fetch.ts";
-import { fetchWithDeadline, isAbortError } from "./fetch-deadline.ts";
+import { fetchWithDeadline, isAbortError, CLIENT_FETCH_DEADLINE_MS } from "./fetch-deadline.ts";
+import { SPARES_FETCH_DEADLINE_MS } from "./fetch-deadline-header.ts";
 import {
   isSessionProbePath,
   notifyUnauthorized,
@@ -92,12 +93,23 @@ async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
       headers.set("Content-Type", "application/json");
     }
 
-    response = await fetchWithDeadline(path, {
-      ...init,
-      cache: "no-store",
-      credentials: "include",
-      headers,
-    });
+    const deadlineHeader = headers.get(SPARES_FETCH_DEADLINE_MS);
+    const deadlineMs =
+      deadlineHeader && Number.isFinite(Number(deadlineHeader))
+        ? Number(deadlineHeader)
+        : CLIENT_FETCH_DEADLINE_MS;
+    headers.delete(SPARES_FETCH_DEADLINE_MS);
+
+    response = await fetchWithDeadline(
+      path,
+      {
+        ...init,
+        cache: "no-store",
+        credentials: "include",
+        headers,
+      },
+      deadlineMs,
+    );
   } catch (cause) {
     if (init?.signal?.aborted || isAbortError(cause)) {
       throw cause;
@@ -146,6 +158,11 @@ async function apiFetchOnce<T>(path: string, init?: RequestInit): Promise<T> {
               typeof (body as { lastModifiedByName?: unknown }).lastModifiedByName ===
               "string"
                 ? (body as { lastModifiedByName: string }).lastModifiedByName
+                : undefined,
+            lastModifiedByUserId:
+              typeof (body as { lastModifiedByUserId?: unknown }).lastModifiedByUserId ===
+              "string"
+                ? (body as { lastModifiedByUserId: string }).lastModifiedByUserId
                 : undefined,
           }
         : undefined;

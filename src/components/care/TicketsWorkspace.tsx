@@ -15,6 +15,8 @@ import {
   listAccessibleTickets,
   listMachineTickets,
 } from "@/lib/api/care";
+import { invalidateListEtag } from "@/lib/api/list-fetch";
+import { invalidateWarmRead } from "@/lib/api/warm-read";
 import { errorMessage } from "@/lib/api/errors";
 import {
   hubTicketHref,
@@ -157,6 +159,8 @@ export function TicketsWorkspace({
   }, [loading, router, scope, tickets]);
 
   function refresh() {
+    invalidateListEtag("/api/tickets");
+    invalidateWarmRead("tickets:accessible");
     setReloadKey((key) => key + 1);
   }
 
