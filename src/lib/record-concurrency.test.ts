@@ -5,12 +5,14 @@ import { RecordWriteConflictError } from "./record-conflict.ts";
 import {
   createQuote,
   createTicket,
+  getTicket,
   listMachines,
   mutateQuote,
   resetStoreMemoryForTests,
   seedEmptyMachineCatalogForTests,
   updateTicketStatus,
 } from "./store.ts";
+import { readRecordVersion } from "./record-meta.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 
 const TENANT = DEFAULT_TENANT_ID;
@@ -119,5 +121,44 @@ describe("record version conflicts", () => {
         }),
       (cause: unknown) => cause instanceof RecordWriteConflictError,
     );
+  });
+
+  it("allows ticket status when the client recordVersion is stale but status did not change on server", async () => {
+    seedCatalog();
+    const machines = await listMachines(TENANT);
+    const machineId = machines[0]?.id;
+    assert.ok(machineId);
+    const created = await createTicket(TENANT, {
+      machineId,
+      title: "Stale version",
+      customerId: "user-customer",
+      customerEmail: "user@demo.com",
+      actor: { id: "staff-a", email: "staff-a@demo.com", role: "staff" },
+    });
+    if ("error" in created) {
+      throw new Error("ticket create failed");
+    }
+    const { ticket } = created;
+    const actor = { id: "staff-a", email: "staff-a@demo.com", role: "staff" as const };
+    await updateTicketStatus(ticket.id, TENANT, "in_progress", actor, {
+      actor: { id: actor.id, email: actor.email, name: "Staff A" },
+      lock: {
+        base: ticket,
+        expectedVersion: readRecordVersion(ticket),
+        touchedFields: ["status"],
+      },
+    });
+    const fresh = await getTicket(ticket.id, TENANT);
+    assert.ok(fresh);
+    assert.ok(readRecordVersion(fresh) > readRecordVersion(ticket));
+    const next = await updateTicketStatus(ticket.id, TENANT, "closed", actor, {
+      actor: { id: actor.id, email: actor.email, name: "Staff A" },
+      lock: {
+        base: fresh,
+        expectedVersion: readRecordVersion(ticket),
+        touchedFields: ["status"],
+      },
+    });
+    assert.equal(next?.status, "closed");
   });
 });

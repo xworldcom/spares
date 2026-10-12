@@ -10,8 +10,7 @@ import {
   withRecordConflict,
 } from "@/lib/http";
 import { etagMatches, ticketRecordEtag } from "@/lib/record-etag";
-import { readRecordVersion, recordMetaFromRow } from "@/lib/record-meta";
-import { recordConflictResponse } from "@/lib/record-conflict";
+import { readRecordVersion } from "@/lib/record-meta";
 import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";

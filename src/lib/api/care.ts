@@ -156,6 +156,13 @@ export async function getTicket(idOrNumber: string): Promise<ServiceTicket> {
   });
 }
 
+/** Bypass warm-read cache — use after conflict Refresh or before retrying a write. */
+export async function getTicketFresh(idOrNumber: string): Promise<ServiceTicket> {
+  invalidateWarmRead(`ticket:${idOrNumber}`);
+  const data = await apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`);
+  return data.ticket;
+}
+
 export function warmTicketDetailFetch(idOrNumber: string) {
   return apiFetch<TicketResponse>(`/api/tickets/${idOrNumber}`, {
     headers: { [SPARES_WARM_HEADER]: "1" },

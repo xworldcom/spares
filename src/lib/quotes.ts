@@ -869,8 +869,11 @@ function asTrackingUrl(value: unknown): string | null | undefined {
 }
 
 export function parseShipments(raw: unknown): ParseShipmentsResult {
-  if (!Array.isArray(raw) || raw.length === 0) {
+  if (!Array.isArray(raw)) {
     return { ok: false, error: "Add at least one tracking number" };
+  }
+  if (raw.length === 0) {
+    return { ok: true, shipments: [] };
   }
   if (raw.length > MAX_SHIPMENTS) {
     return { ok: false, error: `At most ${MAX_SHIPMENTS} tracking numbers` };
