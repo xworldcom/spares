@@ -38,6 +38,40 @@ function copyFromSnapshot(srcRoot) {
   }
 }
 
+/** Idempotent heals so Mac proof matches live demo expectations (no prod writes). */
+function healProofCatalog(dir) {
+  const dbPath = join(dir, "db.json");
+  const db = JSON.parse(readFileSync(dbPath, "utf8"));
+  let touched = false;
+  const quotes = Array.isArray(db.quotes) ? [...db.quotes] : [];
+  const q27 = quotes.findIndex((row) => row?.number === 27);
+  if (q27 >= 0) {
+    const row = { ...quotes[q27] };
+    const poStage = ["po_received", "confirmed", "ordered", "shipped", "delivered"].includes(
+      row.status,
+    );
+    if (!poStage && row.status !== "closed" && row.status !== "cancelled") {
+      row.status = "po_received";
+      touched = true;
+    }
+    if (row.staffPricingUnlocked) {
+      row.staffPricingUnlocked = false;
+      touched = true;
+    }
+    if (touched) {
+      quotes[q27] = row;
+      db.quotes = quotes;
+    }
+  }
+  if (db.dataMigrations?.demoRv421Quote27V1 !== 2) {
+    db.dataMigrations = { ...(db.dataMigrations ?? {}), demoRv421Quote27V1: 2 };
+    touched = true;
+  }
+  if (touched) {
+    writeFileSync(dbPath, `${JSON.stringify(db, null, 2)}\n`);
+  }
+}
+
 async function assertDemoTenantReadOnly() {
   const res = await fetch(`${prodBase}/api/auth/login`, {
     method: "POST",
@@ -106,6 +140,8 @@ async function main() {
   if (!existsSync(join(outDir, "db.json"))) {
     throw new Error(`seed incomplete: missing db.json in ${outDir}`);
   }
+
+  healProofCatalog(outDir);
 
   const meta = {
     ok: true,

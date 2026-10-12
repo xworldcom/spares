@@ -736,13 +736,8 @@ export function useSnapSheet({
       setOpen(false);
       return;
     }
-    if (sheet === "full") {
-      setOpen(true);
-      clearCloseTranslate("reply");
-      settleTo("reply");
-      return;
-    }
-    if (sheet === "reply") {
+    if (sheet === "full" || sheet === "reply") {
+      clearCloseTranslate("peek");
       settleToVisualPeek();
       return;
     }

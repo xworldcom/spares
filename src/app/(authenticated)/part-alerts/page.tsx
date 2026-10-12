@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { RouteDocumentTitle } from "@/components/nav/RouteDocumentTitle";
@@ -8,6 +9,10 @@ import { derivedListEtagForScope } from "@/lib/derived-list-cache";
 import { loadLifecycleNotificationsForSession } from "@/lib/lifecycle-notifications-list-server";
 import { lifecycleNotificationsScopeKey } from "@/lib/list-scope";
 import { tenantIdForUser } from "@/lib/tenant";
+
+export const metadata: Metadata = {
+  title: "Part alerts",
+};
 
 export default async function PartAlertsPage() {
   const user = await getCurrentUser();

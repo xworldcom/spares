@@ -97,7 +97,7 @@ export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
 
 export const DEMO_CUSTOMER_HYGIENE_V2 = 2;
 
-export const DEMO_RV421_QUOTE_27_V1 = 1;
+export const DEMO_RV421_QUOTE_27_V1 = 2;
 
 export const DEMO_RV421_HARDWARE_FIXTURE_LIFECYCLE_V1 = 1;
 
@@ -801,49 +801,49 @@ export function applyDemoRv428DemoPolishMigration<
 export function applyDemoRv421Quote27Migration<T extends DemoMigrationDb & { quotes?: QuoteRecord[] }>(
   db: T,
 ): { db: T; changed: boolean } {
+  const quotes = db.quotes ?? [];
+  const index = quotes.findIndex((row) => row.number === 27);
+  let nextQuotes = quotes;
+  let touched = false;
+  if (index >= 0) {
+    const quote = quotes[index];
+    let next: QuoteRecord = { ...quote };
+    if (next.staffPricingUnlocked) {
+      next = { ...next, staffPricingUnlocked: false };
+      touched = true;
+    }
+    const poStage =
+      next.status === "po_received" ||
+      next.status === "confirmed" ||
+      next.status === "ordered" ||
+      next.status === "shipped" ||
+      next.status === "delivered";
+    if (
+      !poStage &&
+      next.status !== "closed" &&
+      next.status !== "cancelled"
+    ) {
+      next = { ...next, status: "po_received" };
+      touched = true;
+    }
+    if (touched) {
+      nextQuotes = quotes.slice();
+      nextQuotes[index] = next;
+    }
+  }
+  const markerSet =
+    db.dataMigrations?.demoRv421Quote27V1 === DEMO_RV421_QUOTE_27_V1;
+  if (!touched && markerSet) {
+    return { db, changed: false };
+  }
   const marked = {
     ...db,
+    quotes: nextQuotes,
     dataMigrations: {
       ...db.dataMigrations,
       demoRv421Quote27V1: DEMO_RV421_QUOTE_27_V1,
     },
   } as T;
-  if (db.dataMigrations?.demoRv421Quote27V1 === DEMO_RV421_QUOTE_27_V1) {
-    return { db, changed: false };
-  }
-  const quotes = db.quotes ?? [];
-  const index = quotes.findIndex((row) => row.number === 27);
-  if (index < 0) {
-    return { db: marked, changed: true };
-  }
-  const quote = quotes[index];
-  let next: QuoteRecord = { ...quote };
-  let touched = false;
-  if (next.staffPricingUnlocked) {
-    next = { ...next, staffPricingUnlocked: false };
-    touched = true;
-  }
-  const poStage =
-    next.status === "po_received" ||
-    next.status === "confirmed" ||
-    next.status === "ordered" ||
-    next.status === "shipped" ||
-    next.status === "delivered";
-  if (
-    !poStage &&
-    next.status !== "closed" &&
-    next.status !== "cancelled"
-  ) {
-    next = { ...next, status: "po_received" };
-    touched = true;
-  }
-  const nextQuotes = quotes.slice();
-  if (touched) {
-    nextQuotes[index] = next;
-  }
-  return {
-    db: { ...marked, quotes: nextQuotes },
-    changed: true,
-  };
+  return { db: marked, changed: true };
 }
 
