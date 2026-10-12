@@ -371,7 +371,7 @@ export function QuoteWorkspace({
       })
     : { text: "Loading…", unreadHint: false };
   const threadSubtitle =
-    threadReady && desktop
+    threadReady && conversationDock
       ? conversationThreadSubtitle(role, {
           customerEmail: quote.customerEmail,
           machineName: quote.machineName,
