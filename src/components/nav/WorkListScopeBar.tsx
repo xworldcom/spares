@@ -16,6 +16,7 @@ import {
   WORK_LIST_MACHINE_QUERY,
   type WorkListKind,
 } from "@/lib/work-list-scope";
+import { mergeHrefWithCareTicketsListQuery } from "@/lib/care-tickets-list-query";
 import type { Role } from "@/types";
 
 export function WorkListScopeBar({
@@ -63,6 +64,13 @@ export function WorkListScopeBar({
   });
   const Heading = headingLevel;
 
+  function withTicketsListQuery(href: string) {
+    if (kind !== "tickets") {
+      return href;
+    }
+    return mergeHrefWithCareTicketsListQuery(href, searchParams);
+  }
+
   useEffect(() => {
     if (routeScoped) {
       return;
@@ -100,7 +108,7 @@ export function WorkListScopeBar({
       if (!nextId) {
         return;
       }
-      router.push(workListMachineHref(kind, nextId));
+      router.push(withTicketsListQuery(workListMachineHref(kind, nextId)));
       return;
     }
     if (kind === "tickets" && hubTicketId) {
@@ -108,14 +116,18 @@ export function WorkListScopeBar({
         !nextId || (hubTicketMachineId && hubTicketMachineId === nextId);
       if (keepDetail) {
         router.push(
-          workListHubHref(kind, role, nextId || undefined, {
-            hubTicketId,
-          }),
+          withTicketsListQuery(
+            workListHubHref(kind, role, nextId || undefined, {
+              hubTicketId,
+            }),
+          ),
         );
         return;
       }
     }
-    router.push(workListHubHref(kind, role, nextId || undefined));
+    router.push(
+      withTicketsListQuery(workListHubHref(kind, role, nextId || undefined)),
+    );
   }
 
   const backHref = routeScoped ? allHref : workListHubHref(kind, role);

@@ -52,6 +52,7 @@ import type { ServiceTicket } from "@/types";
 import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
 import {
   careTicketsListQueryString,
+  careTicketsPathWithListQuery,
   hrefWithCareTicketsListQuery,
 } from "@/lib/care-tickets-list-query";
 
@@ -255,14 +256,15 @@ export function TicketsWorkspace({
           next.set(key, trimmed);
         }
       }
-      const qs = next.toString();
-      const path =
-        ticketId && scope === "hub"
-          ? `${hubTicketHref(ticketId)}${qs ? `?${qs}` : ""}`
-          : `${listHref}${qs ? `?${qs}` : ""}`;
+      const path = careTicketsPathWithListQuery(scope, {
+        listHref,
+        searchParams: next,
+        machineId,
+        ticketId,
+      });
       router.replace(path, { scroll: false });
     },
-    [listHref, router, scope, searchParams, ticketId],
+    [listHref, machineId, router, scope, searchParams, ticketId],
   );
 
   const visibleTickets = useMemo(
