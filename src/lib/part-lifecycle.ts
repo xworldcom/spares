@@ -58,12 +58,7 @@ export function defaultLifecycleFields(): PartLifecycleFields {
   return { status: "unknown" };
 }
 
-export function effectiveLifecycle(
-  record: StoredPartLifecycle | undefined,
-): PartLifecycleFields {
-  if (!record) {
-    return defaultLifecycleFields();
-  }
+function fieldsFromStoredRecord(record: StoredPartLifecycle): PartLifecycleFields {
   return {
     status: record.status,
     ...(record.discontinuationDate ? { discontinuationDate: record.discontinuationDate } : {}),
@@ -73,6 +68,52 @@ export function effectiveLifecycle(
       : {}),
     ...(record.sourceNotes ? { sourceNotes: record.sourceNotes } : {}),
   };
+}
+
+/**
+ * Demo catalog rows can persist `active` while carrying obsolete seed metadata (#421).
+ * Resolution prefers the stronger demo seed status when markers match — not heal-on-read only.
+ */
+function resolveDemoLifecycleFields(
+  partNumber: string,
+  fields: PartLifecycleFields,
+): PartLifecycleFields {
+  const seed = demoLifecycleSeedByPartNumber().get(normalizePartNumber(partNumber));
+  if (!seed || seed.status === "active") {
+    return fields;
+  }
+  const weakStatus = fields.status === "active" || fields.status === "unknown";
+  if (!weakStatus || LIFECYCLE_STATUS_RANK[seed.status] <= LIFECYCLE_STATUS_RANK[fields.status]) {
+    return fields;
+  }
+  const seedMarkersMatch =
+    (!seed.discontinuationDate && !fields.discontinuationDate) ||
+    (seed.discontinuationDate &&
+      fields.discontinuationDate === seed.discontinuationDate) ||
+    (seed.discontinuationDate &&
+      !fields.discontinuationDate &&
+      fields.successorPartNumber === seed.successorPartNumber);
+  if (!seedMarkersMatch) {
+    return fields;
+  }
+  return {
+    ...fields,
+    status: seed.status,
+    ...(seed.discontinuationDate ? { discontinuationDate: seed.discontinuationDate } : {}),
+    ...(seed.lastTimeBuyDate ? { lastTimeBuyDate: seed.lastTimeBuyDate } : {}),
+    ...(seed.successorPartNumber ? { successorPartNumber: seed.successorPartNumber } : {}),
+    ...(seed.sourceNotes ? { sourceNotes: seed.sourceNotes } : {}),
+  };
+}
+
+export function effectiveLifecycle(
+  record: StoredPartLifecycle | undefined,
+): PartLifecycleFields {
+  if (!record) {
+    return defaultLifecycleFields();
+  }
+  const base = fieldsFromStoredRecord(record);
+  return resolveDemoLifecycleFields(record.partNumber, base);
 }
 
 export function publicLifecycle(
@@ -404,8 +445,9 @@ export function reconcileCorruptedDemoLifecycleRows(
     const corrupted =
       (row.status === "active" || row.status === "unknown") &&
       seed.status !== "active" &&
+      LIFECYCLE_STATUS_RANK[seed.status] > LIFECYCLE_STATUS_RANK[row.status] &&
       Boolean(seed.discontinuationDate) &&
-      !row.discontinuationDate;
+      (row.discontinuationDate === seed.discontinuationDate || !row.discontinuationDate);
     if (!corrupted) {
       return row;
     }

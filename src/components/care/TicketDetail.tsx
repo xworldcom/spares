@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useCareAlerts } from "@/components/care/CareAlerts";
 import { TicketStatusStrip } from "@/components/care/TicketStatusStrip";
 import { ConversationReadWatermark } from "@/components/chat/ConversationReadWatermark";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { QuoteActivityFeed } from "@/components/quote/QuoteActivityFeed";
 import { conversationPeekLine } from "@/lib/ui/conversation-peek";
@@ -351,6 +352,7 @@ export function TicketDetail({
 
   return (
     <div className="care-stack" data-care-ticket-detail="">
+      <DocumentTitle title={`Ticket ${ticket.number}`} />
       {!embedded ? (
         <Link href={ticketsBack} className="care-back">
           <span aria-hidden="true">‹</span> Tickets

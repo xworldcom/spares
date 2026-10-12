@@ -75,12 +75,16 @@ export type DataMigrations = {
   demoQuote26HealV1?: number;
   /** Tickets #27–34 hidden from customers; Q37 note scrub. */
   demoCustomerHygieneV1?: number;
+  /** Tickets #1–26 hidden from customers (gate/smoke); extends v1. */
+  demoCustomerHygieneV2?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
 
 /** Hide gate/smoke tickets from customer UI; scrub junk demo quote copy. */
 export const DEMO_CUSTOMER_HYGIENE_V1 = 1;
+
+export const DEMO_CUSTOMER_HYGIENE_V2 = 2;
 
 type DemoMigrationUser = {
   id: string;
@@ -547,27 +551,21 @@ export function applyDemoQuote26HealMigration<T extends DemoMigrationDb & { quot
   };
 }
 
-const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS = new Set(
+const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V1 = new Set(
   Array.from({ length: 8 }, (_, index) => 27 + index),
 );
 
-/** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */
-export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
-  db: T,
-): { db: T; changed: boolean } {
-  const marked = {
-    ...db,
-    dataMigrations: {
-      ...db.dataMigrations,
-      demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
-    },
-  } as T;
-  if (db.dataMigrations?.demoCustomerHygieneV1 === DEMO_CUSTOMER_HYGIENE_V1) {
-    return { db, changed: false };
-  }
-  let changed = true;
-  const tickets = (db.tickets ?? []).map((ticket) => {
-    if (!DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS.has(ticket.number)) {
+const DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2 = new Set(
+  Array.from({ length: 26 }, (_, index) => index + 1),
+);
+
+function hideDemoTicketsForCustomers<T extends DemoMigrationTicket>(
+  tickets: T[],
+  hiddenNumbers: ReadonlySet<number>,
+): { tickets: T[]; changed: boolean } {
+  let changed = false;
+  const next = tickets.map((ticket) => {
+    if (!hiddenNumbers.has(ticket.number)) {
       return ticket;
     }
     if (ticket.hiddenFromCustomer) {
@@ -576,21 +574,58 @@ export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
     changed = true;
     return { ...ticket, hiddenFromCustomer: true };
   });
+  return { tickets: next, changed };
+}
+
+/** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */
+export function applyDemoCustomerHygieneMigration<T extends DemoMigrationDb>(
+  db: T,
+): { db: T; changed: boolean } {
+  const needsV1 = db.dataMigrations?.demoCustomerHygieneV1 !== DEMO_CUSTOMER_HYGIENE_V1;
+  const needsV2 = db.dataMigrations?.demoCustomerHygieneV2 !== DEMO_CUSTOMER_HYGIENE_V2;
+  if (!needsV1 && !needsV2) {
+    return { db, changed: false };
+  }
+  let changed = false;
+  let tickets = db.tickets ?? [];
+  if (needsV1) {
+    const v1 = hideDemoTicketsForCustomers(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V1);
+    tickets = v1.tickets;
+    changed = changed || v1.changed;
+  }
+  if (needsV2) {
+    const v2 = hideDemoTicketsForCustomers(tickets, DEMO_CUSTOMER_HIDDEN_TICKET_NUMBERS_V2);
+    tickets = v2.tickets;
+    changed = changed || v2.changed;
+  }
+  const marked = {
+    ...db,
+    dataMigrations: {
+      ...db.dataMigrations,
+      demoCustomerHygieneV1: DEMO_CUSTOMER_HYGIENE_V1,
+      demoCustomerHygieneV2: DEMO_CUSTOMER_HYGIENE_V2,
+    },
+  } as T;
   const quotes = (db.quotes ?? []).map((quote) => {
     if (quote.number !== 37) {
       return quote;
     }
+    let next = quote;
     const note = quote.note?.trim().toLowerCase() ?? "";
-    if (!note.includes("testing")) {
-      return quote;
+    if (note.includes("testing")) {
+      changed = true;
+      const { note: _drop, ...rest } = next;
+      next = rest;
     }
-    changed = true;
-    const { note: _drop, ...rest } = quote;
-    return rest;
+    if (!next.hiddenFromCustomer) {
+      changed = true;
+      next = { ...next, hiddenFromCustomer: true };
+    }
+    return next;
   });
   return {
     db: { ...marked, tickets, quotes },
-    changed,
+    changed: changed || needsV1 || needsV2,
   };
 }
 

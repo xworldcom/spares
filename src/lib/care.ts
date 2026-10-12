@@ -348,6 +348,8 @@ export function toPublicTicketListRow(
     viewerReadAt: ticket.lastReadAt[user.id],
     assistantPaused: ticket.assistantPaused,
     assistantEscalatedAt: ticket.assistantEscalatedAt,
+    ...(ticket.lastModifiedAt ? { lastModifiedAt: ticket.lastModifiedAt } : {}),
+    ...(ticket.lastModifiedByName ? { lastModifiedByName: ticket.lastModifiedByName } : {}),
   };
   if (options?.assistantAvailable !== undefined && user.role === "staff") {
     base.assistantAvailable = options.assistantAvailable;

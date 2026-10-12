@@ -825,9 +825,12 @@ export function parseActivityText(
 }
 
 export function canViewQuote(
-  quote: Pick<QuoteRecord, "customerId">,
+  quote: Pick<QuoteRecord, "customerId" | "hiddenFromCustomer">,
   user: Pick<PublicUser, "id" | "role">,
 ) {
+  if (user.role !== "staff" && quote.hiddenFromCustomer) {
+    return false;
+  }
   return user.role === "staff" || quote.customerId === user.id;
 }
 

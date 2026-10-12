@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { MachineContextNav } from "@/components/nav/MachineContextNav";
 import { ConversationSheet } from "@/components/chat/ConversationSheet";
 import { useConversationDockStage } from "@/components/machine/useDesktopStage";
@@ -515,6 +516,7 @@ export function QuoteWorkspace({
       className="quote-workspace mx-auto w-full max-w-5xl"
       data-quote-layout={conversationDock ? "split" : "stack"}
     >
+      {quote ? <DocumentTitle title={quoteTitle(quote)} /> : null}
       <div className="quote-workspace-main space-y-5">
       <div className="quote-timeline-handoff-dest space-y-5">
         <div>

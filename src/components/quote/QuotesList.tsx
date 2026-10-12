@@ -80,14 +80,15 @@ export function QuotesList({
       setSearchDraft(searchQuery);
     }
   }, [searchQuery]);
-  const debouncedDraft = useDebouncedValue(searchDraft.trim(), 250);
+  const debouncedDraft = useDebouncedValue(searchDraft.trim(), 200);
   useEffect(() => {
     if (debouncedDraft === searchQuery.trim()) {
       return;
     }
     replaceListQuery({ [QUOTES_Q_QUERY]: debouncedDraft || undefined });
   }, [debouncedDraft, replaceListQuery, searchQuery]);
-  const debouncedSearch = debouncedDraft;
+  const listSearchQuery =
+    searchDraft.trim() !== searchQuery.trim() ? searchDraft.trim() : debouncedDraft;
   const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
@@ -159,8 +160,8 @@ export function QuotesList({
     } else if (statusFilter !== "all") {
       rows = rows.filter((quote) => quote.status === statusFilter);
     }
-    if (debouncedSearch) {
-      const needle = debouncedSearch.toLowerCase();
+    if (listSearchQuery) {
+      const needle = listSearchQuery.toLowerCase();
       rows = rows.filter((quote) => {
         const hay = [
           String(quote.number),
@@ -179,7 +180,7 @@ export function QuotesList({
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [quotes, machineId, statusFilter, debouncedSearch, role]);
+  }, [quotes, machineId, statusFilter, listSearchQuery, role]);
 
   const statusFilters: Array<{
     value: QuotesStatusFilter;
@@ -224,7 +225,7 @@ export function QuotesList({
   }
 
   if (visible.length === 0) {
-    const searchNoMatch = Boolean(debouncedSearch) && quotes.length > 0;
+    const searchNoMatch = Boolean(listSearchQuery) && quotes.length > 0;
     const filteredEmpty =
       !machineId && quotes.length > 0 && (statusFilter !== "all" || searchNoMatch);
     return (
@@ -234,13 +235,20 @@ export function QuotesList({
             id="staff-quotes-search"
             label="Search quotes"
             value={searchDraft}
-            onChange={(value) => setSearchDraft(value)}
+            onChange={(value) => {
+              setSearchDraft(value);
+              if (!value.trim()) {
+                replaceListQuery({ [QUOTES_Q_QUERY]: undefined });
+              }
+            }}
             onFocus={() => {
               searchFocused.current = true;
             }}
             onBlur={() => {
               searchFocused.current = false;
-              setSearchDraft(searchQuery);
+              if (searchDraft.trim() === searchQuery.trim()) {
+                setSearchDraft(searchQuery);
+              }
             }}
             placeholder="Quote #, machine, customer…"
           />
@@ -320,13 +328,20 @@ export function QuotesList({
           id="staff-quotes-search"
           label="Search quotes"
           value={searchDraft}
-          onChange={(value) => setSearchDraft(value)}
+          onChange={(value) => {
+            setSearchDraft(value);
+            if (!value.trim()) {
+              replaceListQuery({ [QUOTES_Q_QUERY]: undefined });
+            }
+          }}
           onFocus={() => {
             searchFocused.current = true;
           }}
           onBlur={() => {
             searchFocused.current = false;
-            setSearchDraft(searchQuery);
+            if (searchDraft.trim() === searchQuery.trim()) {
+              setSearchDraft(searchQuery);
+            }
           }}
           placeholder="Quote #, machine, customer…"
         />

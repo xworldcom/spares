@@ -49,6 +49,7 @@ import {
   readPersistedHiddenParts,
   writePersistedHiddenParts,
 } from "@/lib/ui/hidden-parts-persist";
+import { DocumentTitle } from "@/components/nav/DocumentTitle";
 import { dismissPartSheetAfterQuoteAdd } from "@/lib/ui/quote-tray-open-policy";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 import {
@@ -994,6 +995,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   return (
     <div className="machine-stage">
+      <DocumentTitle title={machine.name} />
       <h1 className="sr-only">{machine.name}</h1>
       {isCustomer ? <QuoteAddToast message={addToast} /> : null}
       {isCustomer && undoRemove ? (

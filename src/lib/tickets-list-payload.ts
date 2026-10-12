@@ -1,6 +1,6 @@
 import { canAccessMachine } from "@/lib/access";
 import { staffAssistantEnabled } from "@/lib/assistant/public";
-import { toPublicTicketListRow } from "@/lib/care";
+import { ticketIsOpen, toPublicTicketListRow } from "@/lib/care";
 import type { TicketsListResponse } from "@/lib/api/types";
 import { readTenantWorkListSnapshot } from "@/lib/store";
 import type { PublicUser } from "@/types";
@@ -32,6 +32,8 @@ export async function buildAccessibleTicketsListPayload(
 
   return {
     tickets: filtered,
-    unreadCount: filtered.filter((ticket) => ticket.unread).length,
+    unreadCount: filtered.filter(
+      (ticket) => ticket.unread && ticketIsOpen(ticket.status),
+    ).length,
   };
 }

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { RouteDocumentTitle } from "@/components/nav/RouteDocumentTitle";
 import { PartLifecyclePanel } from "@/components/staff/PartLifecyclePanel";
 import { LoadingState } from "@/components/states/LoadingState";
 import { getCurrentUser } from "@/lib/auth";
@@ -21,6 +22,7 @@ export default async function StaffPartLifecyclePage() {
 
   return (
     <RequireAuth role="staff">
+      <RouteDocumentTitle title="Parts" />
       <div className="space-y-4">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight">Part lifecycle</h1>

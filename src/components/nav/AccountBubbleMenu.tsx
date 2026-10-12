@@ -115,7 +115,9 @@ export function AccountBubbleMenu({
             >
               <div className="px-3 py-2.5">
                 <p className="truncate text-sm font-semibold tracking-tight">{displayName}</p>
-                <p className="spares-muted mt-0.5 truncate text-xs">{user.email}</p>
+                {displayName.trim().toLowerCase() !== user.email.trim().toLowerCase() ? (
+                  <p className="spares-muted mt-0.5 truncate text-xs">{user.email}</p>
+                ) : null}
                 <p className="spares-muted mt-1 text-[11px] font-medium uppercase tracking-[0.14em]">
                   {roleLabel(user.role)}
                 </p>
