@@ -18,8 +18,8 @@ import {
   updateTicketStatus,
 } from "@/lib/api/care";
 import { invalidateWarmRead } from "@/lib/api/warm-read";
-import { errorMessage } from "@/lib/api/errors";
-import { isApiError } from "@/lib/api/errors";
+import { errorMessage, isApiError, NETWORK_TIMEOUT_MESSAGE } from "@/lib/api/errors";
+import { isAbortError } from "@/lib/api/fetch-deadline";
 import {
   isRecordConflictError,
   recordConflictMetaFromError,
@@ -203,6 +203,22 @@ export function TicketDetail({
     setFreshnessError,
   );
 
+  function ticketStatusNetworkError(cause: unknown): string | null {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return "You appear to be offline. Check your connection and try again.";
+    }
+    if (isAbortError(cause)) {
+      return NETWORK_TIMEOUT_MESSAGE;
+    }
+    if (isApiError(cause) && cause.status === 0) {
+      return cause.message;
+    }
+    if (cause instanceof TypeError && /fetch|network|load failed/i.test(cause.message)) {
+      return "Could not reach OEE360. Check your network and try again.";
+    }
+    return null;
+  }
+
   async function applyStatusPatch(
     status: TicketStatus,
     recordVersion: number,
@@ -259,17 +275,10 @@ export function TicketDetail({
           }
           return;
         }
-        if (
-          typeof navigator !== "undefined" &&
-          navigator.onLine === false
-        ) {
-          setError(
-            "You appear to be offline. Check your connection and try again.",
-          );
-          return;
-        }
-        if (isApiError(cause) && cause.status === 0) {
-          setError(cause.message);
+        const networkError = ticketStatusNetworkError(cause);
+        if (networkError) {
+          setFreshnessError(null);
+          setError(networkError);
           return;
         }
         if (isTimeoutLikeError(cause)) {

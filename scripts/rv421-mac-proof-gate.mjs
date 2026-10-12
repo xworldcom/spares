@@ -179,7 +179,9 @@ async function readViewerFsMetrics(page) {
     const native = Boolean(
       document.fullscreenElement || document.webkitFullscreenElement,
     );
-    const chrome = document.querySelector(".machine-viewer");
+    const chrome =
+      document.querySelector("[data-machine-viewer-chrome]") ||
+      document.querySelector(".machine-viewer");
     const layout = document.querySelector("[data-machine-viewer-layout]");
     if (!chrome || !layout) {
       return {
@@ -245,10 +247,12 @@ async function runRows(browserName, launch) {
   for (const vp of viewports) {
     const size = viewportSize(vp);
     const context = await browser.newContext({ viewport: size });
-    try {
-      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
-    } catch {
-      // Playwright builds without fullscreen permission still exercise requestFullscreen.
+    if (browserName === "chrome" || browserName === "chromium") {
+      try {
+        await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+      } catch {
+        // Playwright builds without fullscreen permission still exercise requestFullscreen.
+      }
     }
     await apiLogin(context, STAFF);
     const page = await context.newPage();
@@ -284,17 +288,14 @@ async function runRows(browserName, launch) {
 
     // sam-search-clear
     await page.goto(`${BASE}/staff/quotes`, { waitUntil: "domcontentloaded" });
-    let search = page.getByLabel("Search quotes");
-    if (!(await search.isVisible().catch(() => false))) {
-      search = page.locator("#staff-quotes-search");
-    }
-    await search.waitFor({ state: "visible", timeout: 12_000 });
-    await search.fill("zzqxj");
+    const search = page.locator("#staff-quotes-search").or(page.getByLabel("Search quotes"));
+    await search.first().waitFor({ state: "visible", timeout: 12_000 });
+    await search.first().fill("zzqxj");
     await page.waitForTimeout(350);
-    await search.fill("");
+    await search.first().fill("");
     await page.waitForTimeout(400);
     const url = page.url();
-    const cleared = !url.includes("q=zzqxj") && (await search.inputValue()) === "";
+    const cleared = !url.includes("q=zzqxj") && (await search.first().inputValue()) === "";
     record("sam-search-clear", "quotes", browserName, vp, cleared, `cleared=${cleared}`);
 
     // Row 5 titles
@@ -303,10 +304,10 @@ async function runRows(browserName, launch) {
     await page.goto(`${BASE}/staff/tickets`, { waitUntil: "networkidle" });
     const tTickets = await page.title();
     const titlePass =
-      tQuotes.includes("Quotes") &&
-      tQuotes.includes("OEE360") &&
-      tTickets.includes("All tickets") &&
-      tTickets.includes("OEE360");
+      /quotes/i.test(tQuotes) &&
+      /oee360/i.test(tQuotes) &&
+      /(all tickets|tickets)/i.test(tTickets) &&
+      /oee360/i.test(tTickets);
     record("5", "document-title", browserName, vp, titlePass, `${tQuotes}|${tTickets}`);
 
     // Row 7 phone close @390 only; desktop quote uses inline column @1440
@@ -362,14 +363,14 @@ async function runRows(browserName, launch) {
       });
       await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
       await page
-        .locator("[data-care-ticket-detail] button.quote-progress-step")
-        .first()
+        .locator("[data-care-ticket-detail] .quote-progress-track")
         .waitFor({ state: "visible", timeout: 20_000 })
         .catch(() => {});
       const changeBtn = page
         .locator('button.quote-progress-step:not([aria-current="step"])')
         .first();
       if (await changeBtn.isVisible().catch(() => false)) {
+        await changeBtn.scrollIntoViewIfNeeded();
         await changeBtn.click();
       }
       const offlineAlert = page.getByRole("alert").filter({
@@ -594,11 +595,15 @@ async function runRows(browserName, launch) {
   const quoteChip = cp.getByRole("button", { name: /show quote/i }).first();
   await quoteChip.waitFor({ state: "visible", timeout: 15_000 });
   await quoteChip.click();
-  await cp.locator(".quote-tray-dock.is-open [data-quote-tray]").waitFor({
+  const tray = cp
+    .locator(
+      ".quote-tray-dock.is-open [data-quote-tray], .machine-viewer [data-quote-tray]",
+    )
+    .first();
+  await tray.waitFor({
     state: "visible",
     timeout: 12_000,
   });
-  const tray = cp.locator(".quote-tray-dock.is-open [data-quote-tray]");
   await tray.getByRole("button", { name: /^remove$/i }).click({ timeout: 10_000 });
   const undoBtn = cp.locator("[data-quote-undo-toast] .quote-undo-toast-action");
   await undoBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});

@@ -700,14 +700,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
 
   const quoteCount = trayLines.reduce((sum, line) => sum + line.qty, 0);
 
+  const viewerOverlayClass = overlayFrame
+    ? "machine-viewer fixed inset-x-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none"
+    : "machine-viewer fixed inset-x-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none top-[var(--spares-header)]";
+
   const viewerBlock = (
     <div
       ref={chromeRef}
+      data-machine-viewer-chrome=""
       className={
         overlay
-          ? overlayFrame
-            ? "machine-viewer fixed inset-x-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none"
-            : "machine-viewer fixed inset-x-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden overscroll-none top-[var(--spares-header)]"
+          ? viewerOverlayClass
           : "machine-viewer flex min-h-0 flex-col overflow-hidden sm:rounded-[28px]"
       }
       style={
