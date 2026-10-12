@@ -111,10 +111,17 @@ export function QuoteActivityFeed({
   const seenIdsRef = useRef(new Set<string>());
   const stickToBottomRef = useRef(true);
   const bootstrappedRef = useRef(false);
+  const [threadHydrated, setThreadHydrated] = useState(false);
   const unreadJumpedRef = useRef(false);
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
   const hasPendingSend = outgoing.length > 0 || uploading;
   const self = { email: selfEmail, role };
+
+  useEffect(() => {
+    if (!busy) {
+      setThreadHydrated(true);
+    }
+  }, [busy]);
 
   useEffect(() => {
     if (!hasPendingSend) {
@@ -373,8 +380,8 @@ export function QuoteActivityFeed({
       )}
       <ol ref={scrollerRef} className={threadClass}>
         {threadActivities.length === 0 ? (
-          <li className="imsg-empty" aria-busy={busy}>
-            {busy ? "Loading messages…" : "No messages yet."}
+          <li className="imsg-empty" aria-busy={busy || !threadHydrated}>
+            {busy || !threadHydrated ? "Loading messages…" : "No messages yet."}
           </li>
         ) : (
           threadActivities.map((activity, index) => {
@@ -586,16 +593,17 @@ export function QuoteActivityFeed({
               event.target.value = "";
             }}
           />
-          <label
-            htmlFor={`${threadKind}-${threadId}-attach`}
+          <button
+            type="button"
             className="imsg-attach"
             aria-label="Attach file"
-            data-disabled={busy || uploading ? "true" : undefined}
+            disabled={busy || uploading}
+            onClick={() => fileInputRef.current?.click()}
           >
             <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path d="M8.5 14.5 15 8a3.5 3.5 0 1 1 5 5l-7.5 7.5a5 5 0 1 1-7-7l8-8" />
             </svg>
-          </label>
+          </button>
           <label className="imsg-composer-field">
             <span className="sr-only">Message</span>
             <textarea

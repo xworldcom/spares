@@ -223,6 +223,7 @@ export function TenantDirectoryPersonDetail({ userId }: { userId: string }) {
             <input
               value={profile.name}
               disabled={saving}
+              placeholder={displayPersonName({ name: "", email: profile.email })}
               onChange={(event) => setProfile((p) => ({ ...p, name: event.target.value }))}
               className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-4 text-[16px] outline-none"
             />

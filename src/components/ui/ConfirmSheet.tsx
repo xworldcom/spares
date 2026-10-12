@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+
 export function ConfirmSheet({
   open,
   title,
@@ -21,11 +24,25 @@ export function ConfirmSheet({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+      }
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open, onCancel]);
+
   if (!open) {
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="confirm-sheet-backdrop" onClick={onCancel}>
       <div
         role="alertdialog"
@@ -62,6 +79,7 @@ export function ConfirmSheet({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

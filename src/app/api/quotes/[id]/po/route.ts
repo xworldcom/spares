@@ -58,7 +58,7 @@ async function handlePOST(
   if (access.user.role !== "customer") {
     return error("Only the customer can upload a purchase order", 403);
   }
-  if (!canUploadPo(access.quote.status)) {
+  if (!canUploadPo(access.quote.status, "customer")) {
     return error("PO upload is available after the quote is issued", 403);
   }
 

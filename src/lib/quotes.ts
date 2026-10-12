@@ -581,8 +581,14 @@ export function isTrackingCarrier(value: unknown): value is TrackingCarrier {
   );
 }
 
-export function canUploadPo(status: QuoteStatus) {
-  return PO_ELIGIBLE.has(status);
+export function canUploadPo(status: QuoteStatus, role: Role = "staff") {
+  if (!PO_ELIGIBLE.has(status)) {
+    return false;
+  }
+  if (role === "customer" && quoteHasReached(status, "po_received")) {
+    return false;
+  }
+  return true;
 }
 
 /** Invoice UI and invoiceNumber belong after PO is received — not while awaiting a PO. */
@@ -611,29 +617,52 @@ function quoteHasTrackingData(quote: Pick<Quote, "shipments">): boolean {
 }
 
 /**
- * Stage → PO / invoice / tracking sections (#362). Finished quote opens PO; after PO opens
- * invoice + tracking. Existing field values stay visible if status moves backward.
+ * Stage → PO / invoice / tracking sections (#362). Visibility follows the effective
+ * pipeline step (pending status on staff UI included) — stale DB fields do not reopen panels.
  */
 export function quoteFulfillmentVisibility(
   quote: Pick<Quote, "status" | "poNumber" | "hasPoFile" | "invoiceNumber" | "shipments">,
   role: Role = "staff",
+  effectiveStatus?: QuoteStatus,
 ): QuoteFulfillmentVisibility {
+  const status = effectiveStatus ?? quote.status;
   const hasPo = quoteHasPoData(quote);
-  const hasInvoice = quoteHasInvoiceData(quote);
-  const hasTracking = quoteHasTrackingData(quote);
-  const stageOnly = role === "customer";
+
+  const staffTrackingPrep =
+    role === "staff" &&
+    quoteHasReached(status, "po_received") &&
+    !quoteHasReached(status, "shipped");
 
   return {
-    po: stageOnly
-      ? quoteHasReached(quote.status, "quoted")
-      : quoteHasReached(quote.status, "quoted") || hasPo,
-    invoice: stageOnly
-      ? invoiceVisible(quote.status)
-      : invoiceVisible(quote.status) || hasInvoice,
-    tracking: stageOnly
-      ? quoteHasReached(quote.status, "po_received")
-      : quoteHasReached(quote.status, "po_received") || hasTracking,
+    po: quoteHasReached(status, "quoted") || (role === "staff" && hasPo),
+    invoice: invoiceVisible(status),
+    tracking:
+      staffTrackingPrep ||
+      (role === "staff" && canEditTracking(status)) ||
+      (quoteHasReached(status, "shipped") && quoteHasTrackingData(quote)),
   };
+}
+
+/** Fields to clear when staff moves a quote backward on the pipeline. */
+export function quoteRegressionCleanupPatch(
+  from: QuoteStatus,
+  to: QuoteStatus,
+): { invoiceNumber?: null; shipments?: QuoteShipment[] } {
+  if (quoteStatusRegressionSteps(from, to) <= 0) {
+    return {};
+  }
+  const patch: { invoiceNumber?: null; shipments?: QuoteShipment[] } = {};
+  if (!invoiceVisible(to)) {
+    patch.invoiceNumber = null;
+  }
+  if (!quoteHasReached(to, "shipped")) {
+    patch.shipments = [];
+  }
+  return patch;
+}
+
+export function quoteAllowsPoReceived(items: QuoteItem[]): boolean {
+  return quotePricingComplete(items);
 }
 
 export function quotePoNextStep(status: QuoteStatus, role: Role): string | null {
@@ -644,6 +673,11 @@ export function quotePoNextStep(status: QuoteStatus, role: Role): string | null 
     return "PO number and PDF upload open after this quote is issued.";
   }
   if (!invoiceVisible(status)) {
+    if (status === "po_received" || status === "confirmed" || status === "ordered") {
+      return role === "staff"
+        ? "Record the customer PO number or PDF below."
+        : "Add your PO number and PDF to proceed.";
+    }
     return role === "staff"
       ? "Waiting on the PO. The invoice opens after it arrives."
       : "Add your PO number and PDF to proceed.";

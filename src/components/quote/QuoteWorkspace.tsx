@@ -43,9 +43,11 @@ import {
   quoteIsStaffReadOnly,
   quoteItemsEqual,
   quotePricingComplete,
+  quoteRegressionCleanupPatch,
   quoteStaffPricingLocked,
   quoteStatusRegressionSteps,
   quoteTitle,
+  invoiceVisible,
 } from "@/lib/quotes";
 import { quoteSeedForRef } from "@/lib/nav/quote-list-seed";
 import {
@@ -56,7 +58,14 @@ import { UNSAVED_QUOTE_LEAVE_PROMPT } from "@/lib/ui/pending-send-guard";
 import { useRequestGeneration } from "@/lib/ui/request-generation";
 import { useLeavePageGuard } from "@/lib/ui/use-leave-page-guard";
 import { releaseWarmReadIfPending } from "@/lib/api/warm-read";
-import type { Quote, QuoteItem, QuoteShipment, QuoteStatus, Role, TicketCustomerReadReceipt } from "@/types";
+import type {
+  Quote,
+  QuoteItem,
+  QuoteShipment,
+  QuoteStatus,
+  Role,
+  TicketCustomerReadReceipt,
+} from "@/types";
 
 function sameReadReceipts(
   a: TicketCustomerReadReceipt[] | undefined,
@@ -367,10 +376,14 @@ export function QuoteWorkspace({
       : null;
 
   const listHref = role === "staff" ? "/staff/quotes" : "/quotes";
-  const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
-  const fulfillment = quoteFulfillmentVisibility(quote, role);
-  const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
   const displayStatus = pendingStatus ?? quote.status;
+  const showPrices = role === "staff" || pricesVisibleToCustomer(quote.status);
+  const fulfillment = quoteFulfillmentVisibility(quote, role, displayStatus);
+  const readyShipments = shipments.filter((row) => row.trackingNumber.trim());
+  const staleInvoice =
+    role === "staff" &&
+    Boolean(quote.invoiceNumber?.trim()) &&
+    !invoiceVisible(displayStatus);
   const statusDirty = pendingStatus !== null && pendingStatus !== quote.status;
   const itemsDirty = itemsTouched && !quoteItemsEqual(items, quote.items);
   const staffReadOnly =
@@ -392,8 +405,41 @@ export function QuoteWorkspace({
           : "Apply status"
         : "Save pricing";
 
+  async function applyStatusRegression(target: QuoteStatus) {
+    if (!quote) {
+      return;
+    }
+    const cleanup = quoteRegressionCleanupPatch(quote.status, target);
+    const includeItems =
+      itemsDirty || target === "quoted" || target === "pricing";
+    const patch = {
+      status: target,
+      ...cleanup,
+      ...(includeItems ? { items } : {}),
+    };
+    if (target === "po_received" && !quotePricingComplete(items)) {
+      setError("Add a sell price on every line before marking PO received.");
+      return;
+    }
+    await run(
+      () => updateQuote(String(quote.number), withQuoteVersion(patch)),
+      "Status updated.",
+    );
+    setPendingStatus(null);
+    if (cleanup.shipments) {
+      setShipments(draftShipmentsFrom({ ...quote, shipments: [] }));
+    }
+    if (cleanup.invoiceNumber === null) {
+      setInvoiceDraft("");
+    }
+  }
+
   function applyStaffAction() {
     if (!quote) {
+      return;
+    }
+    if (statusDirty && pendingStatus === "po_received" && !quotePricingComplete(items)) {
+      setError("Add a sell price on every line before marking PO received.");
       return;
     }
     if (statusDirty && pendingStatus === "shipped" && readyShipments.length === 0) {
@@ -411,15 +457,21 @@ export function QuoteWorkspace({
     if (statusDirty && pendingStatus) {
       const includeItems =
         itemsDirty || pendingStatus === "quoted" || pendingStatus === "pricing";
+      const cleanup =
+        quoteStatusRegressionSteps(quote.status, pendingStatus) > 0
+          ? quoteRegressionCleanupPatch(quote.status, pendingStatus)
+          : {};
       const patch =
         pendingStatus === "shipped"
           ? {
               status: pendingStatus,
               shipments: readyShipments,
+              ...cleanup,
               ...(includeItems ? { items } : {}),
             }
           : {
               status: pendingStatus,
+              ...cleanup,
               ...(includeItems ? { items } : {}),
             };
       void run(
@@ -534,7 +586,7 @@ export function QuoteWorkspace({
               }
               const target = statusRegressConfirm.target;
               setStatusRegressConfirm(null);
-              setPendingStatus(target === quote.status ? null : target);
+              void applyStatusRegression(target);
             }}
           />
         ) : null}
@@ -630,14 +682,16 @@ export function QuoteWorkspace({
           {error}
         </p>
       ) : null}
-      {notice && !(role === "staff" && staffApplyDirty) ? (
-        <p
-          className="spares-surface rounded-2xl px-4 py-3 text-sm font-medium text-[var(--spares-ink)]"
-          role="status"
-        >
-          {notice}
-        </p>
-      ) : null}
+      <div className="min-h-[3.25rem]" aria-live="polite">
+        {notice && !(role === "staff" && staffApplyDirty) ? (
+          <p
+            className="spares-surface rounded-2xl px-4 py-3 text-sm font-medium text-[var(--spares-ink)]"
+            role="status"
+          >
+            {notice}
+          </p>
+        ) : null}
+      </div>
 
       <section>
         <div className="mb-3 flex items-end justify-between gap-3">
@@ -672,6 +726,29 @@ export function QuoteWorkspace({
             await run(() => uploadQuotePo(String(quote.number), input), "PO uploaded.");
           }}
         />
+      ) : null}
+
+      {staleInvoice ? (
+        <section className="spares-surface rounded-[24px] px-5 py-4">
+          <h2 className="text-[19px] font-semibold tracking-tight">Invoice on file</h2>
+          <p className="spares-muted mt-1 text-sm">
+            {quote.invoiceNumber} is stored but hidden at {QUOTE_STATUS_LABELS[displayStatus]}.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            className="btn-soft mt-3 inline-flex h-11 items-center rounded-full px-4 text-sm font-medium"
+            onClick={() => {
+              void run(
+                () =>
+                  updateQuote(String(quote.number), withQuoteVersion({ invoiceNumber: null })),
+                "Invoice cleared.",
+              ).then(() => setInvoiceDraft(""));
+            }}
+          >
+            Clear invoice
+          </button>
+        </section>
       ) : null}
 
       {fulfillment.invoice ? (
@@ -724,17 +801,15 @@ export function QuoteWorkspace({
           onDrafts={setShipments}
           busy={busy}
           onSave={() => {
-            if (readyShipments.length === 0) {
-              setError("Add a tracking number.");
-              return;
-            }
             const patch =
-              quote.status === "ordered" || quote.status === "confirmed"
-                ? { status: "shipped" as const, shipments: readyShipments }
-                : { shipments: readyShipments };
+              readyShipments.length === 0
+                ? { shipments: [] as QuoteShipment[] }
+                : quote.status === "ordered" || quote.status === "confirmed"
+                  ? { status: "shipped" as const, shipments: readyShipments }
+                  : { shipments: readyShipments };
             void run(
               () => updateQuote(String(quote.number), withQuoteVersion(patch)),
-              "Tracking saved.",
+              readyShipments.length === 0 ? "Tracking cleared." : "Tracking saved.",
             );
           }}
         />
@@ -775,6 +850,7 @@ export function QuoteWorkspace({
         unread={quote.unread}
         threadKey={loadedRef === quoteRef ? quote.id : quoteRef}
         layout={desktop ? "inline" : "overlay"}
+        closeProfile="quote"
       >
         <QuoteActivityFeed
           activities={threadReady ? quote.activities : []}

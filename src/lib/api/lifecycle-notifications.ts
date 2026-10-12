@@ -4,11 +4,14 @@ import { ApiError, NETWORK_TIMEOUT_MESSAGE } from "./errors";
 import { fetchWithDeadline, isAbortError } from "./fetch-deadline";
 import { invalidateWarmRead, readIfWarm, warmRead } from "./warm-read";
 
+import type { PartLifecycleStatus } from "@/types";
+
 export type LifecycleNotification = {
   id: string;
   partNumber: string;
   partName: string;
   kind: "part_obsolete";
+  lifecycleStatus: PartLifecycleStatus;
   machineIds: string[];
   machineNames: string[];
   successorPartNumber?: string;

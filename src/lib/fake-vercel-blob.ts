@@ -4,6 +4,7 @@ import type { BlobClient } from "./persistence.ts";
 export class BlobPreconditionFailedError extends Error {
   constructor() {
     super("Vercel Blob: Precondition failed: ETag mismatch.");
+    this.name = "BlobPreconditionFailedError";
   }
 }
 

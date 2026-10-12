@@ -14,6 +14,12 @@ export function validateEditableQty(
   if (!trimmed) {
     return { ok: false, error: "Enter a quantity." };
   }
+  if (trimmed.startsWith("-")) {
+    const parsed = Number(trimmed);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      return { ok: false, error: "Quantity must be at least 1." };
+    }
+  }
   const parsed = Number(trimmed);
   if (!Number.isInteger(parsed)) {
     return { ok: false, error: "Whole numbers only." };
@@ -29,9 +35,15 @@ export function qtyDraftIsComplete(raw: string): boolean {
   return validateEditableQty(raw).ok;
 }
 
-/** Keep digits only so iPhone can clear and retype without a stuck leading 1. */
+/** Keep digits; preserve a leading minus so staff see validation instead of silent abs(). */
 export function sanitizeQtyDraft(raw: string): string {
-  return raw.replace(/[^\d]/g, "");
+  const trimmed = raw.trim();
+  const negative = trimmed.startsWith("-");
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (negative && !digits) {
+    return "-";
+  }
+  return negative ? `-${digits}` : digits;
 }
 
 /** First digit after focus replaces the current qty (Fern: typing replaces). */

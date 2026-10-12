@@ -236,4 +236,41 @@ describe("record version conflicts", () => {
       (cause: unknown) => cause instanceof RecordWriteConflictError,
     );
   });
+
+  it("rejects a second writer when client baseStatus is stale (same-field conflict)", async () => {
+    seedCatalog();
+    const machines = await listMachines(TENANT);
+    const machineId = machines[0]?.id;
+    assert.ok(machineId);
+    const created = await createTicket(TENANT, {
+      machineId,
+      title: "Status race",
+      customerId: "user-customer",
+      customerEmail: "user@demo.com",
+      actor: { id: "staff-a", email: "staff-a@demo.com", role: "staff" },
+    });
+    if ("error" in created) {
+      throw new Error("ticket create failed");
+    }
+    const { ticket } = created;
+    const baseVersion = readRecordVersion(ticket);
+    const actorA = { id: "staff-a", email: "staff-a@demo.com", role: "staff" as const };
+    const actorB = { id: "staff-b", email: "staff-b@demo.com", role: "staff" as const };
+    await updateTicketStatus(ticket.id, TENANT, "in_progress", actorA, {
+      actor: { id: actorA.id, email: actorA.email, name: "Staff A" },
+      lock: { base: ticket, expectedVersion: baseVersion, touchedFields: ["status"] },
+    });
+    await assert.rejects(
+      () =>
+        updateTicketStatus(ticket.id, TENANT, "closed", actorB, {
+          actor: { id: actorB.id, email: actorB.email, name: "Staff B" },
+          lock: {
+            base: { ...ticket, status: "open" },
+            expectedVersion: baseVersion,
+            touchedFields: ["status"],
+          },
+        }),
+      (cause: unknown) => cause instanceof RecordWriteConflictError,
+    );
+  });
 });

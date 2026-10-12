@@ -9,7 +9,6 @@ import {
   quoteSellTotal,
 } from "@/lib/quotes";
 import {
-  parseEditableQty,
   qtyDraftIsComplete,
   qtyKeyReplacesDraft,
   sanitizeQtyDraft,
@@ -62,7 +61,6 @@ function QtyField({
     const validated = validateEditableQty(raw);
     if (!validated.ok) {
       setError(validated.error);
-      onCommit(parseEditableQty(raw));
       setDraft(null);
       replaceOnType.current = true;
       return;
@@ -120,7 +118,14 @@ function QtyField({
             }
           }}
           onBlur={() => {
-            commit(draft ?? String(value));
+            const raw = draft ?? String(value);
+            const validated = validateEditableQty(raw);
+            if (!validated.ok) {
+              setError(validated.error);
+              setDraft(null);
+              return;
+            }
+            commit(raw);
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
@@ -131,7 +136,6 @@ function QtyField({
               event.preventDefault();
               replaceOnType.current = false;
               setDraft(event.key);
-              onCommit(parseEditableQty(event.key));
               return;
             }
             if (

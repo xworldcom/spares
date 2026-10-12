@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PartLifecycleStatusCounts } from "@/lib/part-lifecycle";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
@@ -73,7 +74,7 @@ export function PartLifecyclePanel({
   initialList?: StaffPartLifecycleResponse | null;
   listEtag?: string | null;
 } = {}) {
-  const { unreadPartNumbers } = useLifecycleAlerts();
+  const { unreadPartNumbers, refresh: refreshLifecycleAlerts } = useLifecycleAlerts();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialFilters = partLifecycleFiltersFromSearch(searchParams);
@@ -114,7 +115,11 @@ export function PartLifecyclePanel({
   const [draft, setDraft] = useState(draftFromRow({ partNumber: "", name: "", machineIds: [], machineNames: [], lifecycle: { status: "unknown" } }));
   const [saving, setSaving] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
   const [selectedNumbers, setSelectedNumbers] = useState<Set<string>>(new Set());
+  const [highlightPart, setHighlightPart] = useState(
+    () => searchParams.get("highlight")?.trim() ?? "",
+  );
 
   const initialLoadSkipped = useRef(hasDefaultInitial);
 
@@ -159,8 +164,6 @@ export function PartLifecyclePanel({
         return null;
       }
       setError(errorMessage(cause, "Could not load parts."));
-      setParts([]);
-      setStatusCounts(EMPTY_STATUS_COUNTS);
       return null;
     } finally {
       if (loadGenerationRef.current === generation) {
@@ -209,6 +212,17 @@ export function PartLifecyclePanel({
     }
   }, [selected]);
 
+  useEffect(() => {
+    const next = searchParams.get("highlight")?.trim() ?? "";
+    if (next) {
+      setHighlightPart(next);
+      const row = parts.find((part) => part.partNumber === next);
+      if (row) {
+        setSelected(row);
+      }
+    }
+  }, [searchParams, parts]);
+
   const dirty = Boolean(
     selected &&
       (draft.status !== selected.lifecycle.status ||
@@ -242,7 +256,7 @@ export function PartLifecyclePanel({
     setSaving(true);
     setError(null);
     try {
-      const result = await saveStaffPartLifecycle({
+      await saveStaffPartLifecycle({
         partNumber: selected.partNumber,
         patch: {
           status: draft.status,
@@ -252,13 +266,28 @@ export function PartLifecyclePanel({
           sourceNotes: draft.sourceNotes || undefined,
         },
       });
-      const refreshedRows = await load();
-      if (refreshedRows && selected) {
-        const refreshed = refreshedRows.find(
-          (row) => row.partNumber === selected.partNumber,
-        );
-        setSelected(refreshed ?? null);
-      }
+      const savedLifecycle = {
+        status: draft.status,
+        discontinuationDate: draft.discontinuationDate || undefined,
+        lastTimeBuyDate: draft.lastTimeBuyDate || undefined,
+        successorPartNumber: draft.successorPartNumber || undefined,
+        sourceNotes: draft.sourceNotes || undefined,
+      };
+      setParts((rows) =>
+        rows.map((row) =>
+          row.partNumber === selected.partNumber
+            ? { ...row, lifecycle: savedLifecycle }
+            : row,
+        ),
+      );
+      setSelected((current) =>
+        current && current.partNumber === selected.partNumber
+          ? { ...current, lifecycle: savedLifecycle }
+          : current,
+      );
+      setDraft(draftFromRow({ ...selected, lifecycle: savedLifecycle }));
+      void load();
+      void refreshLifecycleAlerts();
     } catch (cause) {
       setError(errorMessage(cause, "Could not save."));
     } finally {
@@ -273,13 +302,25 @@ export function PartLifecyclePanel({
     setBulkBusy(true);
     setError(null);
     try {
-      const result = await bulkSaveStaffPartLifecycle({
+      await bulkSaveStaffPartLifecycle({
         updates: [...selectedNumbers].map((partNumber) => ({
           partNumber,
           patch: { status: next },
         })),
       });
+      const label = partLifecycleStatusLabel(next);
+      const touched = new Set(selectedNumbers);
+      setParts((rows) =>
+        rows.map((row) =>
+          touched.has(row.partNumber)
+            ? { ...row, lifecycle: { ...row.lifecycle, status: next } }
+            : row,
+        ),
+      );
+      setBulkNotice(`Marked ${touched.size} ${touched.size === 1 ? "part" : "parts"} ${label.toLowerCase()}.`);
+      window.setTimeout(() => setBulkNotice(null), 4000);
       await load();
+      void refreshLifecycleAlerts();
       setSelectedNumbers(new Set());
     } catch (cause) {
       setError(errorMessage(cause, "Could not update those parts."));
@@ -304,7 +345,7 @@ export function PartLifecyclePanel({
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-[13px]">
         <span className="spares-muted">
-          {parts.length} parts shown
+          {parts.length} {parts.length === 1 ? "part" : "parts"} shown
           {status === "all"
             ? ` · ${statusCounts.announced + statusCounts.obsolete} at risk`
             : ""}
@@ -378,6 +419,24 @@ export function PartLifecyclePanel({
         ))}
       </div>
 
+      {parts.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <button
+            type="button"
+            className="btn-soft inline-flex h-8 items-center rounded-full px-3 font-medium"
+            onClick={() => {
+              if (selectedNumbers.size === parts.length) {
+                setSelectedNumbers(new Set());
+                return;
+              }
+              setSelectedNumbers(new Set(parts.map((row) => row.partNumber)));
+            }}
+          >
+            {selectedNumbers.size === parts.length ? "Clear all" : "Select all on page"}
+          </button>
+        </div>
+      ) : null}
+
       {selectedNumbers.size > 0 ? (
         <div className="staff-lifecycle-bulk-bar spares-surface flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 text-[13px]">
           <span>{selectedNumbers.size} selected</span>
@@ -423,8 +482,27 @@ export function PartLifecyclePanel({
         </div>
       ) : null}
 
+      {bulkNotice ? (
+        <p className="text-sm text-[#e8c27a]" role="status">
+          {bulkNotice}
+        </p>
+      ) : null}
+
       {error ? (
-        <ErrorState message={error} onRetry={() => void load()} />
+        parts.length === 0 ? (
+          <ErrorState message={error} onRetry={() => void load()} />
+        ) : (
+          <p className="text-sm text-[#f0c4c0]" role="alert">
+            {error}
+            <button
+              type="button"
+              className="ml-2 underline"
+              onClick={() => void load()}
+            >
+              Retry
+            </button>
+          </p>
+        )
       ) : null}
 
       {loading ? (
@@ -440,12 +518,13 @@ export function PartLifecyclePanel({
             const active = selected?.partNumber === row.partNumber;
             const checked = selectedNumbers.has(row.partNumber);
             const unreadObsolete = unreadPartNumbers.has(row.partNumber);
+            const highlighted = highlightPart === row.partNumber;
             return (
               <li
                 key={row.partNumber}
                 className={`border-t border-white/6 first:border-t-0 ${
                   unreadObsolete ? "bg-[#e8c27a]/8" : ""
-                }`}
+                } ${highlighted ? "ring-1 ring-inset ring-[#0a84ff]/60" : ""}`}
               >
                 <div
                   className={`flex min-h-14 items-start gap-3 px-4 py-3 ${

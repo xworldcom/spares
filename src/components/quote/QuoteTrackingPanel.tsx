@@ -10,6 +10,17 @@ function emptyShipment(): QuoteShipment {
   return { id: `draft-${Date.now()}`, trackingNumber: "" };
 }
 
+function shipmentsSignature(rows: QuoteShipment[]) {
+  return JSON.stringify(
+    rows.map((row) => ({
+      id: row.id,
+      trackingNumber: row.trackingNumber.trim(),
+      carrier: row.carrier ?? "",
+      trackingUrl: row.trackingUrl ?? "",
+    })),
+  );
+}
+
 export function QuoteTrackingPanel({
   quote,
   role,
@@ -26,7 +37,13 @@ export function QuoteTrackingPanel({
   onSave: () => void;
 }) {
   const editable = role === "staff" && canEditTracking(quote.status);
-  const rows = editable ? drafts : quote.shipments;
+  const rows = editable ? drafts : quote.shipments.filter((row) => row.trackingNumber.trim());
+  const readyDrafts = drafts.filter((row) => row.trackingNumber.trim());
+  const persistedHasTracking = quote.shipments.some((row) => row.trackingNumber.trim());
+  const dirty = editable && shipmentsSignature(drafts) !== shipmentsSignature(quote.shipments);
+  const canSaveClear = dirty && readyDrafts.length === 0 && persistedHasTracking;
+  const canSaveNumbers = dirty && readyDrafts.length > 0;
+  const saveDisabled = busy || !dirty || (!canSaveClear && !canSaveNumbers);
 
   return (
     <section className="spares-surface rounded-[24px] p-5">
@@ -99,17 +116,19 @@ export function QuoteTrackingPanel({
                   className={`${inputClass} sm:col-span-2`}
                   placeholder="Tracking URL (optional)"
                 />
-                {drafts.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onDrafts(drafts.filter((_, itemIndex) => itemIndex !== index))
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (drafts.length <= 1) {
+                      onDrafts([emptyShipment()]);
+                      return;
                     }
-                    className="spares-muted text-left text-sm"
-                  >
-                    Remove
-                  </button>
-                ) : null}
+                    onDrafts(drafts.filter((_, itemIndex) => itemIndex !== index));
+                  }}
+                  className="spares-muted text-left text-sm sm:col-span-2"
+                >
+                  Remove
+                </button>
               </div>
             ) : (
               <div>
@@ -144,11 +163,11 @@ export function QuoteTrackingPanel({
           </button>
           <button
             type="button"
-            disabled={busy || drafts.every((row) => !row.trackingNumber.trim())}
+            disabled={saveDisabled}
             onClick={onSave}
             className="btn-primary inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold disabled:opacity-30"
           >
-            Save tracking
+            {canSaveClear ? "Clear tracking" : "Save tracking"}
           </button>
         </div>
       ) : null}
@@ -157,5 +176,6 @@ export function QuoteTrackingPanel({
 }
 
 export function draftShipmentsFrom(quote: Quote): QuoteShipment[] {
-  return quote.shipments.length > 0 ? quote.shipments : [emptyShipment()];
+  const rows = quote.shipments.filter((row) => row.trackingNumber.trim());
+  return rows.length > 0 ? rows : [emptyShipment()];
 }

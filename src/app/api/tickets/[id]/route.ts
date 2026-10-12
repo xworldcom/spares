@@ -15,6 +15,7 @@ import { userTenantId } from "@/lib/tenant";
 import { actorFromUser, recordAccountActivity, shouldRecordView } from "@/lib/activity-log";
 import { isWarmConversationRequest } from "@/lib/api/warm-intent";
 import { ticketCasDebugSnapshot } from "@/lib/ticket-status-cas";
+import { withTicketShardPersist } from "@/lib/ticket-shard-http";
 import { markTicketRead, updateTicketStatus } from "@/lib/store";
 
 type PatchBody = {
@@ -96,10 +97,14 @@ async function handlePATCH(
     console.info(
       "[ticket-cas]",
       JSON.stringify(
-        ticketCasDebugSnapshot(access.ticket, {
-          expectedVersion,
-          baseStatus: clientBaseStatus,
-        }, actor.id),
+        ticketCasDebugSnapshot(
+          access.ticket,
+          {
+            expectedVersion,
+            baseStatus: clientBaseStatus,
+          },
+          actor.id,
+        ),
       ),
     );
   }
@@ -127,4 +132,6 @@ async function handlePATCH(
   });
 }
 
-export const PATCH = withCatalogConflict(withRecordConflict("ticket", handlePATCH));
+export const PATCH = withCatalogConflict(
+  withRecordConflict("ticket", withTicketShardPersist(handlePATCH)),
+);

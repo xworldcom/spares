@@ -17,6 +17,7 @@ export function ConversationSheet({
   open = true,
   onOpenChange,
   threadKey,
+  closeProfile = "care",
 }: {
   title: string;
   /** Kept for call-site compatibility; latest context now comes from the live thread. */
@@ -29,6 +30,8 @@ export function ConversationSheet({
   onOpenChange?: (open: boolean) => void;
   /** Resets snap when switching tickets/quotes. */
   threadKey?: string;
+  /** Quote phone Messages only — care tickets keep default care close motion. */
+  closeProfile?: "care" | "quote";
 }) {
   const desktop = useDesktopStage();
   const card = useRef<HTMLElement>(null);
@@ -55,6 +58,7 @@ export function ConversationSheet({
     scrollBodySelector: ".imsg-thread",
     inlineLayout: layout === "inline",
     resetKey: threadKey,
+    closeProfile,
   });
 
   const overlayMobile = layout === "overlay" && !desktop;

@@ -205,12 +205,16 @@ export function buildObsoleteLifecycleNotifications(input: {
   return additions;
 }
 
-export function toPublicLifecycleNotification(row: StoredPartLifecycleNotification) {
+export function toPublicLifecycleNotification(
+  row: StoredPartLifecycleNotification,
+  lifecycleStatus: import("../types/index.ts").PartLifecycleStatus = "obsolete",
+) {
   return {
     id: row.id,
     partNumber: row.partNumber,
     partName: row.partName,
     kind: row.kind,
+    lifecycleStatus,
     machineIds: row.machineIds,
     machineNames: row.machineNames,
     successorPartNumber: row.successorPartNumber,

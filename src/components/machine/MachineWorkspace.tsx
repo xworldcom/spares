@@ -48,6 +48,10 @@ import {
 } from "@/lib/ui/hidden-parts-persist";
 import { dismissPartSheetAfterQuoteAdd } from "@/lib/ui/quote-tray-open-policy";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
+import {
+  prefersViewerOverlayFullscreen,
+  viewerOverlayFramePx,
+} from "@/lib/ui/viewer-pseudo-fullscreen";
 
 const VIEWER_STAGE = "#12161c";
 
@@ -96,6 +100,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     linesKey: null as string | null,
   });
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
+  const [overlayFrame, setOverlayFrame] = useState<{ topPx: number; heightPx: number } | null>(
+    null,
+  );
   const desktopStage = useDesktopStage();
   const hydrated = useHydrated();
   const viewerLayoutReady = useViewerLayoutReady();
@@ -114,6 +121,26 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       : null;
   const [trayNote, setTrayNote] = useState("");
   const customerTrayInViewer = isCustomer && !desktopStage;
+
+  useEffect(() => {
+    if (!overlay || !prefersViewerOverlayFullscreen()) {
+      setOverlayFrame(null);
+      return;
+    }
+    function sync() {
+      setOverlayFrame(viewerOverlayFramePx());
+    }
+    sync();
+    window.visualViewport?.addEventListener("resize", sync);
+    window.visualViewport?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", sync);
+      window.visualViewport?.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+    };
+  }, [overlay]);
+
   const trayPickSeed =
     isCustomer && selectedPart
       ? { id: selectedPart.id, name: selectedPart.name }
@@ -640,12 +667,22 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       ref={chromeRef}
       className={
         overlay
-          ? "fixed inset-x-0 bottom-0 z-40 flex flex-col overscroll-none top-[var(--spares-header)]"
+          ? overlayFrame
+            ? "fixed inset-x-0 z-40 flex flex-col overscroll-none"
+            : "fixed inset-x-0 bottom-0 z-40 flex flex-col overscroll-none top-[var(--spares-header)]"
           : fullscreen
             ? "flex h-full min-h-0 flex-col overscroll-none"
             : "machine-viewer overflow-hidden sm:rounded-[28px]"
       }
-      style={{ background: VIEWER_STAGE }}
+      style={
+        overlay && overlayFrame
+          ? {
+              background: VIEWER_STAGE,
+              top: overlayFrame.topPx,
+              height: overlayFrame.heightPx,
+            }
+          : { background: VIEWER_STAGE }
+      }
       onContextMenu={(event) => {
         event.preventDefault();
       }}
