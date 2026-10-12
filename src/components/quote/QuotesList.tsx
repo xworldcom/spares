@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { PrefetchLink } from "@/components/nav/PrefetchLink";
 import { useEffect, useMemo, useState } from "react";
+import { CatalogSearch } from "@/components/catalog/CatalogSearch";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -43,6 +45,8 @@ export function QuotesList({
   const [statusFilter, setStatusFilter] = useState<
     QuoteStatus | "all" | "in_review" | "closed_group"
   >("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 250);
   const { begin, isCurrent } = useRequestGeneration();
 
   useEffect(() => {
@@ -111,10 +115,27 @@ export function QuotesList({
     } else if (statusFilter !== "all") {
       rows = rows.filter((quote) => quote.status === statusFilter);
     }
-    return [...rows].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  }, [quotes, machineId, statusFilter]);
+    if (debouncedSearch) {
+      const needle = debouncedSearch.toLowerCase();
+      rows = rows.filter((quote) => {
+        const hay = [
+          String(quote.number),
+          quote.machineName ?? "",
+          quote.customerEmail ?? "",
+          quote.note ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(needle);
+      });
+    }
+    return [...rows].sort((a, b) => {
+      if (role === "staff" || machineId) {
+        return b.number - a.number;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [quotes, machineId, statusFilter, debouncedSearch, role]);
 
   const statusFilters: Array<{
     value: QuoteStatus | "all" | "in_review" | "closed_group";
@@ -216,6 +237,15 @@ export function QuotesList({
 
   return (
     <div className="space-y-3">
+      {role === "staff" && !machineId ? (
+        <CatalogSearch
+          id="staff-quotes-search"
+          label="Search quotes"
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Quote #, machine, customer…"
+        />
+      ) : null}
       {!machineId ? (
         <div className="flex flex-wrap gap-1.5">
           {statusFilters.map((option) => (

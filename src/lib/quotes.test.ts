@@ -7,6 +7,7 @@ import {
   canUploadPo,
   invoiceVisible,
   quoteFulfillmentVisibility,
+  quoteRegressionCleanupPatch,
   isQuoteUnreadForUser,
   itemsForRole,
   mergeQuoteItems,
@@ -314,6 +315,12 @@ describe("status and visibility", () => {
     assert.equal(canUploadPo("cancelled"), false);
   });
 
+  it("locks customer PO edits after PO is received", () => {
+    assert.equal(canUploadPo("quoted", "customer"), true);
+    assert.equal(canUploadPo("po_received", "customer"), false);
+    assert.equal(canUploadPo("po_received", "staff"), true);
+  });
+
   it("shows customer prices after quoted", () => {
     assert.equal(pricesVisibleToCustomer("pricing"), false);
     assert.equal(pricesVisibleToCustomer("quoted"), true);
@@ -398,7 +405,7 @@ describe("status and visibility", () => {
         ...base,
         invoiceNumber: "INV-1",
       }),
-      { po: true, invoice: true, tracking: false },
+      { po: true, invoice: false, tracking: false },
     );
     assert.deepEqual(
       quoteFulfillmentVisibility({
@@ -406,8 +413,25 @@ describe("status and visibility", () => {
         ...base,
         shipments: [{ id: "s1", trackingNumber: "1Z999" }],
       }),
-      { po: false, invoice: false, tracking: true },
+      { po: false, invoice: false, tracking: false },
     );
+    assert.deepEqual(
+      quoteFulfillmentVisibility(
+        {
+          status: "po_received",
+          ...base,
+          invoiceNumber: "INV-1",
+          shipments: [{ id: "s1", trackingNumber: "1Z999" }],
+        },
+        "staff",
+        "requested",
+      ),
+      { po: false, invoice: false, tracking: false },
+    );
+    assert.deepEqual(quoteRegressionCleanupPatch("po_received", "requested"), {
+      invoiceNumber: null,
+      shipments: [],
+    });
   });
 
   it("names the PO as the next step while invoice is still closed", () => {

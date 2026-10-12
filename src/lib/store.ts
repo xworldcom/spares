@@ -66,6 +66,10 @@ import {
 import { RecordWriteConflictError } from "./record-conflict.ts";
 import { ticketStatusCasWouldConflict } from "./ticket-status-cas.ts";
 import {
+  ensureTicketShardFromCatalog,
+  persistTicketShard,
+} from "./ticket-shard-persist.ts";
+import {
   fieldsOverlap,
   quoteChangedFields,
   readRecordVersion,
@@ -3840,11 +3844,54 @@ export function getUserLifecycleNotificationsBundle(
   filter?: { unreadOnly?: boolean },
 ) {
   return withLock(async () => {
-    const db = await readDatabase();
+    let db = await readDatabase();
+    const { backfillObsoleteLifecycleNotifications } = await import(
+      "./lifecycle-notifications-backfill.ts"
+    );
+    const { effectiveLifecycle, normalizePartNumber } = await import("./part-lifecycle.ts");
+    const machines = machinesForTenantListing(db, tenantId);
+    const catalogRows = buildTenantPartCatalog(
+      machines,
+      db.partLifecycle ?? [],
+      tenantId,
+    ).map((row) => ({
+      partNumber: row.partNumber,
+      name: row.name,
+      machineIds: row.machineIds,
+      machineNames: row.machineNames,
+      lifecycle: effectiveLifecycle(
+        (db.partLifecycle ?? []).find(
+          (entry) =>
+            entry.tenantId === tenantId &&
+            normalizePartNumber(entry.partNumber) === normalizePartNumber(row.partNumber),
+        ),
+      ),
+    }));
+    const at = new Date().toISOString();
+    const additions = backfillObsoleteLifecycleNotifications({
+      existing: db.partLifecycleNotifications ?? [],
+      tenantId,
+      catalogRows,
+      users: db.users,
+      machines,
+      sites: db.sites ?? [],
+      customers: db.customers ?? [],
+      at,
+    });
+    if (additions.length > 0) {
+      db = {
+        ...db,
+        partLifecycleNotifications: [...(db.partLifecycleNotifications ?? []), ...additions],
+      };
+      await writeDatabase(db);
+    }
     const {
       listLifecycleNotificationsForUser,
       countUnreadLifecycleNotifications,
     } = await import("./lifecycle-notifications.ts");
+    const lifecycleStatusByPart = new Map(
+      catalogRows.map((row) => [normalizePartNumber(row.partNumber), row.lifecycle.status]),
+    );
     const notifications = listLifecycleNotificationsForUser(
       db.partLifecycleNotifications,
       tenantId,
@@ -3856,7 +3903,7 @@ export function getUserLifecycleNotificationsBundle(
       tenantId,
       userId,
     );
-    return { notifications, unreadCount };
+    return { notifications, unreadCount, lifecycleStatusByPart };
   });
 }
 
@@ -4985,7 +5032,11 @@ export function createTicket(
       ...careCollections(db),
       tickets: [ticket, ...careCollections(db).tickets],
     });
-    return { ticket: committed.tickets?.find((row) => row.id === ticket.id) ?? ticket };
+    const saved = committed.tickets?.find((row) => row.id === ticket.id) ?? ticket;
+    if (entityShardsEnabled(committed)) {
+      await persistTicketShard(tenantId, saved, "createTicket");
+    }
+    return { ticket: saved };
   });
 }
 
@@ -5005,6 +5056,14 @@ function mutateTicket(
   options?: TicketMutationOptions,
 ): Promise<StoredTicket | null> {
   return withLock(async (): Promise<StoredTicket | null> => {
+    const dbForShard = await readDatabase();
+    if (entityShardsEnabled(dbForShard)) {
+      const care = careCollections(dbForShard);
+      const existing = findTicketInList(filterByTenant(care.tickets, tenantId), idOrNumber);
+      if (existing) {
+        await ensureTicketShardFromCatalog(tenantId, existing);
+      }
+    }
     let result: StoredTicket | null = null;
     let prior: StoredTicket | null = null;
     const committedDb = await commitCatalog(async (latest) => {
@@ -5059,7 +5118,7 @@ function mutateTicket(
     const savedTicket: StoredTicket = result;
     const priorTicket: StoredTicket = prior;
     if (entityShardsEnabled(committedDb)) {
-      await writeTicketShard(tenantId, savedTicket);
+      await persistTicketShard(tenantId, savedTicket, "mutateTicket");
     }
     if (conversationWatchChanged(priorTicket, savedTicket)) {
       await bumpChatWatch(chatWatchChannel("ticket", savedTicket.id));

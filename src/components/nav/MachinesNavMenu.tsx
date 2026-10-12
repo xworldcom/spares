@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { isNavActive } from "@/lib/nav-active";
 
 const MACHINE_FAMILY_HREFS = ["/machines", "/machines/new"] as const;
@@ -26,7 +27,9 @@ function menuItemClass(active: boolean) {
 export function StaffMachinesDesktopNav({ hrefs }: { hrefs: readonly string[] }) {
   const pathname = usePathname();
   const menuId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<{ top: number; left: number } | null>(null);
   const familyActive = machinesFamilyActive(pathname, hrefs);
   const listActive = isNavActive(pathname, "/machines", hrefs);
   const uploadActive = isNavActive(pathname, "/machines/new", hrefs);
@@ -56,9 +59,32 @@ export function StaffMachinesDesktopNav({ hrefs }: { hrefs: readonly string[] })
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuStyle(null);
+      return;
+    }
+    function place() {
+      const trigger = triggerRef.current;
+      if (!trigger) {
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      setMenuStyle({ top: rect.bottom + 4, left: rect.left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
   return (
     <div className="relative inline-flex" data-machines-nav-menu>
       <button
+        ref={triggerRef}
         type="button"
         id={`${menuId}-trigger`}
         aria-haspopup="menu"
@@ -76,33 +102,38 @@ export function StaffMachinesDesktopNav({ hrefs }: { hrefs: readonly string[] })
           ▾
         </span>
       </button>
-      {open ? (
-        <div
-          id={`${menuId}-menu`}
-          role="menu"
-          aria-labelledby={`${menuId}-trigger`}
-          className="spares-surface absolute top-full left-0 z-[70] mt-1 min-w-[11rem] rounded-2xl p-1 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
-        >
-          <Link
-            href="/machines"
-            role="menuitem"
-            aria-current={listActive ? "page" : undefined}
-            className={menuItemClass(listActive)}
-            onClick={() => setOpen(false)}
-          >
-            All machines
-          </Link>
-          <Link
-            href="/machines/new"
-            role="menuitem"
-            aria-current={uploadActive ? "page" : undefined}
-            className={menuItemClass(uploadActive)}
-            onClick={() => setOpen(false)}
-          >
-            Upload
-          </Link>
-        </div>
-      ) : null}
+      {open && menuStyle
+        ? createPortal(
+            <div
+              id={`${menuId}-menu`}
+              role="menu"
+              aria-labelledby={`${menuId}-trigger`}
+              data-machines-nav-menu=""
+              className="spares-surface fixed z-[80] min-w-[11rem] rounded-2xl p-1 shadow-[0_16px_40px_rgba(0,0,0,0.42)]"
+              style={{ top: menuStyle.top, left: menuStyle.left }}
+            >
+              <Link
+                href="/machines"
+                role="menuitem"
+                aria-current={listActive ? "page" : undefined}
+                className={menuItemClass(listActive)}
+                onClick={() => setOpen(false)}
+              >
+                All machines
+              </Link>
+              <Link
+                href="/machines/new"
+                role="menuitem"
+                aria-current={uploadActive ? "page" : undefined}
+                className={menuItemClass(uploadActive)}
+                onClick={() => setOpen(false)}
+              >
+                Upload
+              </Link>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

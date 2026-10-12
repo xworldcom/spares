@@ -256,7 +256,7 @@ export function BugReportControl() {
                 </button>
                 <button
                   type="button"
-                  disabled={sending}
+                  disabled={sending || !description.trim()}
                   onClick={() => {
                     void handleSend();
                   }}

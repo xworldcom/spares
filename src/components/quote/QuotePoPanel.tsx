@@ -21,7 +21,7 @@ export function QuotePoPanel({
 }) {
   const [poNumber, setPoNumber] = useState(quote.poNumber ?? "");
   const [file, setFile] = useState<File | null>(null);
-  const allowed = canUploadPo(quote.status);
+  const allowed = canUploadPo(quote.status, role);
   const nextStep = quotePoNextStep(quote.status, role);
   const downloadHref = quote.hasPoFile ? quotePoUrl(String(quote.number)) : null;
 
@@ -52,6 +52,35 @@ export function QuotePoPanel({
         >
           Download PDF
         </a>
+      ) : null}
+
+      {role === "staff" && allowed ? (
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (poNumber.trim()) {
+              void onSaveNumber(poNumber.trim());
+            }
+          }}
+        >
+          <label className="block text-sm font-medium">
+            PO number (customer or internal)
+            <input
+              value={poNumber}
+              onChange={(event) => setPoNumber(event.target.value)}
+              className="spares-field mt-1.5 h-12 w-full rounded-2xl border-0 px-3 text-[16px] outline-none"
+              placeholder="Customer PO"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy || !poNumber.trim()}
+            className="btn-primary inline-flex h-12 items-center rounded-full px-5 text-[15px] font-semibold disabled:opacity-30"
+          >
+            Save PO number
+          </button>
+        </form>
       ) : null}
 
       {role === "customer" && allowed ? (

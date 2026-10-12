@@ -3976,6 +3976,7 @@ html.is-quote-timeline-handoff::view-transition-new(root) {
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
+  min-height: 2.75rem;
 }
 
 .tickets-workspace-filters {

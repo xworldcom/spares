@@ -33,6 +33,7 @@ import {
   parseQuoteItems,
   parseShipments,
   quoteItemsEqual,
+  quotePricingComplete,
   quoteStaffPricingLocked,
   shippedActivityText,
   statusActivityText,
@@ -155,7 +156,7 @@ async function handlePATCH(
     if (!poNumber) {
       return error("Customers can only update the PO number here", 403);
     }
-    if (!canUploadPo(access.quote.status)) {
+    if (!canUploadPo(access.quote.status, "customer")) {
       return error("PO number can be added after the quote is issued", 403);
     }
     const next = await mutateQuote(
@@ -273,9 +274,16 @@ async function handlePATCH(
     return error("Add a tracking number to mark this quote shipped", 400);
   }
 
+  if (status === "po_received" && !quotePricingComplete(items)) {
+    return error("Add a sell price on every line before marking PO received", 400);
+  }
+
   if (body.invoiceNumber !== undefined) {
     const invoiceAt = status ?? access.quote.status;
-    if (!invoiceVisible(invoiceAt)) {
+    const clearing =
+      body.invoiceNumber === null ||
+      (typeof body.invoiceNumber === "string" && !body.invoiceNumber.trim());
+    if (!clearing && !invoiceVisible(invoiceAt)) {
       return error("Invoice opens after PO is received", 400);
     }
   }

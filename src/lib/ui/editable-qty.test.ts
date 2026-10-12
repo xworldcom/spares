@@ -9,6 +9,13 @@ import {
 } from "./editable-qty.ts";
 
 describe("editable qty", () => {
+  it("rejects negative quantities with an error", () => {
+    const result = validateEditableQty("-3");
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.match(result.error, /at least 1/i);
+    }
+  });
   it("keeps a typed integer ≥ 1", () => {
     assert.equal(parseEditableQty("10"), 10);
     assert.equal(parseEditableQty(" 25 "), 25);
@@ -44,6 +51,8 @@ describe("editable qty", () => {
     assert.equal(sanitizeQtyDraft(""), "");
     assert.equal(sanitizeQtyDraft("12a"), "12");
     assert.equal(sanitizeQtyDraft(" 8 "), "8");
+    assert.equal(sanitizeQtyDraft("-3"), "-3");
+    assert.equal(sanitizeQtyDraft("-"), "-");
   });
 
   it("replaces the focused qty on the first typed digit", () => {

@@ -17,6 +17,7 @@ import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
 import { errorMessage } from "@/lib/api/errors";
 import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
 import { formatWhen } from "@/components/quote/quote-format";
+import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
 
 function machineLabel(row: LifecycleNotification) {
   return row.machineNames.length > 0 ? row.machineNames.join(" · ") : "—";
@@ -161,7 +162,9 @@ export function LifecycleNotificationsPanel({
                   {formatWhen(row.createdAt)}
                 </time>
               </div>
-              <p className="mt-1 text-sm">Discontinued · Used on {machineLabel(row)}</p>
+              <p className="mt-1 text-sm">
+                {partLifecycleStatusLabel(row.lifecycleStatus)} · Used on {machineLabel(row)}
+              </p>
               {row.discontinuationDate ? (
                 <p className="spares-muted mt-1 text-xs">Ends {row.discontinuationDate}</p>
               ) : null}
@@ -172,7 +175,7 @@ export function LifecycleNotificationsPanel({
               ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
-                  href={`${partsHref}?q=${encodeURIComponent(row.partNumber)}`}
+                  href={`${partsHref}?q=${encodeURIComponent(row.partNumber)}&highlight=${encodeURIComponent(row.partNumber)}`}
                   className="btn-primary inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold"
                   onClick={() => void openRow(row)}
                 >

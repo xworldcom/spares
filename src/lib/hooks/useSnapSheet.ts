@@ -193,6 +193,8 @@ export function useSnapSheet({
   scrollBodySelector,
   inlineLayout,
   resetKey,
+  /** Quote Messages: Close from full settles to reply (not care translate). */
+  closeProfile = "care",
 }: {
   cardRef: RefObject<HTMLElement | null>;
   open: boolean;
@@ -201,6 +203,7 @@ export function useSnapSheet({
   scrollBodySelector: string;
   inlineLayout?: boolean;
   resetKey?: string;
+  closeProfile?: "care" | "quote";
 }) {
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
     initialConversationSheetSnap(open, desktopStage, inlineLayout),
@@ -673,7 +676,7 @@ export function useSnapSheet({
     settleTo("reply");
   }
 
-  /** Toolbar Close — same `--sheet-close-ty` rail as handle drag-down (not height settle). */
+  /** Toolbar Close — care uses `--sheet-close-ty`; quote Messages rolls full → reply → out. */
   function closeViaTranslate() {
     if (desktopStage || sheet === "out") {
       return;
@@ -686,6 +689,19 @@ export function useSnapSheet({
     }
     steppedAtRef.current = performance.now();
     setThreadDockedState(true);
+    if (closeProfile === "quote") {
+      if (sheet === "full") {
+        clearCloseTranslate("reply");
+        settleTo("reply");
+        return;
+      }
+      if (sheet === "reply") {
+        settleCloseTo("out");
+        return;
+      }
+      settleCloseTo("out");
+      return;
+    }
     if (sheet !== "reply") {
       setOpen(true);
       setSheet("reply");

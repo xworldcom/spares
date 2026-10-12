@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { useLifecycleAlerts } from "@/components/notifications/LifecycleAlerts";
-import { partLifecycleStatusLabel } from "@/lib/part-lifecycle-copy";
 import { saveStaffPartLifecycle } from "@/lib/api/part-lifecycle";
 import { errorMessage } from "@/lib/api/errors";
 import type { PartLifecycleInfo, PartLifecycleStatus } from "@/types";
@@ -24,18 +23,6 @@ function draftFrom(lifecycle?: PartLifecycleInfo) {
     discontinuationDate: lifecycle?.discontinuationDate ?? "",
     successorPartNumber: lifecycle?.successorPartNumber ?? "",
   };
-}
-
-function lifecycleSummaryLine(lifecycle?: PartLifecycleInfo) {
-  const status = lifecycle?.status ?? "unknown";
-  const parts = [partLifecycleStatusLabel(status)];
-  if (lifecycle?.discontinuationDate) {
-    parts.push(`Ends ${lifecycle.discontinuationDate}`);
-  }
-  if (lifecycle?.successorPartNumber?.trim()) {
-    parts.push(`→ ${lifecycle.successorPartNumber.trim()}`);
-  }
-  return parts.join(" · ");
 }
 
 export function StaffQuoteLineLifecycle({
@@ -127,7 +114,6 @@ export function StaffQuoteLineLifecycle({
           </button>
         </div>
         <PartLifecycleNotice lifecycle={lifecycle} compact />
-        <p className="spares-muted text-[11px] leading-snug">{lifecycleSummaryLine(lifecycle)}</p>
       </div>
     );
   }
