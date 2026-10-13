@@ -774,11 +774,7 @@ export function PartPicker({
 
   const internalLayoutRef = useRef<HTMLDivElement>(null);
   const measureRef = layoutRootRef ?? internalLayoutRef;
-  const assemblyKey = [
-    hiddenIds.join("\0"),
-    isolatedId ?? "",
-    selected && "id" in selected ? selected.id : "",
-  ].join("|");
+  const assemblyKey = [hiddenIds.join("\0"), isolatedId ?? ""].join("|");
 
   return (
     <div
