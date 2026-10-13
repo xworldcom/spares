@@ -29,6 +29,7 @@ import {
 } from "./resolvePick";
 import { StudioGround } from "./StudioGround";
 import { ViewerCameraOwner } from "./ViewerCameraOwner";
+import { viewerAssemblyCameraKey } from "./viewerAssemblyKey";
 import type { PartPickerProps, UnmatchedMesh, ViewerPart } from "./types";
 import {
   loadGltfWithCredentials,
@@ -774,11 +775,7 @@ export function PartPicker({
 
   const internalLayoutRef = useRef<HTMLDivElement>(null);
   const measureRef = layoutRootRef ?? internalLayoutRef;
-  const assemblyKey = [
-    hiddenIds.join("\0"),
-    isolatedId ?? "",
-    selected && "id" in selected ? selected.id : "",
-  ].join("|");
+  const assemblyKey = viewerAssemblyCameraKey(hiddenIds, isolatedId);
 
   return (
     <div
