@@ -132,19 +132,32 @@ export function SelectedPartSheet({
             </button>
           </div>
         ) : null}
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
+        <div className="part-sheet-header mb-1 flex items-start justify-between gap-2" data-part-sheet-header="">
+          <div className="min-w-0 flex-1 pt-0.5">
             <p className="line-clamp-2 text-[13px] leading-tight font-semibold tracking-tight">
               {part.name}
             </p>
             <p className="chrome-quiet truncate font-mono text-[11px]">
               {part.id}
             </p>
-            <PartLifecycleNotice lifecycle={part.lifecycle} compact />
-            {partSheetMetaLine(part) ? (
-              <p className="chrome-quiet truncate text-[11px]">{partSheetMetaLine(part)}</p>
-            ) : null}
           </div>
+          <button
+            type="button"
+            data-part-sheet-close=""
+            data-part-sheet-control=""
+            aria-label="Close part details"
+            {...activate(onDismiss)}
+            disabled={!canAct}
+            className="part-sheet-close inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl leading-none hover:bg-white/14 disabled:opacity-30"
+          >
+            ×
+          </button>
+        </div>
+        <PartLifecycleNotice lifecycle={part.lifecycle} compact />
+        {partSheetMetaLine(part) ? (
+          <p className="chrome-quiet mb-1 truncate text-[11px]">{partSheetMetaLine(part)}</p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
           {showAdd && onAdd ? (
             <button
               type="button"
@@ -155,16 +168,6 @@ export function SelectedPartSheet({
               Add
             </button>
           ) : null}
-          <button
-            type="button"
-            data-part-sheet-control=""
-            aria-label="Close part details"
-            {...activate(onDismiss)}
-            disabled={!canAct}
-            className="chrome-quiet inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none hover:text-[var(--spares-on-chip)] disabled:opacity-30"
-          >
-            ×
-          </button>
           {staff ? (
             <Link
               href={staffPartLifecycleViewHref(part.id)}
