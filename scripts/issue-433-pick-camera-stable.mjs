@@ -36,8 +36,8 @@ async function sampleCanvas(page) {
     }
     const w = canvas.width;
     const h = canvas.height;
-    const center = px(Math.floor(w / 2), Math.floor(h / 2));
-    const corner = px(Math.floor(w * 0.72), Math.floor(h * 0.38));
+    const center = px(Math.floor(w * 0.55), Math.floor(h * 0.42));
+    const corner = px(Math.floor(w * 0.28), Math.floor(h * 0.38));
     const dist = (a, b) =>
       Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b);
     const bgDist = dist(center, bg);
@@ -151,6 +151,32 @@ if (!box) {
     path: join(outDir, "iphone-after-pick.png"),
     fullPage: false,
   });
+
+  if (orbitMoved) {
+    await page.getByRole("button", { name: "List" }).click();
+    const partRow = page
+      .locator("[data-parts-bom] button")
+      .filter({ hasText: /5972K325|bearing/i })
+      .first();
+    await partRow.click({ timeout: 30000 });
+    await page.waitForTimeout(400);
+    await page.getByRole("button", { name: "3D" }).click();
+    await page.waitForTimeout(800);
+    const afterListPick = await sampleCanvas(page);
+    const listSnappedBack =
+      rgbDist(afterListPick.center, firstLoad.center) < 8 &&
+      rgbDist(afterListPick.corner, firstLoad.corner) < 8;
+    const listStable =
+      rgbDist(afterListPick.center, afterOrbit.center) < 12 ||
+      rgbDist(afterListPick.corner, afterOrbit.corner) < 12;
+    proof.checks.push({
+      id: "iphone-orbit-then-list-pick",
+      listSnappedBack,
+      listStable,
+      pass: listStable && !listSnappedBack,
+    });
+    if (!proof.checks.at(-1).pass) proof.ok = false;
+  }
 }
 
 await browser.close();
