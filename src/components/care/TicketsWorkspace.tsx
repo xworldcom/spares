@@ -54,7 +54,6 @@ import type { ServiceTicket } from "@/types";
 import { useSeedListSlotOnce } from "@/lib/ui/use-seed-list-slot";
 import {
   careTicketsListQueryString,
-  careTicketsPathWithListQuery,
   hrefWithCareTicketsListQuery,
 } from "@/lib/care-tickets-list-query";
 
@@ -274,15 +273,10 @@ export function TicketsWorkspace({
           next.set(key, trimmed);
         }
       }
-      const path = careTicketsPathWithListQuery(scope, {
-        listHref,
-        searchParams: next,
-        machineId,
-        ticketId,
-      });
-      router.replace(path, { scroll: false });
+      const qs = careTicketsListQueryString(next);
+      router.replace(`${pathname}${qs}`, { scroll: false });
     },
-    [listHref, machineId, router, scope, searchParams, ticketId],
+    [pathname, router, searchParams],
   );
 
   useEffect(() => {
@@ -473,37 +467,39 @@ export function TicketsWorkspace({
               </label>
             </div>
           </div>
-          {listTickets.length === 0 ? (
-            <EmptyState
-              title="No matching tickets"
-              message={
-                searchQuery || statusFilter !== "all"
-                  ? "Try a different search or filter."
-                  : hubMachineFilter
-                    ? "No tickets for this machine yet."
-                    : scope === "hub"
-                      ? "Open one when a machine needs service."
-                      : "Open one when this machine needs service."
-              }
-            />
-          ) : (
-            <TicketsList
-              tickets={listTickets}
-              showMachine={showMachine}
-              selectedId={ticketId}
-              pinnedOutsideFilterId={
-                selected &&
-                !visibleTickets.some((ticket) =>
-                  ticketRefMatches(ticket, selected.id),
-                )
-                  ? selected.id
-                  : undefined
-              }
-              hrefFor={(ticket) => ticketHrefFor(scope, ticket, searchParams)}
-              emptyTitle="No tickets yet"
-              emptyMessage="Open one when something needs service."
-            />
-          )}
+          <div className="tickets-workspace-list-scroll">
+            {listTickets.length === 0 ? (
+              <EmptyState
+                title="No matching tickets"
+                message={
+                  searchQuery || statusFilter !== "all"
+                    ? "Try a different search or filter."
+                    : hubMachineFilter
+                      ? "No tickets for this machine yet."
+                      : scope === "hub"
+                        ? "Open one when a machine needs service."
+                        : "Open one when this machine needs service."
+                }
+              />
+            ) : (
+              <TicketsList
+                tickets={listTickets}
+                showMachine={showMachine}
+                selectedId={ticketId}
+                pinnedOutsideFilterId={
+                  selected &&
+                  !visibleTickets.some((ticket) =>
+                    ticketRefMatches(ticket, selected.id),
+                  )
+                    ? selected.id
+                    : undefined
+                }
+                hrefFor={(ticket) => ticketHrefFor(scope, ticket, searchParams)}
+                emptyTitle="No tickets yet"
+                emptyMessage="Open one when something needs service."
+              />
+            )}
+          </div>
         </>
       )}
     </div>
