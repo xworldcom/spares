@@ -383,8 +383,6 @@ export function useSnapSheet({
       return;
     }
     const { peekH, replyH, fullH } = heightsForMotion();
-    const maxLive = conversationSheetFullHeightPx();
-    liveHeightPx = Math.max(peekH, Math.min(fullH, maxLive, liveHeightPx));
     const { phaseA, phaseB } = conversationSheetMotionFromHeight(
       liveHeightPx,
       peekH,
@@ -711,11 +709,15 @@ export function useSnapSheet({
     setThreadDockedState(true);
     if (closeProfile === "quote") {
       if (sheet === "full") {
-        clearCloseTranslate("reply");
-        settleTo("reply");
+        clearCloseTranslate("peek");
+        settleToVisualPeek();
         return;
       }
-      if (sheet === "reply" || sheet === "peek") {
+      if (sheet === "reply") {
+        settleToVisualPeek();
+        return;
+      }
+      if (sheet === "peek") {
         settleCloseTo("out");
         return;
       }
@@ -1112,25 +1114,8 @@ export function useSnapSheet({
       replyH,
       fullH,
     });
-    const card = cardRef.current;
-    const liveRectH =
-      drag.current.liveH > 0
-        ? drag.current.liveH
-        : card?.getBoundingClientRect().height ?? currentH;
-    const restingH = heightForSnap(normalizedFrom, card);
+    const restingH = heightForSnap(normalizedFrom, cardRef.current);
     const displaced = Math.abs(currentH - restingH) > 12;
-    const liveOffDetent =
-      Math.abs(liveRectH - restingH) > 18 &&
-      Math.abs(liveRectH - heightForSnap("reply", card)) > 18 &&
-      Math.abs(liveRectH - heightForSnap("full", card)) > 18;
-    if (
-      liveOffDetent ||
-      card?.hasAttribute("data-motion-live") ||
-      card?.classList.contains("is-settling")
-    ) {
-      settleTo(nearestSnap(liveRectH, velocity, card));
-      return;
-    }
     if (
       displaced ||
       Math.abs(dy) > 12 ||
