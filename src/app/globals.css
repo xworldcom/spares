@@ -354,8 +354,15 @@ body {
   .machine-viewer .quote-sheet {
     position: fixed;
     z-index: 65;
-    bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+    bottom: env(safe-area-inset-bottom, 0px);
     height: auto;
+    max-height: calc(
+      100dvh - var(--spares-header) - env(safe-area-inset-top, 0px) - 0.35rem
+    );
+  }
+
+  .spares-app-tabs .machine-viewer .quote-sheet {
+    bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
     max-height: calc(
       100dvh - var(--spares-header) - var(--spares-tabbar) -
         env(safe-area-inset-top, 0px) - 0.35rem
@@ -592,9 +599,6 @@ html.viewer-immersive-fs .spares-tabbar {
 .conversation-sheet:not(.is-inline)[data-close-translate] {
   z-index: 52;
   transition: none;
-  /* Close dismiss uses translate only — do not grow layout height mid-animation. */
-  height: var(--sheet-h, var(--peek-h, auto));
-  max-height: var(--full-h);
 }
 
 .conversation-sheet.is-dragging,

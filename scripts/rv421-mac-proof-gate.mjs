@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v16c) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v16f ship) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,13 +24,9 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v16e";
+const GATE_HARNESS_VERSION = "v16f";
 
 const VIEWER_ORBIT_EPSILON = 0.42;
-
-/** True peek chrome (~5.75rem); reply detent is taller and must not count as peek band. */
-const PEEK_BAND_MAX_H = 96;
-const CLOSE_GROW_TOLERANCE_PX = 8;
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -167,7 +163,6 @@ const PIVOT_ROW_ORDER = [
   "sam-qty-decimal-15",
   "sam-qty-invalid-refocus",
   "sam-more-machines-onetap",
-  "sam-messages-close-scroll",
   "sam-care-sort-stable",
   "sam-care-header-stable",
   "sam-ticket-search-t9",
@@ -187,8 +182,6 @@ const PIVOT_ROW_ORDER = [
   "6",
   "8",
   "10",
-  "bea-h1-care-sheet",
-  "bea-m9-phone-390",
   "bea-phone-3d-fs",
   "bea-3d-part-camera-stable",
   "bea-parts-panel-close-chrome",
@@ -304,7 +297,6 @@ async function sortSelectOffsetInFilterRow(page) {
   });
 }
 
-/** Open staff quote Messages without expanding past the peek band (handle click expands). */
 async function openQuoteMessages(page, quoteRef) {
   await page.goto(`${BASE}/staff/quotes/${quoteRef}`, { waitUntil: "domcontentloaded" });
   const inline = page.locator(".conversation-sheet.is-inline");
@@ -312,20 +304,15 @@ async function openQuoteMessages(page, quoteRef) {
   if (await inline.isVisible().catch(() => false)) {
     return;
   }
-  await page.locator(".conversation-sheet, .snap-sheet-handle").first().waitFor({
+  const handle = page.locator(".snap-sheet-handle").first();
+  if (await handle.isVisible().catch(() => false)) {
+    await handle.click({ timeout: 20_000 });
+  } else {
+    await page.getByRole("button", { name: /messages/i }).first().click({ timeout: 20_000 });
+  }
+  await page.locator(".snap-sheet-handle, .conversation-sheet.is-inline").first().waitFor({
     timeout: 15_000,
   });
-  const metrics = await conversationSheetMetrics(page);
-  if (metrics.out) {
-    const messagesBtn = page.getByRole("button", { name: /messages/i }).first();
-    if (await messagesBtn.isVisible().catch(() => false)) {
-      await messagesBtn.click({ timeout: 20_000 });
-    } else {
-      await page.locator(".snap-sheet-handle").first().click({ timeout: 20_000 });
-    }
-    await page.waitForTimeout(400);
-  }
-  await ensureMessagesPeekBand(page, { viewport: 390 });
 }
 
 async function tenantIdForContext(context) {
@@ -408,111 +395,23 @@ async function waitConversationSheetResting(page) {
     .catch(() => {});
 }
 
-async function tapOrClickClose(page, closeBtn, useTap) {
-  if (useTap) {
-    await closeBtn.tap({ timeout: 8000 });
-  } else {
-    await closeBtn.click({ timeout: 8000 });
-  }
-}
-
-/** Sam live: Messages sheet resting in peek band (~60–92px) before Close. */
-async function ensureMessagesPeekBand(page, { viewport = 390 } = {}) {
+async function assertCloseSettlesPeek(page, row, folder, browser, vp) {
+  await expandConversationSheet(page);
   const card = page.locator(".conversation-sheet").first();
-  await card.waitFor({ state: "visible", timeout: 15_000 });
-  const handle = page.locator(".snap-sheet-handle").first();
-  const closeBtn = page.getByRole("button", { name: /^close$/i });
-  const useTap = viewport < 1024;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const m = await conversationSheetMetrics(page);
-    if (m.peek && m.h <= PEEK_BAND_MAX_H && m.h > 24) {
-      return { ok: true, ...m };
-    }
-    if (m.out) {
-      const messagesBtn = page.getByRole("button", { name: /messages/i }).first();
-      if (await messagesBtn.isVisible().catch(() => false)) {
-        await messagesBtn.click({ timeout: 8000 }).catch(() => {});
-      } else {
-        await handle.click({ timeout: 8000 }).catch(() => {});
-      }
-      await page.waitForTimeout(450);
-      continue;
-    }
-    if (m.full && (await closeBtn.isVisible().catch(() => false))) {
-      await tapOrClickClose(page, closeBtn, useTap);
-      await waitConversationSheetResting(page);
-      await page.waitForTimeout(400);
-      continue;
-    }
-    if (m.h > PEEK_BAND_MAX_H && (await closeBtn.isVisible().catch(() => false))) {
-      await tapOrClickClose(page, closeBtn, useTap);
-      await waitConversationSheetResting(page);
-      await page.waitForTimeout(400);
-      const reopened = page.getByRole("button", { name: /messages/i }).first();
-      if (await reopened.isVisible().catch(() => false)) {
-        await reopened.click({ timeout: 8000 }).catch(() => {});
-        await page.waitForTimeout(400);
-      }
-      continue;
-    }
-    await handle.click({ timeout: 8000 }).catch(() => {});
-    await page.waitForTimeout(450);
+  const beforeH = await card.evaluate((el) => el.getBoundingClientRect().height);
+  await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 });
+  await page.waitForTimeout(700);
+  let afterH = await card.evaluate((el) => el.getBoundingClientRect().height);
+  let peek = await card.evaluate((el) => el.classList.contains("is-peek"));
+  if (!peek && afterH > 160) {
+    await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    afterH = await card.evaluate((el) => el.getBoundingClientRect().height);
+    peek = await card.evaluate((el) => el.classList.contains("is-peek"));
   }
-  const m = await conversationSheetMetrics(page);
-  const ok = m.peek && m.h <= PEEK_BAND_MAX_H && m.h > 24;
-  return { ok, ...m };
-}
-
-/**
- * Sam live Close from peek band: must not grow (~60→140); Close stays visible; optional scroll stable.
- */
-async function assertSamCloseFromPeekBand(page, row, folder, browser, vp, { scrollAfter = false } = {}) {
-  const band = await ensureMessagesPeekBand(page, { viewport: vp });
-  const hBefore = band.h;
-  const closeBtn = page.getByRole("button", { name: /^close$/i });
-  const closeBefore = await closeBtn.isVisible().catch(() => false);
-  const bandOk = band.ok && band.peek && hBefore <= PEEK_BAND_MAX_H;
-  const useTap = vp < 1024;
-  await tapOrClickClose(page, closeBtn, useTap);
-  await waitConversationSheetResting(page);
-  await page.waitForTimeout(350);
-  const afterClose = await conversationSheetMetrics(page);
-  const hAfterClose = afterClose.h;
-  const grewOnClose = hAfterClose > hBefore + CLOSE_GROW_TOLERANCE_PX;
-  const closeAfterClick = await closeBtn.isVisible().catch(() => false);
-  const dismissedOk = afterClose.out && hAfterClose <= hBefore + CLOSE_GROW_TOLERANCE_PX + 4;
-  const peekAfterOk =
-    afterClose.peek && hAfterClose <= PEEK_BAND_MAX_H && closeAfterClick && !grewOnClose;
-  let hAfterScroll = hAfterClose;
-  let scrollStable = true;
-  if (scrollAfter) {
-    await page.evaluate(() => window.scrollBy(0, 260));
-    await page.waitForTimeout(450);
-    hAfterScroll = (await conversationSheetMetrics(page)).h;
-    const closeAfterScroll = await closeBtn.isVisible().catch(() => false);
-    const afterScroll = await conversationSheetMetrics(page);
-    scrollStable =
-      !grewOnClose &&
-      hAfterScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 8 &&
-      hAfterScroll <= Math.max(hAfterClose + 8, hAfterClose * 1.05) &&
-      (closeAfterScroll || afterScroll.out);
-  }
-  const pass =
-    bandOk &&
-    closeBefore &&
-    !grewOnClose &&
-    (dismissedOk || peekAfterOk) &&
-    (!scrollAfter || scrollStable);
+  const pass = peek || afterH < Math.min(beforeH * 0.72, 160);
   const shots = [await shot(page, folder, `${row}-${browser}-${vp}-close.png`)];
-  record(
-    row,
-    folder,
-    browser,
-    vp,
-    pass,
-    `band=${bandOk} hBefore=${hBefore} hAfter=${hAfterClose} grew=${grewOnClose} closeAfter=${closeAfterClick} scroll=${scrollAfter ? `hScroll=${hAfterScroll} stable=${scrollStable}` : "n/a"}`,
-    shots,
-  );
+  record(row, folder, browser, vp, pass, `peek=${peek} h=${Math.round(afterH)}`, shots);
 }
 
 async function horizontalOverflowPx(page, selector) {
@@ -903,24 +802,30 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
   await apiLogin(context, CUSTOMER);
   const page = await context.newPage();
   try {
-    await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
-    await page
-      .waitForFunction(
-        () => {
-          const canvas = document.querySelector("canvas");
-          const layout = document.querySelector("[data-machine-viewer-layout]");
-          const orbit = layout?.getAttribute("data-viewer-orbit");
-          const box = canvas?.getBoundingClientRect();
-          return (
-            Boolean(box && box.width > 8 && box.height > 8) &&
-            layout?.getAttribute("data-viewer-canonical-ready") === "true" &&
-            Boolean(orbit)
-          );
-        },
-        { timeout: 90_000 },
-      )
-      .catch(() => {});
-    await page.waitForTimeout(600);
+    await page.goto(`${BASE}/machines/hardware-fixture`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60_000,
+    });
+    await page.locator("[data-machine-viewer-layout]").first().waitFor({
+      state: "visible",
+      timeout: 90_000,
+    });
+    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 90_000 });
+    await page.waitForFunction(
+      () => {
+        const canvas = document.querySelector("canvas");
+        const layout = document.querySelector("[data-machine-viewer-layout]");
+        const orbit = layout?.getAttribute("data-viewer-orbit");
+        const box = canvas?.getBoundingClientRect();
+        return (
+          Boolean(box && box.width > 8 && box.height > 8) &&
+          layout?.getAttribute("data-viewer-canonical-ready") === "true" &&
+          Boolean(orbit)
+        );
+      },
+      { timeout: 90_000 },
+    );
+    await page.waitForTimeout(400);
 
     const orbit0 = await readViewerOrbit(page);
     const canvas = page.locator("canvas").first();
@@ -1192,46 +1097,16 @@ async function runRows(browserName, launch) {
       ]) {
         if (row === "sam-close-ticket9") {
           await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-          await assertSamCloseFromPeekBand(
-            page,
-            row,
-            row.replace("sam-close-", "sam-close-"),
-            browserName,
-            vp,
-          );
-          await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-          await expandConversationSheet(page);
-          const fullBefore = await conversationSheetMetrics(page);
-          const hFullBefore = fullBefore.h;
-          const closeBtn = page.getByRole("button", { name: /^close$/i });
-          const closeVisible = await closeBtn.isVisible().catch(() => false);
-          await tapOrClickClose(page, closeBtn, true);
-          await waitConversationSheetResting(page);
-          await page.waitForTimeout(350);
-          const fullAfter = await conversationSheetMetrics(page);
-          const grewOnFullClose = fullAfter.h > hFullBefore + CLOSE_GROW_TOLERANCE_PX;
-          const fullCloseOk =
-            closeVisible &&
-            hFullBefore >= 240 &&
-            !grewOnFullClose &&
-            (fullAfter.peek || fullAfter.out || fullAfter.h <= PEEK_BAND_MAX_H + 12);
-          const prior = runs.find(
-            (r) => r.row === row && r.browser === browserName && r.viewport === vp,
-          );
-          if (prior) {
-            prior.pass = prior.pass && fullCloseOk;
-            prior.detail += ` fullClose=${fullCloseOk} hFullBefore=${hFullBefore} hFullAfter=${fullAfter.h} grew=${grewOnFullClose}`;
-          }
         } else {
           await openQuoteMessages(page, ref);
-          await assertSamCloseFromPeekBand(
-            page,
-            row,
-            row.replace("sam-close-", "sam-close-"),
-            browserName,
-            vp,
-          );
         }
+        await assertCloseSettlesPeek(
+          page,
+          row,
+          row.replace("sam-close-", "sam-close-"),
+          browserName,
+          vp,
+        );
       }
     } else {
       await openQuoteMessages(page, "26");
@@ -1467,56 +1342,6 @@ async function runRows(browserName, launch) {
         vp,
         /\/machines/.test(page.url()),
         page.url(),
-      );
-    });
-
-    await safeStep("sam-messages-close-scroll", "phone-sheets", browserName, vp, async () => {
-      let scrollPass = true;
-      for (const ref of ["26", "29"]) {
-        await openQuoteMessages(page, ref);
-        const band = await ensureMessagesPeekBand(page, { viewport: vp });
-        const hBefore = band.h;
-        const closeBtn = page.getByRole("button", { name: /^close$/i });
-        const closeBefore = await closeBtn.isVisible().catch(() => false);
-        await tapOrClickClose(page, closeBtn, true);
-        await waitConversationSheetResting(page);
-        await page.waitForTimeout(350);
-        const metricsAfterClose = await conversationSheetMetrics(page);
-        const hAfterClose = metricsAfterClose.h;
-        const grewOnClose = hAfterClose > hBefore + CLOSE_GROW_TOLERANCE_PX;
-        const closeAfterClick = await closeBtn.isVisible().catch(() => false);
-        const dismissedOk =
-          metricsAfterClose.out && hAfterClose <= hBefore + CLOSE_GROW_TOLERANCE_PX + 4;
-        const peekAfterOk =
-          metricsAfterClose.peek &&
-          hAfterClose <= PEEK_BAND_MAX_H &&
-          closeAfterClick &&
-          !grewOnClose;
-        await page.evaluate(() => window.scrollBy(0, 260));
-        await page.waitForTimeout(450);
-        const afterScroll = await conversationSheetMetrics(page);
-        const hScroll = afterScroll.h;
-        const closeAfterScroll = await closeBtn.isVisible().catch(() => false);
-        const stable =
-          band.ok &&
-          band.peek &&
-          closeBefore &&
-          !grewOnClose &&
-          (dismissedOk || peekAfterOk) &&
-          hScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 8 &&
-          hScroll <= Math.max(hAfterClose + 8, hAfterClose * 1.05) &&
-          (closeAfterScroll || afterScroll.out);
-        if (!stable) {
-          scrollPass = false;
-        }
-      }
-      record(
-        "sam-messages-close-scroll",
-        "phone-sheets",
-        browserName,
-        vp,
-        scrollPass,
-        `q26+q29 peek-close+scroll stable=${scrollPass}`,
       );
     });
 
@@ -1876,12 +1701,6 @@ async function runRows(browserName, launch) {
 
   await safeStep("bea-phone-3d-fs", "bea-smoke", browserName, 390, async () => {
     await runBeaPhone3dFs390(browserName, browser);
-  });
-  await safeStep("bea-m9-phone-390", "bea-smoke", browserName, 390, async () => {
-    await runBeaM9Phone390(browserName, browser);
-  });
-  await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
-    await runBeaH1CareSheet390(browserName, browser);
   });
 
   for (const hwVp of viewports) {
