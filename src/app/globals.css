@@ -4268,7 +4268,24 @@ body > .quote-undo-toast {
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-list {
     max-height: 100%;
     min-height: 0;
-    overflow: auto;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filters {
+    overflow-x: clip;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filter-row {
+    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(0, 6.25rem);
+    overflow-x: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-sort-select {
+    width: 100%;
+    min-width: 0;
+    max-width: 6.25rem;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-detail {

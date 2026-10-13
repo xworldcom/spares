@@ -1344,7 +1344,9 @@ async function runRows(browserName, launch) {
     });
 
     await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
-      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      const careTicketsUrl =
+        vp >= 1024 ? `${BASE}/care/tickets/34` : `${BASE}/care/tickets`;
+      await page.goto(careTicketsUrl, { waitUntil: "domcontentloaded" });
       await page.locator(".tickets-workspace-filter-row").waitFor({ state: "visible", timeout: 12_000 });
       const listTopBefore = await page
         .locator(".tickets-workspace-list")
@@ -1359,9 +1361,14 @@ async function runRows(browserName, launch) {
           return { ok: false, overflowX: "missing" };
         }
         const overflowX = getComputedStyle(row).overflowX;
+        const split = Boolean(
+          document.querySelector('.tickets-workspace[data-tickets-layout="split"]'),
+        );
+        const needsHidden = window.innerWidth <= 430 || split;
         return {
-          ok: window.innerWidth <= 430 ? overflowX === "hidden" : true,
+          ok: needsHidden ? overflowX === "hidden" : true,
           overflowX,
+          split,
         };
       });
       const search = page.locator("#care-tickets-search");
@@ -1433,15 +1440,25 @@ async function runRows(browserName, launch) {
     await safeStep("sam-ticket-search-t9", "care-search", browserName, vp, async () => {
       let rankedOk = true;
       let detail = "";
+      const careSearchUrl =
+        vp >= 1024 ? `${BASE}/care/tickets/34` : `${BASE}/care/tickets`;
       for (const query of ["T9", "9"]) {
-        await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+        await page.goto(careSearchUrl, { waitUntil: "domcontentloaded" });
+        await page
+          .locator('.tickets-workspace[data-tickets-layout="split"]')
+          .waitFor({ state: "visible", timeout: vp >= 1024 ? 12_000 : 2000 })
+          .catch(() => {});
         const searchInput = page.locator("#care-tickets-search");
         await searchInput.fill("");
         await searchInput.fill(query);
         await searchInput.press("Enter").catch(() => {});
         await page
           .waitForFunction(
-            (needle) => {
+            (q) => {
+              const params = new URLSearchParams(window.location.search);
+              if (q === "9" && params.get("q") !== "9") {
+                return false;
+              }
               const first = document.querySelector(".tickets-workspace-list a.care-row");
               return Boolean(first && /Ticket\s+9\b/i.test(first.textContent ?? ""));
             },

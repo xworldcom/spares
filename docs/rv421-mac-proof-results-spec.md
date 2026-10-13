@@ -18,7 +18,13 @@ Deferred live-fail rows (Messages close, H1, M9 @390, ticket9 bite, etc.) ship i
 **Product (this PR):**
 
 - Live fixes kept: immersive phone 3D FS, care search ranking, care sort @390 filter layout, qty decimal/refocus, staff nav, drawer/FS rows
-- **Deferred to [#435](https://github.com/xworldcom/spares/pull/435):** `#433` camera stable, `#434` part sheet close (Mac v16f Phase B FAIL @ `1cc06d9`)
+- **Deferred to [#435](https://github.com/xworldcom/spares/pull/435):** split-pane care @1440 (partial ship), `#433` camera stable, `#434` part sheet close, Messages/H1/M9 bite rows
+
+## v16g partial ship (#435 @ `main` + delta)
+
+**Product (net-new vs `ea1e682`):** `TicketsWorkspace` split search list behavior; split-pane care filter/sort CSS @1440.
+
+**Still deferred:** `#433`/`#434`, peek-band / Messages / H1 / M9 / `sam-close-ticket9` bite — see `cursor/rv430-deferred-v16g-followup-9e78`.
 
 **Harness:**
 
