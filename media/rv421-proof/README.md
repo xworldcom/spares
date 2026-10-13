@@ -6,16 +6,16 @@
 **`git bundle list-heads rv421-batch.bundle`:**
 
 ```
-895682931afa9683b09a683ce827ca885602aed8 refs/heads/cursor/rv430-live-v16-f338
+cb11de3b4553b50120a82485f0ddc0ca480dd009 refs/heads/cursor/rv430-live-v16-f338
 ```
 
-Harness **v16d** — v16c #433/#434 rows + scoped BOM; peek-band Close (tap @390), care H1 detent, focus-click care sort.
+Harness **v16e** — peek-open quote Messages (no handle-expand); care H1 reply drag; ticket9 full-close bite; filter `overflow-x: hidden` @390; 3D orbit wait.
 
-## Authoritative SHA (Kevin v16d re-gate)
+## Authoritative SHA (Kevin v16e re-gate)
 
-**HEAD:** `895682931afa9683b09a683ce827ca885602aed8` (`8956829`)
+**HEAD:** `cb11de3b4553b50120a82485f0ddc0ca480dd009` (`cb11de3`)
 
-The gate labels **Mac checkout HEAD** in `RESULTS.md`, `proof-summary.json`, and `RESULTS-rv430-v16d-<shortSha>.md`.
+The gate labels **Mac checkout HEAD** in `RESULTS.md`, `proof-summary.json`, and `RESULTS-rv430-v16e-<shortSha>.md`.
 
 **Dual gate bar (coordinator):**
 
@@ -32,7 +32,7 @@ After download, run `git bundle list-heads` locally — must match the line abov
 cp /path/to/rv421-batch.bundle ~/rv421-batch.bundle
 git clone -b cursor/rv430-live-v16-f338 ~/rv421-batch.bundle ~/spares-gate
 cd ~/spares-gate
-git rev-parse HEAD   # expect 895682931afa9683b09a683ce827ca885602aed8
+git rev-parse HEAD   # expect cb11de3b4553b50120a82485f0ddc0ca480dd009
 npm ci
 node scripts/rv421-mac-proof-seed.mjs
 npm run build
