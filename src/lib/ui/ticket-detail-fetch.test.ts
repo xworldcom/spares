@@ -25,4 +25,13 @@ describe("TicketDetail fetch loop guards", () => {
     assert.match(src, /return changed \? next : rows/);
     assert.match(src, /row\.status === patch\.status/);
   });
+
+  it("syncs ticket list filters on the current pathname (detail + search)", () => {
+    const src = readFileSync(
+      new URL("../../components/care/TicketsWorkspace.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(src, /router\.replace\(`\$\{pathname\}\$\{qs\}`/);
+    assert.match(src, /tickets-workspace-list-scroll/);
+  });
 });

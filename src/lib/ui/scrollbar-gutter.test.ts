@@ -10,5 +10,9 @@ describe("scrollbar gutter (layout shift)", () => {
       /html:has\(\.spares-app-stage\):not\(:has\(\.spares-app-cinematic\)\)[\s\S]*scrollbar-gutter:\s*stable/,
     );
     assert.match(css, /\.imsg-thread[\s\S]*scrollbar-gutter:\s*stable/);
+    assert.match(
+      css,
+      /\.tickets-workspace\[data-tickets-layout="split"\] \.tickets-workspace-list-scroll[\s\S]*scrollbar-gutter:\s*stable/,
+    );
   });
 });

@@ -4266,21 +4266,34 @@ body > .quote-undo-toast {
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-list {
+    display: flex;
     max-height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-toolbar,
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filters {
+    flex-shrink: 0;
+    overflow-x: clip;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-list-scroll {
+    flex: 1 1 0;
     min-height: 0;
     overflow-x: clip;
     overflow-y: auto;
     scrollbar-gutter: stable;
   }
 
-  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filters {
-    overflow-x: clip;
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filter-row {
+    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(9.75rem, max-content);
+    overflow-x: hidden;
   }
 
-  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filter-row {
-    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(9.75rem, 1fr);
-    overflow-x: hidden;
-    scrollbar-gutter: stable;
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-sort {
+    min-width: 9.75rem;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-sort-select {
