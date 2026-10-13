@@ -2,6 +2,9 @@
 /**
  * Download prod catalog JSON from Vercel Blob (private).
  * Requires BLOB_READ_WRITE_TOKEN from Vercel project env only.
+ *
+ * Model blobs (e.g. files/hardware-fixture.glb) are not in this pull; Mac proof seed
+ * copies them from repo placeholders or from OEE360_PROD_SNAPSHOT_DIR/files/ when present.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
