@@ -6,14 +6,14 @@
 **`git bundle list-heads rv421-batch.bundle`:**
 
 ```
-cb11de3b4553b50120a82485f0ddc0ca480dd009 refs/heads/cursor/rv430-live-v16-f338
+7706dce01065ed6376f9bb7fdd0e75ae50ba683c refs/heads/cursor/rv430-live-v16-f338
 ```
 
 Harness **v16e** — peek-open quote Messages (no handle-expand); care H1 reply drag; ticket9 full-close bite; filter `overflow-x: hidden` @390; 3D orbit wait.
 
 ## Authoritative SHA (Kevin v16e re-gate)
 
-**HEAD:** `cb11de3b4553b50120a82485f0ddc0ca480dd009` (`cb11de3`)
+**HEAD:** `7706dce01065ed6376f9bb7fdd0e75ae50ba683c` (`7706dce`)
 
 The gate labels **Mac checkout HEAD** in `RESULTS.md`, `proof-summary.json`, and `RESULTS-rv430-v16e-<shortSha>.md`.
 
@@ -32,7 +32,7 @@ After download, run `git bundle list-heads` locally — must match the line abov
 cp /path/to/rv421-batch.bundle ~/rv421-batch.bundle
 git clone -b cursor/rv430-live-v16-f338 ~/rv421-batch.bundle ~/spares-gate
 cd ~/spares-gate
-git rev-parse HEAD   # expect cb11de3b4553b50120a82485f0ddc0ca480dd009
+git rev-parse HEAD   # expect 7706dce01065ed6376f9bb7fdd0e75ae50ba683c
 npm ci
 node scripts/rv421-mac-proof-seed.mjs
 npm run build
