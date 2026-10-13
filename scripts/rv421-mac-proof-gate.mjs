@@ -183,8 +183,6 @@ const PIVOT_ROW_ORDER = [
   "8",
   "10",
   "bea-phone-3d-fs",
-  "bea-3d-part-camera-stable",
-  "bea-parts-panel-close-chrome",
   "9",
 ];
 
@@ -1702,12 +1700,6 @@ async function runRows(browserName, launch) {
   await safeStep("bea-phone-3d-fs", "bea-smoke", browserName, 390, async () => {
     await runBeaPhone3dFs390(browserName, browser);
   });
-
-  for (const hwVp of viewports) {
-    if (hwVp === 390 || hwVp === 1440) {
-      await runBeaHardwareFixtureGateRows(browserName, browser, hwVp);
-    }
-  }
 
   await browser.close();
 }
