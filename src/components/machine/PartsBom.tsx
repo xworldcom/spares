@@ -134,7 +134,7 @@ export function PartsBom({
       {filtered.length === 0 && !pinnedSelection ? (
         <p className="spares-muted text-sm">No parts match that search.</p>
       ) : (
-        <ul data-parts-bom="" className="spares-surface overflow-hidden rounded-[22px]">
+        <ul className="spares-surface overflow-hidden rounded-[22px]">
           {pinnedSelection ? (
             <li key={`pinned:${pinnedSelection.id}`} data-bom-pinned-selection="">
               <div className="flex min-h-14 w-full items-center gap-3 px-4 py-2 row-on-ink">

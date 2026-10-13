@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v15g) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v16f ship) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,9 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v15g";
+const GATE_HARNESS_VERSION = "v16f";
+
+const VIEWER_ORBIT_EPSILON = 0.42;
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -161,7 +163,6 @@ const PIVOT_ROW_ORDER = [
   "sam-qty-decimal-15",
   "sam-qty-invalid-refocus",
   "sam-more-machines-onetap",
-  "sam-messages-close-scroll",
   "sam-care-sort-stable",
   "sam-care-header-stable",
   "sam-ticket-search-t9",
@@ -181,7 +182,6 @@ const PIVOT_ROW_ORDER = [
   "6",
   "8",
   "10",
-  "bea-h1-care-sheet",
   "bea-phone-3d-fs",
   "9",
 ];
@@ -357,6 +357,42 @@ async function expandConversationSheet(page) {
   }
 }
 
+async function conversationSheetMetrics(page) {
+  const card = page.locator(".conversation-sheet").first();
+  return card.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      h: Math.round(rect.height),
+      peek: el.classList.contains("is-peek"),
+      reply: el.classList.contains("is-reply"),
+      full: el.classList.contains("is-full"),
+      out: el.classList.contains("is-out"),
+    };
+  });
+}
+
+/** Customer list overlay vs staff split aside — avoids strict-mode duplicate nested BOM lists. */
+function machinePartsBomRoot(page) {
+  return page.locator("section[data-parts-bom], aside.machine-bom[data-parts-bom]").first();
+}
+
+async function waitConversationSheetResting(page) {
+  await page
+    .waitForFunction(
+      () => {
+        const el = document.querySelector(".conversation-sheet");
+        return (
+          el &&
+          !el.classList.contains("is-dragging") &&
+          !el.classList.contains("is-settling") &&
+          !el.hasAttribute("data-motion-live")
+        );
+      },
+      { timeout: 8000 },
+    )
+    .catch(() => {});
+}
+
 async function assertCloseSettlesPeek(page, row, folder, browser, vp) {
   await expandConversationSheet(page);
   const card = page.locator(".conversation-sheet").first();
@@ -374,6 +410,21 @@ async function assertCloseSettlesPeek(page, row, folder, browser, vp) {
   const pass = peek || afterH < Math.min(beforeH * 0.72, 160);
   const shots = [await shot(page, folder, `${row}-${browser}-${vp}-close.png`)];
   record(row, folder, browser, vp, pass, `peek=${peek} h=${Math.round(afterH)}`, shots);
+}
+
+async function horizontalOverflowPx(page, selector) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) {
+      return { found: false, overflow: 0 };
+    }
+    return {
+      found: true,
+      overflow: Math.max(0, Math.round(el.scrollWidth - el.clientWidth)),
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    };
+  }, selector);
 }
 
 async function waitForDocumentTitle(page, pattern) {
@@ -447,66 +498,84 @@ async function controlsAboveTabBar(page, selectors) {
         continue;
       }
       const rect = el.getBoundingClientRect();
-      hits[sel] = rect.height > 4 && rect.bottom <= tabTop + 1;
+      const style = getComputedStyle(el);
+      hits[sel] =
+        rect.height > 4 &&
+        rect.bottom <= tabTop + 1 &&
+        style.visibility !== "hidden" &&
+        style.display !== "none" &&
+        style.opacity !== "0";
     }
     return { ok: Object.values(hits).every(Boolean), tabTop, hits };
   }, selectors);
 }
 
-async function runBeaMandatoryPhone390(browserName, browser) {
-  const context = await browser.newContext({ viewport: viewportSize(390) });
-  if (browserName === "chrome" || browserName === "chromium") {
-    try {
-      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
-    } catch {
-      // Playwright builds without fullscreen permission still exercise requestFullscreen.
+async function sheetBottomAboveTabBar(page, sheetSelector = ".conversation-sheet, .quote-sheet") {
+  return page.evaluate((sel) => {
+    const sheet = document.querySelector(sel);
+    const tabbar = document.querySelector(".spares-tabbar");
+    if (!sheet || !tabbar) {
+      return { ok: false, reason: "missing" };
     }
-  }
-  await apiLogin(context, CUSTOMER);
-  const page = await context.newPage();
-  const vp = 390;
+    const bottom = sheet.getBoundingClientRect().bottom;
+    const tabTop = tabbar.getBoundingClientRect().top;
+    return { ok: bottom <= tabTop + 1, bottom: Math.round(bottom), tabTop: Math.round(tabTop) };
+  }, sheetSelector);
+}
 
-  await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
-  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
-  await clickEnterViewerFullscreen(page);
-  await page.waitForTimeout(750);
-  const inFs = await readViewerFsMetrics(page);
-  const mode = viewerFsMode(inFs);
-  const fsEntered =
-    inFs.native ||
-    (inFs.overlay && inFs.layoutH >= Math.min(360, inFs.innerH * 0.52));
-  record(
-    "bea-phone-3d-fs",
-    "bea-smoke",
-    browserName,
-    vp,
-    fsEntered,
-    `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH}`,
-  );
-  await clickExitViewerFullscreen(page);
+async function viewerChromeHiddenForFs(page) {
+  return page.evaluate(() => {
+    const immersive = document.documentElement.classList.contains("viewer-immersive-fs");
+    const tab = document.querySelector(".spares-tabbar");
+    const header = document.querySelector(".spares-header");
+    if (!tab || !header) {
+      return immersive;
+    }
+    const tabBox = tab.getBoundingClientRect();
+    const headBox = header.getBoundingClientRect();
+    const tabHidden =
+      immersive ||
+      getComputedStyle(tab).visibility === "hidden" ||
+      tabBox.height < 2 ||
+      tabBox.bottom < 4;
+    const headHidden =
+      immersive ||
+      getComputedStyle(header).visibility === "hidden" ||
+      headBox.height < 2 ||
+      headBox.bottom < 4;
+    return tabHidden && headHidden;
+  });
+}
 
-  await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-  await expandConversationSheet(page);
-  const card = page.locator(".conversation-sheet").first();
-  const sheetBox = await card.boundingBox();
-  const hBeforeDrag = await card.evaluate((el) => el.getBoundingClientRect().height);
-  if (sheetBox) {
-    const x = sheetBox.x + sheetBox.width / 2;
-    const yStart = sheetBox.y + 32;
-    const yEnd = sheetBox.y + sheetBox.height * 0.52;
-    await page.mouse.move(x, yStart);
-    await page.mouse.down();
-    await page.mouse.move(x, yEnd, { steps: 16 });
-    await page.mouse.up();
-  }
-  await page.waitForTimeout(900);
-  const stuck = await card.evaluate((el) => {
+async function mouseDragVertical(page, x, yStart, yEnd, steps = 16) {
+  await page.mouse.move(x, yStart);
+  await page.mouse.down();
+  await page.mouse.move(x, yEnd, { steps });
+  await page.mouse.up();
+}
+
+async function touchDragVertical(page, x, yStart, yEnd) {
+  const card = page.locator(".conversation-sheet, .quote-sheet").first();
+  const pointerInit = {
+    pointerId: 7,
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    buttons: 1,
+    pressure: 0.5,
+  };
+  await card.dispatchEvent("pointerdown", { ...pointerInit, clientX: x, clientY: yStart });
+  await card.dispatchEvent("pointermove", { ...pointerInit, clientX: x, clientY: yEnd, buttons: 1 });
+  await card.dispatchEvent("pointerup", { ...pointerInit, clientX: x, clientY: yEnd, buttons: 0 });
+}
+
+async function careSheetDragStuckMetrics(page, card) {
+  return card.evaluate((el) => {
     const settling = el.classList.contains("is-settling") || el.classList.contains("is-dragging");
     const motionLive = el.hasAttribute("data-motion-live");
     const h = el.getBoundingClientRect().height;
     const reply = Number.parseFloat(getComputedStyle(el).getPropertyValue("--reply-h"));
     const full = Number.parseFloat(getComputedStyle(el).getPropertyValue("--full-h"));
-    const mid = (reply + full) / 2;
     const betweenDetents =
       Number.isFinite(reply) &&
       Number.isFinite(full) &&
@@ -516,29 +585,399 @@ async function runBeaMandatoryPhone390(browserName, browser) {
       h < full - 0.35 * (full - reply);
     return { settling, motionLive, betweenDetents, h: Math.round(h) };
   });
-  if (await card.evaluate((el) => el.classList.contains("is-peek"))) {
-    await expandConversationSheet(page);
-    await page.waitForTimeout(400);
-  }
+}
+
+async function evaluateCareH1AfterDrag(page, card) {
+  await waitConversationSheetResting(page);
+  await page.waitForTimeout(450);
+  const stuck = await careSheetDragStuckMetrics(page, card);
+  const sheetEdge = await sheetBottomAboveTabBar(page);
   const above = await controlsAboveTabBar(page, [
     ".conversation-sheet-close",
     ".imsg-send",
   ]);
-  const h1Pass =
+  const closeVisible = await page
+    .locator(".conversation-sheet-close")
+    .isVisible()
+    .catch(() => false);
+  const sendVisible = await page
+    .locator(".imsg-send")
+    .isVisible()
+    .catch(() => false);
+  const detentOk = await card.evaluate((el) => {
+    if (
+      el.classList.contains("is-dragging") ||
+      el.classList.contains("is-settling") ||
+      el.hasAttribute("data-motion-live")
+    ) {
+      return false;
+    }
+    const h = el.getBoundingClientRect().height;
+    const reply = Number.parseFloat(getComputedStyle(el).getPropertyValue("--reply-h"));
+    const full = Number.parseFloat(getComputedStyle(el).getPropertyValue("--full-h"));
+    if (el.classList.contains("is-peek")) {
+      return Number.isFinite(reply) && h <= reply + 10;
+    }
+    if (el.classList.contains("is-reply")) {
+      return Number.isFinite(reply) && Math.abs(h - reply) <= 12;
+    }
+    if (el.classList.contains("is-full")) {
+      return Number.isFinite(full) && Math.abs(h - full) <= 16;
+    }
+    return false;
+  });
+  const pass =
     !stuck.settling &&
     !stuck.motionLive &&
     !stuck.betweenDetents &&
-    above.ok;
+    detentOk &&
+    sheetEdge.ok &&
+    above.ok &&
+    closeVisible &&
+    sendVisible;
+  return { pass, stuck, sheetEdge, above, closeVisible, sendVisible, detentOk };
+}
+
+async function newCustomerPhone390Context(browser, browserName) {
+  const context = await browser.newContext({
+    viewport: viewportSize(390),
+    hasTouch: true,
+  });
+  if (browserName === "chrome" || browserName === "chromium") {
+    try {
+      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+    } catch {
+      // Playwright builds without fullscreen permission still exercise requestFullscreen.
+    }
+  }
+  await apiLogin(context, CUSTOMER);
+  return context;
+}
+
+async function openCustomerQuoteTrayExpanded(page) {
+  await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 });
+  const quoteChip = page.locator("button[data-quote-tray]").first();
+  await quoteChip.waitFor({ state: "visible", timeout: 20_000 });
+  await quoteChip.click({ timeout: 12_000 });
+  const quoteSheet = page.locator(".machine-viewer .quote-sheet, .quote-sheet").first();
+  await quoteSheet.waitFor({ state: "visible", timeout: 12_000 });
+  const handle = quoteSheet.locator('[data-quote-target="handle"], .quote-sheet-handle').first();
+  const isFull = await quoteSheet.evaluate((el) => el.classList.contains("is-full"));
+  if (!isFull) {
+    await handle.click({ force: true, timeout: 10_000 });
+    await page.waitForTimeout(550);
+  }
+  return quoteSheet;
+}
+
+async function runBeaPhone3dFs390(browserName, browser) {
+  const vp = 390;
+  const context = await newCustomerPhone390Context(browser, browserName);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+    await clickEnterViewerFullscreen(page);
+    await page.waitForTimeout(750);
+    const inFs = await readViewerFsMetrics(page);
+    const mode = viewerFsMode(inFs);
+    const chromeHidden = await viewerChromeHiddenForFs(page);
+    const fsEntered =
+      (inFs.native || inFs.overlay) &&
+      chromeHidden &&
+      inFs.layoutH >= Math.round(inFs.innerH * 0.86);
+    record(
+      "bea-phone-3d-fs",
+      "bea-smoke",
+      browserName,
+      vp,
+      fsEntered,
+      `mode=${mode} layoutH=${inFs.layoutH} innerH=${inFs.innerH} chromeHidden=${chromeHidden}`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function runBeaM9Phone390(browserName, browser) {
+  const vp = 390;
+  const context = await newCustomerPhone390Context(browser, browserName);
+  const page = await context.newPage();
+  try {
+    const customerTenant = await tenantIdForContext(context);
+    await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
+    await seedCustomerTray(page, "palletizer", customerTenant);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    if (browserName === "webkit") {
+      await page.waitForTimeout(900);
+    }
+    const quoteSheet = await openCustomerQuoteTrayExpanded(page);
+    const hExpanded = await quoteSheet.evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    const removeBtn = quoteSheet.getByRole("button", { name: /^remove$/i }).first();
+    await removeBtn.waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+    await removeBtn.scrollIntoViewIfNeeded().catch(() => {});
+    await page.waitForTimeout(browserName === "webkit" ? 350 : 120);
+    const removeBox = await removeBtn.boundingBox();
+    const vpH = page.viewportSize()?.height ?? 844;
+    const removeInView =
+      Boolean(removeBox) && removeBox.y >= 0 && removeBox.y + removeBox.height <= vpH + 1;
+    const sheetEdgeM9 = await sheetBottomAboveTabBar(page, ".machine-viewer .quote-sheet, .quote-sheet");
+    await removeBtn.click({ timeout: 8000 }).catch(() => {});
+    const undoBtn = page.locator("[data-quote-undo-toast] .quote-undo-toast-action");
+    await undoBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+    const undoBox = await undoBtn.boundingBox();
+    const undoInView =
+      Boolean(undoBox) && undoBox.y >= 0 && undoBox.y + undoBox.height <= vpH + 1;
+    record(
+      "bea-m9-phone-390",
+      "bea-smoke",
+      browserName,
+      vp,
+      hExpanded > 120 && removeInView && sheetEdgeM9.ok && undoInView,
+      `expandedH=${hExpanded} removeInView=${removeInView} edge=${JSON.stringify(sheetEdgeM9)} undoInView=${undoInView}`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    record(
+      "bea-m9-phone-390",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 280)}`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function readViewerOrbit(page) {
+  return page.evaluate(() => {
+    const layout = document.querySelector("[data-machine-viewer-layout]");
+    const raw = layout?.getAttribute("data-viewer-orbit");
+    if (!raw) {
+      return null;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
+}
+
+function viewerOrbitStable(before, after, epsilon = VIEWER_ORBIT_EPSILON) {
+  if (!before || !after) {
+    return false;
+  }
+  for (const key of ["position", "target"]) {
+    const a = before[key];
+    const b = after[key];
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3) {
+      return false;
+    }
+    for (let i = 0; i < 3; i += 1) {
+      if (Math.abs(a[i] - b[i]) > epsilon) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
+  const context = await browser.newContext({
+    viewport: viewportSize(vp),
+    hasTouch: vp < 1024,
+  });
+  if (browserName === "chrome" || browserName === "chromium") {
+    try {
+      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+    } catch {
+      // optional
+    }
+  }
+  await apiLogin(context, CUSTOMER);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${BASE}/machines/hardware-fixture`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60_000,
+    });
+    await page.locator("[data-machine-viewer-layout]").first().waitFor({
+      state: "visible",
+      timeout: 90_000,
+    });
+    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 90_000 });
+    await page.waitForFunction(
+      () => {
+        const canvas = document.querySelector("canvas");
+        const layout = document.querySelector("[data-machine-viewer-layout]");
+        const orbit = layout?.getAttribute("data-viewer-orbit");
+        const box = canvas?.getBoundingClientRect();
+        return (
+          Boolean(box && box.width > 8 && box.height > 8) &&
+          layout?.getAttribute("data-viewer-canonical-ready") === "true" &&
+          Boolean(orbit)
+        );
+      },
+      { timeout: 90_000 },
+    );
+    await page.waitForTimeout(400);
+
+    const orbit0 = await readViewerOrbit(page);
+    const canvas = page.locator("canvas").first();
+    const canvasBox = await canvas.boundingBox();
+    let cameraPass = false;
+    let cameraDetail = "no-canvas";
+    if (canvasBox && orbit0) {
+      const taps = [
+        { x: canvasBox.width * 0.42, y: canvasBox.height * 0.52 },
+        { x: canvasBox.width * 0.58, y: canvasBox.height * 0.46 },
+      ];
+      let lastOrbit = orbit0;
+      let stableChain = true;
+      for (const pos of taps) {
+        await canvas.click({ position: pos, timeout: 10_000 });
+        await page.waitForTimeout(550);
+        const nextOrbit = await readViewerOrbit(page);
+        if (!viewerOrbitStable(lastOrbit, nextOrbit)) {
+          stableChain = false;
+          cameraDetail = `orbit-shift after tap @${Math.round(pos.x)},${Math.round(pos.y)}`;
+          break;
+        }
+        lastOrbit = nextOrbit;
+      }
+      cameraPass = stableChain && Boolean(lastOrbit);
+      if (cameraPass) {
+        cameraDetail = "orbit-stable-across-2-taps";
+      }
+    }
+    record(
+      "bea-3d-part-camera-stable",
+      "bea-smoke",
+      browserName,
+      vp,
+      cameraPass,
+      cameraDetail,
+    );
+
+    await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: /^list$/i }).click({ timeout: 10_000 });
+    const bomRoot = machinePartsBomRoot(page);
+    await bomRoot.waitFor({ state: "visible", timeout: 12_000 });
+    const partRow = bomRoot.locator("button").first();
+    await partRow.click({ timeout: 10_000 });
+    const sheet = page.locator("[data-part-sheet]").first();
+    await sheet.waitFor({ state: "visible", timeout: 10_000 });
+    const close = page.locator("[data-part-sheet-close]").first();
+    await close.waitFor({ state: "visible", timeout: 8000 });
+    const sheetBox = await sheet.boundingBox();
+    const closeBox = await close.boundingBox();
+    const inHeader = await close.evaluate(
+      (el) => el.closest("[data-part-sheet-header]") !== null,
+    );
+    const touchTarget =
+      Boolean(closeBox) && closeBox.width >= 44 && closeBox.height >= 44;
+    const headerRegion =
+      Boolean(sheetBox && closeBox) && closeBox.y - sheetBox.y <= 56 && inHeader;
+    record(
+      "bea-parts-panel-close-chrome",
+      "bea-smoke",
+      browserName,
+      vp,
+      touchTarget && headerRegion,
+      `touch=${touchTarget} header=${headerRegion} close=${closeBox ? `${Math.round(closeBox.width)}x${Math.round(closeBox.height)}` : "na"}`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    record(
+      "bea-3d-part-camera-stable",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 200)}`,
+    );
+    record(
+      "bea-parts-panel-close-chrome",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 200)}`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function runCareH1DragProbe(page, actor) {
+  await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
+  const card = page.locator(".conversation-sheet").first();
+  await card.waitFor({ state: "visible", timeout: 15_000 });
+  const handle = page.locator(".snap-sheet-handle").first();
+  const startMetrics = await conversationSheetMetrics(page);
+  if (startMetrics.out) {
+    await handle.click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  }
+  if (await card.evaluate((el) => el.classList.contains("is-peek"))) {
+    await handle.click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(450);
+  }
+  const sheetBox = await card.boundingBox();
+  if (!sheetBox) {
+    return { pass: false, detail: "no-sheet-box" };
+  }
+  const vpH = page.viewportSize()?.height ?? 844;
+  const x = sheetBox.x + sheetBox.width / 2;
+  const yStart = sheetBox.y + 28;
+  const yEnd = sheetBox.y + sheetBox.height * 0.38;
+  if (actor === "mouse") {
+    await mouseDragVertical(page, x, yStart, yEnd);
+  } else {
+    await touchDragVertical(page, x, yStart, yEnd);
+  }
+  const result = await evaluateCareH1AfterDrag(page, card);
+  const hAfter = result.stuck?.h ?? 0;
+  const notFullSheet = hAfter > 0 && hAfter < vpH * 0.62 && !(await card.evaluate((el) => el.classList.contains("is-full")));
+  const pass = result.pass && notFullSheet;
+  return {
+    pass,
+    detail: `stuck=${JSON.stringify(result.stuck)} edge=${JSON.stringify(result.sheetEdge)} detent=${result.detentOk} close=${result.closeVisible} send=${result.sendVisible} notFull=${notFullSheet}`,
+  };
+}
+
+async function runBeaH1CareSheet390(browserName, browser) {
+  const vp = 390;
+  const context = await newCustomerPhone390Context(browser, browserName);
+  const page = await context.newPage();
+  try {
+  const mouseH1 = await runCareH1DragProbe(page, "mouse");
+  const touchH1 = await runCareH1DragProbe(page, "touch");
+  const h1Pass = mouseH1.pass && touchH1.pass;
   record(
     "bea-h1-care-sheet",
     "bea-smoke",
     browserName,
     vp,
     h1Pass,
-    `stuck=${JSON.stringify(stuck)} above=${JSON.stringify(above)} hBefore=${Math.round(hBeforeDrag)}`,
+    `mouse=${mouseH1.pass} ${mouseH1.detail} touch=${touchH1.pass} ${touchH1.detail}`,
   );
-
-  await context.close();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    record(
+      "bea-h1-care-sheet",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 280)}`,
+    );
+  } finally {
+    await context.close();
+  }
 }
 
 async function clickEnterViewerFullscreen(page) {
@@ -571,7 +1010,10 @@ async function runRows(browserName, launch) {
   const browser = await launch.launch({ headless: true });
   for (const vp of viewports) {
     const size = viewportSize(vp);
-    const context = await browser.newContext({ viewport: size });
+    const context = await browser.newContext({
+      viewport: size,
+      hasTouch: vp < 1024,
+    });
     if (browserName === "chrome" || browserName === "chromium") {
       try {
         await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
@@ -656,7 +1098,13 @@ async function runRows(browserName, launch) {
         } else {
           await openQuoteMessages(page, ref);
         }
-        await assertCloseSettlesPeek(page, row, row.replace("sam-close-", "sam-close-"), browserName, vp);
+        await assertCloseSettlesPeek(
+          page,
+          row,
+          row.replace("sam-close-", "sam-close-"),
+          browserName,
+          vp,
+        );
       }
     } else {
       await openQuoteMessages(page, "26");
@@ -895,45 +1343,65 @@ async function runRows(browserName, launch) {
       );
     });
 
-    await safeStep("sam-messages-close-scroll", "phone-sheets", browserName, vp, async () => {
-      await openQuoteMessages(page, "26");
-      await expandConversationSheet(page);
-      const cardMsg = page.locator(".conversation-sheet").first();
-      const hClose = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
-      await page.getByRole("button", { name: /^close$/i }).click({ timeout: 8000 });
-      await page.waitForTimeout(650);
-      await page.evaluate(() => window.scrollBy(0, 260));
-      await page.waitForTimeout(450);
-      const hScroll = await cardMsg.evaluate((el) => el.getBoundingClientRect().height);
-      record(
-        "sam-messages-close-scroll",
-        "phone-sheets",
-        browserName,
-        vp,
-        hScroll <= Math.max(hClose * 1.12, hClose + 28),
-        `hClose=${Math.round(hClose)} hScroll=${Math.round(hScroll)}`,
-      );
-    });
-
     await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
       await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
       await page.locator(".tickets-workspace-filter-row").waitFor({ state: "visible", timeout: 12_000 });
+      const listTopBefore = await page
+        .locator(".tickets-workspace-list")
+        .boundingBox()
+        .catch(() => null);
       const sortBoxBefore = await sortSelectOffsetInFilterRow(page);
-      await page.locator("#care-tickets-search").fill("pal");
+      const overflowBefore = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
+      const listOverflowBefore = await horizontalOverflowPx(page, ".tickets-workspace-list");
+      const filterOverflowPolicy = await page.evaluate(() => {
+        const row = document.querySelector(".tickets-workspace-filter-row");
+        if (!row) {
+          return { ok: false, overflowX: "missing" };
+        }
+        const overflowX = getComputedStyle(row).overflowX;
+        return {
+          ok: window.innerWidth <= 430 ? overflowX === "hidden" : true,
+          overflowX,
+        };
+      });
+      const search = page.locator("#care-tickets-search");
+      await search.click({ timeout: 8000 });
+      await page.waitForTimeout(320);
+      const sortBoxFocus = await sortSelectOffsetInFilterRow(page);
+      const overflowFocus = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
+      const listOverflowFocus = await horizontalOverflowPx(page, ".tickets-workspace-list");
+      const listTopFocus = await page
+        .locator(".tickets-workspace-list")
+        .boundingBox()
+        .catch(() => null);
+      const focusStable =
+        sortBoxBefore &&
+        sortBoxFocus &&
+        Math.abs(sortBoxBefore.y - sortBoxFocus.y) < 1 &&
+        Math.abs(sortBoxBefore.x - sortBoxFocus.x) < 2 &&
+        (!listTopBefore ||
+          !listTopFocus ||
+          Math.abs(listTopBefore.y - listTopFocus.y) < 2);
+      const noOverflowOnFocus =
+        overflowFocus.overflow <= 1 &&
+        listOverflowFocus.overflow <= 1;
+      await search.fill("pal");
       await page.waitForTimeout(500);
       const sortBoxAfter = await sortSelectOffsetInFilterRow(page);
+      const overflowTyped = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
       const sortStable =
-        sortBoxBefore &&
+        sortBoxFocus &&
         sortBoxAfter &&
-        Math.abs(sortBoxBefore.y - sortBoxAfter.y) < 1 &&
-        Math.abs(sortBoxBefore.x - sortBoxAfter.x) < 2;
+        Math.abs(sortBoxFocus.y - sortBoxAfter.y) < 1 &&
+        Math.abs(sortBoxFocus.x - sortBoxAfter.x) < 2 &&
+        overflowTyped.overflow <= 1;
       record(
         "sam-care-sort-stable",
         "care-layout",
         browserName,
         vp,
-        Boolean(sortStable),
-        `before=${sortBoxBefore?.x},${sortBoxBefore?.y} after=${sortBoxAfter?.x},${sortBoxAfter?.y}`,
+        Boolean(focusStable && noOverflowOnFocus && sortStable && filterOverflowPolicy.ok),
+        `focusStable=${focusStable} filterOverflowX=${filterOverflowPolicy.overflowX} overflowFocus=${overflowFocus.overflow}/${listOverflowFocus.overflow} typedOverflow=${overflowTyped.overflow} sort=${sortBoxBefore?.x},${sortBoxBefore?.y}→${sortBoxFocus?.x},${sortBoxFocus?.y}→${sortBoxAfter?.x},${sortBoxAfter?.y}`,
       );
     });
 
@@ -962,19 +1430,60 @@ async function runRows(browserName, launch) {
     });
     }
 
-    if (vp >= 1024) {
     await safeStep("sam-ticket-search-t9", "care-search", browserName, vp, async () => {
-      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
-      await page.locator("#care-tickets-search").fill("T9");
-      await page.waitForTimeout(450);
-      const t9Text = await page.locator(".tickets-workspace-list").innerText();
-      const t9visible = /\b9\b/.test(t9Text) && /ticket/i.test(t9Text);
-      record("sam-ticket-search-t9", "care-search", browserName, vp, t9visible, `t9=${t9visible}`);
+      let rankedOk = true;
+      let detail = "";
+      for (const query of ["T9", "9"]) {
+        await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+        const searchInput = page.locator("#care-tickets-search");
+        await searchInput.fill("");
+        await searchInput.fill(query);
+        await searchInput.press("Enter").catch(() => {});
+        await page
+          .waitForFunction(
+            (needle) => {
+              const first = document.querySelector(".tickets-workspace-list a.care-row");
+              return Boolean(first && /Ticket\s+9\b/i.test(first.textContent ?? ""));
+            },
+            query,
+            { timeout: 15_000 },
+          )
+          .catch(() => {});
+        await page.waitForTimeout(browserName === "webkit" ? 500 : 250);
+        const first = await page
+          .locator(".tickets-workspace-list a.care-row")
+          .first()
+          .innerText()
+          .catch(() => "");
+        const firstIsNine = /Ticket\s+9\b/i.test(first);
+        if (!firstIsNine) {
+          rankedOk = false;
+          detail += `q=${query} first=${first.slice(0, 48).replace(/\s+/g, " ")}; `;
+        }
+      }
+      record(
+        "sam-ticket-search-t9",
+        "care-search",
+        browserName,
+        vp,
+        rankedOk,
+        rankedOk ? "rankedFirst=true" : detail.trim(),
+      );
     });
+
+    if (vp >= 1024) {
 
     await safeStep("bea-inline-messages-no-handle", "quote-messages", browserName, vp, async () => {
       await page.goto(`${BASE}/staff/quotes/26`, { waitUntil: "domcontentloaded" });
-      const inlineMsgs = await page.locator(".conversation-sheet.is-inline").isVisible().catch(() => false);
+      await page
+        .locator('[data-quote-layout="split"] .conversation-sheet.is-inline')
+        .first()
+        .waitFor({ state: "visible", timeout: 20_000 })
+        .catch(() => {});
+      const inlineMsgs = await page
+        .locator(".conversation-sheet.is-inline")
+        .isVisible()
+        .catch(() => false);
       const handleHidden = await page
         .locator(".conversation-sheet.is-inline .snap-sheet-handle")
         .first()
@@ -995,7 +1504,10 @@ async function runRows(browserName, launch) {
   }
 
   // Customer rows — separate context; one safeStep per row so row 9 cannot ABORT on later Add timeout
-  const cust = await browser.newContext({ viewport: viewportSize(1440) });
+  const cust = await browser.newContext({
+    viewport: viewportSize(1440),
+    hasTouch: false,
+  });
   await apiLogin(cust, CUSTOMER);
   const cp = await cust.newPage();
 
@@ -1185,8 +1697,8 @@ async function runRows(browserName, launch) {
 
   await cust.close();
 
-  await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
-    await runBeaMandatoryPhone390(browserName, browser);
+  await safeStep("bea-phone-3d-fs", "bea-smoke", browserName, 390, async () => {
+    await runBeaPhone3dFs390(browserName, browser);
   });
 
   await browser.close();

@@ -134,6 +134,18 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const customerTrayInViewer = isCustomer && !customerTrayDock;
 
   useEffect(() => {
+    const root = document.documentElement;
+    if (isCustomer && fullscreen && overlay) {
+      root.classList.add("viewer-immersive-fs");
+    } else {
+      root.classList.remove("viewer-immersive-fs");
+    }
+    return () => {
+      root.classList.remove("viewer-immersive-fs");
+    };
+  }, [fullscreen, overlay, isCustomer]);
+
+  useEffect(() => {
     if (!overlay || !shouldPinViewerOverlayFrame()) {
       setOverlayFrame(null);
       return;

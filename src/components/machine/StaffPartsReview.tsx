@@ -201,7 +201,7 @@ export function StaffPartsReview({
         ) : filtered.length === 0 ? (
           <p className="spares-muted mt-4 text-sm">No parts match that search.</p>
         ) : (
-          <ul data-parts-bom="" className="spares-surface mt-3 overflow-hidden rounded-[22px]">
+          <ul className="spares-surface mt-3 overflow-hidden rounded-[22px]">
             {filtered.map((row) => {
               const selected = row.key === selectedKey;
               return (

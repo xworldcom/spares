@@ -31,6 +31,13 @@ describe("ticketMatchesCareSearch", () => {
     assert.equal(ticketMatchesCareSearch(row, "nope"), false);
   });
 
+  it("matches ticket number exactly for numeric-only query", () => {
+    const nine = ticket({ id: "t9", number: 9, title: "Fault" });
+    const twentyNine = ticket({ id: "t29", number: 29, title: "Fault" });
+    assert.equal(ticketMatchesCareSearch(nine, "9"), true);
+    assert.equal(ticketMatchesCareSearch(twentyNine, "9"), false);
+  });
+
   it("matches ticket number with T prefix", () => {
     const row = ticket({ id: "t9", number: 9, title: "Infeed fault" });
     assert.equal(ticketMatchesCareSearch(row, "T9"), true);
@@ -73,5 +80,25 @@ describe("filterAndSortCareTickets", () => {
       sort: "updated",
     });
     assert.deepEqual(sorted.map((row) => row.number), [9, 8]);
+  });
+
+  it("ranks exact ticket number first for numeric search", () => {
+    const rows = [
+      ticket({ id: "t29", number: 29, title: "Line 29 fault" }),
+      ticket({ id: "t9", number: 9, title: "Line 9 fault" }),
+      ticket({ id: "t19", number: 19, title: "Line 19 fault" }),
+    ];
+    const sorted = filterAndSortCareTickets(rows, {
+      query: "9",
+      status: "all",
+      sort: "recent",
+    });
+    assert.equal(sorted[0]?.number, 9);
+    const sortedT9 = filterAndSortCareTickets(rows, {
+      query: "T9",
+      status: "all",
+      sort: "recent",
+    });
+    assert.equal(sortedT9[0]?.number, 9);
   });
 });

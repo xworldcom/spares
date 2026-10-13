@@ -368,6 +368,29 @@ body {
         env(safe-area-inset-top, 0px) - 0.35rem
     );
   }
+
+  .machine-viewer[data-viewer-fs="overlay"] {
+    inset: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    z-index: 90;
+    border-radius: 0;
+  }
+
+  .spares-app-tabs:has([data-viewer-fs="overlay"]) > .spares-header,
+  .spares-app-tabs:has([data-viewer-fs="overlay"]) .spares-tabbar {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+html.viewer-immersive-fs .spares-header,
+html.viewer-immersive-fs .spares-tabbar {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @media (min-width: 1024px) and (pointer: fine) {
@@ -4098,6 +4121,15 @@ body > .quote-undo-toast {
   flex-direction: column;
   gap: 0.65rem;
   margin-bottom: 0.75rem;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@media (max-width: 1023px) {
+  .care-tickets-shell .tickets-workspace-list {
+    max-width: 100%;
+    overflow-x: clip;
+  }
 }
 
 /* Queue filters stack vertically: catalog-search flex-basis 16rem is for row toolbars only. */
@@ -4122,6 +4154,24 @@ body > .quote-undo-toast {
   align-items: center;
   gap: 0.5rem;
   min-height: 2.25rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 430px) {
+  .tickets-workspace-filter-row {
+    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(0, 7.25rem);
+    overflow-x: hidden;
+  }
+
+  .tickets-workspace-sort-select {
+    width: 100%;
+    min-width: 0;
+    max-width: 7.25rem;
+  }
 }
 
 .tickets-workspace-filter-row .btn-primary,
