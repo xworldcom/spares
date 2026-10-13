@@ -592,6 +592,9 @@ html.viewer-immersive-fs .spares-tabbar {
 .conversation-sheet:not(.is-inline)[data-close-translate] {
   z-index: 52;
   transition: none;
+  /* Close dismiss uses translate only — do not grow layout height mid-animation. */
+  height: var(--sheet-h, var(--peek-h, auto));
+  max-height: var(--full-h);
 }
 
 .conversation-sheet.is-dragging,
@@ -4152,6 +4155,19 @@ body > .quote-undo-toast {
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-gutter: stable;
+}
+
+@media (max-width: 430px) {
+  .tickets-workspace-filter-row {
+    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(0, 7.25rem);
+    overflow-x: hidden;
+  }
+
+  .tickets-workspace-sort-select {
+    width: 100%;
+    min-width: 0;
+    max-width: 7.25rem;
+  }
 }
 
 .tickets-workspace-filter-row .btn-primary,

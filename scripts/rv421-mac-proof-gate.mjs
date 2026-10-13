@@ -24,11 +24,12 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v16c";
+const GATE_HARNESS_VERSION = "v16d";
 
 const VIEWER_ORBIT_EPSILON = 0.42;
 
-const PEEK_BAND_MAX_H = 130;
+/** True peek chrome (~5.75rem); reply detent is taller and must not count as peek band. */
+const PEEK_BAND_MAX_H = 96;
 const CLOSE_GROW_TOLERANCE_PX = 8;
 
 const require = createRequire(import.meta.url);
@@ -379,6 +380,36 @@ async function conversationSheetMetrics(page) {
   });
 }
 
+/** Customer list overlay vs staff split aside — avoids strict-mode duplicate nested BOM lists. */
+function machinePartsBomRoot(page) {
+  return page.locator("section[data-parts-bom], aside.machine-bom[data-parts-bom]").first();
+}
+
+async function waitConversationSheetResting(page) {
+  await page
+    .waitForFunction(
+      () => {
+        const el = document.querySelector(".conversation-sheet");
+        return (
+          el &&
+          !el.classList.contains("is-dragging") &&
+          !el.classList.contains("is-settling") &&
+          !el.hasAttribute("data-motion-live")
+        );
+      },
+      { timeout: 8000 },
+    )
+    .catch(() => {});
+}
+
+async function tapOrClickClose(page, closeBtn, useTap) {
+  if (useTap) {
+    await closeBtn.tap({ timeout: 8000 });
+  } else {
+    await closeBtn.click({ timeout: 8000 });
+  }
+}
+
 /** Sam live: Messages sheet resting in peek band (~60–92px) before Close. */
 async function ensureMessagesPeekBand(page) {
   const card = page.locator(".conversation-sheet").first();
@@ -386,7 +417,7 @@ async function ensureMessagesPeekBand(page) {
   const handle = page.locator(".snap-sheet-handle").first();
   for (let attempt = 0; attempt < 6; attempt += 1) {
     const m = await conversationSheetMetrics(page);
-    if ((m.peek || m.h <= PEEK_BAND_MAX_H) && m.h > 24) {
+    if (m.peek && m.h <= PEEK_BAND_MAX_H && m.h > 24) {
       return { ok: true, ...m };
     }
     if (m.out) {
@@ -399,13 +430,7 @@ async function ensureMessagesPeekBand(page) {
       await page.waitForTimeout(450);
       continue;
     }
-    if (m.reply && m.h > PEEK_BAND_MAX_H) {
-      const closeBtn = page.getByRole("button", { name: /^close$/i });
-      if (await closeBtn.isVisible().catch(() => false)) {
-        await closeBtn.click({ timeout: 8000 }).catch(() => {});
-        await page.waitForTimeout(550);
-        continue;
-      }
+    if ((m.reply || m.full) && m.h > PEEK_BAND_MAX_H) {
       await handle.click({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(450);
       continue;
@@ -414,7 +439,7 @@ async function ensureMessagesPeekBand(page) {
     await page.waitForTimeout(450);
   }
   const m = await conversationSheetMetrics(page);
-  const ok = (m.peek || m.h <= PEEK_BAND_MAX_H) && m.h > 24;
+  const ok = m.peek && m.h <= PEEK_BAND_MAX_H && m.h > 24;
   return { ok, ...m };
 }
 
@@ -423,17 +448,21 @@ async function ensureMessagesPeekBand(page) {
  */
 async function assertSamCloseFromPeekBand(page, row, folder, browser, vp, { scrollAfter = false } = {}) {
   const band = await ensureMessagesPeekBand(page);
-  const card = page.locator(".conversation-sheet").first();
   const hBefore = band.h;
   const closeBtn = page.getByRole("button", { name: /^close$/i });
   const closeBefore = await closeBtn.isVisible().catch(() => false);
-  const bandOk = band.ok && hBefore <= PEEK_BAND_MAX_H;
-  await closeBtn.click({ timeout: 8000 });
-  await page.waitForTimeout(700);
+  const bandOk = band.ok && band.peek && hBefore <= PEEK_BAND_MAX_H;
+  const useTap = vp < 1024;
+  await tapOrClickClose(page, closeBtn, useTap);
+  await waitConversationSheetResting(page);
+  await page.waitForTimeout(350);
   const afterClose = await conversationSheetMetrics(page);
   const hAfterClose = afterClose.h;
   const grewOnClose = hAfterClose > hBefore + CLOSE_GROW_TOLERANCE_PX;
   const closeAfterClick = await closeBtn.isVisible().catch(() => false);
+  const dismissedOk = afterClose.out && hAfterClose <= hBefore + CLOSE_GROW_TOLERANCE_PX + 4;
+  const peekAfterOk =
+    afterClose.peek && hAfterClose <= PEEK_BAND_MAX_H && closeAfterClick && !grewOnClose;
   let hAfterScroll = hAfterClose;
   let scrollStable = true;
   if (scrollAfter) {
@@ -441,16 +470,18 @@ async function assertSamCloseFromPeekBand(page, row, folder, browser, vp, { scro
     await page.waitForTimeout(450);
     hAfterScroll = (await conversationSheetMetrics(page)).h;
     const closeAfterScroll = await closeBtn.isVisible().catch(() => false);
+    const afterScroll = await conversationSheetMetrics(page);
     scrollStable =
-      hAfterScroll <= Math.max(hAfterClose + 12, hAfterClose * 1.08) &&
-      hAfterScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 12 &&
-      closeAfterScroll;
+      !grewOnClose &&
+      hAfterScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 8 &&
+      hAfterScroll <= Math.max(hAfterClose + 8, hAfterClose * 1.05) &&
+      (closeAfterScroll || afterScroll.out);
   }
   const pass =
     bandOk &&
     closeBefore &&
     !grewOnClose &&
-    (closeAfterClick || afterClose.out) &&
+    (dismissedOk || peekAfterOk) &&
     (!scrollAfter || scrollStable);
   const shots = [await shot(page, folder, `${row}-${browser}-${vp}-close.png`)];
   record(
@@ -640,7 +671,8 @@ async function careSheetDragStuckMetrics(page, card) {
 }
 
 async function evaluateCareH1AfterDrag(page, card) {
-  await page.waitForTimeout(900);
+  await waitConversationSheetResting(page);
+  await page.waitForTimeout(450);
   const stuck = await careSheetDragStuckMetrics(page, card);
   const sheetEdge = await sheetBottomAboveTabBar(page);
   const above = await controlsAboveTabBar(page, [
@@ -651,14 +683,42 @@ async function evaluateCareH1AfterDrag(page, card) {
     .locator(".conversation-sheet-close")
     .isVisible()
     .catch(() => false);
+  const sendVisible = await page
+    .locator(".imsg-send")
+    .isVisible()
+    .catch(() => false);
+  const detentOk = await card.evaluate((el) => {
+    if (
+      el.classList.contains("is-dragging") ||
+      el.classList.contains("is-settling") ||
+      el.hasAttribute("data-motion-live")
+    ) {
+      return false;
+    }
+    const h = el.getBoundingClientRect().height;
+    const reply = Number.parseFloat(getComputedStyle(el).getPropertyValue("--reply-h"));
+    const full = Number.parseFloat(getComputedStyle(el).getPropertyValue("--full-h"));
+    if (el.classList.contains("is-peek")) {
+      return Number.isFinite(reply) && h <= reply + 10;
+    }
+    if (el.classList.contains("is-reply")) {
+      return Number.isFinite(reply) && Math.abs(h - reply) <= 12;
+    }
+    if (el.classList.contains("is-full")) {
+      return Number.isFinite(full) && Math.abs(h - full) <= 16;
+    }
+    return false;
+  });
   const pass =
     !stuck.settling &&
     !stuck.motionLive &&
     !stuck.betweenDetents &&
+    detentOk &&
     sheetEdge.ok &&
     above.ok &&
-    closeVisible;
-  return { pass, stuck, sheetEdge, above, closeVisible };
+    closeVisible &&
+    sendVisible;
+  return { pass, stuck, sheetEdge, above, closeVisible, sendVisible, detentOk };
 }
 
 async function newCustomerPhone390Context(browser, browserName) {
@@ -731,6 +791,9 @@ async function runBeaM9Phone390(browserName, browser) {
     await page.goto(`${BASE}/machines/palletizer`, { waitUntil: "domcontentloaded" });
     await seedCustomerTray(page, "palletizer", customerTenant);
     await page.reload({ waitUntil: "domcontentloaded" });
+    if (browserName === "webkit") {
+      await page.waitForTimeout(900);
+    }
     const quoteSheet = await openCustomerQuoteTrayExpanded(page);
     const hExpanded = await quoteSheet.evaluate((el) => Math.round(el.getBoundingClientRect().height));
     const removeBtn = quoteSheet.getByRole("button", { name: /^remove$/i }).first();
@@ -865,8 +928,9 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
 
     await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: /^list$/i }).click({ timeout: 10_000 });
-    await page.locator("[data-parts-bom]").waitFor({ state: "visible", timeout: 12_000 });
-    const partRow = page.locator("[data-parts-bom] button").first();
+    const bomRoot = machinePartsBomRoot(page);
+    await bomRoot.waitFor({ state: "visible", timeout: 12_000 });
+    const partRow = bomRoot.locator("button").first();
     await partRow.click({ timeout: 10_000 });
     const sheet = page.locator("[data-part-sheet]").first();
     await sheet.waitFor({ state: "visible", timeout: 10_000 });
@@ -912,52 +976,45 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
   }
 }
 
+async function runCareH1DragProbe(page, actor) {
+  await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
+  await expandConversationSheet(page);
+  const card = page.locator(".conversation-sheet").first();
+  const sheetBox = await card.boundingBox();
+  if (!sheetBox) {
+    return { pass: false, detail: "no-sheet-box" };
+  }
+  const x = sheetBox.x + sheetBox.width / 2;
+  const yStart = sheetBox.y + 32;
+  const yEnd = sheetBox.y + sheetBox.height * 0.52;
+  if (actor === "mouse") {
+    await mouseDragVertical(page, x, yStart, yEnd);
+  } else {
+    await touchDragVertical(page, x, yStart, yEnd);
+  }
+  const result = await evaluateCareH1AfterDrag(page, card);
+  return {
+    pass: result.pass,
+    detail: `stuck=${JSON.stringify(result.stuck)} edge=${JSON.stringify(result.sheetEdge)} detent=${result.detentOk} close=${result.closeVisible} send=${result.sendVisible}`,
+  };
+}
+
 async function runBeaH1CareSheet390(browserName, browser) {
   const vp = 390;
   const context = await newCustomerPhone390Context(browser, browserName);
   const page = await context.newPage();
   try {
-  await page.goto(`${BASE}/care/tickets/9`, { waitUntil: "domcontentloaded" });
-  await expandConversationSheet(page);
-  const card = page.locator(".conversation-sheet").first();
-  const sheetBox = await card.boundingBox();
-  const hBeforeDrag = await card.evaluate((el) => el.getBoundingClientRect().height);
-  if (sheetBox) {
-    const x = sheetBox.x + sheetBox.width / 2;
-    const yStart = sheetBox.y + 32;
-    const yEnd = sheetBox.y + sheetBox.height * 0.52;
-    await mouseDragVertical(page, x, yStart, yEnd);
-    const mouseH1 = await evaluateCareH1AfterDrag(page, card);
-    await expandConversationSheet(page);
-    await page.waitForTimeout(400);
-    const box2 = await card.boundingBox();
-    let touchH1 = { pass: false, stuck: {}, sheetEdge: {}, above: {}, closeVisible: false };
-    if (box2) {
-      const x2 = box2.x + box2.width / 2;
-      const ys2 = box2.y + 32;
-      const ye2 = box2.y + box2.height * 0.52;
-      await touchDragVertical(page, x2, ys2, ye2);
-      touchH1 = await evaluateCareH1AfterDrag(page, card);
-    }
-    const h1Pass = mouseH1.pass && touchH1.pass;
-    record(
-      "bea-h1-care-sheet",
-      "bea-smoke",
-      browserName,
-      vp,
-      h1Pass,
-      `mouse=${mouseH1.pass} touch=${touchH1.pass} stuck=${JSON.stringify(touchH1.stuck)} edge=${JSON.stringify(touchH1.sheetEdge)} hBefore=${Math.round(hBeforeDrag)}`,
-    );
-  } else {
-    record(
-      "bea-h1-care-sheet",
-      "bea-smoke",
-      browserName,
-      vp,
-      false,
-      "no-sheet-box",
-    );
-  }
+  const mouseH1 = await runCareH1DragProbe(page, "mouse");
+  const touchH1 = await runCareH1DragProbe(page, "touch");
+  const h1Pass = mouseH1.pass && touchH1.pass;
+  record(
+    "bea-h1-care-sheet",
+    "bea-smoke",
+    browserName,
+    vp,
+    h1Pass,
+    `mouse=${mouseH1.pass} ${mouseH1.detail} touch=${touchH1.pass} ${touchH1.detail}`,
+  );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     record(
@@ -1344,12 +1401,20 @@ async function runRows(browserName, launch) {
         const hBefore = band.h;
         const closeBtn = page.getByRole("button", { name: /^close$/i });
         const closeBefore = await closeBtn.isVisible().catch(() => false);
-        await closeBtn.click({ timeout: 8000 });
-        await page.waitForTimeout(650);
+        await tapOrClickClose(page, closeBtn, true);
+        await waitConversationSheetResting(page);
+        await page.waitForTimeout(350);
         const metricsAfterClose = await conversationSheetMetrics(page);
         const hAfterClose = metricsAfterClose.h;
         const grewOnClose = hAfterClose > hBefore + CLOSE_GROW_TOLERANCE_PX;
         const closeAfterClick = await closeBtn.isVisible().catch(() => false);
+        const dismissedOk =
+          metricsAfterClose.out && hAfterClose <= hBefore + CLOSE_GROW_TOLERANCE_PX + 4;
+        const peekAfterOk =
+          metricsAfterClose.peek &&
+          hAfterClose <= PEEK_BAND_MAX_H &&
+          closeAfterClick &&
+          !grewOnClose;
         await page.evaluate(() => window.scrollBy(0, 260));
         await page.waitForTimeout(450);
         const afterScroll = await conversationSheetMetrics(page);
@@ -1357,11 +1422,12 @@ async function runRows(browserName, launch) {
         const closeAfterScroll = await closeBtn.isVisible().catch(() => false);
         const stable =
           band.ok &&
+          band.peek &&
           closeBefore &&
           !grewOnClose &&
-          (closeAfterClick || metricsAfterClose.out) &&
-          hScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 12 &&
-          hScroll <= Math.max(hAfterClose + 12, hAfterClose * 1.08) &&
+          (dismissedOk || peekAfterOk) &&
+          hScroll <= hBefore + CLOSE_GROW_TOLERANCE_PX + 8 &&
+          hScroll <= Math.max(hAfterClose + 8, hAfterClose * 1.05) &&
           (closeAfterScroll || afterScroll.out);
         if (!stable) {
           scrollPass = false;
@@ -1388,8 +1454,8 @@ async function runRows(browserName, launch) {
       const overflowBefore = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
       const listOverflowBefore = await horizontalOverflowPx(page, ".tickets-workspace-list");
       const search = page.locator("#care-tickets-search");
-      await search.focus();
-      await page.waitForTimeout(280);
+      await search.click({ timeout: 8000 });
+      await page.waitForTimeout(320);
       const sortBoxFocus = await sortSelectOffsetInFilterRow(page);
       const overflowFocus = await horizontalOverflowPx(page, ".tickets-workspace-filter-row");
       const listOverflowFocus = await horizontalOverflowPx(page, ".tickets-workspace-list");
@@ -1460,11 +1526,15 @@ async function runRows(browserName, launch) {
         await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
         await page.locator("#care-tickets-search").fill(query);
         await page
-          .locator(".tickets-workspace-list .care-row-title", { hasText: /Ticket\s+9\b/i })
-          .first()
-          .waitFor({ state: "visible", timeout: 6000 })
+          .waitForFunction(
+            () => {
+              const first = document.querySelector(".tickets-workspace-list a.care-row");
+              return Boolean(first && /Ticket\s+9\b/i.test(first.textContent ?? ""));
+            },
+            { timeout: 10_000 },
+          )
           .catch(() => {});
-        await page.waitForTimeout(350);
+        await page.waitForTimeout(250);
         const first = await page
           .locator(".tickets-workspace-list a.care-row")
           .first()

@@ -9,6 +9,11 @@ Authoritative harness: `scripts/rv421-mac-proof-gate.mjs`. Artifacts land in pro
 | **A** | Product files from `2b0ae4f` + harness @ branch HEAD | Bite rows **FAIL** (old behavior) |
 | **B** | Full branch HEAD | **GREEN** |
 
+## v16d harness (peek band + BOM scoping)
+
+- Peek-band rows require `is-peek` and height ≤ 96px; Close uses tap @390; care H1 uses fresh navigation per actor.
+- BOM rows scope `section[data-parts-bom]` / `aside.machine-bom` (no nested list `data-parts-bom`).
+
 ## v16c rows (hardware-fixture, `user@demo.com`)
 
 | Row ID | Viewports | Actor | Pass |

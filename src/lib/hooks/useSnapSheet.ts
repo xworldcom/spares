@@ -1112,8 +1112,25 @@ export function useSnapSheet({
       replyH,
       fullH,
     });
-    const restingH = heightForSnap(normalizedFrom, cardRef.current);
+    const card = cardRef.current;
+    const liveRectH =
+      drag.current.liveH > 0
+        ? drag.current.liveH
+        : card?.getBoundingClientRect().height ?? currentH;
+    const restingH = heightForSnap(normalizedFrom, card);
     const displaced = Math.abs(currentH - restingH) > 12;
+    const liveOffDetent =
+      Math.abs(liveRectH - restingH) > 18 &&
+      Math.abs(liveRectH - heightForSnap("reply", card)) > 18 &&
+      Math.abs(liveRectH - heightForSnap("full", card)) > 18;
+    if (
+      liveOffDetent ||
+      card?.hasAttribute("data-motion-live") ||
+      card?.classList.contains("is-settling")
+    ) {
+      settleTo(nearestSnap(liveRectH, velocity, card));
+      return;
+    }
     if (
       displaced ||
       Math.abs(dy) > 12 ||
