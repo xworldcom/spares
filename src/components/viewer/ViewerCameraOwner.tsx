@@ -254,13 +254,17 @@ export function ViewerCameraOwner({
         }
         canonicalReady.current = true;
         setCanonicalReadyFlag(true);
+        const root = layoutRootRef.current;
+        if (root) {
+          root.setAttribute("data-viewer-orbit", JSON.stringify(snap));
+        }
       }
       requestAnimationFrame(paint);
       return () => {
         alive = false;
       };
     },
-    [camera, controls, invalidate, setCanonicalReadyFlag, syncViewport],
+    [camera, controls, invalidate, layoutRootRef, setCanonicalReadyFlag, syncViewport],
   );
 
   const captureCanonical = useCallback(() => {

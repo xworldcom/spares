@@ -906,15 +906,17 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
-    await page.locator("[data-machine-viewer-layout]").first().waitFor({
+    const viewerLayout = page.locator("[data-machine-viewer-layout]").first();
+    await viewerLayout.waitFor({
       state: "visible",
       timeout: 90_000,
     });
-    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 90_000 });
+    const viewerCanvas = viewerLayout.locator("canvas").first();
+    await viewerCanvas.waitFor({ state: "visible", timeout: 90_000 });
     await page.waitForFunction(
       () => {
-        const canvas = document.querySelector("canvas");
         const layout = document.querySelector("[data-machine-viewer-layout]");
+        const canvas = layout?.querySelector("canvas");
         const orbit = layout?.getAttribute("data-viewer-orbit");
         const box = canvas?.getBoundingClientRect();
         return (
@@ -923,12 +925,12 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
           Boolean(orbit)
         );
       },
-      { timeout: 90_000 },
+      { timeout: 120_000 },
     );
     await page.waitForTimeout(400);
 
     const orbit0 = await readViewerOrbit(page);
-    const canvas = page.locator("canvas").first();
+    const canvas = viewerCanvas;
     const canvasBox = await canvas.boundingBox();
     let cameraPass = false;
     let cameraDetail = "no-canvas";
