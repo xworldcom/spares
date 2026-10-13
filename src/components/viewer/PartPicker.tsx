@@ -29,6 +29,10 @@ import {
 } from "./resolvePick";
 import { StudioGround } from "./StudioGround";
 import { ViewerCameraOwner } from "./ViewerCameraOwner";
+import {
+  buildViewerAssemblyKey,
+  shouldForwardViewerFitKey,
+} from "./viewerCameraFit";
 import type { PartPickerProps, UnmatchedMesh, ViewerPart } from "./types";
 import {
   loadGltfWithCredentials,
@@ -774,7 +778,26 @@ export function PartPicker({
 
   const internalLayoutRef = useRef<HTMLDivElement>(null);
   const measureRef = layoutRootRef ?? internalLayoutRef;
-  const assemblyKey = [hiddenIds.join("\0"), isolatedId ?? ""].join("|");
+  const assemblyKey = buildViewerAssemblyKey(hiddenIds, isolatedId);
+  const lastExplodeChangeAt = useRef(0);
+  const prevParentFitKey = useRef(fitKey);
+  const [viewerFitKey, setViewerFitKey] = useState(fitKey);
+
+  useLayoutEffect(() => {
+    lastExplodeChangeAt.current = Date.now();
+  }, [explode]);
+
+  useLayoutEffect(() => {
+    if (fitKey === prevParentFitKey.current) {
+      return;
+    }
+    prevParentFitKey.current = fitKey;
+    if (
+      shouldForwardViewerFitKey(Date.now() - lastExplodeChangeAt.current)
+    ) {
+      setViewerFitKey(fitKey);
+    }
+  }, [explode, fitKey]);
 
   return (
     <div
@@ -787,7 +810,7 @@ export function PartPicker({
         parts={parts}
         selected={selected}
         explode={explode}
-        fitKey={fitKey}
+        fitKey={viewerFitKey}
         resetKey={resetKey}
         viewerFullscreen={viewerFullscreen}
         assemblyKey={assemblyKey}
