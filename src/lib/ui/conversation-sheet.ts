@@ -58,12 +58,15 @@ export function conversationSheetMotionFromHeight(
 
 export function conversationSheetSnapFromHeight(
   heightPx: number,
-  _peekH: number,
+  peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetSnap {
   if (heightPx >= fullH - 2) {
     return "full";
+  }
+  if (heightPx <= peekH + PEEK_LAYOUT_BAND_PX) {
+    return "peek";
   }
   if (heightPx <= replyH + PEEK_LAYOUT_BAND_PX) {
     return "reply";

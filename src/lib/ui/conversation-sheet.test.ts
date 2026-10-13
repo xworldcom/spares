@@ -53,7 +53,7 @@ describe("conversation sheet startup snap", () => {
   });
 });
 
-const heights = { peekH: 280, replyH: 280, fullH: 700 };
+const heights = { peekH: 92, replyH: 280, fullH: 700 };
 
 describe("conversation sheet roll-up", () => {
   it("grows continuously from intermediate toward full", () => {
@@ -98,6 +98,10 @@ describe("conversation sheet roll-up", () => {
   });
 
   it("derives snap labels from height without drag hysteresis", () => {
+    assert.equal(
+      conversationSheetSnapFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
+      "peek",
+    );
     assert.equal(
       conversationSheetSnapFromHeight(280, heights.peekH, heights.replyH, heights.fullH),
       "reply",
