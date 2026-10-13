@@ -887,6 +887,43 @@ function viewerOrbitStable(before, after, epsilon = VIEWER_ORBIT_EPSILON) {
   return true;
 }
 
+/** Canvas + canonical-ready first; orbit probe second (avoids combined #433 canvas-wait timeout). */
+async function waitForViewerGateCanvas(page, { layoutTimeoutMs = 90_000, orbitTimeoutMs = 45_000 } = {}) {
+  const viewerLayout = page.locator("[data-machine-viewer-layout]").first();
+  await viewerLayout.waitFor({ state: "visible", timeout: layoutTimeoutMs });
+  const viewerCanvas = viewerLayout.locator("canvas").first();
+  await viewerCanvas.waitFor({ state: "visible", timeout: layoutTimeoutMs });
+  await page.waitForFunction(
+    () => {
+      const layout = document.querySelector("[data-machine-viewer-layout]");
+      const canvas = layout?.querySelector("canvas");
+      const box = canvas?.getBoundingClientRect();
+      return (
+        Boolean(box && box.width > 8 && box.height > 8) &&
+        layout?.getAttribute("data-viewer-canonical-ready") === "true"
+      );
+    },
+    { timeout: layoutTimeoutMs },
+  );
+  await page.waitForFunction(
+    () => {
+      const layout = document.querySelector("[data-machine-viewer-layout]");
+      const orbit = layout?.getAttribute("data-viewer-orbit");
+      if (!orbit) {
+        return false;
+      }
+      try {
+        const parsed = JSON.parse(orbit);
+        return Boolean(parsed?.position?.length >= 3 && parsed?.target?.length >= 3);
+      } catch {
+        return false;
+      }
+    },
+    { timeout: orbitTimeoutMs },
+  );
+  return viewerCanvas;
+}
+
 async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
   const context = await browser.newContext({
     viewport: viewportSize(vp),
@@ -906,27 +943,7 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
-    const viewerLayout = page.locator("[data-machine-viewer-layout]").first();
-    await viewerLayout.waitFor({
-      state: "visible",
-      timeout: 90_000,
-    });
-    const viewerCanvas = viewerLayout.locator("canvas").first();
-    await viewerCanvas.waitFor({ state: "visible", timeout: 90_000 });
-    await page.waitForFunction(
-      () => {
-        const layout = document.querySelector("[data-machine-viewer-layout]");
-        const canvas = layout?.querySelector("canvas");
-        const orbit = layout?.getAttribute("data-viewer-orbit");
-        const box = canvas?.getBoundingClientRect();
-        return (
-          Boolean(box && box.width > 8 && box.height > 8) &&
-          layout?.getAttribute("data-viewer-canonical-ready") === "true" &&
-          Boolean(orbit)
-        );
-      },
-      { timeout: 120_000 },
-    );
+    const viewerCanvas = await waitForViewerGateCanvas(page);
     await page.waitForTimeout(400);
 
     const orbit0 = await readViewerOrbit(page);
