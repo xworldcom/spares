@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v16b) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v16c) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,9 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v16b";
+const GATE_HARNESS_VERSION = "v16c";
+
+const VIEWER_ORBIT_EPSILON = 0.42;
 
 const PEEK_BAND_MAX_H = 130;
 const CLOSE_GROW_TOLERANCE_PX = 8;
@@ -187,6 +189,8 @@ const PIVOT_ROW_ORDER = [
   "bea-h1-care-sheet",
   "bea-m9-phone-390",
   "bea-phone-3d-fs",
+  "bea-3d-part-camera-stable",
+  "bea-parts-panel-close-chrome",
   "9",
 ];
 
@@ -759,6 +763,149 @@ async function runBeaM9Phone390(browserName, browser) {
       vp,
       false,
       `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 280)}`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function readViewerOrbit(page) {
+  return page.evaluate(() => {
+    const layout = document.querySelector("[data-machine-viewer-layout]");
+    const raw = layout?.getAttribute("data-viewer-orbit");
+    if (!raw) {
+      return null;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
+}
+
+function viewerOrbitStable(before, after, epsilon = VIEWER_ORBIT_EPSILON) {
+  if (!before || !after) {
+    return false;
+  }
+  for (const key of ["position", "target"]) {
+    const a = before[key];
+    const b = after[key];
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3) {
+      return false;
+    }
+    for (let i = 0; i < 3; i += 1) {
+      if (Math.abs(a[i] - b[i]) > epsilon) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
+  const context = await browser.newContext({
+    viewport: viewportSize(vp),
+    hasTouch: vp < 1024,
+  });
+  if (browserName === "chrome" || browserName === "chromium") {
+    try {
+      await context.grantPermissions(["fullscreen"], { origin: new URL(BASE).origin });
+    } catch {
+      // optional
+    }
+  }
+  await apiLogin(context, CUSTOMER);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
+    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 }).catch(() => {});
+    await page
+      .locator("[data-machine-viewer-layout][data-viewer-canonical-ready='true']")
+      .waitFor({ state: "attached", timeout: 60_000 })
+      .catch(() => {});
+    await page.waitForTimeout(600);
+
+    const orbit0 = await readViewerOrbit(page);
+    const canvas = page.locator("canvas").first();
+    const canvasBox = await canvas.boundingBox();
+    let cameraPass = false;
+    let cameraDetail = "no-canvas";
+    if (canvasBox && orbit0) {
+      const taps = [
+        { x: canvasBox.width * 0.42, y: canvasBox.height * 0.52 },
+        { x: canvasBox.width * 0.58, y: canvasBox.height * 0.46 },
+      ];
+      let lastOrbit = orbit0;
+      let stableChain = true;
+      for (const pos of taps) {
+        await canvas.click({ position: pos, timeout: 10_000 });
+        await page.waitForTimeout(550);
+        const nextOrbit = await readViewerOrbit(page);
+        if (!viewerOrbitStable(lastOrbit, nextOrbit)) {
+          stableChain = false;
+          cameraDetail = `orbit-shift after tap @${Math.round(pos.x)},${Math.round(pos.y)}`;
+          break;
+        }
+        lastOrbit = nextOrbit;
+      }
+      cameraPass = stableChain && Boolean(lastOrbit);
+      if (cameraPass) {
+        cameraDetail = "orbit-stable-across-2-taps";
+      }
+    }
+    record(
+      "bea-3d-part-camera-stable",
+      "bea-smoke",
+      browserName,
+      vp,
+      cameraPass,
+      cameraDetail,
+    );
+
+    await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: /^list$/i }).click({ timeout: 10_000 });
+    await page.locator("[data-parts-bom]").waitFor({ state: "visible", timeout: 12_000 });
+    const partRow = page.locator("[data-parts-bom] button").first();
+    await partRow.click({ timeout: 10_000 });
+    const sheet = page.locator("[data-part-sheet]").first();
+    await sheet.waitFor({ state: "visible", timeout: 10_000 });
+    const close = page.locator("[data-part-sheet-close]").first();
+    await close.waitFor({ state: "visible", timeout: 8000 });
+    const sheetBox = await sheet.boundingBox();
+    const closeBox = await close.boundingBox();
+    const inHeader = await close.evaluate(
+      (el) => el.closest("[data-part-sheet-header]") !== null,
+    );
+    const touchTarget =
+      Boolean(closeBox) && closeBox.width >= 44 && closeBox.height >= 44;
+    const headerRegion =
+      Boolean(sheetBox && closeBox) && closeBox.y - sheetBox.y <= 56 && inHeader;
+    record(
+      "bea-parts-panel-close-chrome",
+      "bea-smoke",
+      browserName,
+      vp,
+      touchTarget && headerRegion,
+      `touch=${touchTarget} header=${headerRegion} close=${closeBox ? `${Math.round(closeBox.width)}x${Math.round(closeBox.height)}` : "na"}`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    record(
+      "bea-3d-part-camera-stable",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 200)}`,
+    );
+    record(
+      "bea-parts-panel-close-chrome",
+      "bea-smoke",
+      browserName,
+      vp,
+      false,
+      `FAIL: ${msg.replace(/\s+/g, " ").slice(0, 200)}`,
     );
   } finally {
     await context.close();
@@ -1574,6 +1721,12 @@ async function runRows(browserName, launch) {
   await safeStep("bea-h1-care-sheet", "bea-smoke", browserName, 390, async () => {
     await runBeaH1CareSheet390(browserName, browser);
   });
+
+  for (const hwVp of viewports) {
+    if (hwVp === 390 || hwVp === 1440) {
+      await runBeaHardwareFixtureGateRows(browserName, browser, hwVp);
+    }
+  }
 
   await browser.close();
 }

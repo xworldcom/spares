@@ -4,6 +4,7 @@ import { useBounds } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   type RefObject,
@@ -431,6 +432,30 @@ export function ViewerCameraOwner({
       observer.disconnect();
     };
   }, [applyCanonical, invalidate, layoutRootRef, syncViewport]);
+
+  const publishOrbitProbe = useCallback(() => {
+    const root = layoutRootRef.current;
+    if (!root || !(camera instanceof PerspectiveCamera) || !controls) {
+      return;
+    }
+    const snap = snapshotOrbit(camera, controls.target);
+    if (!isValidOrbitSnapshot(snap)) {
+      return;
+    }
+    root.setAttribute("data-viewer-orbit", JSON.stringify(snap));
+  }, [camera, controls, layoutRootRef]);
+
+  useEffect(() => {
+    if (!controls) {
+      return;
+    }
+    const onChange = () => {
+      publishOrbitProbe();
+    };
+    controls.addEventListener("change", onChange);
+    publishOrbitProbe();
+    return () => controls.removeEventListener("change", onChange);
+  }, [controls, publishOrbitProbe]);
 
   useLayoutEffect(() => {
     const root = layoutRootRef.current;
