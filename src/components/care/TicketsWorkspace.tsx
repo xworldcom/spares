@@ -307,7 +307,7 @@ export function TicketsWorkspace({
   const listSearchQuery =
     searchDraft.trim() !== searchQuery.trim()
       ? searchDraft.trim()
-      : debouncedSearchDraft;
+      : searchQuery.trim();
 
   const visibleTickets = useMemo(
     () =>
@@ -329,6 +329,9 @@ export function TicketsWorkspace({
     if (!selected) {
       return visibleTickets;
     }
+    if (listSearchQuery.trim()) {
+      return visibleTickets;
+    }
     if (visibleTickets.some((ticket) => ticketRefMatches(ticket, selected.id))) {
       return visibleTickets;
     }
@@ -340,7 +343,7 @@ export function TicketsWorkspace({
       return visibleTickets;
     }
     return [selected, ...visibleTickets];
-  }, [selected, statusFilter, visibleTickets]);
+  }, [listSearchQuery, selected, statusFilter, visibleTickets]);
 
   const listPanel = (
     <div className="tickets-workspace-list">

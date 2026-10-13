@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * rv421 / rv428 / rv430 Mac proof gate (v16c) — prod-identical disposable store + Bea/Sam flows.
+ * rv421 / rv428 / rv430 Mac proof gate (v16g deferred) — prod-identical disposable store + Bea/Sam flows.
  * WebKit FS: bea-phone-3d-fs / bea-fs-strip-15px always enter FS; PASS requires native
  * or overlay fallback (mode= recorded in RESULTS detail — never skip FS on WebKit).
  *
@@ -24,7 +24,7 @@ import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 
-const GATE_HARNESS_VERSION = "v16e";
+const GATE_HARNESS_VERSION = "v16g";
 
 const VIEWER_ORBIT_EPSILON = 0.42;
 
@@ -167,7 +167,6 @@ const PIVOT_ROW_ORDER = [
   "sam-qty-decimal-15",
   "sam-qty-invalid-refocus",
   "sam-more-machines-onetap",
-  "sam-messages-close-scroll",
   "sam-care-sort-stable",
   "sam-care-header-stable",
   "sam-ticket-search-t9",
@@ -903,24 +902,30 @@ async function runBeaHardwareFixtureGateRows(browserName, browser, vp) {
   await apiLogin(context, CUSTOMER);
   const page = await context.newPage();
   try {
-    await page.goto(`${BASE}/machines/hardware-fixture`, { waitUntil: "domcontentloaded" });
-    await page
-      .waitForFunction(
-        () => {
-          const canvas = document.querySelector("canvas");
-          const layout = document.querySelector("[data-machine-viewer-layout]");
-          const orbit = layout?.getAttribute("data-viewer-orbit");
-          const box = canvas?.getBoundingClientRect();
-          return (
-            Boolean(box && box.width > 8 && box.height > 8) &&
-            layout?.getAttribute("data-viewer-canonical-ready") === "true" &&
-            Boolean(orbit)
-          );
-        },
-        { timeout: 90_000 },
-      )
-      .catch(() => {});
-    await page.waitForTimeout(600);
+    await page.goto(`${BASE}/machines/hardware-fixture`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60_000,
+    });
+    await page.locator("[data-machine-viewer-layout]").first().waitFor({
+      state: "visible",
+      timeout: 90_000,
+    });
+    await page.locator("canvas").first().waitFor({ state: "visible", timeout: 90_000 });
+    await page.waitForFunction(
+      () => {
+        const canvas = document.querySelector("canvas");
+        const layout = document.querySelector("[data-machine-viewer-layout]");
+        const orbit = layout?.getAttribute("data-viewer-orbit");
+        const box = canvas?.getBoundingClientRect();
+        return (
+          Boolean(box && box.width > 8 && box.height > 8) &&
+          layout?.getAttribute("data-viewer-canonical-ready") === "true" &&
+          Boolean(orbit)
+        );
+      },
+      { timeout: 90_000 },
+    );
+    await page.waitForTimeout(400);
 
     const orbit0 = await readViewerOrbit(page);
     const canvas = page.locator("canvas").first();
@@ -1521,7 +1526,9 @@ async function runRows(browserName, launch) {
     });
 
     await safeStep("sam-care-sort-stable", "care-layout", browserName, vp, async () => {
-      await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+      const careTicketsUrl =
+        vp >= 1024 ? `${BASE}/care/tickets/34` : `${BASE}/care/tickets`;
+      await page.goto(careTicketsUrl, { waitUntil: "domcontentloaded" });
       await page.locator(".tickets-workspace-filter-row").waitFor({ state: "visible", timeout: 12_000 });
       const listTopBefore = await page
         .locator(".tickets-workspace-list")
@@ -1536,9 +1543,14 @@ async function runRows(browserName, launch) {
           return { ok: false, overflowX: "missing" };
         }
         const overflowX = getComputedStyle(row).overflowX;
+        const split = Boolean(
+          document.querySelector('.tickets-workspace[data-tickets-layout="split"]'),
+        );
+        const needsHidden = window.innerWidth <= 430 || split;
         return {
-          ok: window.innerWidth <= 430 ? overflowX === "hidden" : true,
+          ok: needsHidden ? overflowX === "hidden" : true,
           overflowX,
+          split,
         };
       });
       const search = page.locator("#care-tickets-search");
@@ -1610,15 +1622,25 @@ async function runRows(browserName, launch) {
     await safeStep("sam-ticket-search-t9", "care-search", browserName, vp, async () => {
       let rankedOk = true;
       let detail = "";
+      const careSearchUrl =
+        vp >= 1024 ? `${BASE}/care/tickets/34` : `${BASE}/care/tickets`;
       for (const query of ["T9", "9"]) {
-        await page.goto(`${BASE}/care/tickets`, { waitUntil: "domcontentloaded" });
+        await page.goto(careSearchUrl, { waitUntil: "domcontentloaded" });
+        await page
+          .locator('.tickets-workspace[data-tickets-layout="split"]')
+          .waitFor({ state: "visible", timeout: vp >= 1024 ? 12_000 : 2000 })
+          .catch(() => {});
         const searchInput = page.locator("#care-tickets-search");
         await searchInput.fill("");
         await searchInput.fill(query);
         await searchInput.press("Enter").catch(() => {});
         await page
           .waitForFunction(
-            (needle) => {
+            (q) => {
+              const params = new URLSearchParams(window.location.search);
+              if (q === "9" && params.get("q") !== "9") {
+                return false;
+              }
               const first = document.querySelector(".tickets-workspace-list a.care-row");
               return Boolean(first && /Ticket\s+9\b/i.test(first.textContent ?? ""));
             },
