@@ -9,9 +9,13 @@ Authoritative harness: `scripts/rv421-mac-proof-gate.mjs`. Artifacts land in pro
 | **A** | Product files from `2b0ae4f` + harness @ branch HEAD | Bite rows **FAIL** (old behavior) |
 | **B** | Full branch HEAD | **GREEN** |
 
-## v16d harness (peek band + BOM scoping)
+## v16e harness (peek open + bite rows)
 
-- Peek-band rows require `is-peek` and height ≤ 96px; Close uses tap @390; care H1 uses fresh navigation per actor.
+- Quote Messages rows open via **Messages** control (never handle-expand); `ensureMessagesPeekBand` steps **Close → reopen** when stuck above peek.
+- Peek-band rows require `is-peek` and height ≤ 96px; Close uses tap @390; care H1 drags from **reply** (not pre-expanded full).
+- `sam-close-ticket9` also asserts **full → Close** does not grow sheet height.
+- `sam-care-sort-stable` @390 requires filter row `overflow-x: hidden` (product `@media (max-width: 430px)`).
+- `bea-3d-part-camera-stable` waits for canvas box + `data-viewer-canonical-ready` + `data-viewer-orbit` before taps.
 - BOM rows scope `section[data-parts-bom]` / `aside.machine-bom` (no nested list `data-parts-bom`).
 
 ## v16c rows (hardware-fixture, `user@demo.com`)
