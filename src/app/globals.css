@@ -4270,6 +4270,7 @@ body > .quote-undo-toast {
     min-height: 0;
     overflow-x: clip;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filters {
@@ -4277,15 +4278,29 @@ body > .quote-undo-toast {
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-filter-row {
-    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(0, 6.25rem);
+    grid-template-columns: repeat(3, minmax(0, max-content)) minmax(0, 1fr) minmax(9.75rem, 1fr);
     overflow-x: hidden;
-    scrollbar-gutter: auto;
+    scrollbar-gutter: stable;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-sort-select {
     width: 100%;
+    min-width: 9.75rem;
+    max-width: 100%;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-toolbar .work-list-scope-row {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-toolbar .work-list-scope-copy {
+    flex: 1 1 auto;
     min-width: 0;
-    max-width: 6.25rem;
+  }
+
+  .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-new {
+    white-space: nowrap;
   }
 
   .tickets-workspace[data-tickets-layout="split"] .tickets-workspace-detail {
