@@ -3,7 +3,9 @@ import { canAccessMachine } from "@/lib/access";
 import { error, isErrorResponse, json, readJson, withCatalogConflict } from "@/lib/http";
 import { machineFileUrl } from "@/lib/machine-file-url";
 import { toMachineDetail } from "@/lib/machines";
+import { parseManualSubPartMutation } from "@/lib/manual-sub-assembly";
 import { parseStaffPartEdit, type StaffPartEdit } from "@/lib/staff-catalog";
+import type { ManualSubPartMutation } from "@/lib/manual-sub-assembly";
 import { actorFromUser, recordAccountActivity } from "@/lib/activity-log";
 import {
   deleteMachine,
@@ -58,6 +60,7 @@ type PatchBody = {
   siteId?: unknown;
   name?: unknown;
   part?: unknown;
+  manualSubPart?: unknown;
 };
 
 async function handlePATCH(
@@ -78,11 +81,17 @@ async function handlePATCH(
   const hasSiteId = "siteId" in body;
   const hasName = "name" in body;
   const hasPart = "part" in body;
-  if (!hasSiteId && !hasName && !hasPart) {
-    return error("Send a name, plant, or part to update", 400);
+  const hasManualSubPart = "manualSubPart" in body;
+  if (!hasSiteId && !hasName && !hasPart && !hasManualSubPart) {
+    return error("Send a name, plant, part, or manual sub-part change", 400);
   }
 
-  const patch: { name?: string; siteId?: string | null; part?: StaffPartEdit } = {};
+  const patch: {
+    name?: string;
+    siteId?: string | null;
+    part?: StaffPartEdit;
+    manualSubPart?: ManualSubPartMutation;
+  } = {};
   if (hasSiteId) {
     patch.siteId =
       body.siteId === null || body.siteId === ""
@@ -107,6 +116,13 @@ async function handlePATCH(
     }
     patch.part = parsed;
   }
+  if (hasManualSubPart) {
+    const parsed = parseManualSubPartMutation(body.manualSubPart);
+    if ("error" in parsed) {
+      return error(parsed.error, 400);
+    }
+    patch.manualSubPart = parsed;
+  }
 
   const updated = await updateMachine(id, auth.tenantId, patch);
   if ("error" in updated) {
@@ -118,6 +134,13 @@ async function handlePATCH(
     }
     if (updated.error === "bad-part") {
       return error(updated.message, 400);
+    }
+    if (updated.error === "bad-manual-sub") {
+      const status =
+        updated.message.includes("Refresh") || updated.message.includes("Someone else")
+          ? 409
+          : 400;
+      return error(updated.message, status);
     }
     return error("Machine not found", 404);
   }

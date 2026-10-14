@@ -7,6 +7,7 @@ import type { Part } from "@/lib/api/types";
 import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { PartDetailSheet } from "@/components/machine/PartDetailSheet";
+import { ManualSubAssemblyChildRow } from "@/components/machine/ManualSubAssemblyRows";
 import { partSheetMetaLine, partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -20,11 +21,15 @@ export function SelectedPartSheet({
   onAdd,
   onDismiss,
   showAdd,
+  manualSubChildren,
+  onSelectSubPart,
   held,
   listView,
   quoteTrayPeek,
 }: {
   part: Part | null;
+  manualSubChildren?: Part[];
+  onSelectSubPart?: (part: Part) => void;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
   onHide: () => void;
@@ -156,6 +161,26 @@ export function SelectedPartSheet({
         <PartLifecycleNotice lifecycle={part.lifecycle} compact />
         {partSheetMetaLine(part) ? (
           <p className="chrome-quiet mb-1 truncate text-[11px]">{partSheetMetaLine(part)}</p>
+        ) : null}
+        {manualSubChildren && manualSubChildren.length > 0 ? (
+          <div className="mb-2 border-t border-white/8 pt-2" data-manual-sub-sheet="">
+            <p className="chrome-quiet mb-1 text-[11px] font-medium uppercase tracking-wide">
+              Manual sub-parts
+            </p>
+            <ul className="space-y-1">
+              {manualSubChildren.map((child) => (
+                <li key={child.id}>
+                  <ManualSubAssemblyChildRow
+                    part={child}
+                    selected={part.id === child.id}
+                    onSelect={(row) => onSelectSubPart?.(row)}
+                    onAdd={onAdd}
+                    showAdd={showAdd && Boolean(onAdd)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
           {showAdd && onAdd ? (

@@ -8,6 +8,11 @@ import {
   staffJoinCounts,
   type StaffCatalogRow,
 } from "@/lib/staff-catalog";
+import {
+  ManualSubAssemblyCollapse,
+  manualGroupForParent,
+} from "@/components/machine/ManualSubAssemblyRows";
+import { StaffManualSubAssemblyEditor } from "@/components/machine/StaffManualSubAssemblyEditor";
 
 function statusLabel(status: StaffCatalogRow["status"]) {
   return status === "joined" ? "Joined" : "Missing mesh";
@@ -46,6 +51,7 @@ export function StaffPartsReview({
   onSuggestedMeshUsed,
   onSelectPart,
   onSave,
+  onMachineUpdated,
   saving,
   saveError,
 }: {
@@ -61,6 +67,7 @@ export function StaffPartsReview({
     meshName: string;
     qty: number;
   }) => Promise<string | void>;
+  onMachineUpdated?: (machine: MachineDetail) => void;
   saving?: boolean;
   saveError?: string | null;
 }) {
@@ -204,6 +211,13 @@ export function StaffPartsReview({
           <ul className="spares-surface mt-3 overflow-hidden rounded-[22px]">
             {filtered.map((row) => {
               const selected = row.key === selectedKey;
+              const parentPart =
+                row.status === "joined"
+                  ? machine.parts.find((item) => item.id === row.partNumber) ?? null
+                  : null;
+              const manualGroup = parentPart
+                ? manualGroupForParent(machine.manualSubAssemblies, parentPart)
+                : undefined;
               return (
                 <li key={row.key}>
                   <button
@@ -244,6 +258,16 @@ export function StaffPartsReview({
                       </span>
                     </span>
                   </button>
+                  {parentPart && manualGroup ? (
+                    <ul className="border-t border-white/6">
+                      <ManualSubAssemblyCollapse
+                        parent={parentPart}
+                        group={manualGroup}
+                        selectedPartId={selectedPartId}
+                        onSelect={onSelectPart}
+                      />
+                    </ul>
+                  ) : null}
                 </li>
               );
             })}
@@ -361,6 +385,15 @@ export function StaffPartsReview({
           >
             {saving ? "Saving…" : "Save"}
           </button>
+          {selectedRow.status === "joined" && onMachineUpdated ? (
+            <StaffManualSubAssemblyEditor
+              machine={machine}
+              parentPart={
+                machine.parts.find((item) => item.id === selectedRow.partNumber)!
+              }
+              onMachineUpdated={onMachineUpdated}
+            />
+          ) : null}
         </form>
       ) : null}
     </div>

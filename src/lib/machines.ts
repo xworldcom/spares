@@ -134,6 +134,10 @@ export function toMachineDetail(
     ? lifecycleMapForTenant(lifecycleRows, tenantId)
     : new Map<string, StoredPartLifecycle>();
   const parts = enrichPartsWithLifecycle(machine.parts, lifecycleMap, role);
+  const manualSubAssemblies = machine.manualSubAssemblies?.length
+    ? machine.manualSubAssemblies
+    : undefined;
+
   if (role === "staff") {
     return {
       id: machine.id,
@@ -141,6 +145,7 @@ export function toMachineDetail(
       fileUrl: resolvedUrl,
       parts,
       unmatched: machine.unmatched,
+      manualSubAssemblies,
       version: machine.version ?? 1,
       revisedAt: machine.revisedAt,
       hasModel,
@@ -154,6 +159,7 @@ export function toMachineDetail(
     name: machine.name,
     fileUrl: resolvedUrl,
     parts,
+    manualSubAssemblies,
     version: machine.version ?? 1,
     revisedAt: machine.revisedAt,
     hasModel,

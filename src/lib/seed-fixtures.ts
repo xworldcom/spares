@@ -4,6 +4,10 @@ import path from "path";
 import { extractMeshNames } from "./gltf.ts";
 import { joinParts, parsePartsList } from "./parts.ts";
 import type { Part, UnmatchedPart } from "../types/index.ts";
+import {
+  HARDWARE_FIXTURE_MOTOR_SUB_PARTS,
+  type ManualSubAssemblyGroup,
+} from "./manual-sub-assembly.ts";
 
 type FixtureMachine = {
   id: string;
@@ -12,6 +16,7 @@ type FixtureMachine = {
   originalFileName: string;
   parts: Part[];
   unmatched: UnmatchedPart[];
+  manualSubAssemblies?: ManualSubAssemblyGroup[];
   createdAt: string;
 };
 
@@ -90,6 +95,11 @@ export async function buildFixtureMachine(
   const meshNames = extractMeshNames(modelBytes, spec.originalFileName);
   const { parts, unmatched } = joinParts(rows, meshNames);
 
+  const manualSubAssemblies =
+    spec.id === FIXTURE_MACHINE_IDS.hardware
+      ? [HARDWARE_FIXTURE_MOTOR_SUB_PARTS]
+      : undefined;
+
   return {
     machine: {
       id: spec.id,
@@ -98,6 +108,7 @@ export async function buildFixtureMachine(
       originalFileName: spec.originalFileName,
       parts,
       unmatched,
+      ...(manualSubAssemblies ? { manualSubAssemblies } : {}),
       createdAt: new Date().toISOString(),
     },
     bytes: modelBytes,

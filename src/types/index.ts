@@ -99,6 +99,10 @@ export type UnmatchedPart = {
   qty?: number;
 };
 
+export type ManualSubPart = import("../lib/manual-sub-assembly.ts").ManualSubPart;
+export type ManualSubAssemblyGroup =
+  import("../lib/manual-sub-assembly.ts").ManualSubAssemblyGroup;
+
 export type MachineSummary = {
   id: string;
   name: string;
@@ -116,6 +120,7 @@ export type MachineDetail = {
   fileUrl: string;
   parts: Part[];
   unmatched?: UnmatchedPart[];
+  manualSubAssemblies?: ManualSubAssemblyGroup[];
   siteId?: string;
   company?: string;
   siteName?: string;
