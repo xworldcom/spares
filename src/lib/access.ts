@@ -1,4 +1,8 @@
 import type { CustomerAccount, MachineSummary, PublicUser, Role, Site } from "@/types";
+import {
+  demoBuyerMachineAccess,
+  isPublicDemoBuyerEmail,
+} from "./demo-buyer-access.ts";
 import { belongsToTenant, effectiveTenantId } from "./tenant.ts";
 import {
   customerAllSitesLabel,
@@ -462,12 +466,15 @@ export function canCreateMachineAtSite(
   user: Pick<
     PublicUser,
     "role" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
-  >,
+  > & { email?: string },
   site: Pick<Site, "id" | "deletedAt" | "customerId" | "company" | "tenantId">,
   machines: readonly Pick<MachineSummary, "id" | "siteId">[] = [],
   accounts: readonly CustomerAccount[] = [],
 ) {
   if (site.deletedAt) {
+    return false;
+  }
+  if (isPublicDemoBuyerEmail(user.email)) {
     return false;
   }
   if (user.role === "staff") {
@@ -507,7 +514,7 @@ export function canAccessMachine(
   user: Pick<
     PublicUser,
     "role" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
-  >,
+  > & { email?: string },
   machine: {
     id?: string;
     siteId?: string | null;
@@ -517,6 +524,10 @@ export function canAccessMachine(
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
 ) {
+  const demoOnly = demoBuyerMachineAccess(user, machine);
+  if (demoOnly !== null) {
+    return demoOnly;
+  }
   if (user.role === "staff") {
     if (!user.tenantId) {
       return false;
@@ -593,6 +604,8 @@ export function toPublicUser(
     siteIds.length > 0
       ? sites.filter((site) => siteIds.includes(site.id) && !site.deletedAt)
       : undefined;
+  const publicSites =
+    isPublicDemoBuyerEmail(user.email) ? [] : resolved;
   const domain = user.email.split("@")[1] ?? user.emailDomain;
   return {
     id: user.id,
@@ -605,7 +618,7 @@ export function toPublicUser(
     machineIds,
     ...(user.name?.trim() ? { name: user.name.trim() } : {}),
     ...(domain ? { emailDomain: domain } : {}),
-    ...(resolved && resolved.length > 0 ? { sites: resolved } : {}),
+    ...(publicSites && publicSites.length > 0 ? { sites: publicSites } : {}),
     ...(user.deletedAt ? { deletedAt: user.deletedAt } : {}),
     ...(user.lifecycleNotifyObsolete !== undefined
       ? { lifecycleNotifyObsolete: user.lifecycleNotifyObsolete }
