@@ -4,10 +4,6 @@ import {
   lifecycleMapForTenant,
   type StoredPartLifecycle,
 } from "./part-lifecycle.ts";
-import {
-  isPublicDemoBuyerEmail,
-  scrubMachineSiteFieldsForDemoBuyer,
-} from "./demo-buyer-access.ts";
 import { siteCompanyName } from "./org.ts";
 import type { StoredMachine } from "./store.ts";
 
@@ -100,22 +96,13 @@ export function toMachineSummary(
   },
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
-  viewer?: { email?: string },
 ): MachineSummary {
-  const located = siteFields(machine, sites, accounts);
-  const summary: MachineSummary = {
+  return {
     id: machine.id,
     name: machine.name,
     hasModel: machineHasModel(machine),
     version: machine.version ?? 1,
-    ...located,
-  };
-  if (!isPublicDemoBuyerEmail(viewer?.email)) {
-    return summary;
-  }
-  return {
-    ...summary,
-    ...scrubMachineSiteFieldsForDemoBuyer(machine, located),
+    ...siteFields(machine, sites, accounts),
   };
 }
 
@@ -137,12 +124,8 @@ export function toMachineDetail(
   sites: readonly Site[] = [],
   accounts: readonly CustomerAccount[] = [],
   lifecycleRows: readonly StoredPartLifecycle[] = [],
-  viewer?: { email?: string },
 ): MachineDetail {
   const located = siteFields(machine, sites, accounts);
-  const presentedLocated = isPublicDemoBuyerEmail(viewer?.email)
-    ? scrubMachineSiteFieldsForDemoBuyer(machine, located)
-    : located;
   const hasModel = machineHasModel(machine);
   const resolvedUrl = hasModel ? fileUrl : "";
   const extra = optionalMachineCopy(machine);
@@ -162,7 +145,7 @@ export function toMachineDetail(
       revisedAt: machine.revisedAt,
       hasModel,
       ...extra,
-      ...presentedLocated,
+      ...located,
     };
   }
 
@@ -175,7 +158,7 @@ export function toMachineDetail(
     revisedAt: machine.revisedAt,
     hasModel,
     ...extra,
-    ...presentedLocated,
+    ...located,
   };
 }
 

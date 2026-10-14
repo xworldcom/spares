@@ -9,7 +9,6 @@ import {
 } from "./demo-stage-quote-seed.ts";
 import { isSeedAllowed } from "./production-env.ts";
 import { FIXTURE_MACHINE_IDS, buildFixtureMachineById } from "./seed-fixtures.ts";
-import { demoBuyerMachineIdsGrant } from "./demo-buyer-access.ts";
 import { isDemoCustomerHiddenTicketNumber } from "./demo-customer-visibility.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 import { nextQuoteNumber } from "./quotes.ts";
@@ -89,8 +88,6 @@ export type DataMigrations = {
   demoRv421HardwareFixtureLifecycleV1?: number;
   /** Retitle demo tickets #10–#16; force Q37 hidden from customers (rv428). */
   demoRv428DemoPolishV1?: number;
-  /** Strip site grants from user@demo.com; machine-only demo catalog access (#448). */
-  demoBuyerAccessIsolationV1?: number;
 };
 
 export const DEMO_QUOTE_26_HEAL_V1 = 1;
@@ -109,8 +106,6 @@ export const DEMO_CUSTOMER_HYGIENE_V3 = 3;
 export const DEMO_CUSTOMER_HYGIENE_V4 = 4;
 
 export const DEMO_RV428_DEMO_POLISH_V1 = 1;
-
-export const DEMO_BUYER_ACCESS_ISOLATION_V1 = 1;
 
 const DEMO_TICKET_PLACEHOLDER_TITLE =
   /^(Ack dismiss preview|Short thread pin(?: Absolute v[56])?|Long thread scroll Absolute v6)$/i;
@@ -280,30 +275,13 @@ export function applyDemoTenantB1Migration<T extends DemoMigrationDb>(
   };
 }
 
-function ensureDemoBuyerMachineGrants(user: DemoMigrationUser): {
-  user: DemoMigrationUser;
-  changed: boolean;
-} {
-  const wanted = demoBuyerMachineIdsGrant();
+function grantHardwareFixture(user: DemoMigrationUser, machineId: string): DemoMigrationUser {
   const machineIds = new Set(user.machineIds ?? []);
-  let changed = false;
-  for (const id of wanted) {
-    if (!machineIds.has(id)) {
-      machineIds.add(id);
-      changed = true;
-    }
+  if (machineIds.has(machineId)) {
+    return user;
   }
-  const siteIds = user.siteIds ?? [];
-  if (siteIds.length > 0) {
-    changed = true;
-  }
-  if (!changed) {
-    return { user, changed: false };
-  }
-  return {
-    user: { ...user, siteIds: [], machineIds: [...machineIds] },
-    changed: true,
-  };
+  machineIds.add(machineId);
+  return { ...user, machineIds: [...machineIds] };
 }
 
 /**
@@ -495,10 +473,8 @@ export async function applyDemoTenantV1Migration<T extends DemoMigrationDb>(
     (user) => normalizeEmail(user.email) === buyerEmail && !user.deletedAt,
   );
   if (existingIndex >= 0) {
-    const { user: updated, changed: grantChanged } = ensureDemoBuyerMachineGrants(
-      users[existingIndex],
-    );
-    if (grantChanged) {
+    const updated = grantHardwareFixture(users[existingIndex], machineId);
+    if (updated !== users[existingIndex]) {
       users = users.slice();
       users[existingIndex] = updated;
       buyerGranted = true;
@@ -670,52 +646,6 @@ function reconcileDemoCustomerTicketVisibility<T extends DemoMigrationTicket>(
     return rest as T;
   });
   return { tickets: next, changed };
-}
-
-/**
- * Production demo buyer: machine-only grants (hardware fixture + palletizer), never site-wide
- * Cargill/Acme access. Re-runs when catalog drift re-attaches siteIds (#448).
- */
-export function applyDemoBuyerAccessIsolationMigration<T extends DemoMigrationDb>(
-  db: T,
-): { db: T; changed: boolean } {
-  if (isSeedAllowed()) {
-    return { db, changed: false };
-  }
-  const buyerEmail = normalizeEmail(DEMO_TENANT_BUYER.email);
-  const buyerIndex = db.users.findIndex(
-    (user) => normalizeEmail(user.email) === buyerEmail && !user.deletedAt,
-  );
-  if (buyerIndex < 0) {
-    return { db, changed: false };
-  }
-  let users = db.users;
-  let changed = false;
-  users = users.map((user) => {
-    if (normalizeEmail(user.email) !== buyerEmail || user.deletedAt) {
-      return user;
-    }
-    const { user: next, changed: rowChanged } = ensureDemoBuyerMachineGrants(user);
-    if (rowChanged) {
-      changed = true;
-    }
-    return next;
-  });
-  const markerSet = db.dataMigrations?.demoBuyerAccessIsolationV1 === DEMO_BUYER_ACCESS_ISOLATION_V1;
-  if (!changed && markerSet) {
-    return { db, changed: false };
-  }
-  return {
-    db: {
-      ...db,
-      users,
-      dataMigrations: {
-        ...db.dataMigrations,
-        demoBuyerAccessIsolationV1: DEMO_BUYER_ACCESS_ISOLATION_V1,
-      },
-    } as T,
-    changed: true,
-  };
 }
 
 /** Demo tenant: hide gate tickets from buyers; remove junk quote #37 note. */

@@ -108,7 +108,6 @@ import {
   applyDemoTenantB2StageQuotesMigration,
   applyDemoQuote26HealMigration,
   applyDemoRv421Quote27Migration,
-  applyDemoBuyerAccessIsolationMigration,
   applyDemoCustomerHygieneMigration,
   applyDemoTenantStaffBMigration,
   applyDemoTenantV1Migration,
@@ -1782,11 +1781,6 @@ async function runDemoTenantMigration(
   const hygiene = applyDemoCustomerHygieneMigration(next);
   if (hygiene.changed) {
     next = hygiene.db;
-    changed = true;
-  }
-  const demoBuyerAccess = applyDemoBuyerAccessIsolationMigration(next);
-  if (demoBuyerAccess.changed) {
-    next = demoBuyerAccess.db;
     changed = true;
   }
   const rv428 = applyDemoRv428DemoPolishMigration(next);

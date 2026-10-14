@@ -18,7 +18,7 @@ export async function buildMachinesListPayload(
   );
   return {
     machines: visible.map((machine) =>
-      toMachineSummary(machine, snapshot.sites, snapshot.customers, user),
+      toMachineSummary(machine, snapshot.sites, snapshot.customers),
     ),
   };
 }
