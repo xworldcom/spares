@@ -1,5 +1,5 @@
-import { DEMO_TENANT_BUYER } from "./demo-tenant-data-migration.ts";
-import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
+import { FIXTURE_MACHINE_IDS } from "./fixture-machine-ids.ts";
+import { PUBLIC_DEMO_BUYER_EMAIL } from "./public-demo-buyer.ts";
 
 /** Public demo customer on oee360.com — machine grants only, never whole customer sites. */
 export const DEMO_BUYER_MACHINE_IDS: readonly string[] = [
@@ -24,7 +24,7 @@ export function isPublicDemoBuyerEmail(email: string | undefined) {
   }
   return (
     normalizePublicDemoBuyerEmail(email) ===
-    normalizePublicDemoBuyerEmail(DEMO_TENANT_BUYER.email)
+    normalizePublicDemoBuyerEmail(PUBLIC_DEMO_BUYER_EMAIL)
   );
 }
 

@@ -1248,6 +1248,8 @@ function ensureOrg(db: Database): Database {
         canAccessMachine(
           {
             role: "customer",
+            email: healed.email,
+            tenantId: healed.tenantId,
             siteIds: healed.siteIds ?? [],
             machineIds: healed.machineIds ?? [],
             companyAccess: healed.companyAccess,

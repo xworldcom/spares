@@ -8,6 +8,7 @@ import {
   preferredDemoStageMachineId,
 } from "./demo-stage-quote-seed.ts";
 import { isSeedAllowed } from "./production-env.ts";
+import { PUBLIC_DEMO_BUYER_EMAIL } from "./public-demo-buyer.ts";
 import { FIXTURE_MACHINE_IDS, buildFixtureMachineById } from "./seed-fixtures.ts";
 import { demoBuyerMachineIdsGrant } from "./demo-buyer-access.ts";
 import { isDemoCustomerHiddenTicketNumber } from "./demo-customer-visibility.ts";
@@ -48,7 +49,7 @@ export function readDemoBuyerPasswordFromEnv(): string | undefined {
 }
 
 export const DEMO_TENANT_BUYER = {
-  email: "user@demo.com",
+  email: PUBLIC_DEMO_BUYER_EMAIL,
   name: "Demo buyer",
 } as const;
 
