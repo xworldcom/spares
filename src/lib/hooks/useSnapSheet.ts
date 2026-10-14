@@ -8,7 +8,6 @@ import {
   type RefObject,
 } from "react";
 import {
-  CONVERSATION_SHEET_PEEK_H,
   conversationSheetDragHeight,
   conversationSheetMotionFromHeight,
   conversationSheetSnapFromHeight,
@@ -75,29 +74,6 @@ function measureThreadContextBandPx(card: HTMLElement, maxRows = 2): number {
   return pt + rowsH + pb + remPx(0.35);
 }
 
-function peekHeightPx(card: HTMLElement | null) {
-  if (card) {
-    const raw = getComputedStyle(card).getPropertyValue("--peek-h").trim();
-    if (raw.endsWith("rem")) {
-      const rem = Number.parseFloat(raw);
-      if (Number.isFinite(rem) && rem > 0) {
-        return Math.ceil(remPx(rem));
-      }
-    }
-    if (raw.endsWith("px")) {
-      const px = Number.parseFloat(raw);
-      if (Number.isFinite(px) && px > 0) {
-        return Math.ceil(px);
-      }
-    }
-  }
-  const fallback = CONVERSATION_SHEET_PEEK_H;
-  if (fallback.endsWith("rem")) {
-    return Math.ceil(remPx(Number.parseFloat(fallback)));
-  }
-  return Math.ceil(remPx(5.75));
-}
-
 function measureDetentHeights(card: HTMLElement | null) {
   const replyFallback = remPx(17.5);
   const composerFallback = remPx(4);
@@ -125,15 +101,7 @@ function measureDetentHeights(card: HTMLElement | null) {
     chrome + measureThreadContextBandPx(card, 2) + composerH + stackGap,
   );
   // Resting intermediate height only — never tie replyH to the live sheet height during drag.
-  let replyH = Math.max(replyFallback, stackReply);
-  const fullCap = openHeightPx(card);
-  const minGap = remPx(2.75);
-  if (replyH >= fullCap - minGap) {
-    replyH = Math.max(replyFallback, Math.min(stackReply, fullCap * 0.52));
-  }
-  if (replyH >= fullCap - minGap) {
-    replyH = Math.max(replyFallback, fullCap - minGap);
-  }
+  const replyH = Math.max(replyFallback, stackReply);
   return { replyH, composerH };
 }
 
@@ -152,12 +120,9 @@ function heightForSnap(snap: ConversationSheetSnap, card?: Element | null) {
   if (snap === "out") {
     return 0;
   }
-  const el = card instanceof HTMLElement ? card : null;
-  if (snap === "peek") {
-    return peekHeightPx(el);
-  }
-  if (snap === "reply") {
-    return measureDetentHeights(el).replyH;
+  const { replyH } = measureDetentHeights(card instanceof HTMLElement ? card : null);
+  if (snap === "peek" || snap === "reply") {
+    return replyH;
   }
   return openHeightPx(card);
 }
@@ -167,24 +132,16 @@ function nearestSnap(
   velocity: number,
   card?: Element | null,
 ): ConversationSheetSnap {
-  const peek = heightForSnap("peek", card);
   const reply = heightForSnap("reply", card);
   const full = heightForSnap("full", card);
-  const peekReplyMid = (peek + reply) / 2;
-  const replyFullMid = (reply + full) / 2;
   if (velocity < -0.45) {
     return "full";
   }
   if (velocity > 0.45) {
-    return height > peekReplyMid ? "reply" : "peek";
-  }
-  if (height <= peekReplyMid) {
-    return "peek";
-  }
-  if (height < replyFullMid) {
     return "reply";
   }
-  return "full";
+  const mid = (reply + full) / 2;
+  return height < mid ? "reply" : "full";
 }
 
 function stepToward(
@@ -226,22 +183,19 @@ export function useSnapSheet({
   onOpenChange,
   desktopStage,
   scrollBodySelector,
-  inlineLayout,
+  openForUnread,
   resetKey,
-  /** Quote Messages: Close from full settles to reply (not care translate). */
-  closeProfile = "care",
 }: {
   cardRef: RefObject<HTMLElement | null>;
   open: boolean;
   onOpenChange?: (open: boolean) => void;
   desktopStage: boolean;
   scrollBodySelector: string;
-  inlineLayout?: boolean;
+  openForUnread?: boolean;
   resetKey?: string;
-  closeProfile?: "care" | "quote";
 }) {
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
-    initialConversationSheetSnap(open, desktopStage, inlineLayout),
+    initialConversationSheetSnap(open, desktopStage, openForUnread),
   );
   const [motionSnap, setMotionSnap] = useState<ConversationSheetSnap | null>(null);
   const [motionPhases, setMotionPhases] = useState({ phaseA: 0, phaseB: 0 });
@@ -272,10 +226,13 @@ export function useSnapSheet({
   }
   const steppedAtRef = useRef(0);
   const settleFrameRef = useRef(0);
-  const motionHeightsRef = useRef<{ peekH: number; replyH: number; fullH: number } | null>(null);
+  const motionHeightsRef = useRef<{ replyH: number; fullH: number } | null>(null);
   const closeSettleRef = useRef(false);
 
   const controlledOpen = typeof onOpenChange === "function";
+  const openForUnreadRef = useRef(openForUnread);
+  openForUnreadRef.current = openForUnread;
+
   const displaySnap = motionSnap ?? sheet;
 
   function setOpen(next: boolean) {
@@ -372,16 +329,15 @@ export function useSnapSheet({
 
   function snapHeights() {
     const card = cardRef.current;
-    const el = card instanceof HTMLElement ? card : null;
-    const peekH = peekHeightPx(el);
-    const { replyH } = measureDetentHeights(el);
-    const fullH = openHeightPx(el);
+    const { replyH } = measureDetentHeights(card instanceof HTMLElement ? card : null);
+    const peekH = replyH;
+    const fullH = openHeightPx(card instanceof HTMLElement ? card : null);
     return { peekH, replyH, fullH };
   }
 
   function lockMotionHeights() {
-    const { peekH, replyH, fullH } = snapHeights();
-    motionHeightsRef.current = { peekH, replyH, fullH };
+    const { replyH, fullH } = snapHeights();
+    motionHeightsRef.current = { replyH, fullH };
   }
 
   function clearMotionHeights() {
@@ -390,7 +346,8 @@ export function useSnapSheet({
 
   function heightsForMotion() {
     if (motionHeightsRef.current) {
-      return motionHeightsRef.current;
+      const { replyH, fullH } = motionHeightsRef.current;
+      return { peekH: replyH, replyH, fullH };
     }
     return snapHeights();
   }
@@ -474,7 +431,7 @@ export function useSnapSheet({
   function paintDrag(dy: number) {
     const { peekH, replyH, fullH } = heightsForMotion();
     const live = conversationSheetDragHeight({
-      from: drag.current.from,
+      from: drag.current.from === "peek" ? "reply" : drag.current.from,
       startH: drag.current.startH,
       dy,
       peekH,
@@ -532,14 +489,14 @@ export function useSnapSheet({
       return;
     }
     setSheet(
-      initialConversationSheetSnap(open, desktopStage, inlineLayout),
+      initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
     );
     clearMotionSnap();
     setThreadDockedState(true);
     clearMotionPaint();
     setDragging(false);
     setDraggingClass(false);
-  }, [resetKey, open, desktopStage, inlineLayout, cardRef]);
+  }, [resetKey, open, desktopStage, cardRef]);
 
   useEffect(() => {
     if (open) {
@@ -547,7 +504,7 @@ export function useSnapSheet({
         if (current !== "out") {
           return current;
         }
-        return initialConversationSheetSnap(true, desktopStage, inlineLayout);
+        return initialConversationSheetSnap(true, desktopStage, openForUnread);
       });
       setThreadDockedState(true);
       clearMotionPaint();
@@ -557,7 +514,7 @@ export function useSnapSheet({
       return;
     }
     if (!controlledOpen && !desktopStage) {
-      setSheet("peek");
+      setSheet("reply");
       clearMotionPaint();
       setDragging(false);
       setDraggingClass(false);
@@ -569,7 +526,7 @@ export function useSnapSheet({
     setDragging(false);
     setDraggingClass(false);
     clearMotionSnap();
-  }, [open, desktopStage, inlineLayout, cardRef, controlledOpen]);
+  }, [open, desktopStage, cardRef, controlledOpen, openForUnread]);
 
   useEffect(() => {
     const body = cardRef.current?.querySelector(scrollBodySelector);
@@ -648,10 +605,12 @@ export function useSnapSheet({
       }
       paintDetentHeightVars();
     };
+    window.addEventListener("scroll", refresh, { passive: true });
     const vv = window.visualViewport;
     vv?.addEventListener("resize", refresh);
     vv?.addEventListener("scroll", refresh);
     return () => {
+      window.removeEventListener("scroll", refresh);
       vv?.removeEventListener("resize", refresh);
       vv?.removeEventListener("scroll", refresh);
     };
@@ -709,27 +668,7 @@ export function useSnapSheet({
     settleTo("reply");
   }
 
-  /** Resting peek band — CSS `is-peek`, not reply height (settleTo("peek") used to expand). */
-  function settleToVisualPeek() {
-    cancelSettleAnimation();
-    drag.current.on = false;
-    drag.current.pending = false;
-    drag.current.moved = false;
-    steppedAtRef.current = performance.now();
-    setDragging(false);
-    setDraggingClass(false);
-    setSettling(false);
-    setSettlingClass(false);
-    cardRef.current?.classList.remove("is-dragging");
-    setThreadDockedState(true);
-    setOpen(true);
-    setSheet("peek");
-    clearMotionSnap("peek");
-    clearMotionPaint("peek");
-    clearCloseTranslate("peek");
-  }
-
-  /** Toolbar Close — care uses `--sheet-close-ty`; quote Messages rolls full → reply → out. */
+  /** Toolbar Close — same `--sheet-close-ty` rail as handle drag-down (not height settle). */
   function closeViaTranslate() {
     if (desktopStage || sheet === "out") {
       return;
@@ -742,41 +681,12 @@ export function useSnapSheet({
     }
     steppedAtRef.current = performance.now();
     setThreadDockedState(true);
-    if (closeProfile === "quote") {
-      if (sheet === "full") {
-        clearCloseTranslate("peek");
-        settleToVisualPeek();
-        return;
-      }
-      if (sheet === "reply") {
-        settleToVisualPeek();
-        return;
-      }
-      if (sheet === "peek") {
-        settleCloseTo("out");
-        return;
-      }
-      steppedAtRef.current = performance.now();
-      setThreadDockedState(true);
-      const max = lockCloseOffset();
-      setSheet("out");
-      clearMotionPaint("out");
-      clearCloseTranslate("out");
-      cardRef.current?.style.setProperty("--sheet-close-rest-ty", `${max}px`);
-      cardRef.current?.style.setProperty("--sheet-close-ty", `${max}px`);
-      cardRef.current?.setAttribute("data-close-translate", "");
-      closeSettleRef.current = true;
-      setOpen(false);
-      return;
-    }
-    if (sheet === "full" || sheet === "reply") {
-      clearCloseTranslate("peek");
-      settleToVisualPeek();
-      return;
-    }
-    if (sheet === "peek") {
-      settleCloseTo("out");
-      return;
+    if (sheet !== "reply") {
+      setOpen(true);
+      setSheet("reply");
+      clearMotionPaint("reply");
+      clearCloseTranslate("reply");
+      lockCloseOffset();
     }
     settleCloseTo("out");
   }
@@ -855,24 +765,25 @@ export function useSnapSheet({
     from: SnapSheetSnap,
     pending: boolean,
   ) {
+    const normalized = from === "peek" ? "reply" : from;
     const card = cardRef.current;
     const startH =
-      card?.getBoundingClientRect().height ?? heightForSnap(from, card);
+      card?.getBoundingClientRect().height ?? heightForSnap(normalized, card);
     const closeMax = lockCloseOffset();
     const startTy =
-      card instanceof HTMLElement ? readCloseTyPx(card) : from === "out" ? closeMax : 0;
+      card instanceof HTMLElement ? readCloseTyPx(card) : normalized === "out" ? closeMax : 0;
     lockMotionHeights();
     drag.current = {
       y: event.clientY,
       on: !pending,
       pending,
-      from,
+      from: normalized,
       startH,
       moved: false,
       samples: [{ t: performance.now(), y: event.clientY }],
       gesture: null,
       liveH: startH,
-      mode: from === "out" ? "close" : null,
+      mode: normalized === "out" ? "close" : null,
       startTy,
       closeMax,
       liveTy: startTy,
@@ -884,7 +795,7 @@ export function useSnapSheet({
       if (drag.current.mode === "close") {
         paintCloseTy(startTy);
       } else {
-        prepareThreadForSheetMotion(from);
+        prepareThreadForSheetMotion(normalized);
         paintMotion(startH);
       }
     }
@@ -1140,24 +1051,13 @@ export function useSnapSheet({
     const velocity = liveVelocity();
     const { peekH, replyH, fullH } = heightsForMotion();
     const currentH = conversationSheetDragHeight({
-      from,
+      from: from === "peek" ? "reply" : from,
       startH: drag.current.startH,
       dy,
       peekH,
       replyH,
       fullH,
     });
-    const restingH = heightForSnap(from, cardRef.current);
-    const displaced = Math.abs(currentH - restingH) > 12;
-    if (
-      displaced ||
-      Math.abs(dy) > 12 ||
-      Math.abs(velocity) > 0.25 ||
-      cardRef.current?.hasAttribute("data-motion-live")
-    ) {
-      settleTo(nearestSnap(currentH, velocity, cardRef.current));
-      return;
-    }
     if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
       if (dy < -12 || velocity < -0.2) {
         settleTo(stepToward(from === "out" ? "reply" : from, "up"));
@@ -1218,11 +1118,7 @@ export function useSnapSheet({
       const ty = drag.current.liveTy;
       const mid = max / 2;
       if (Math.abs(dy) < 28 && Math.abs(velocity) < 0.3) {
-        if (ty < mid) {
-          settleToVisualPeek();
-        } else {
-          settleCloseTo("out");
-        }
+        settleCloseTo(ty < mid ? "reply" : "out");
         return;
       }
       if (velocity > 0.35 || ty > mid + 12) {
@@ -1230,14 +1126,10 @@ export function useSnapSheet({
         return;
       }
       if (velocity < -0.35 || ty < mid - 12) {
-        settleToVisualPeek();
+        settleCloseTo("reply");
         return;
       }
-      if (ty >= mid) {
-        settleCloseTo("out");
-      } else {
-        settleToVisualPeek();
-      }
+      settleCloseTo(ty >= mid ? "out" : "reply");
       return;
     }
     settleSheet(dy, drag.current.from);
