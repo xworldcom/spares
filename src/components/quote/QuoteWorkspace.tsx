@@ -881,7 +881,6 @@ export function QuoteWorkspace({
         unread={quote.unread}
         threadKey={loadedRef === quoteRef ? quote.id : quoteRef}
         layout={inlineMessages ? "inline" : "overlay"}
-        closeProfile="quote"
       >
         <QuoteActivityFeed
           activities={threadReady ? quote.activities : []}

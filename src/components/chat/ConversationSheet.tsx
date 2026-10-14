@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { useConversationDockStage } from "@/components/machine/useDesktopStage";
+import { useDesktopStage } from "@/components/machine/useDesktopStage";
 import {
   ConversationSheetProvider,
 } from "@/components/chat/ConversationSheetContext";
@@ -17,7 +17,6 @@ export function ConversationSheet({
   open = true,
   onOpenChange,
   threadKey,
-  closeProfile = "care",
 }: {
   title: string;
   /** Kept for call-site compatibility; latest context now comes from the live thread. */
@@ -30,11 +29,8 @@ export function ConversationSheet({
   onOpenChange?: (open: boolean) => void;
   /** Resets snap when switching tickets/quotes. */
   threadKey?: string;
-  /** Quote phone Messages only — care tickets keep default care close motion. */
-  closeProfile?: "care" | "quote";
 }) {
-  const conversationDock = useConversationDockStage();
-  const inlineLayout = layout === "inline";
+  const desktop = useDesktopStage();
   const card = useRef<HTMLElement>(null);
   const {
     sheet,
@@ -55,14 +51,13 @@ export function ConversationSheet({
     cardRef: card,
     open,
     onOpenChange,
-    desktopStage: inlineLayout && conversationDock,
+    desktopStage: desktop,
     scrollBodySelector: ".imsg-thread",
-    inlineLayout,
+    openForUnread: Boolean(unread) && layout === "overlay" && !desktop,
     resetKey: threadKey,
-    closeProfile,
   });
 
-  const overlayMobile = layout === "overlay";
+  const overlayMobile = layout === "overlay" && !desktop;
   /** Snap classes follow resting `sheet` — motion phases paint inline during drag/settle. */
   const stageSnap = sheet;
   const expanded =
@@ -71,7 +66,7 @@ export function ConversationSheet({
     (overlayMobile && sheet === "out") ||
     displaySnap === "full" ||
     displaySnap === "reply" ||
-    (inlineLayout && conversationDock);
+    (layout === "inline" && desktop);
   const showToolbar =
     overlayMobile &&
     (sheet === "reply" || sheet === "full" || sheet === "peek" || sheet === "out");

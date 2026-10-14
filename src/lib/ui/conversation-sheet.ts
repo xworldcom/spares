@@ -4,16 +4,20 @@ export type ConversationSheetSnap = "peek" | "reply" | "full" | "out";
 export function initialConversationSheetSnap(
   open: boolean,
   desktopStage: boolean,
-  /** Split-pane column (quote/care desktop) — not the bottom overlay sheet. */
-  inlineLayout = false,
+  /** Mobile: open straight to full when the thread has unread messages. */
+  openForUnread = false,
 ): ConversationSheetSnap {
   if (!open) {
     return "out";
   }
-  if (inlineLayout && desktopStage) {
+  if (desktopStage) {
     return "reply";
   }
-  return "peek";
+  if (openForUnread) {
+    return "full";
+  }
+  // Chunk 1: resting closed = Kevin intermediate (composer visible above tabs).
+  return "reply";
 }
 
 /** Sheet heights as CSS lengths — keep in sync with globals.css. */
@@ -58,15 +62,12 @@ export function conversationSheetMotionFromHeight(
 
 export function conversationSheetSnapFromHeight(
   heightPx: number,
-  peekH: number,
+  _peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetSnap {
   if (heightPx >= fullH - 2) {
     return "full";
-  }
-  if (heightPx <= peekH + PEEK_LAYOUT_BAND_PX) {
-    return "peek";
   }
   if (heightPx <= replyH + PEEK_LAYOUT_BAND_PX) {
     return "reply";

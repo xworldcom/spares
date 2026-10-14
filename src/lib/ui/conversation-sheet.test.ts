@@ -36,24 +36,20 @@ describe("conversation sheet startup snap", () => {
     assert.equal(initialConversationSheetSnap(false, true), "out");
   });
 
-  it("starts at peek on phone overlay", () => {
-    assert.equal(initialConversationSheetSnap(true, false), "peek");
+  it("starts at Kevin intermediate (reply) on phone", () => {
+    assert.equal(initialConversationSheetSnap(true, false), "reply");
   });
 
-  it("starts at peek on phone overlay even when unread would have opened full", () => {
-    assert.equal(initialConversationSheetSnap(true, false), "peek");
+  it("starts at full on phone when the thread is unread", () => {
+    assert.equal(initialConversationSheetSnap(true, false, true), "full");
   });
 
-  it("opens at peek on desktop overlay tray", () => {
-    assert.equal(initialConversationSheetSnap(true, true), "peek");
-  });
-
-  it("opens at reply in desktop split-pane inline column", () => {
-    assert.equal(initialConversationSheetSnap(true, true, true), "reply");
+  it("opens at reply on desktop overlay so the composer is ready", () => {
+    assert.equal(initialConversationSheetSnap(true, true), "reply");
   });
 });
 
-const heights = { peekH: 92, replyH: 280, fullH: 700 };
+const heights = { peekH: 280, replyH: 280, fullH: 700 };
 
 describe("conversation sheet roll-up", () => {
   it("grows continuously from intermediate toward full", () => {
@@ -98,10 +94,6 @@ describe("conversation sheet roll-up", () => {
   });
 
   it("derives snap labels from height without drag hysteresis", () => {
-    assert.equal(
-      conversationSheetSnapFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
-      "peek",
-    );
     assert.equal(
       conversationSheetSnapFromHeight(280, heights.peekH, heights.replyH, heights.fullH),
       "reply",
