@@ -465,8 +465,8 @@ export function accessLabel(
 export function canCreateMachineAtSite(
   user: Pick<
     PublicUser,
-    "role" | "email" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
-  >,
+    "role" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
+  > & { email?: string },
   site: Pick<Site, "id" | "deletedAt" | "customerId" | "company" | "tenantId">,
   machines: readonly Pick<MachineSummary, "id" | "siteId">[] = [],
   accounts: readonly CustomerAccount[] = [],
@@ -513,8 +513,8 @@ export function canCreateMachineAtSite(
 export function canAccessMachine(
   user: Pick<
     PublicUser,
-    "role" | "email" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
-  >,
+    "role" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
+  > & { email?: string },
   machine: {
     id?: string;
     siteId?: string | null;
