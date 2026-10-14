@@ -1,17 +1,16 @@
-import { DEMO_TENANT_BUYER } from "./demo-tenant-data-migration.ts";
-import { FIXTURE_MACHINE_IDS } from "./seed-fixtures.ts";
-
 /** Public demo customer on oee360.com — machine grants only, never whole customer sites. */
+export const PUBLIC_DEMO_BUYER_EMAIL = "user@demo.com";
+
 export const DEMO_BUYER_MACHINE_IDS: readonly string[] = [
-  FIXTURE_MACHINE_IDS.hardware,
-  FIXTURE_MACHINE_IDS.palletizer,
+  "hardware-fixture",
+  "palletizer",
 ];
 
 export const DEMO_BUYER_COMPANY_LABEL = "Demo Manufacturing";
 
 const DEMO_BUYER_SITE_BY_MACHINE: Readonly<Record<string, string>> = {
-  [FIXTURE_MACHINE_IDS.hardware]: "Plant 1",
-  [FIXTURE_MACHINE_IDS.palletizer]: "Plant 2",
+  "hardware-fixture": "Plant 1",
+  palletizer: "Plant 2",
 };
 
 export function normalizePublicDemoBuyerEmail(email: string) {
@@ -24,7 +23,7 @@ export function isPublicDemoBuyerEmail(email: string | undefined) {
   }
   return (
     normalizePublicDemoBuyerEmail(email) ===
-    normalizePublicDemoBuyerEmail(DEMO_TENANT_BUYER.email)
+    normalizePublicDemoBuyerEmail(PUBLIC_DEMO_BUYER_EMAIL)
   );
 }
 
