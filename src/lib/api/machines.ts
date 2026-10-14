@@ -59,6 +59,7 @@ export function normalizeMachine(
       name: machine.name,
       fileUrl,
       parts,
+      manualSubAssemblies: machine.manualSubAssemblies,
       siteId: machine.siteId,
       company: machine.company,
       siteName: machine.siteName,
@@ -86,6 +87,9 @@ export function normalizeMachine(
   };
   if (Array.isArray(machine.unmatched)) {
     detail.unmatched = machine.unmatched;
+  }
+  if (machine.manualSubAssemblies?.length) {
+    detail.manualSubAssemblies = machine.manualSubAssemblies;
   }
   return detail;
 }
@@ -154,6 +158,17 @@ export async function updateMachinePart(
   const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}`, {
     method: "PATCH",
     body: JSON.stringify({ part }),
+  });
+  return normalizeMachine(data, "staff");
+}
+
+export async function mutateMachineManualSubPart(
+  machineId: string,
+  mutation: import("@/lib/manual-sub-assembly").ManualSubPartMutation,
+) {
+  const data = await apiFetch<MachineDetail>(`/api/machines/${machineId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ manualSubPart: mutation }),
   });
   return normalizeMachine(data, "staff");
 }

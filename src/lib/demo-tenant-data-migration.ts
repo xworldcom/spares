@@ -9,6 +9,10 @@ import {
 } from "./demo-stage-quote-seed.ts";
 import { isSeedAllowed } from "./production-env.ts";
 import { FIXTURE_MACHINE_IDS, buildFixtureMachineById } from "./seed-fixtures.ts";
+import {
+  HARDWARE_FIXTURE_MOTOR_SUB_PARTS,
+  type ManualSubAssemblyGroup,
+} from "./manual-sub-assembly.ts";
 import { isDemoCustomerHiddenTicketNumber } from "./demo-customer-visibility.ts";
 import { DEFAULT_TENANT_ID } from "./tenant.ts";
 import { nextQuoteNumber } from "./quotes.ts";
@@ -64,6 +68,7 @@ export const DEMO_TENANT_STAFF_B = {
 export const DEMO_TENANT_DATA_MIGRATION_STAFF_B = 1;
 
 export type DataMigrations = {
+  demoManualSubAssemblyHardwareV1?: number;
   demoTenantV1?: number;
   demoTenantB1?: number;
   demoTenantB2?: number;
@@ -845,5 +850,65 @@ export function applyDemoRv421Quote27Migration<T extends DemoMigrationDb & { quo
     },
   } as T;
   return { db: marked, changed: true };
+}
+
+export const DEMO_MANUAL_SUB_ASSEMBLY_HARDWARE_V1 = 1;
+
+type ManualSubMigrationDb = {
+  dataMigrations?: DataMigrations;
+  machines?: Array<{
+    id: string;
+    manualSubAssemblies?: ManualSubAssemblyGroup[];
+  }>;
+};
+
+/** Seed manual motor sub-parts on hardware-fixture for buyer/staff demos. */
+export function applyDemoManualSubAssemblyHardwareMigration<T extends ManualSubMigrationDb>(
+  db: T,
+): { db: T; changed: boolean } {
+  const marker = DEMO_MANUAL_SUB_ASSEMBLY_HARDWARE_V1;
+  const machines = db.machines ?? [];
+  const index = machines.findIndex(
+    (machine) => machine.id === FIXTURE_MACHINE_IDS.hardware,
+  );
+  if (index < 0) {
+    if (db.dataMigrations?.demoManualSubAssemblyHardwareV1 === marker) {
+      return { db, changed: false };
+    }
+    return {
+      db: {
+        ...db,
+        dataMigrations: {
+          ...db.dataMigrations,
+          demoManualSubAssemblyHardwareV1: marker,
+        },
+      } as T,
+      changed: true,
+    };
+  }
+  const current = machines[index];
+  const existing = current.manualSubAssemblies ?? [];
+  const hasMotor = existing.some(
+    (group) => group.assemblyKey === HARDWARE_FIXTURE_MOTOR_SUB_PARTS.assemblyKey,
+  );
+  if (hasMotor && db.dataMigrations?.demoManualSubAssemblyHardwareV1 === marker) {
+    return { db, changed: false };
+  }
+  const nextGroups = hasMotor
+    ? existing
+    : [...existing, HARDWARE_FIXTURE_MOTOR_SUB_PARTS];
+  const nextMachines = machines.slice();
+  nextMachines[index] = { ...current, manualSubAssemblies: nextGroups };
+  return {
+    db: {
+      ...db,
+      machines: nextMachines,
+      dataMigrations: {
+        ...db.dataMigrations,
+        demoManualSubAssemblyHardwareV1: marker,
+      },
+    } as T,
+    changed: true,
+  };
 }
 

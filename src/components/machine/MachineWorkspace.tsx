@@ -29,6 +29,10 @@ import { getMachine, updateMachinePart } from "@/lib/api/machines";
 import { machineHasModel } from "@/lib/machines";
 import { machineTabHref } from "@/lib/machine-context";
 import { staffCatalogRows } from "@/lib/staff-catalog";
+import {
+  groupForPart,
+  manualChildAsPart,
+} from "@/lib/manual-sub-assembly";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import type { PartLifecycleInfo } from "@/types";
@@ -450,6 +454,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
+  const selectedManualSubChildren = useMemo(() => {
+    if (!machine || !selectedPart) {
+      return [];
+    }
+    const group = groupForPart(machine.manualSubAssemblies, selectedPart);
+    if (!group) {
+      return [];
+    }
+    return group.children.map((child) => manualChildAsPart(child, selectedPart));
+  }, [machine, selectedPart]);
   const atRiskPartsOnMachine = useMemo(() => {
     return joinedParts.filter((part) => {
       const lifecycle = lifecycleById[part.id];
@@ -837,6 +851,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 </p>
                 <PartsBom
                   parts={joinedParts}
+                  manualSubAssemblies={machine.manualSubAssemblies}
                   selectedPartId={selectedPart?.id ?? null}
                   onSelect={(part) => {
                     setSelectedPart(part);
@@ -854,6 +869,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 onSuggestedMeshUsed={() => setSuggestedMesh(null)}
                 onSelectPart={setSelectedPart}
                 onSave={saveStaffPart}
+                onMachineUpdated={setMachine}
                 saving={savingPart}
                 saveError={saveError}
               />
@@ -863,6 +879,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         {selectedPartForSheet && (view === "model" || (isCustomer && view === "list")) ? (
           <SelectedPartSheet
             part={selectedPartForSheet}
+            manualSubChildren={selectedManualSubChildren}
+            onSelectSubPart={setSelectedPart}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
             isolatedViewPart={
               isolatedId
@@ -1058,6 +1076,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         onSuggestedMeshUsed={() => setSuggestedMesh(null)}
         onSelectPart={setSelectedPart}
         onSave={saveStaffPart}
+        onMachineUpdated={setMachine}
         saving={savingPart}
         saveError={saveError}
       />

@@ -3,8 +3,13 @@
 import { useMemo, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
+import type { ManualSubAssemblyGroup } from "@/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { partMatchesBomFilter } from "@/components/machine/parts-bom-filter";
+import {
+  ManualSubAssemblyCollapse,
+  manualGroupForParent,
+} from "@/components/machine/ManualSubAssemblyRows";
 
 function PartRowSelectButton({
   part,
@@ -51,6 +56,7 @@ function PartRowSelectButton({
 
 export function PartsBom({
   parts,
+  manualSubAssemblies,
   selectedPartId,
   onSelect,
   onAdd,
@@ -58,6 +64,7 @@ export function PartsBom({
   searchable = false,
 }: {
   parts: Part[];
+  manualSubAssemblies?: ManualSubAssemblyGroup[];
   selectedPartId: string | null;
   onSelect: (part: Part) => void;
   onAdd?: (part: Part) => void;
@@ -164,6 +171,7 @@ export function PartsBom({
           ) : null}
           {filtered.map((part) => {
             const selected = part.id === selectedPartId;
+            const manualGroup = manualGroupForParent(manualSubAssemblies, part);
             return (
               <li key={part.id}>
                 <div
@@ -190,6 +198,18 @@ export function PartsBom({
                     </button>
                   ) : null}
                 </div>
+                {manualGroup ? (
+                  <ul className="border-t border-white/6">
+                    <ManualSubAssemblyCollapse
+                      parent={part}
+                      group={manualGroup}
+                      selectedPartId={selectedPartId}
+                      onSelect={onSelect}
+                      onAdd={onAdd}
+                      showAdd={showAdd}
+                    />
+                  </ul>
+                ) : null}
               </li>
             );
           })}

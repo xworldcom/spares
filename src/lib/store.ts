@@ -50,6 +50,11 @@ import {
   type StaffPartEdit,
 } from "./staff-catalog.ts";
 import {
+  applyManualSubPartMutation,
+  mergeManualSubAssembliesOnPackReplace,
+  type ManualSubPartMutation,
+} from "./manual-sub-assembly.ts";
+import {
   filesDir,
   getPersistence,
   safeStoredFileName,
@@ -113,6 +118,7 @@ import {
   applyDemoTenantV1Migration,
   applyDemoRv421HardwareFixtureLifecycleMigration,
   applyDemoRv428DemoPolishMigration,
+  applyDemoManualSubAssemblyHardwareMigration,
 } from "./demo-tenant-data-migration.ts";
 import {
   appendMissingDemoStageQuotes,
@@ -355,6 +361,7 @@ export type StoredMachine = {
   originalFileName: string;
   parts: Part[];
   unmatched: UnmatchedPart[];
+  manualSubAssemblies?: import("./manual-sub-assembly.ts").ManualSubAssemblyGroup[];
   createdAt: string;
   siteId?: string;
   tenantId?: string;
@@ -1786,6 +1793,11 @@ async function runDemoTenantMigration(
   const rv428 = applyDemoRv428DemoPolishMigration(next);
   if (rv428.changed) {
     next = rv428.db;
+    changed = true;
+  }
+  const manualSub = applyDemoManualSubAssemblyHardwareMigration(next);
+  if (manualSub.changed) {
+    next = manualSub.db;
     changed = true;
   }
   return { db: next, changed };
@@ -3591,7 +3603,12 @@ export const updateCustomerSites = updatePerson;
 export function updateMachine(
   machineId: string,
   tenantId: string,
-  patch: { name?: string; siteId?: string | null; part?: StaffPartEdit },
+  patch: {
+    name?: string;
+    siteId?: string | null;
+    part?: StaffPartEdit;
+    manualSubPart?: ManualSubPartMutation;
+  },
 ) {
   return withLock(async () => {
     const db = await readDatabase();
@@ -3630,16 +3647,16 @@ export function updateMachine(
     if (patch.name !== undefined) {
       next = { ...next, name: patch.name.trim() };
     }
-    if (patch.part) {
-      let meshNames = knownMeshNames(next.parts, next.unmatched);
-      try {
-        const bytes = await readModelFile(next.storedFileName);
-        if (bytes?.length) {
-          meshNames = extractMeshNames(bytes, next.originalFileName);
-        }
-      } catch {
-        // Keep names reconstructed from the stored catalog.
+    let meshNames = knownMeshNames(next.parts, next.unmatched);
+    try {
+      const bytes = await readModelFile(next.storedFileName);
+      if (bytes?.length) {
+        meshNames = extractMeshNames(bytes, next.originalFileName);
       }
+    } catch {
+      // Keep names reconstructed from the stored catalog.
+    }
+    if (patch.part) {
       const edited = applyStaffPartEdit({
         parts: next.parts,
         unmatched: next.unmatched,
@@ -3653,6 +3670,24 @@ export function updateMachine(
         ...next,
         parts: edited.parts,
         unmatched: edited.unmatched,
+        version: (next.version ?? 1) + 1,
+        revisedAt: new Date().toISOString(),
+      };
+    }
+    if (patch.manualSubPart) {
+      const edited = applyManualSubPartMutation({
+        version: next.version ?? 1,
+        parts: next.parts,
+        meshNames,
+        manualSubAssemblies: next.manualSubAssemblies,
+        mutation: patch.manualSubPart,
+      });
+      if ("error" in edited) {
+        return { error: "bad-manual-sub" as const, message: edited.error };
+      }
+      next = {
+        ...next,
+        manualSubAssemblies: edited.manualSubAssemblies,
         version: (next.version ?? 1) + 1,
         revisedAt: new Date().toISOString(),
       };
@@ -4269,6 +4304,20 @@ export function replaceMachinePack(
     if (modelFileNameClaimed(db.machines, input.storedFileName, machineId)) {
       return { error: "file-taken" as const };
     }
+    let meshNames = knownMeshNames(input.parts, input.unmatched);
+    try {
+      const bytes = await readModelFile(input.storedFileName);
+      if (bytes?.length) {
+        meshNames = extractMeshNames(bytes, input.originalFileName);
+      }
+    } catch {
+      // Fall back to catalog-derived mesh names.
+    }
+    const manualSubAssemblies = mergeManualSubAssembliesOnPackReplace(
+      current.manualSubAssemblies,
+      input.parts,
+      meshNames,
+    );
     const machines = db.machines.slice();
     machines[index] = {
       ...current,
@@ -4277,6 +4326,7 @@ export function replaceMachinePack(
       originalFileName: input.originalFileName,
       parts: input.parts,
       unmatched: input.unmatched,
+      manualSubAssemblies,
       version: (current.version ?? 1) + 1,
       revisedAt: new Date().toISOString(),
     };
