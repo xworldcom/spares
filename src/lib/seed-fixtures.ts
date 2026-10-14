@@ -4,6 +4,9 @@ import path from "path";
 import { extractMeshNames } from "./gltf.ts";
 import { joinParts, parsePartsList } from "./parts.ts";
 import type { Part, UnmatchedPart } from "../types/index.ts";
+import { FIXTURE_MACHINE_IDS } from "./fixture-machine-ids.ts";
+
+export { FIXTURE_MACHINE_IDS } from "./fixture-machine-ids.ts";
 
 type FixtureMachine = {
   id: string;
@@ -14,11 +17,6 @@ type FixtureMachine = {
   unmatched: UnmatchedPart[];
   createdAt: string;
 };
-
-export const FIXTURE_MACHINE_IDS = {
-  hardware: "hardware-fixture",
-  palletizer: "palletizer",
-} as const;
 
 type FixtureSpec = {
   id: string;

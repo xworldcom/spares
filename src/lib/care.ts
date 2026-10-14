@@ -184,7 +184,10 @@ export function parseOptionalDate(
 }
 
 export function canAccessCareMachine(
-  user: Pick<PublicUser, "role" | "siteIds" | "companyAccess" | "machineIds">,
+  user: Pick<
+    PublicUser,
+    "role" | "email" | "siteIds" | "companyAccess" | "machineIds" | "tenantId"
+  >,
   machine: { id?: string; siteId?: string | null; company?: string | null },
   sites: readonly Site[] = [],
   accounts: readonly import("../types/index.ts").CustomerAccount[] = [],

@@ -59,8 +59,8 @@ function buyerRow(machineIds: string[]) {
     passwordHash: "live-hash-unchanged",
     role: "customer",
     tenantId: T,
-    siteIds: ["site-cargill-ftw", "site-cargill-wichita"],
-    machineIds,
+    siteIds: [],
+    machineIds: machineIds.length > 0 ? machineIds : [HW],
     name: DEMO_TENANT_BUYER.name,
     sessionStamp: 4,
   };

@@ -50,6 +50,7 @@ export async function GET(
       org.sites,
       org.customers,
       lifecycleRows,
+      auth.user,
     ),
   );
 }
