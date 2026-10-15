@@ -385,13 +385,21 @@ async function staffFlows(page) {
   await page.screenshot({ path: path.join(OUT, "04-390-staff-edit-entry.png") });
   if (await editBtn.isVisible().catch(() => false)) {
     await editBtn.click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(450);
+    const cancelFocusedOnOpen = await page
+      .locator("[data-staff-manual-sub-cancel]")
+      .evaluate((el) => el === document.activeElement);
     await page.keyboard.press("Tab");
     await page.waitForTimeout(100);
     const firstTabCancel = await page
       .locator("[data-staff-manual-sub-cancel]")
       .evaluate((el) => el === document.activeElement);
-    measures.push({ item: 4, tag: "390-staff", firstTabCancel });
+    measures.push({
+      item: 4,
+      tag: "390-staff",
+      cancelFocusedOnOpen,
+      firstTabCancel,
+    });
     await page.keyboard.press("Escape");
     await page.waitForTimeout(200);
   }
@@ -415,13 +423,21 @@ async function staffFlows(page) {
 
   await goListBom(page);
   await page.getByRole("button", { name: "Edit sub-parts" }).first().click();
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(450);
+  const cancelFocusedOnOpenList = await page
+    .locator("[data-staff-manual-sub-cancel]")
+    .evaluate((el) => el === document.activeElement);
   await page.keyboard.press("Tab");
   await page.waitForTimeout(100);
   const firstTabCancelList = await page
     .locator("[data-staff-manual-sub-cancel]")
     .evaluate((el) => el === document.activeElement);
-  measures.push({ item: 4, tag: "1440-staff-list", firstTabCancel: firstTabCancelList });
+  measures.push({
+    item: 4,
+    tag: "1440-staff-list",
+    cancelFocusedOnOpen: cancelFocusedOnOpenList,
+    firstTabCancel: firstTabCancelList,
+  });
   await page.keyboard.press("Escape");
   await page.waitForTimeout(200);
   await page.getByRole("button", { name: "Edit sub-parts" }).first().click();
