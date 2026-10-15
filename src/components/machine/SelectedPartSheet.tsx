@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { Part } from "@/lib/api/types";
 import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
@@ -31,6 +31,7 @@ export function SelectedPartSheet({
   showIsolateActions = true,
   onEditSubParts,
   showEditSubParts = false,
+  editSubPartsButtonRef,
   modelViewMobile = false,
   dismissOnEscape = true,
 }: {
@@ -42,6 +43,7 @@ export function SelectedPartSheet({
   showIsolateActions?: boolean;
   onEditSubParts?: () => void;
   showEditSubParts?: boolean;
+  editSubPartsButtonRef?: RefObject<HTMLButtonElement | null>;
   /** Phone 3D: dock chip above tab bar so viewer controls stay clear. */
   modelViewMobile?: boolean;
   dismissOnEscape?: boolean;
@@ -67,10 +69,15 @@ export function SelectedPartSheet({
   const canAct = open && ready;
   const [more, setMore] = useState(false);
   const [blockSheetPointer, setBlockSheetPointer] = useState(false);
+  const chipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMore(false);
   }, [part?.id]);
+
+  useEffect(() => {
+    chipRef.current?.scrollTo(0, 0);
+  }, [part?.id, more]);
 
   useEffect(() => {
     if (!open) {
@@ -163,13 +170,14 @@ export function SelectedPartSheet({
           : modelViewMobile
             ? `pointer-events-none absolute inset-x-3 z-[70] max-w-none ${
                 quoteTrayPeek
-                  ? "bottom-[calc(var(--peek-h,14.5rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
-                  : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
+                  ? "bottom-[calc(var(--peek-h,14.5rem)+env(safe-area-inset-bottom,0px))]"
+                  : "bottom-[env(safe-area-inset-bottom,0px)]"
               }`
             : "pointer-events-none absolute top-[7.5rem] left-3 z-[70] max-w-[min(20rem,calc(100%-1.5rem))]"
       }
     >
       <div
+        ref={chipRef}
         className={`viewer-chrome-chip overflow-x-hidden rounded-2xl px-3 py-2.5 part-sheet-chip ${
           blockSheetPointer ? "pointer-events-none" : "pointer-events-auto"
         } ${held ? "scale-[1.02]" : "scale-100"} chrome-fade`}
@@ -205,13 +213,12 @@ export function SelectedPartSheet({
               <button
                 type="button"
                 {...activate(() => onSelectSubPart(manualSubParent))}
-                className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1.5 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
+                className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >
-                <span aria-hidden="true" className="shrink-0 text-base leading-none">←</span>
-                <span className="min-w-0 text-left leading-snug">
-                  <span className="block text-[11px] font-medium opacity-80">Back to</span>
-                  <span className="block break-words">{manualSubParent.name}</span>
+                <span className="min-w-0 truncate text-left leading-snug">
+                  <span aria-hidden="true">← </span>
+                  Back to {manualSubParent.name}
                 </span>
               </button>
             ) : null}
@@ -312,6 +319,7 @@ export function SelectedPartSheet({
           ) : null}
           {showEditSubParts && onEditSubParts ? (
             <button
+              ref={editSubPartsButtonRef}
               type="button"
               data-part-sheet-edit-sub-parts=""
               {...activate(onEditSubParts)}
