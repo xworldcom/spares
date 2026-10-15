@@ -356,6 +356,9 @@ export function StaffPartsReview({
     }
     setPartEditOpen(false);
     setSubPartsEditRowKey(rowKey);
+    requestAnimationFrame(() => {
+      editSubPartsRef.current?.blur();
+    });
   }
 
   return (
