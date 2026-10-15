@@ -33,6 +33,7 @@ import {
   groupForPart,
   manualChildAsPart,
   isManualOnlySubPartId,
+  manualSubPartParentPartId,
 } from "@/lib/manual-sub-assembly";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
@@ -64,7 +65,6 @@ import {
   shouldPinViewerOverlayFrame,
   viewerOverlayFramePx,
 } from "@/lib/ui/viewer-pseudo-fullscreen";
-import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
 
 const VIEWER_STAGE = "#12161c";
 
@@ -180,13 +180,19 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     viewerLayoutReady &&
     (!staffSplitView || staffSplit.ready);
   useEffect(() => {
-    if (trayOpen) {
+    if (trayOpen && !customerTrayDock) {
       setQuoteChip(false);
       return;
     }
     const timer = window.setTimeout(() => setQuoteChip(true), SHEET_EASE_MS);
     return () => window.clearTimeout(timer);
-  }, [trayOpen]);
+  }, [trayOpen, customerTrayDock]);
+
+  useEffect(() => {
+    if (isCustomer && customerTrayInViewer && lines.length === 0 && trayOpen) {
+      setTrayOpen(false);
+    }
+  }, [isCustomer, customerTrayInViewer, lines.length, trayOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -465,12 +471,28 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     return group.children.map((child) => manualChildAsPart(child, selectedPart));
   }, [machine, selectedPart]);
-  const atRiskPartsOnMachine = useMemo(() => {
-    return joinedParts.filter((part) => {
-      const lifecycle = lifecycleById[part.id];
-      return lifecycle?.status === "obsolete" || lifecycle?.status === "announced";
-    });
-  }, [joinedParts, lifecycleById]);
+  const viewerHighlightPartId = useMemo(() => {
+    if (!selectedPart || !machine) {
+      return null;
+    }
+    const parentId = manualSubPartParentPartId(
+      selectedPart.id,
+      machine.parts,
+      machine.manualSubAssemblies,
+    );
+    return parentId ?? selectedPart.id;
+  }, [machine, selectedPart]);
+
+  const sheetShowIsolateActions = useMemo(() => {
+    if (!selectedPart || !machine) {
+      return true;
+    }
+    return !isManualOnlySubPartId(
+      selectedPart.id,
+      machine.parts,
+      machine.manualSubAssemblies,
+    );
+  }, [machine, selectedPart]);
 
   const clearUndoRemove = useCallback(() => {
     if (undoRemoveTimer.current != null) {
@@ -504,12 +526,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       const next = lines.filter((line) => line.part.id !== partId);
       if (next.length === 0) {
         setTrayNote("");
+        if (isCustomer && customerTrayInViewer) {
+          setTrayOpen(false);
+        }
       }
       commitTrayLinesToStorage(next, true);
       setLines(next);
       showUndoRemove(removed);
     },
-    [lines, commitTrayLinesToStorage, showUndoRemove],
+    [lines, commitTrayLinesToStorage, showUndoRemove, isCustomer, customerTrayInViewer],
   );
 
   const undoTrayRemove = useCallback(() => {
@@ -772,7 +797,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <PartPicker
             src={src}
             parts={joinedParts}
-            selectedId={selectedPart?.id ?? null}
+            selectedId={viewerHighlightPartId}
             explode={explode}
             fitKey={viewerFitKey}
             resetKey={viewerResetKey}
@@ -837,7 +862,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             data-parts-bom=""
             className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
               isCustomer
-                ? "overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
+                ? "overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pr-14"
                 : "flex flex-col"
             }`}
             style={{ paddingTop: "3.65rem" }}
@@ -893,6 +918,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 machine.manualSubAssemblies,
               )
             }
+            showIsolateActions={sheetShowIsolateActions}
             onSelectSubPart={setSelectedPart}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
             isolatedViewPart={
@@ -918,19 +944,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
-          {!isCustomer && atRiskPartsOnMachine.length > 0 && view === "model" ? (
-            <div className="flex flex-wrap gap-2" data-machine-lifecycle-links="">
-              {atRiskPartsOnMachine.map((part) => (
-                <Link
-                  key={part.id}
-                  href={staffPartLifecycleViewHref(part.id)}
-                  className="btn-primary inline-flex h-9 items-center rounded-full px-3 text-[12px] font-semibold"
-                >
-                  View part
-                </Link>
-              ))}
-            </div>
-          ) : null}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {showViewToggle && hasModel ? (
               <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
@@ -1025,7 +1038,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               }}
             />
           ) : null}
-          {isCustomer && !fullscreen && !trayOpen && quoteChip ? (
+          {isCustomer && !fullscreen && quoteChip && (!trayOpen || customerTrayDock) ? (
             <button
               type="button"
               data-quote-tray=""
@@ -1049,7 +1062,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               </span>
             </button>
           ) : null}
-          {hasModel ? (
+          {hasModel && view !== "list" ? (
             <button
               type="button"
               onPointerDown={(event) => event.stopPropagation()}
@@ -1143,6 +1156,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <div
             className={`quote-tray-dock${trayOpen ? " is-open" : ""}`}
             data-quote-tray=""
+            inert={trayOpen ? undefined : true}
           >
             {tray}
           </div>

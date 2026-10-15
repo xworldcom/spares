@@ -35,6 +35,29 @@ export function groupForPart(
 }
 
 /** True when `partId` exists only as a manual sub-part line (not a top-level BOM row). */
+/** Parent BOM row id when `partId` is a manual sub-part line; otherwise null. */
+export function manualSubPartParentPartId(
+  partId: string,
+  parts: readonly Part[],
+  groups: readonly ManualSubAssemblyGroup[] | undefined,
+): string | null {
+  const normalized = partId.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  for (const group of groups ?? []) {
+    for (const child of group.children) {
+      if (child.id.trim().toLowerCase() === normalized) {
+        const parent = parts.find(
+          (part) => assemblyKeyForPart(part) === group.assemblyKey,
+        );
+        return parent?.id ?? null;
+      }
+    }
+  }
+  return null;
+}
+
 export function isManualOnlySubPartId(
   partId: string,
   parts: readonly Part[],

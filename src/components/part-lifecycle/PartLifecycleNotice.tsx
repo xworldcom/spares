@@ -15,7 +15,10 @@ export function PartLifecycleNotice({
   /** Selected BOM row (`row-on-ink`) — use dark at-risk colors for ≥4.5:1 contrast. */
   onLightBackground?: boolean;
 }) {
-  const status = lifecycle?.status ?? "unknown";
+  if (!lifecycle) {
+    return null;
+  }
+  const status = lifecycle.status;
   const atRisk = status === "obsolete" || status === "announced";
   const headline = atRisk
     ? partLifecycleStatusHeadline(status)

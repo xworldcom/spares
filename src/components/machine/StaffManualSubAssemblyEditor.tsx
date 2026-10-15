@@ -18,10 +18,12 @@ export function StaffManualSubAssemblyEditor({
   machine,
   parentPart,
   onMachineUpdated,
+  onClose,
 }: {
   machine: MachineDetail;
   parentPart: Part;
   onMachineUpdated: (machine: MachineDetail) => void;
+  onClose: () => void;
 }) {
   const assemblyKey = assemblyKeyForPart(parentPart);
   const group = useMemo(
@@ -109,17 +111,27 @@ export function StaffManualSubAssemblyEditor({
   return (
     <section
       data-staff-manual-sub=""
-      className="mt-4 border-t border-white/8 pt-3"
+      className="mt-1"
       aria-labelledby="manual-sub-heading"
     >
-      <h2 id="manual-sub-heading" className="text-[13px] font-medium">
-        Manual sub-assembly parts
-      </h2>
-      <p className="spares-muted mt-1 text-[12px] leading-snug">
-        Vendor kit breakdown for{" "}
-        <span className="font-mono">{parentPart.meshName || parentPart.id}</span>.
-        Shown to buyers under this assembly.
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 id="manual-sub-heading" className="text-[13px] font-medium">
+            Manual sub-assembly parts
+          </h2>
+          <p className="spares-muted mt-1 text-[12px] leading-snug">
+            Vendor kit breakdown for{" "}
+            <span className="font-mono">{parentPart.meshName || parentPart.id}</span>.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="btn-soft inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[12px] font-semibold"
+        >
+          Cancel
+        </button>
+      </div>
 
       {children.length > 0 ? (
         <ul className="spares-surface mt-2 overflow-hidden rounded-[18px]">
@@ -128,7 +140,35 @@ export function StaffManualSubAssemblyEditor({
               key={child.id}
               className="border-t border-white/6 first:border-t-0"
             >
-              <div className="flex items-start gap-2 px-3 py-2">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <div className="flex w-11 shrink-0 flex-col items-center justify-center gap-0.5">
+                  {index > 0 ? (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void moveChild(child.id, -1)}
+                      className="btn-soft inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold"
+                      aria-label="Move up"
+                    >
+                      ↑
+                    </button>
+                  ) : (
+                    <span className="h-9 w-9" aria-hidden="true" />
+                  )}
+                  {index < children.length - 1 ? (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void moveChild(child.id, 1)}
+                      className="btn-soft inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold"
+                      aria-label="Move down"
+                    >
+                      ↓
+                    </button>
+                  ) : (
+                    <span className="h-9 w-9" aria-hidden="true" />
+                  )}
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-medium">{child.name}</p>
                   <p className="truncate font-mono text-xs spares-muted">
@@ -136,26 +176,6 @@ export function StaffManualSubAssemblyEditor({
                     {child.vendor ? ` · ${child.vendor}` : ""}
                     {" · "}qty {child.qty}
                   </p>
-                </div>
-                <div className="flex shrink-0 flex-col gap-1">
-                  <button
-                    type="button"
-                    disabled={saving || index === 0}
-                    onClick={() => void moveChild(child.id, -1)}
-                    className="btn-soft h-8 rounded-full px-2 text-xs disabled:opacity-40"
-                    aria-label="Move up"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    disabled={saving || index === children.length - 1}
-                    onClick={() => void moveChild(child.id, 1)}
-                    className="btn-soft h-8 rounded-full px-2 text-xs disabled:opacity-40"
-                    aria-label="Move down"
-                  >
-                    ↓
-                  </button>
                 </div>
                 <button
                   type="button"
@@ -242,21 +262,20 @@ export function StaffManualSubAssemblyEditor({
           onClick={() => void saveChild()}
           className="btn-primary inline-flex h-10 flex-1 items-center justify-center rounded-full text-[14px] font-semibold disabled:opacity-40"
         >
-          {saving ? "Saving…" : editingId ? "Update sub-part" : "Add sub-part"}
+          {saving ? "Saving…" : "Save"}
         </button>
-        {editingId ? (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => {
-              setEditingId(null);
-              setDraft(emptyDraft());
-            }}
-            className="btn-soft inline-flex h-10 items-center rounded-full px-4 text-[14px] font-semibold"
-          >
-            Cancel
-          </button>
-        ) : null}
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => {
+            setEditingId(null);
+            setDraft(emptyDraft());
+            setError(null);
+          }}
+          className="btn-soft inline-flex h-10 items-center rounded-full px-4 text-[14px] font-semibold"
+        >
+          Clear
+        </button>
       </div>
     </section>
   );

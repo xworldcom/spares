@@ -1054,6 +1054,12 @@ html.spares-embed .spares-app-stage {
   display: none;
 }
 
+/* Keep BOM qty column clear of the header bug-report control on machine stage. */
+.spares-app-machine-context .machine-bom-list-pad,
+.spares-app-machine-context [data-parts-bom] {
+  padding-inline-end: 2.75rem;
+}
+
 .machine-bom-scroll {
   min-height: 0;
   overflow-y: auto;
@@ -3175,14 +3181,17 @@ body > .quote-undo-toast {
   color: #eceae4;
   font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .quote-undo-toast-action {
   flex-shrink: 0;
-  padding: 0.35rem 0.65rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.85rem;
   border-radius: 999px;
   background: rgba(10, 132, 255, 0.22);
   color: #7ec8ff;
@@ -3192,8 +3201,10 @@ body > .quote-undo-toast {
 
 .quote-undo-toast-dismiss {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   border-radius: 999px;
   color: rgba(236, 234, 228, 0.72);
   font-size: 1.25rem;
@@ -3307,6 +3318,22 @@ body > .quote-undo-toast {
 [data-parts-bom] textarea {
   user-select: text;
   -webkit-user-select: text;
+}
+
+.quote-sheet.is-peek .manual-quote-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.quote-sheet.is-peek .manual-quote-row > .flex.items-center.gap-2 {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.quote-sheet.is-peek .manual-quote-remove {
+  margin-left: auto;
 }
 
 @container manual-quote (max-width: 23rem) {

@@ -5,7 +5,7 @@ export function trayCountLabel(lineCount: number, unitCount: number): string {
   const lineWord = lineCount === 1 ? "line" : "lines";
   const unitWord = unitCount === 1 ? "unit" : "units";
   if (lineCount === unitCount) {
-    return `${unitCount} ${unitWord}`;
+    return `${lineCount} ${lineWord} · ${unitCount} ${unitWord}`;
   }
   return `${lineCount} ${lineWord} · ${unitCount} ${unitWord}`;
 }

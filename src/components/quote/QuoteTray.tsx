@@ -467,6 +467,10 @@ export function QuoteTray({
     setDraggingClass(false);
     paintDrag(0);
     const velocity = liveVelocity();
+    if (lines.length === 0 && !quoteTrayDock) {
+      dismiss();
+      return;
+    }
     if (from === "full") {
       if (dy > 48 || velocity > 0.35) {
         setSheet("peek");
@@ -502,8 +506,12 @@ export function QuoteTray({
       setDraggingClass(false);
       paintDrag(0);
       if (drag.current.from !== "full") {
-        setSheet("full");
-        setOpen(true);
+        if (lines.length === 0 && !quoteTrayDock) {
+          dismiss();
+        } else {
+          setSheet("full");
+          setOpen(true);
+        }
       }
       return;
     }

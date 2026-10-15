@@ -8,6 +8,7 @@ import {
   mergeManualSubAssembliesOnPackReplace,
   manualChildAsPart,
   isManualOnlySubPartId,
+  manualSubPartParentPartId,
 } from "./manual-sub-assembly.ts";
 
 const motor: Part = {
@@ -115,6 +116,10 @@ describe("manual sub-assembly", () => {
     );
     assert.equal(isManualOnlySubPartId("6331K32", [motor], groups), false);
     assert.equal(isManualOnlySubPartId("UNKNOWN", [motor], groups), false);
+    assert.equal(
+      manualSubPartParentPartId("6331K32-BRUSH", [motor], groups),
+      "6331K32",
+    );
   });
 
   it("maps manual children to quote-ready parts", () => {

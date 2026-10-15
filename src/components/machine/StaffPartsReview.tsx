@@ -54,6 +54,10 @@ function StaffCatalogTreeEntry({
   selectedPartId,
   onSelectRow,
   onSelectPart,
+  onOpenPartEdit,
+  onToggleSubPartsEdit,
+  subPartsEditOpen,
+  onMachineUpdated,
 }: {
   row: StaffCatalogRow;
   machine: MachineDetail;
@@ -61,6 +65,10 @@ function StaffCatalogTreeEntry({
   selectedPartId: string | null;
   onSelectRow: (row: StaffCatalogRow) => void;
   onSelectPart: (part: Part | null) => void;
+  onOpenPartEdit: () => void;
+  onToggleSubPartsEdit: () => void;
+  subPartsEditOpen: boolean;
+  onMachineUpdated?: (machine: MachineDetail) => void;
 }) {
   const parentPart =
     row.status === "joined"
@@ -73,57 +81,86 @@ function StaffCatalogTreeEntry({
 
   return (
     <Fragment>
-      <li>
-        <div
-          className={`flex min-h-14 w-full items-center gap-1 py-2 pr-4 ${
-            selected ? "row-on-ink" : ""
-          }`}
-        >
+      <li className={selected ? "row-on-ink" : undefined}>
+        <div className="flex min-h-14 w-full items-center gap-1 py-2 pr-4">
           <span className="w-1 shrink-0" aria-hidden="true" />
-          {tree.hasChildren && parentPart ? (
-            <ManualSubAssemblyExpandButton
-              open={tree.open}
-              count={tree.count}
-              onToggle={tree.toggle}
-            />
-          ) : (
-            <span className="w-9 shrink-0" aria-hidden="true" />
-          )}
-          <button
-            type="button"
-            onPointerDown={() => onSelectRow(row)}
-            onClick={() => onSelectRow(row)}
-            className="flex min-w-0 flex-1 items-center gap-3 text-left"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium">{row.name}</span>
-              <span
-                className={`block truncate font-mono text-xs ${
-                  selected ? "row-on-ink-muted" : "spares-muted"
-                }`}
-              >
-                {row.partNumber}
-                {row.meshName ? `  ·  ${row.meshName}` : ""}
+          <div className="flex min-w-0 flex-1 items-center gap-0.5">
+            {tree.hasChildren && parentPart ? (
+              <ManualSubAssemblyExpandButton
+                open={tree.open}
+                count={tree.count}
+                onToggle={tree.toggle}
+              />
+            ) : (
+              <span className="w-9 shrink-0" aria-hidden="true" />
+            )}
+            {tree.hasChildren ? (
+              <ManualSubAssemblyCountBadge count={tree.count} selected={selected} />
+            ) : null}
+            <button
+              type="button"
+              onPointerDown={() => onSelectRow(row)}
+              onClick={() => onSelectRow(row)}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-medium">{row.name}</span>
+                <span
+                  className={`block truncate font-mono text-xs ${
+                    selected ? "row-on-ink-muted" : "spares-muted"
+                  }`}
+                >
+                  {row.partNumber}
+                  {row.meshName ? `  ·  ${row.meshName}` : ""}
+                </span>
               </span>
-            </span>
-            <span className="shrink-0 text-right">
-              <span
-                className={`block text-[12px] ${
-                  selected ? "row-on-ink-muted" : "spares-muted"
-                }`}
-              >
-                {statusLabel(row.status)}
+              <span className="shrink-0 text-right">
+                {row.status === "missing-mesh" ? (
+                  <span
+                    className={`block text-[12px] ${
+                      selected ? "row-on-ink-muted" : "spares-muted"
+                    }`}
+                  >
+                    {statusLabel(row.status)}
+                  </span>
+                ) : null}
+                <span
+                  className={`block tabular-nums text-sm ${
+                    selected ? "row-on-ink-muted" : "spares-muted"
+                  }`}
+                >
+                  {row.qty}
+                </span>
               </span>
-              <span
-                className={`block tabular-nums text-sm ${
-                  selected ? "row-on-ink-muted" : "spares-muted"
-                }`}
+            </button>
+          </div>
+          {selected && row.status === "joined" ? (
+            <div className="flex shrink-0 flex-col gap-1">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenPartEdit();
+                }}
+                className="btn-soft inline-flex h-8 items-center rounded-full px-2.5 text-[11px] font-semibold"
               >
-                {row.qty}
-              </span>
-            </span>
-          </button>
-          {tree.hasChildren ? <ManualSubAssemblyCountBadge count={tree.count} /> : null}
+                Edit part
+              </button>
+              {tree.hasChildren ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleSubPartsEdit();
+                  }}
+                  className="btn-soft inline-flex h-8 items-center rounded-full px-2.5 text-[11px] font-semibold"
+                  aria-expanded={subPartsEditOpen}
+                >
+                  Edit sub-parts
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </li>
       {tree.open && parentPart && manualGroup ? (
@@ -132,7 +169,18 @@ function StaffCatalogTreeEntry({
           group={manualGroup}
           selectedPartId={selectedPartId}
           onSelect={onSelectPart}
+          variant="staff"
         />
+      ) : null}
+      {subPartsEditOpen && selected && parentPart && manualGroup && onMachineUpdated ? (
+        <li className="border-t border-white/6 px-4 py-3" data-staff-manual-sub-inline="">
+          <StaffManualSubAssemblyEditor
+            machine={machine}
+            parentPart={parentPart}
+            onMachineUpdated={onMachineUpdated}
+            onClose={onToggleSubPartsEdit}
+          />
+        </li>
       ) : null}
     </Fragment>
   );
@@ -185,27 +233,35 @@ export function StaffPartsReview({
   });
   const [draftKey, setDraftKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [partEditOpen, setPartEditOpen] = useState(false);
   const [subPartsEditOpen, setSubPartsEditOpen] = useState(false);
+  const [subPartsEditRowKey, setSubPartsEditRowKey] = useState<string | null>(null);
 
   useEffect(() => {
+    setPartEditOpen(false);
     setSubPartsEditOpen(false);
+    setSubPartsEditRowKey(null);
   }, [selectedPartId, missingKey]);
-
-  if (selectedPartId && missingKey) {
-    setMissingKey(null);
-  }
 
   const selectedKey = missingKey ?? (selectedPartId ? `part:${selectedPartId}` : null);
   const selectedRow = rows.find((row) => row.key === selectedKey) ?? null;
 
-  if (selectedRow && selectedRow.key !== draftKey) {
-    setDraftKey(selectedRow.key);
-    setDraft(draftFromRow(selectedRow));
-    setLocalError(null);
-  }
-  if (!selectedRow && draftKey) {
-    setDraftKey(null);
-  }
+  useEffect(() => {
+    if (selectedPartId && missingKey) {
+      setMissingKey(null);
+    }
+  }, [selectedPartId, missingKey]);
+
+  useEffect(() => {
+    if (selectedRow && selectedRow.key !== draftKey) {
+      setDraftKey(selectedRow.key);
+      setDraft(draftFromRow(selectedRow));
+      setLocalError(null);
+    }
+    if (!selectedRow && draftKey) {
+      setDraftKey(null);
+    }
+  }, [selectedRow, draftKey]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -238,6 +294,9 @@ export function StaffPartsReview({
     setDraftKey(row.key);
     setDraft(draftFromRow(row));
     setLocalError(null);
+    setPartEditOpen(false);
+    setSubPartsEditOpen(false);
+    setSubPartsEditRowKey(null);
   }
 
   function setMeshName(next: string) {
@@ -281,9 +340,20 @@ export function StaffPartsReview({
     }
   }
 
+  function toggleSubPartsEditor(rowKey: string) {
+    if (subPartsEditOpen && subPartsEditRowKey === rowKey) {
+      setSubPartsEditOpen(false);
+      setSubPartsEditRowKey(null);
+      return;
+    }
+    setPartEditOpen(false);
+    setSubPartsEditOpen(true);
+    setSubPartsEditRowKey(rowKey);
+  }
+
   return (
     <div data-staff-parts="" className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-3 machine-bom-list-pad">
         <p className="truncate text-[15px] font-semibold tracking-tight">
           {machine.name}
         </p>
@@ -317,6 +387,14 @@ export function StaffPartsReview({
                 selectedPartId={selectedPartId}
                 onSelectRow={selectRow}
                 onSelectPart={onSelectPart}
+                onOpenPartEdit={() => {
+                  setSubPartsEditOpen(false);
+                  setSubPartsEditRowKey(null);
+                  setPartEditOpen(true);
+                }}
+                onToggleSubPartsEdit={() => toggleSubPartsEditor(row.key)}
+                subPartsEditOpen={subPartsEditOpen && subPartsEditRowKey === row.key}
+                onMachineUpdated={onMachineUpdated}
               />
             ))}
           </ul>
@@ -363,7 +441,7 @@ export function StaffPartsReview({
         ) : null}
       </div>
 
-      {selectedRow ? (
+      {selectedRow && partEditOpen ? (
         <form
           data-staff-edit=""
           className="spares-surface shrink-0 border-t border-white/8 px-4 py-3"
@@ -372,7 +450,16 @@ export function StaffPartsReview({
             void save();
           }}
         >
-          <p className="mb-2 text-[13px] font-medium">Edit part</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[13px] font-medium">Edit part</p>
+            <button
+              type="button"
+              onClick={() => setPartEditOpen(false)}
+              className="btn-soft inline-flex h-8 items-center rounded-full px-3 text-[12px] font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="spares-muted col-span-2 block text-xs font-medium">
               Part number
@@ -433,27 +520,6 @@ export function StaffPartsReview({
           >
             {saving ? "Saving…" : "Save"}
           </button>
-          {selectedRow.status === "joined" && onMachineUpdated ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setSubPartsEditOpen((value) => !value)}
-                className="btn-soft mt-3 inline-flex h-10 w-full items-center justify-center rounded-full text-[14px] font-semibold"
-                aria-expanded={subPartsEditOpen}
-              >
-                {subPartsEditOpen ? "Done editing sub-parts" : "Edit sub-parts"}
-              </button>
-              {subPartsEditOpen ? (
-                <StaffManualSubAssemblyEditor
-                  machine={machine}
-                  parentPart={
-                    machine.parts.find((item) => item.id === selectedRow.partNumber)!
-                  }
-                  onMachineUpdated={onMachineUpdated}
-                />
-              ) : null}
-            </>
-          ) : null}
         </form>
       ) : null}
     </div>

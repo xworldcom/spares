@@ -28,12 +28,14 @@ export function SelectedPartSheet({
   listView,
   quoteTrayPeek,
   staffViewPart = true,
+  showIsolateActions = true,
 }: {
   part: Part | null;
   manualSubChildren?: Part[];
   manualSubParent?: Part | null;
   onSelectSubPart?: (part: Part) => void;
   staffViewPart?: boolean;
+  showIsolateActions?: boolean;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
   onHide: () => void;
@@ -101,6 +103,11 @@ export function SelectedPartSheet({
     return null;
   }
 
+  const isParentAssembly =
+    Boolean(manualSubParent) &&
+    Boolean(manualSubChildren?.length) &&
+    part.id === manualSubParent?.id;
+
   return (
     <div
       data-part-sheet=""
@@ -111,11 +118,11 @@ export function SelectedPartSheet({
                 ? "bottom-[calc(var(--peek-h,8.65rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
                 : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
             }`
-          : "pointer-events-none absolute top-[4.35rem] left-3 z-[70] max-w-[min(20rem,calc(100%-5.5rem))]"
+          : "pointer-events-none absolute top-[7.5rem] left-3 z-[70] max-w-[min(20rem,calc(100%-1.5rem))]"
       }
     >
       <div
-        className={`viewer-chrome-chip pointer-events-auto rounded-2xl px-3 py-2.5 ${
+        className={`viewer-chrome-chip pointer-events-auto max-h-[min(52vh,20rem)] overflow-y-auto rounded-2xl px-3 py-2.5 ${
           held ? "scale-[1.02]" : "scale-100"
         } chrome-fade`}
         onPointerDown={(event) => {
@@ -144,13 +151,23 @@ export function SelectedPartSheet({
         ) : null}
         <div className="part-sheet-header mb-1 flex items-start justify-between gap-2" data-part-sheet-header="">
           <div className="min-w-0 flex-1 pt-0.5">
-            <p className="line-clamp-2 text-[13px] leading-tight font-semibold tracking-tight">
+            <p className="text-[13px] leading-tight font-semibold tracking-tight break-words">
               {part.name}
             </p>
-            <p className="chrome-quiet truncate font-mono text-[11px]">
+            <p className="chrome-quiet font-mono text-[11px] break-all">
               {part.id}
             </p>
           </div>
+          {showAdd && onAdd && isParentAssembly ? (
+            <button
+              type="button"
+              {...activate(() => onAdd(part))}
+              disabled={!canAct}
+              className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
+            >
+              Add
+            </button>
+          ) : null}
           <button
             type="button"
             data-part-sheet-close=""
@@ -165,11 +182,13 @@ export function SelectedPartSheet({
         </div>
         <PartLifecycleNotice lifecycle={part.lifecycle} compact />
         {partSheetMetaLine(part) ? (
-          <p className="chrome-quiet mb-1 truncate text-[11px]">{partSheetMetaLine(part)}</p>
+          <p className="chrome-quiet mb-1 text-[11px] leading-snug break-words">
+            {partSheetMetaLine(part)}
+          </p>
         ) : null}
         {manualSubChildren && manualSubChildren.length > 0 && manualSubParent ? (
           <div className="mb-2 border-t border-white/8 pt-2" data-manual-sub-sheet="">
-            <ul className="overflow-hidden rounded-xl bg-white/6">
+            <ul className="overflow-hidden">
               <ManualSubAssemblyChildListItems
                 parent={manualSubParent}
                 group={{
@@ -178,7 +197,6 @@ export function SelectedPartSheet({
                     id: child.id,
                     name: child.name,
                     qty: child.qty,
-                    ...(child.vendor ? { vendor: child.vendor } : {}),
                   })),
                 }}
                 selectedPartId={part.id}
@@ -186,17 +204,18 @@ export function SelectedPartSheet({
                 onAdd={onAdd}
                 showAdd={showAdd && Boolean(onAdd)}
                 compact
+                treeLayout="sheet"
               />
             </ul>
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          {showAdd && onAdd ? (
+          {showAdd && onAdd && !isParentAssembly ? (
             <button
               type="button"
               {...activate(() => onAdd(part))}
               disabled={!canAct}
-              className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
+              className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >
               Add
             </button>
@@ -214,7 +233,7 @@ export function SelectedPartSheet({
             data-part-sheet-control=""
             {...activate(() => setMore((current) => !current))}
             disabled={!canAct}
-            className="chrome-quiet inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[12px] font-medium hover:text-[var(--spares-on-chip)] disabled:opacity-30"
+            className="chrome-quiet inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[12px] font-medium hover:text-[var(--spares-on-chip)] disabled:opacity-30"
             aria-expanded={more}
           >
             More
@@ -224,26 +243,30 @@ export function SelectedPartSheet({
           <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
             <PartDetailSheet part={part} />
             <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              {...activate(onHide)}
-              disabled={!canAct}
-              className="inline-flex h-9 items-center rounded-full bg-white/8 px-3 text-[12px] font-medium disabled:opacity-30"
-            >
-              Hide
-            </button>
-            <button
-              type="button"
-              {...activate(onIsolate)}
-              disabled={!canAct}
-              className={`${
-                isolated
-                  ? "bg-[var(--spares-on-chip)] text-[var(--spares-chip)]"
-                  : "bg-white/8 text-[var(--spares-on-chip)]"
-              } inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30`}
-            >
-              {isolated ? "Show all parts" : "Only this"}
-            </button>
+            {showIsolateActions ? (
+              <>
+                <button
+                  type="button"
+                  {...activate(onHide)}
+                  disabled={!canAct}
+                  className="inline-flex h-9 items-center rounded-full bg-white/8 px-3 text-[12px] font-medium disabled:opacity-30"
+                >
+                  Hide
+                </button>
+                <button
+                  type="button"
+                  {...activate(onIsolate)}
+                  disabled={!canAct}
+                  className={`${
+                    isolated
+                      ? "bg-[var(--spares-on-chip)] text-[var(--spares-chip)]"
+                      : "bg-white/8 text-[var(--spares-on-chip)]"
+                  } inline-flex h-9 items-center rounded-full px-3 text-[12px] font-medium disabled:opacity-30`}
+                >
+                  {isolated ? "Show all parts" : "Only this"}
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               {...activate(onDismiss)}

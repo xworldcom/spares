@@ -77,24 +77,24 @@ function PartsBomTreeEntry({
 
   return (
     <Fragment>
-      <li>
-        <div
-          className={`flex min-h-14 w-full items-center gap-1 py-2 pr-4 ${
-            selected ? "row-on-ink" : ""
-          }`}
-        >
+      <li className={selected ? "row-on-ink" : undefined}>
+        <div className="flex min-h-14 w-full items-center gap-1 py-2 pr-4">
           <span className="w-1 shrink-0" aria-hidden="true" />
-          {tree.hasChildren ? (
-            <ManualSubAssemblyExpandButton
-              open={tree.open}
-              count={tree.count}
-              onToggle={tree.toggle}
-            />
-          ) : (
-            <span className="w-9 shrink-0" aria-hidden="true" />
-          )}
-          <PartRowSelectButton part={part} selected={selected} onSelect={onSelect} />
-          {tree.hasChildren ? <ManualSubAssemblyCountBadge count={tree.count} /> : null}
+          <div className="flex min-w-0 flex-1 items-center gap-0.5">
+            {tree.hasChildren ? (
+              <ManualSubAssemblyExpandButton
+                open={tree.open}
+                count={tree.count}
+                onToggle={tree.toggle}
+              />
+            ) : (
+              <span className="w-11 shrink-0" aria-hidden="true" />
+            )}
+            {tree.hasChildren ? (
+              <ManualSubAssemblyCountBadge count={tree.count} selected={selected} />
+            ) : null}
+            <PartRowSelectButton part={part} selected={selected} onSelect={onSelect} />
+          </div>
           {showAdd && onAdd ? (
             <button
               type="button"
@@ -102,7 +102,7 @@ function PartsBomTreeEntry({
                 event.stopPropagation();
                 onAdd(part);
               }}
-              className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+              className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
               data-selected={selected ? "" : undefined}
             >
               Add

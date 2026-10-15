@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import type { Part } from "@/lib/api/types";
 import type { ManualSubAssemblyGroup } from "@/types";
 import {
@@ -9,6 +9,11 @@ import {
   manualChildAsPart,
 } from "@/lib/manual-sub-assembly";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
+
+const TREE_GUIDE_OFFSET_LIST = "2.25rem";
+const TREE_INDENT_LIST = "1.25rem";
+const TREE_GUIDE_OFFSET_SHEET = "0.5rem";
+const TREE_INDENT_SHEET = "0.75rem";
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -22,13 +27,23 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-export function ManualSubAssemblyCountBadge({ count }: { count: number }) {
+export function ManualSubAssemblyCountBadge({
+  count,
+  selected,
+}: {
+  count: number;
+  selected?: boolean;
+}) {
   if (count <= 0) {
     return null;
   }
   return (
     <span
-      className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-white/10 px-1.5 text-[11px] font-semibold tabular-nums"
+      className={`inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
+        selected
+          ? "bg-[var(--spares-on-ink)]/14 text-[var(--spares-on-ink)]"
+          : "bg-white/10"
+      }`}
       aria-label={`${count} sub-part${count === 1 ? "" : "s"}`}
     >
       {count}
@@ -53,7 +68,10 @@ export function ManualSubAssemblyExpandButton({
         event.preventDefault();
         onToggle();
       }}
-      className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-full text-[var(--spares-on-surface)] spares-muted hover:bg-white/6"
+      onPointerUp={(event) => {
+        event.currentTarget.blur();
+      }}
+      className="inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[var(--spares-on-surface)] spares-muted hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
       aria-expanded={open}
       aria-label={open ? "Collapse sub-parts" : `Expand ${count} sub-part${count === 1 ? "" : "s"}`}
     >
@@ -62,31 +80,21 @@ export function ManualSubAssemblyExpandButton({
   );
 }
 
-function BomStylePartRow({
+export function CustomerBomPartRow({
   part,
   selected,
   onSelect,
   onAdd,
   showAdd,
-  nested,
-  compact,
 }: {
   part: Part;
   selected: boolean;
   onSelect: (part: Part) => void;
   onAdd?: (part: Part) => void;
   showAdd?: boolean;
-  nested?: boolean;
-  compact?: boolean;
 }) {
-  const titleClass = compact ? "text-[13px]" : "text-[15px]";
-  const rowMinH = compact ? "min-h-11" : "min-h-14";
   return (
-    <div
-      className={`flex w-full items-center gap-2 ${rowMinH} py-2 ${
-        nested ? "pl-11 pr-4" : "px-4"
-      } ${selected ? "row-on-ink" : ""}`}
-    >
+    <div className="flex min-h-[37px] w-full items-center gap-2 py-1">
       <button
         type="button"
         onClick={(event) => {
@@ -96,7 +104,7 @@ function BomStylePartRow({
         className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
       >
         <span className="min-w-0">
-          <span className={`block truncate font-medium ${titleClass}`}>{part.name}</span>
+          <span className="block truncate text-[15px] font-medium">{part.name}</span>
           <span
             className={`block truncate font-mono text-xs ${
               selected ? "row-on-ink-muted" : "spares-muted"
@@ -104,7 +112,6 @@ function BomStylePartRow({
           >
             {part.id}
             {part.replaces ? ` · replaces ${part.replaces}` : ""}
-            {part.vendor && !part.replaces ? ` · ${part.vendor}` : ""}
           </span>
           <PartLifecycleNotice
             lifecycle={part.lifecycle}
@@ -127,7 +134,7 @@ function BomStylePartRow({
             event.stopPropagation();
             onAdd(part);
           }}
-          className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+          className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
           data-selected={selected ? "" : undefined}
         >
           Add
@@ -137,32 +144,81 @@ function BomStylePartRow({
   );
 }
 
-/** @deprecated Use BomStylePartRow via tree helpers; kept for sheet imports migrating off. */
-export function ManualSubAssemblyChildRow({
-  part,
+export function StaffCatalogPartRow({
+  partNumber,
+  name,
+  qty,
   selected,
   onSelect,
-  onAdd,
-  showAdd,
-  nested,
+  secondaryLine,
 }: {
-  part: Part;
+  partNumber: string;
+  name: string;
+  qty: number;
   selected: boolean;
-  onSelect: (part: Part) => void;
-  onAdd?: (part: Part) => void;
-  showAdd?: boolean;
-  nested?: boolean;
+  onSelect: () => void;
+  secondaryLine?: string;
 }) {
   return (
-    <BomStylePartRow
-      part={part}
-      selected={selected}
-      onSelect={onSelect}
-      onAdd={onAdd}
-      showAdd={showAdd}
-      nested={nested}
-      compact={nested}
-    />
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
+      className="flex min-h-[37px] w-full items-center gap-3 py-1 text-left"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-medium">{name}</span>
+        <span
+          className={`block truncate font-mono text-xs ${
+            selected ? "row-on-ink-muted" : "spares-muted"
+          }`}
+        >
+          {partNumber}
+          {secondaryLine ? `  ·  ${secondaryLine}` : ""}
+        </span>
+      </span>
+      <span
+        className={`shrink-0 tabular-nums text-sm ${
+          selected ? "row-on-ink-muted" : "spares-muted"
+        }`}
+      >
+        {qty}
+      </span>
+    </button>
+  );
+}
+
+function ManualSubTreeChildShell({
+  selected,
+  children,
+  treeLayout = "list",
+}: {
+  selected: boolean;
+  children: ReactNode;
+  treeLayout?: "list" | "sheet";
+}) {
+  const marginLeft =
+    treeLayout === "sheet" ? TREE_GUIDE_OFFSET_SHEET : TREE_GUIDE_OFFSET_LIST;
+  const paddingLeft =
+    treeLayout === "sheet" ? TREE_INDENT_SHEET : TREE_INDENT_LIST;
+  return (
+    <li
+      data-manual-sub-part=""
+      className={`border-t border-white/6 ${selected ? "row-on-ink" : ""}`}
+    >
+      <div
+        className="relative pr-4"
+        style={{
+          marginLeft,
+          paddingLeft,
+          borderLeft: "1px solid rgba(255,255,255,0.14)",
+        }}
+      >
+        {children}
+      </div>
+    </li>
   );
 }
 
@@ -174,6 +230,8 @@ export function ManualSubAssemblyChildListItems({
   onAdd,
   showAdd,
   compact,
+  variant = "customer",
+  treeLayout = "list",
 }: {
   parent: Part;
   group: ManualSubAssemblyGroup;
@@ -182,6 +240,8 @@ export function ManualSubAssemblyChildListItems({
   onAdd?: (part: Part) => void;
   showAdd?: boolean;
   compact?: boolean;
+  variant?: "customer" | "staff";
+  treeLayout?: "list" | "sheet";
 }) {
   return (
     <>
@@ -189,24 +249,52 @@ export function ManualSubAssemblyChildListItems({
         const part = manualChildAsPart(child, parent);
         const selected = part.id === selectedPartId;
         return (
-          <li
+          <ManualSubTreeChildShell
             key={`${assemblyKeyForPart(parent)}:${child.id}`}
-            data-manual-sub-part=""
-            className="border-t border-white/6"
+            selected={selected}
+            treeLayout={treeLayout}
           >
-            <BomStylePartRow
-              part={part}
-              selected={selected}
-              onSelect={onSelect}
-              onAdd={onAdd}
-              showAdd={showAdd}
-              nested
-              compact={compact}
-            />
-          </li>
+            {variant === "staff" ? (
+              <StaffCatalogPartRow
+                partNumber={part.id}
+                name={part.name}
+                qty={part.qty}
+                selected={selected}
+                onSelect={() => onSelect(part)}
+              />
+            ) : (
+              <CustomerBomPartRow
+                part={part}
+                selected={selected}
+                onSelect={onSelect}
+                onAdd={onAdd}
+                showAdd={showAdd && !compact}
+              />
+            )}
+          </ManualSubTreeChildShell>
         );
       })}
     </>
+  );
+}
+
+/** @deprecated Use CustomerBomPartRow via tree helpers. */
+export function ManualSubAssemblyChildRow(props: {
+  part: Part;
+  selected: boolean;
+  onSelect: (part: Part) => void;
+  onAdd?: (part: Part) => void;
+  showAdd?: boolean;
+  nested?: boolean;
+}) {
+  return (
+    <CustomerBomPartRow
+      part={props.part}
+      selected={props.selected}
+      onSelect={props.onSelect}
+      onAdd={props.onAdd}
+      showAdd={props.showAdd}
+    />
   );
 }
 
