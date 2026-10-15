@@ -1400,8 +1400,8 @@ html.spares-embed .spares-app-stage {
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
     max-height: min(
-      21.625rem,
-      calc(100% - 11.5rem - env(safe-area-inset-bottom, 0px))
+      21rem,
+      calc(100% - 12.75rem - env(safe-area-inset-bottom, 0px))
     );
     overflow-x: hidden;
     overflow-y: auto;

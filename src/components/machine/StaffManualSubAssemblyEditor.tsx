@@ -51,6 +51,19 @@ export function StaffManualSubAssemblyEditor({
   }, [parentPart.id, assemblyKey]);
 
   useEffect(() => {
+    const timers = [0, 50, 120].map((delay) =>
+      window.setTimeout(() => {
+        cancelRef.current?.focus({ preventScroll: true });
+      }, delay),
+    );
+    return () => {
+      for (const id of timers) {
+        window.clearTimeout(id);
+      }
+    };
+  }, [parentPart.id, assemblyKey]);
+
+  useEffect(() => {
     const section = rootRef.current;
     if (!section) {
       return;
