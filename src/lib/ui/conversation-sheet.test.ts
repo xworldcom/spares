@@ -126,6 +126,10 @@ describe("conversation sheet roll-up", () => {
       "reply",
     );
     assert.equal(
+      conversationSheetSnapFromHeight(400, heights.peekH, heights.replyH, heights.fullH),
+      "full",
+    );
+    assert.equal(
       conversationSheetSnapFromHeight(500, heights.peekH, heights.replyH, heights.fullH),
       "full",
     );

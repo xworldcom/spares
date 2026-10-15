@@ -410,7 +410,12 @@ export function useSnapSheet({
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     setMotionPhases({ phaseA, phaseB });
-    setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
+    // Detents (incl. reply/full mid) apply on release only — not during active drag.
+    if (!drag.current.on) {
+      setMotionSnap(
+        conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH),
+      );
+    }
     drag.current.liveH = liveHeightPx;
   }
 
@@ -793,6 +798,7 @@ export function useSnapSheet({
     const closeMax = lockCloseOffset();
     const startTy =
       card instanceof HTMLElement ? readCloseTyPx(card) : from === "out" ? closeMax : 0;
+    cancelSettleAnimation();
     lockMotionHeights();
     drag.current = {
       y: event.clientY,
@@ -811,6 +817,7 @@ export function useSnapSheet({
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
+      setMotionSnap(null);
       setDragging(true);
       setDraggingClass(true);
       if (drag.current.mode === "close") {
@@ -927,7 +934,9 @@ export function useSnapSheet({
     drag.current.pending = false;
     drag.current.moved = true;
     drag.current.mode = mode;
+    cancelSettleAnimation();
     lockMotionHeights();
+    setMotionSnap(null);
     setDragging(true);
     setDraggingClass(true);
     if (mode === "close") {
@@ -945,7 +954,8 @@ export function useSnapSheet({
       const from = drag.current.from;
       if (from === "reply") {
         if (Math.abs(dy) > DRAG_SLOP) {
-          activateDrag(event, dy > 0 ? "close" : "height");
+          // Body drag: height collapse/expand (peek ↔ full). Close is handle-only.
+          activateDrag(event, "height");
         } else {
           return;
         }

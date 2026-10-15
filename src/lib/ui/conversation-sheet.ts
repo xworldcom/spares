@@ -78,8 +78,8 @@ export function conversationSheetSnapFromHeight(
   if (heightPx <= replyH + PEEK_LAYOUT_BAND_PX) {
     return "reply";
   }
-  const mid = (replyH + fullH) / 2;
-  return heightPx < mid ? "reply" : "full";
+  // No reply/full mid detent while height is live — release snap picks detents.
+  return "full";
 }
 
 export function chromeSnapForHeight(
