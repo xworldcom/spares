@@ -259,6 +259,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     );
     if (row) {
       setStaffSubPartsEditRowKey(row.key);
+      requestAnimationFrame(() => {
+        staffEditSubPartsRef.current?.blur();
+      });
     }
   }
 

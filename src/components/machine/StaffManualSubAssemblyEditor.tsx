@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { bindFocusTrap, focusableElements } from "@/lib/ui/focus-trap";
+import { bindFocusTrap } from "@/lib/ui/focus-trap";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import type { ManualSubPart } from "@/types";
 import {
@@ -51,33 +51,13 @@ export function StaffManualSubAssemblyEditor({
   }, [parentPart.id, assemblyKey]);
 
   useEffect(() => {
-    const timers = [0, 50, 120].map((delay) =>
-      window.setTimeout(() => {
-        cancelRef.current?.focus({ preventScroll: true });
-      }, delay),
-    );
-    return () => {
-      for (const id of timers) {
-        window.clearTimeout(id);
-      }
-    };
-  }, [parentPart.id, assemblyKey]);
-
-  useEffect(() => {
     const section = rootRef.current;
     if (!section) {
       return;
     }
     const root =
       section.closest<HTMLElement>("[data-staff-manual-sub-overlay]") ?? section;
-    const frame = requestAnimationFrame(() => {
-      (cancelRef.current ?? focusableElements(root)[0])?.focus({ preventScroll: true });
-    });
-    const releaseTrap = bindFocusTrap(root, { initialFocus: cancelRef.current });
-    return () => {
-      cancelAnimationFrame(frame);
-      releaseTrap();
-    };
+    return bindFocusTrap(root, { initialFocus: cancelRef.current });
   }, [children.length, editingId]);
 
   useEffect(() => {
