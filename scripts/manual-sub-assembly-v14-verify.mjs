@@ -426,7 +426,7 @@ async function staffFlows(page) {
   await page.waitForTimeout(200);
   await page.getByRole("button", { name: "Edit sub-parts" }).first().click();
   await page.waitForTimeout(400);
-  const up = page.getByRole("button", { name: "Move up" }).first();
+  const up = page.getByRole("button", { name: /Move .+ up/ }).first();
   const tabIndexUp = await up.getAttribute("tabindex");
   measures.push({
     item: 9,

@@ -395,11 +395,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const partSheetBottomInset = useViewerPartSheetBottomInset(
     viewerLayoutRef,
     Boolean(
-      isCustomer &&
-        phoneViewerLayout &&
-        view === "model" &&
-        selectedPartForSheet &&
-        !fullscreen,
+      phoneViewerLayout && view === "model" && selectedPartForSheet && !fullscreen,
     ),
   );
 

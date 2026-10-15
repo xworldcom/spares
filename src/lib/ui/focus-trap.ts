@@ -43,5 +43,13 @@ export function bindFocusTrap(
   }
 
   root.addEventListener("keydown", onKeyDown, true);
+  const initial = options?.initialFocus;
+  if (initial) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        initial.focus({ preventScroll: true });
+      });
+    });
+  }
   return () => root.removeEventListener("keydown", onKeyDown, true);
 }
