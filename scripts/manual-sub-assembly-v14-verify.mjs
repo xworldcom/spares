@@ -317,35 +317,56 @@ async function customer390(page) {
   await page.screenshot({ path: path.join(OUT, "07-390-sheet-row-heights.png") });
 }
 
-async function customer1024Quote(page) {
-  await page.setViewportSize({ width: 1024, height: 900 });
-  await openMachine(page);
-  await goModel3D(page);
-  await dismissPartSheet(page);
-  await page.mouse.click(270, 515);
-  await page.waitForTimeout(700);
-  const add = page.getByRole("button", { name: "Add", exact: true }).first();
-  if (await add.isVisible().catch(() => false)) {
-    await add.click();
-    await page.waitForTimeout(450);
+async function customer1024Quote(page, context) {
+  try {
+    if (previewHost) {
+      await context.clearCookies();
+      await login(page, customer);
+    }
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await openMachine(page);
+    await goModel3D(page);
+    await dismissPartSheet(page);
+    await page.mouse.click(270, 515);
+    await page.waitForTimeout(700);
+    const add = page.getByRole("button", { name: "Add", exact: true }).first();
+    if (await add.isVisible().catch(() => false)) {
+      await add.click();
+      await page.waitForTimeout(450);
+    }
+    const sheet = page.locator(".machine-viewer .quote-sheet").first();
+    const visible = await sheet.isVisible({ timeout: 8_000 }).catch(() => false);
+    if (!visible) {
+      measures.push({
+        item: 4,
+        tag: "1024",
+        quoteOpens: false,
+        note: "No in-viewer quote sheet (preview tenant or empty tray)",
+      });
+      return;
+    }
+    let sheetBox = await box(sheet);
+    let cls = (await sheet.getAttribute("class")) ?? "";
+    if (cls.includes("is-out")) {
+      const quoteBtn = page.getByRole("button", { name: /Show quote/i }).first();
+      if (await quoteBtn.isVisible().catch(() => false)) {
+        await quoteBtn.click();
+        await page.waitForTimeout(650);
+        sheetBox = await box(sheet);
+        cls = (await sheet.getAttribute("class")) ?? "";
+      }
+    }
+    measures.push({
+      item: 4,
+      tag: "1024",
+      isOut: cls.includes("is-out"),
+      sheetY: sheetBox?.y ?? null,
+      quoteOpens: Boolean(sheetBox && sheetBox.y < 850 && !cls.includes("is-out")),
+    });
+    await page.screenshot({ path: path.join(OUT, "10-1024-quote-sheet.png") });
+  } catch (cause) {
+    measures.push({ item: 4, tag: "1024", quoteOpens: false, error: String(cause) });
   }
-  const quoteBtn = page
-    .locator("[data-viewer-chrome-toolbar] [data-quote-tray]")
-    .filter({ hasText: "Quote" })
-    .first();
-  await quoteBtn.click();
-  await page.waitForTimeout(650);
-  const sheet = page.locator(".machine-viewer .quote-sheet").first();
-  const sheetBox = await box(sheet);
-  const cls = (await sheet.getAttribute("class")) ?? "";
-  measures.push({
-    item: 4,
-    tag: "1024",
-    isOut: cls.includes("is-out"),
-    sheetY: sheetBox?.y ?? null,
-    quoteOpens: Boolean(sheetBox && sheetBox.y < 850 && !cls.includes("is-out")),
-  });
-  await page.screenshot({ path: path.join(OUT, "10-1024-quote-sheet.png") });
 }
 
 async function staffFlows(page) {
@@ -431,7 +452,11 @@ async function main() {
         note: "Preview uses staff for hardware-fixture + R2 GLB; customer Add counts need local seed",
       });
     }
-    await customer1024Quote(page);
+    await customer1024Quote(page, context);
+    if (previewHost) {
+      await context.clearCookies();
+      await login(page, staff);
+    }
     await customer1440(page);
     await customer390(page);
 
