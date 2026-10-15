@@ -25,12 +25,12 @@ function PartRowSelectButton({
   part,
   selected,
   onSelect,
-  onRowKeyDown,
+  onArrowKeys,
 }: {
   part: Part;
   selected: boolean;
   onSelect: (part: Part) => void;
-  onRowKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+  onArrowKeys?: (event: KeyboardEvent<HTMLDivElement>) => void;
 }) {
   function selectRow(event: MouseEvent<HTMLDivElement>) {
     const target = event.target;
@@ -55,10 +55,10 @@ function PartRowSelectButton({
           onSelect(part);
           return;
         }
-        onRowKeyDown?.(event);
+        onArrowKeys?.(event);
       }}
       aria-selected={selected}
-      className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0 py-1"
+      className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0"
     >
       <span className="bom-row-main min-w-0 text-left">
         <span className="bom-row-text min-w-0">
@@ -125,7 +125,7 @@ function PartsBomTreeEntry({
     onSelect(part);
   }
 
-  function onParentRowKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  function onParentRowArrowKeys(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "ArrowRight" && tree.hasChildren && !tree.open) {
       event.preventDefault();
       tree.setOpen(true);
@@ -158,7 +158,7 @@ function PartsBomTreeEntry({
               part={part}
               selected={selected}
               onSelect={onSelect}
-              onRowKeyDown={onParentRowKeyDown}
+              onArrowKeys={onParentRowArrowKeys}
             />
           }
           trailing={

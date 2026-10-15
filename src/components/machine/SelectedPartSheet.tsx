@@ -63,6 +63,7 @@ export function SelectedPartSheet({
   modelViewMobile = false,
   phoneCompactSheet = false,
   onCompactPeekChange,
+  onListPeekGuard,
   dismissOnEscape = true,
 }: {
   part: Part | null;
@@ -81,6 +82,8 @@ export function SelectedPartSheet({
   /** Phone list or 3D: compact peek until expanded. */
   phoneCompactSheet?: boolean;
   onCompactPeekChange?: (compact: boolean) => void;
+  /** Brief list pass-through guard after compact→expanded (same tap must not hit list). */
+  onListPeekGuard?: (blocked: boolean) => void;
   dismissOnEscape?: boolean;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
@@ -112,6 +115,7 @@ export function SelectedPartSheet({
   const addPendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const backToParentRef = useRef(false);
   const expandInertUntilRef = useRef(0);
+  const listPeekGuardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setMore(false);
@@ -127,8 +131,12 @@ export function SelectedPartSheet({
   useEffect(() => {
     return () => {
       onCompactPeekChange?.(false);
+      onListPeekGuard?.(false);
+      if (listPeekGuardTimer.current != null) {
+        clearTimeout(listPeekGuardTimer.current);
+      }
     };
-  }, [onCompactPeekChange]);
+  }, [onCompactPeekChange, onListPeekGuard]);
 
   useEffect(() => {
     return () => {
@@ -261,6 +269,14 @@ export function SelectedPartSheet({
 
   function expandMobileSheet() {
     expandInertUntilRef.current = Date.now() + 480;
+    onListPeekGuard?.(true);
+    if (listPeekGuardTimer.current != null) {
+      clearTimeout(listPeekGuardTimer.current);
+    }
+    listPeekGuardTimer.current = setTimeout(() => {
+      onListPeekGuard?.(false);
+      listPeekGuardTimer.current = null;
+    }, 520);
     setMobileExpanded(true);
   }
 

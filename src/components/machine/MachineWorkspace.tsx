@@ -114,6 +114,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const addToastTimer = useRef<number | null>(null);
   const addPartLock = useRef(false);
   const [partSheetCompactPeek, setPartSheetCompactPeek] = useState(false);
+  const [partSheetListPeekGuard, setPartSheetListPeekGuard] = useState(false);
   const undoRemoveTimer = useRef<number | null>(null);
   const undoRemoveRef = useRef<TrayLine | null>(null);
   const UNDO_REMOVE_MS = 12_000;
@@ -205,6 +206,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   useEffect(() => {
     if (!selectedPart) {
       setPartSheetCompactPeek(false);
+      setPartSheetListPeekGuard(false);
     }
   }, [selectedPart]);
 
@@ -1016,7 +1018,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 ? "machine-bom-mobile-list pointer-events-auto overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
                 : "flex flex-col"
             } ${!isCustomer && view !== "list" ? "invisible pointer-events-none" : ""}`}
-            data-bom-list-blocked={partSheetCompactPeek ? "" : undefined}
+            data-bom-list-blocked={
+              partSheetCompactPeek || partSheetListPeekGuard ? "" : undefined
+            }
             style={{ paddingTop: "3.65rem" }}
             aria-hidden={!isCustomer && view !== "list" ? true : undefined}
           >
@@ -1106,6 +1110,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               phoneViewerLayout && (view === "model" || view === "list")
             }
             onCompactPeekChange={setPartSheetCompactPeek}
+            onListPeekGuard={setPartSheetListPeekGuard}
             showEditSubParts={staffCanEditSubParts}
             onEditSubParts={openStaffSubPartsEditor}
             editSubPartsButtonRef={staffEditSubPartsRef}

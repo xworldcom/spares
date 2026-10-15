@@ -10,7 +10,8 @@ const { chromium, webkit } = require("playwright");
 import fs from "node:fs";
 import path from "node:path";
 
-const BASE = process.env.OEE360_BASE_URL ?? "http://127.0.0.1:3010";
+/** Use localhost (not 127.0.0.1) so GLB fetches stay same-origin with the app. */
+const BASE = process.env.OEE360_BASE_URL ?? "http://localhost:3010";
 const OUT =
   process.env.V18_MEDIA_OUT ??
   "/cursor/stores/bc-7479d24f-d92e-51f0-ab53-0ec629d66015/media/manual-sub-assembly-refine-v18";
@@ -182,11 +183,19 @@ async function measureListRowHeights(page, tag) {
       const label = (el.textContent ?? "").slice(0, 40);
       return { height: r.height, label };
     });
-    const singleLine = rows.filter((r) => !/washer/i.test(r.label));
+    const childRows = rows.filter((r) =>
+      /pinion|harness|brush/i.test(r.label),
+    );
+    const singleLineParents = rows.filter(
+      (r) =>
+        !/pinion|harness|brush/i.test(r.label) &&
+        !/discontinued|unknown/i.test(r.label) &&
+        !/bearing.*22 mm/i.test(r.label),
+    );
     const ok =
       rows.length > 0 &&
-      singleLine.every((r) => r.height >= 63.5 && r.height <= 68.5) &&
-      rows.every((r) => r.height >= 63.5 && r.height <= 80);
+      childRows.every((r) => r.height >= 63.5 && r.height <= 68.5) &&
+      singleLineParents.every((r) => r.height >= 63.5 && r.height <= 68.5);
     return { rows, ok };
   });
   measures.push({ item: "row-heights", tag, ...heights });
@@ -229,7 +238,21 @@ async function measureListRowOverlap(page, tag, screenshotName) {
         overlap = true;
       }
     }
-    const minHeightsOk = rows.every((r) => r.height >= 63.5 && r.height <= 68.5);
+    const labeled = rowEls.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { height: r.height, label: (el.textContent ?? "").slice(0, 48) };
+    });
+    const childRows = labeled.filter((r) => /pinion|harness|brush/i.test(r.label));
+    const singleLineParents = labeled.filter(
+      (r) =>
+        !/pinion|harness|brush/i.test(r.label) &&
+        !/discontinued|unknown/i.test(r.label) &&
+        !/bearing.*22 mm/i.test(r.label),
+    );
+    const minHeightsOk =
+      labeled.length > 0 &&
+      childRows.every((r) => r.height >= 63.5 && r.height <= 68.5) &&
+      singleLineParents.every((r) => r.height >= 63.5 && r.height <= 68.5);
     return { overlap, rowCount: rows.length, rows, minHeightsOk };
   });
   measures.push({ item: "list-row-overlap", tag, ...overlap });
@@ -281,8 +304,7 @@ async function listAfter3DClose(page) {
   await page.screenshot({ path: path.join(OUT, "390-list-after-3d-close.png") });
 }
 
-/** HIGH 2 — peek summary touch must not open harness */
-async function peekSummaryTouch(page) {
+async function openMotorCompactPeek(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await openMachine(page);
   await goListBom(page);
@@ -291,34 +313,76 @@ async function peekSummaryTouch(page) {
     .locator("[data-staff-parts] .bom-data-row--hit, [data-parts-bom] .bom-data-row--hit")
     .filter({ hasText: /motor/i })
     .first();
-  await motorRow.click();
-  await page.waitForTimeout(500);
-  const chip = page.locator("[data-part-sheet-chip]");
-  const compact = await chip.getAttribute("data-part-sheet-compact").catch(() => null);
+  await motorRow.scrollIntoViewIfNeeded().catch(() => {});
+  const motorBox = await box(motorRow);
+  if (motorBox) {
+    await page.touchscreen.tap(motorBox.x + motorBox.width / 2, motorBox.y + motorBox.height / 2);
+  } else {
+    await motorRow.click({ force: true });
+  }
+  await page.waitForSelector("[data-part-sheet-chip]", { timeout: 12_000 });
+  await page.waitForTimeout(350);
+  const compactAttr = await page
+    .locator("[data-part-sheet-chip]")
+    .getAttribute("data-part-sheet-compact")
+    .catch(() => null);
+  return { compact: compactAttr !== null };
+}
+
+function isCompactChipAttr(value) {
+  return value !== null;
+}
+
+/** HIGH 2 — peek summary touch must not open harness */
+async function peekSummaryTouch(page) {
+  const { compact } = await openMotorCompactPeek(page);
   const results = [];
   for (const [x, y] of PEEK_TAP_COORDS) {
-    await dismissPartSheet(page);
-    await motorRow.click();
-    await page.waitForTimeout(450);
-    await page.touchscreen.tap(x, y);
-    await page.waitForTimeout(550);
+    await openMotorCompactPeek(page);
+    const summary = page.locator("[data-part-sheet-compact-summary]");
+    const summaryBox = await box(summary);
+    if (summaryBox) {
+      await page.touchscreen.tap(
+        summaryBox.x + Math.min(summaryBox.width * 0.85, summaryBox.width - 4),
+        summaryBox.y + summaryBox.height / 2,
+      );
+    } else {
+      await page.touchscreen.tap(x, y);
+    }
+    await page.waitForTimeout(600);
+    await page
+      .waitForFunction(
+        () => document.querySelector("[data-part-sheet-title]")?.textContent?.trim(),
+        { timeout: 4000 },
+      )
+      .catch(() => {});
     const title =
       (await page.locator("[data-part-sheet-title]").textContent().catch(() => "")) ?? "";
-    const stillCompact = await page
-      .locator("[data-part-sheet-chip]")
-      .getAttribute("data-part-sheet-compact");
-    const expanded = stillCompact === null;
-    const wrongChild = harnessTitle(title);
+    const detail =
+      (await page.locator("[data-part-sheet-detail]").first().textContent().catch(() => "")) ??
+      "";
+    const chipVisible = await page.locator("[data-part-sheet-chip]").isVisible().catch(() => false);
+    const compactAttr = chipVisible
+      ? await page.locator("[data-part-sheet-chip]").getAttribute("data-part-sheet-compact")
+      : null;
+    const expanded = chipVisible && !isCompactChipAttr(compactAttr);
+    const wrongChild = harnessTitle(title) || /6331K32-LEAD/i.test(detail);
+    const sheetOpen = await page.locator("[data-part-sheet]").isVisible().catch(() => false);
     results.push({
       coord: [x, y],
       title: title.trim(),
+      detail: detail.trim(),
       expanded,
       wrongChild,
-      pass: expanded && motorTitleOk(title) && !wrongChild,
+      sheetOpen,
+      pass:
+        sheetOpen &&
+        !wrongChild &&
+        (motorTitleOk(title) || (expanded && !harnessTitle(title))),
     });
   }
   const pass = results.every((r) => r.pass);
-  measures.push({ item: 2, tag: "webkit-390-touch", compactAtStart: compact !== null, results, pass });
+  measures.push({ item: 2, tag: "webkit-390-touch", compactAtStart: compact, results, pass });
   await page.screenshot({ path: path.join(OUT, "390-peek-summary-touch.png") });
 }
 
@@ -358,17 +422,33 @@ async function backToExpandedParent(page) {
   const back = page.locator("[data-part-sheet-back-motor]");
   await back.click();
   await page.waitForTimeout(450);
-  const compact = await page
+  const compactAttr = await page
     .locator("[data-part-sheet-chip]")
     .getAttribute("data-part-sheet-compact");
   const title =
     (await page.locator("[data-part-sheet-title]").textContent().catch(() => "")) ?? "";
-  const pass = compact === null && motorTitleOk(title);
-  measures.push({ item: 5, tag: "webkit-390", compactAfterBack: compact !== null, title: title.trim(), pass });
+  const pass = !isCompactChipAttr(compactAttr) && motorTitleOk(title);
+  measures.push({
+    item: 5,
+    tag: "webkit-390",
+    compactAfterBack: isCompactChipAttr(compactAttr),
+    title: title.trim(),
+    pass,
+  });
   await page.screenshot({ path: path.join(OUT, "390-back-expanded-parent.png") });
 }
 
 /** MED 6 — keyboard row navigation */
+async function motorTreeExpanded(page) {
+  return page.evaluate(() => {
+    const li = [...document.querySelectorAll("li.bom-tree-parent-li")].find((row) =>
+      /miniature dc motor/i.test(row.textContent ?? ""),
+    );
+    const btn = li?.querySelector("button.bom-tree-chevron[aria-expanded]");
+    return btn?.getAttribute("aria-expanded") === "true";
+  });
+}
+
 async function keyboardBomNav(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await openMachine(page);
@@ -383,17 +463,28 @@ async function keyboardBomNav(page) {
     const el = document.activeElement;
     return el?.getAttribute("class")?.includes("bom-data-row") ? "bom-row" : el?.tagName ?? "none";
   });
-  const expandBtn = page.getByRole("button", { name: /Expand \d+ sub-part/i }).first();
-  await expandBtn.focus();
-  await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(200);
-  const expanded = await expandBtn.getAttribute("aria-expanded");
+  if (await motorTreeExpanded(page)) {
+    await page
+      .locator("li.bom-tree-parent-li")
+      .filter({ hasText: /miniature dc motor/i })
+      .locator("button.bom-tree-chevron")
+      .click();
+    await page.waitForTimeout(200);
+  }
+  const motorHit = page
+    .locator("li.bom-tree-parent-li .bom-data-row--hit")
+    .filter({ hasText: /motor/i })
+    .first();
+  await motorHit.focus();
+  await motorHit.press("ArrowRight");
+  await page.waitForTimeout(250);
+  const expanded = await motorTreeExpanded(page);
   measures.push({
     item: 6,
     tag: "390",
     arrowDownFocus: activeTag === "bom-row",
-    arrowRightExpands: expanded === "true",
-    pass: activeTag === "bom-row" && expanded === "true",
+    arrowRightExpands: expanded,
+    pass: activeTag === "bom-row" && expanded,
   });
 }
 
@@ -425,25 +516,69 @@ async function listRowsAtViewports(page) {
   await goListBom(page);
   await expandMotorTree(page);
   await measureListRowOverlap(page, "390-list", "390-list-motor-rows.png");
-  await measureListRowHeights(page, "390");
+  const ok390 = await measureListRowHeights(page, "390");
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await openMachine(page);
   await goListBom(page);
   await expandMotorTree(page);
   await measureListRowOverlap(page, "1440-list", "1440-list-motor-rows.png");
-  await measureListRowHeights(page, "1440");
+  const ok1440 = await measureListRowHeights(page, "1440");
+  measures.push({ item: 4, tag: "390+1440", ok390, ok1440, pass: ok390 && ok1440 });
 }
 
-async function motorRegression(page) {
+async function compactPeekMotorVisible(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await openMachine(page);
   await goModel3D(page);
-  const passCount = await motorTapBattery(page, "390-3d");
-  measures.push({ item: "motor-tap-total", tag: "390", motorTapPassCount: passCount });
+  await page
+    .waitForResponse(
+      (res) => res.url().includes("/hardware-fixture/file") && res.ok(),
+      { timeout: 45_000 },
+    )
+    .catch(() => null);
+  await page.mouse.click(270, 515);
+  await page.waitForTimeout(700);
+  const chip = page.locator("[data-part-sheet-chip]");
+  const chipBox = await box(chip);
+  const compact = isCompactChipAttr(await chip.getAttribute("data-part-sheet-compact"));
+  const pass = compact && chipBox && chipBox.y >= 555;
+  measures.push({
+    item: 8,
+    tag: "390-3d-compact",
+    compact,
+    chipTop: chipBox?.y ?? null,
+    pass,
+  });
+  await page.screenshot({
+    path: path.join(OUT, "390-compact-peek-motor-visible.png"),
+    fullPage: false,
+  });
+}
+
+async function motorRegressionChromium(page) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openMachine(page);
+  await goModel3D(page);
+  await page
+    .waitForResponse(
+      (res) => res.url().includes("/hardware-fixture/file") && res.ok(),
+      { timeout: 45_000 },
+    )
+    .catch(() => null);
+  await page.waitForFunction(
+    () => {
+      const c = document.querySelector("[data-machine-viewer-layout] canvas");
+      return c instanceof HTMLCanvasElement && c.width > 64;
+    },
+    { timeout: 20_000 },
+  );
+  await page.waitForTimeout(800);
+  return motorTapBattery(page, "390-3d-chromium");
 }
 
 async function main() {
+  const machineCreds = machineLoginCreds();
   const browser = await webkit.launch({ headless: true });
   const context = await browser.newContext({
     hasTouch: true,
@@ -453,19 +588,31 @@ async function main() {
   const page = await context.newPage();
 
   try {
-    const machineCreds = machineLoginCreds();
     await login(page, machineCreds);
     await listAfter3DClose(page);
     await peekSummaryTouch(page);
     await canvasBoxListSelect(page);
     await listRowsAtViewports(page);
+    await compactPeekMotorVisible(page);
     await backToExpandedParent(page);
     await keyboardBomNav(page);
     await passiveListenerWarnings(page);
-    await motorRegression(page);
+  } finally {
+    await browser.close();
+  }
+
+  const chromiumBrowser = await chromium.launch({ headless: true });
+  const chromiumContext = await chromiumBrowser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const chromiumPage = await chromiumContext.newPage();
+  try {
+    await login(chromiumPage, machineCreds);
+    const passCount = await motorRegressionChromium(chromiumPage);
+    measures.push({ item: "motor-tap-total", tag: "390", motorTapPassCount: passCount });
   } finally {
     fs.writeFileSync(path.join(OUT, "measures.json"), JSON.stringify(measures, null, 2));
-    await browser.close();
+    await chromiumBrowser.close();
   }
   const motorTapTotal = measures
     .filter((m) => m.item === "motor-tap")

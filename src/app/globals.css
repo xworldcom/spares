@@ -1093,6 +1093,22 @@ html.spares-embed .spares-app-stage {
 }
 
 @media (max-width: 1023px) {
+  [data-parts-bom] .bom-row-text > .block.text-\[15px\],
+  [data-staff-parts] .bom-row-text > .block.text-\[15px\] {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-line-clamp: unset;
+  }
+
+  [data-parts-bom] [data-manual-sub-part] .bom-data-row--grid,
+  [data-staff-parts] [data-manual-sub-part] .bom-data-row--grid {
+    min-height: 4rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
   [data-parts-bom] {
     --bom-qty-col: 3rem;
     --bom-row-pad-end: 0;

@@ -160,11 +160,11 @@ export function CustomerBomPartRow({
         }
       }}
       aria-selected={selected}
-      className={`bom-data-row bom-data-row--grid bom-data-row--hit w-full min-w-0 py-1 ${
+      className={`bom-data-row bom-data-row--grid bom-data-row--hit w-full min-w-0 ${
         addVisible ? "" : "bom-data-row--no-add"
       }`}
     >
-      <span className="bom-row-main min-w-0 py-1 text-left">
+      <span className="bom-row-main min-w-0 text-left">
         <span className="bom-row-text min-w-0">
           <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
             {part.name}
