@@ -1102,10 +1102,30 @@ html.spares-embed .spares-app-stage {
   }
 
   .machine-context-tabs {
-    padding-inline-end: 1rem;
-    scroll-padding-inline-end: 1rem;
-    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1rem), transparent);
-    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1rem), transparent);
+    padding-inline-end: 2rem;
+    scroll-padding-inline-end: 2rem;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1.35rem), transparent);
+    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 1.35rem), transparent);
+  }
+
+  .machine-context-tab {
+    padding-inline: 0.7rem;
+    font-size: 13px;
+  }
+
+  .spares-header-context {
+    padding-inline-end: 0.5rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .spares-app-machine-context .machine-stage,
+  .spares-app-machine-context .machine-stage-grid,
+  .spares-app-machine-context .machine-viewer,
+  .spares-app-machine-context .machine-viewer [data-machine-viewer-layout] {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
   }
 }
 
@@ -1225,7 +1245,8 @@ html.spares-embed .spares-app-stage {
 }
 
 [data-parts-bom] .bom-data-row--grid,
-[data-parts-bom] [data-manual-sub-part] .bom-data-row--grid {
+[data-parts-bom] [data-manual-sub-part] .bom-data-row--grid,
+[data-staff-parts] .bom-data-row--grid {
   min-height: var(--bom-row-min-h, 3.5rem);
 }
 
@@ -1244,7 +1265,7 @@ html.spares-embed .spares-app-stage {
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-data-row--grid {
-  min-height: 2.75rem;
+  min-height: var(--bom-row-min-h, 3.5rem);
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-row-text {
@@ -1304,11 +1325,12 @@ html.spares-embed .spares-app-stage {
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] {
-    bottom: calc(var(--peek-h, 14.5rem) + 5.25rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+    max-height: min(44vh, 12.75rem);
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
-    max-height: none;
+    max-height: min(44vh, 12.75rem);
     overflow-y: visible;
   }
 
@@ -1365,12 +1387,29 @@ html.spares-embed .spares-app-stage {
 }
 
 .part-sheet-chip {
-  max-height: min(52vh, 20rem);
+  max-height: none;
+  overflow-y: visible;
   padding-bottom: 0.65rem;
 }
 
-.spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
-  max-height: min(42vh, 16rem);
+@media (min-width: 1024px) and (pointer: fine) {
+  .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model"] .part-sheet-chip {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 1023px) {
+  .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    pointer-events: none;
+  }
+
+  .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
+    pointer-events: auto;
+  }
 }
 
 .part-sheet-chip .part-sheet-actions,

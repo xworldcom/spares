@@ -920,7 +920,27 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             layoutRootRef={viewerLayoutRef}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
-            onSelect={setSelectedPart}
+            onSelect={(part) => {
+              if (!part) {
+                setSelectedPart(null);
+                return;
+              }
+              if (!machine) {
+                setSelectedPart(part);
+                return;
+              }
+              const parentId = manualSubPartParentPartId(
+                part.id,
+                machine.parts,
+                machine.manualSubAssemblies,
+              );
+              if (parentId && parentId !== part.id) {
+                const parent = machine.parts.find((row) => row.id === parentId);
+                setSelectedPart(parent ?? part);
+                return;
+              }
+              setSelectedPart(part);
+            }}
             onUnmatchedSelect={
               isCustomer
                 ? undefined
@@ -1205,9 +1225,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   return;
                 }
                 event.preventDefault();
-                setTrayOpen(true);
               }}
-              onClick={() => setTrayOpen(true)}
+              onClick={() => {
+                setTrayOpen((open) => (customerTrayDock ? !open : true));
+              }}
               className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold"
               aria-label={`Show quote, ${quoteCount} ${quoteCount === 1 ? "item" : "items"}`}
             >

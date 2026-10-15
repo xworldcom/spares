@@ -124,7 +124,7 @@ function StaffCatalogTreeEntry({
               <span className="bom-qty-col text-right">
                 {row.status === "missing-mesh" ? (
                   <span
-                    className={`block text-[12px] ${
+                    className={`block whitespace-nowrap text-[12px] leading-tight ${
                       selected ? "row-on-ink-muted" : "spares-muted"
                     }`}
                   >

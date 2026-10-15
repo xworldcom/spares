@@ -7,7 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useQuoteConversationDockStage } from "@/components/machine/useDesktopStage";
+import { useMachineQuoteTrayDockStage } from "@/components/machine/useDesktopStage";
 import { useQuoteAlerts } from "@/components/quote/QuoteAlerts";
 import { createQuote } from "@/lib/api/quotes";
 import { errorMessage } from "@/lib/api/errors";
@@ -209,7 +209,7 @@ export function QuoteTray({
   onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const quoteTrayDock = useQuoteConversationDockStage();
+  const quoteTrayDock = useMachineQuoteTrayDockStage();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { refresh: refreshQuoteAlerts } = useQuoteAlerts();
@@ -250,7 +250,7 @@ export function QuoteTray({
     afterNextPaint(() => {
       bounceQuoteCount(node);
     });
-  }, [unitCount, open]);
+  }, [unitCount, open, quoteTrayDock]);
 
   function setOpen(next: boolean) {
     onOpenChange?.(next);
@@ -303,7 +303,7 @@ export function QuoteTray({
     paintDrag(0);
     setDragging(false);
     setDraggingClass(false);
-  }, [open]);
+  }, [open, quoteTrayDock]);
 
   async function handleSubmit() {
     setError(null);
