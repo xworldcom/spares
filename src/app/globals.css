@@ -1283,10 +1283,10 @@ html.spares-embed .spares-app-stage {
   align-self: stretch;
   box-sizing: border-box;
   min-height: 4rem;
-  height: 4rem;
-  padding-top: 0;
-  padding-bottom: 0;
-  align-items: center;
+  height: auto;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  align-items: start;
 }
 
 [data-parts-bom] li.bom-tree-parent-li:has(~ [data-manual-sub-part]) .bom-row-main,
@@ -1342,10 +1342,10 @@ html.spares-embed .spares-app-stage {
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-data-row--grid {
   box-sizing: border-box;
   min-height: var(--bom-row-min-h, 4rem);
-  height: var(--bom-row-min-h, 4rem);
-  padding-top: 0;
-  padding-bottom: 0;
-  align-items: center;
+  height: auto;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  align-items: start;
   grid-template-columns: minmax(0, 1fr) var(--bom-qty-col) var(--bom-add-col);
 }
 
@@ -1583,6 +1583,77 @@ html.spares-embed .spares-app-stage {
   text-overflow: unset;
   white-space: normal;
   word-break: break-word;
+}
+
+@media (min-width: 1024px) {
+  [data-part-sheet-back-motor].part-sheet-back-parent {
+    width: max-content;
+    max-width: min(100%, 26rem);
+    padding-inline: 0.9rem 1.05rem;
+  }
+
+  [data-part-sheet-back-motor] .part-sheet-back-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-compact] {
+    max-height: min(
+      9.75rem,
+      calc(100% - 17.5rem - env(safe-area-inset-bottom, 0px))
+    );
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: pan-y;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-compact]
+    [data-part-sheet-detail] {
+    display: none;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-compact]
+    [data-part-sheet-actions-full] {
+    display: none;
+  }
+
+  .part-sheet-compact-summary {
+    display: none;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-compact]
+    .part-sheet-compact-summary {
+    display: block;
+  }
+
+  .part-sheet-expand-hint {
+    display: none;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-compact]
+    .part-sheet-expand-hint {
+    display: flex;
+  }
 }
 
 .machine-bom-scroll {

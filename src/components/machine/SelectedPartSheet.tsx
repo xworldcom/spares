@@ -20,6 +20,24 @@ function manualSubParentBackLabel(parent: Part): string {
   return mesh ?? parent.id;
 }
 
+function manualSubCompactSummary(children: Part[]): string {
+  if (children.length === 0) {
+    return "";
+  }
+  const names = children
+    .map((child) => child.name.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  const suffix =
+    children.length > names.length
+      ? ` +${children.length - names.length} more`
+      : "";
+  if (names.length === 0) {
+    return `${children.length} manual sub-part${children.length === 1 ? "" : "s"}`;
+  }
+  return `${children.length} sub-part${children.length === 1 ? "" : "s"} · ${names.join(", ")}${suffix}`;
+}
+
 export function SelectedPartSheet({
   part,
   isolated,
@@ -80,11 +98,14 @@ export function SelectedPartSheet({
   const open = partSheetVisible(part?.id);
   const canAct = open && ready;
   const [more, setMore] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const [blockSheetPointer, setBlockSheetPointer] = useState(false);
   const chipRef = useRef<HTMLDivElement>(null);
+  const dragExpandRef = useRef<{ pointerId: number; startY: number } | null>(null);
 
   useEffect(() => {
     setMore(false);
+    setMobileExpanded(false);
   }, [part?.id]);
 
   useEffect(() => {
@@ -167,6 +188,65 @@ export function SelectedPartSheet({
   const showAddInFooter = Boolean(
     showAdd && onAdd && !showAddInHeader && !showAddOnSubPartRows,
   );
+  const mobileCompact =
+    modelViewMobile && !mobileExpanded && !more && !subPartsEditorOpen;
+  const compactSubSummary =
+    manualSubChildren && manualSubChildren.length > 0
+      ? manualSubCompactSummary(manualSubChildren)
+      : "";
+
+  function expandMobileSheet() {
+    setMobileExpanded(true);
+  }
+
+  function onCompactChipPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (!mobileCompact || event.button !== 0) {
+      return;
+    }
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest(
+        "button, a, input, textarea, select, [data-part-sheet-control], [data-part-sheet-close]",
+      )
+    ) {
+      return;
+    }
+    dragExpandRef.current = { pointerId: event.pointerId, startY: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onCompactChipPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragExpandRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.clientY < drag.startY - 28) {
+      dragExpandRef.current = null;
+      expandMobileSheet();
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  function onCompactChipPointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragExpandRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    dragExpandRef.current = null;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (Math.abs(event.clientY - drag.startY) < 8) {
+      expandMobileSheet();
+    }
+  }
 
   return (
     <div
@@ -196,9 +276,14 @@ export function SelectedPartSheet({
         } ${held ? "scale-[1.02]" : "scale-100"} chrome-fade`}
         data-part-sheet-chip=""
         data-part-sheet-more-open={more ? "" : undefined}
+        data-part-sheet-compact={mobileCompact ? "" : undefined}
         onPointerDown={(event) => {
+          onCompactChipPointerDown(event);
           event.stopPropagation();
         }}
+        onPointerMove={onCompactChipPointerMove}
+        onPointerUp={onCompactChipPointerUp}
+        onPointerCancel={onCompactChipPointerUp}
       >
         {isolatedViewPart ? (
           <div
@@ -241,7 +326,10 @@ export function SelectedPartSheet({
             >
               {part.name}
             </p>
-            <p className="chrome-quiet font-mono text-[11px] break-all">
+            <p
+              className="chrome-quiet font-mono text-[11px] break-all"
+              data-part-sheet-detail=""
+            >
               <span>{part.id}</span>
               {typeof part.qty === "number" && part.qty > 0 ? (
                 <span className="part-sheet-qty-inline font-sans tabular-nums">
@@ -250,6 +338,14 @@ export function SelectedPartSheet({
                 </span>
               ) : null}
             </p>
+            {compactSubSummary ? (
+              <p
+                className="part-sheet-compact-summary chrome-quiet mt-0.5 truncate text-[11px] leading-snug"
+                data-part-sheet-compact-summary=""
+              >
+                {compactSubSummary}
+              </p>
+            ) : null}
           </div>
           {showAddInHeader ? (
             <button
@@ -273,23 +369,59 @@ export function SelectedPartSheet({
             ×
           </button>
         </div>
-        <PartLifecycleNotice lifecycle={part.lifecycle} compact />
-        {(() => {
-          const bits: string[] = [];
-          if (part.vendor?.trim()) {
-            bits.push(part.vendor.trim());
-          }
-          if (part.stock?.trim()) {
-            bits.push(`stock ${part.stock.trim()}`);
-          }
-          return bits.length > 0 ? (
-            <p className="chrome-quiet mb-1 text-[11px] leading-snug break-words">
-              {bits.join(" · ")}
-            </p>
-          ) : null;
-        })()}
+        <div data-part-sheet-detail="">
+          <PartLifecycleNotice lifecycle={part.lifecycle} compact />
+          {(() => {
+            const bits: string[] = [];
+            if (part.vendor?.trim()) {
+              bits.push(part.vendor.trim());
+            }
+            if (part.stock?.trim()) {
+              bits.push(`stock ${part.stock.trim()}`);
+            }
+            return bits.length > 0 ? (
+              <p className="chrome-quiet mb-1 text-[11px] leading-snug break-words">
+                {bits.join(" · ")}
+              </p>
+            ) : null;
+          })()}
+        </div>
+        {mobileCompact ? (
+          <>
+            <div className="mb-1 flex flex-wrap items-center gap-2" data-part-sheet-compact-actions="">
+              {typeof part.qty === "number" && part.qty > 0 ? (
+                <span className="chrome-quiet text-[12px] font-medium tabular-nums">
+                  Qty {part.qty}
+                </span>
+              ) : null}
+              {showAddInHeader || showAddInFooter ? (
+                <button
+                  type="button"
+                  {...activate(() => onAdd!(part))}
+                  disabled={!canAct}
+                  className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
+                >
+                  Add
+                </button>
+              ) : null}
+              {showAddOnSubPartRows ? (
+                <span className="chrome-quiet text-[11px]">Tap a sub-part to add</span>
+              ) : null}
+            </div>
+            <div
+              className="part-sheet-expand-hint chrome-quiet mb-1 items-center justify-center gap-1 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              aria-hidden="true"
+            >
+              <span>Swipe up for details</span>
+            </div>
+          </>
+        ) : null}
         {manualSubChildren && manualSubChildren.length > 0 && manualSubParent ? (
-          <div className="mb-2 border-t border-white/8 pt-2" data-manual-sub-sheet="">
+          <div
+            className="mb-2 border-t border-white/8 pt-2"
+            data-manual-sub-sheet=""
+            data-part-sheet-detail=""
+          >
             <ul className="overflow-hidden">
               <ManualSubAssemblyChildListItems
                 parent={manualSubParent}
@@ -311,7 +443,7 @@ export function SelectedPartSheet({
             </ul>
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" data-part-sheet-actions-full="">
           {showAddInFooter ? (
             <button
               type="button"
@@ -345,7 +477,10 @@ export function SelectedPartSheet({
           <button
             type="button"
             data-part-sheet-control=""
-            {...activate(() => setMore((current) => !current))}
+            {...activate(() => {
+              setMobileExpanded(true);
+              setMore((current) => !current);
+            })}
             disabled={!canAct}
             className="chrome-quiet inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[12px] font-medium hover:text-[var(--spares-on-chip)] disabled:opacity-30"
             aria-expanded={more}
