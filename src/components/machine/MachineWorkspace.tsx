@@ -551,12 +551,15 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     if (!machine || !selectedPart) {
       return { parent: null as Part | null, children: [] as Part[] };
     }
-    const directGroup = groupForPart(machine.manualSubAssemblies, selectedPart);
-    if (directGroup && directGroup.children.length > 0) {
+    const topLevelPart = machine.parts.find((row) => row.id === selectedPart.id);
+    const directGroup = topLevelPart
+      ? groupForPart(machine.manualSubAssemblies, topLevelPart)
+      : undefined;
+    if (topLevelPart && directGroup && directGroup.children.length > 0) {
       return {
-        parent: selectedPart,
+        parent: topLevelPart,
         children: directGroup.children.map((child) =>
-          manualChildAsPart(child, selectedPart),
+          manualChildAsPart(child, topLevelPart),
         ),
       };
     }
