@@ -1274,6 +1274,7 @@ html.spares-embed .spares-app-stage {
 [data-parts-bom] [data-manual-sub-part] .bom-data-row--grid {
   flex: 1 1 auto;
   align-self: center;
+  min-height: var(--bom-row-min-h, 4rem);
 }
 
 [data-parts-bom] .bom-qty-col {
@@ -1284,6 +1285,9 @@ html.spares-embed .spares-app-stage {
 [data-manual-sub-sheet] {
   --bom-tree-chevron-col: 1.5rem;
   --bom-tree-badge-col: 1.25rem;
+  --bom-row-min-h: 4rem;
+  --bom-qty-col: 2.25rem;
+  --bom-add-col: 3.5rem;
 }
 
 [data-manual-sub-sheet] .bom-tree-child-inner {
@@ -1291,7 +1295,20 @@ html.spares-embed .spares-app-stage {
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-data-row--grid {
-  min-height: var(--bom-row-min-h, 3.5rem);
+  min-height: var(--bom-row-min-h, 4rem);
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) var(--bom-qty-col) var(--bom-add-col);
+}
+
+[data-manual-sub-sheet] [data-manual-sub-part] .bom-qty-col,
+[data-manual-sub-sheet] [data-manual-sub-part] .bom-add-col {
+  align-self: center;
+}
+
+[data-manual-sub-sheet] [data-manual-sub-part] .bom-add-col.btn-accent {
+  padding-inline: 0.65rem;
+  min-width: 0;
+  width: var(--bom-add-col);
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-row-text {
@@ -1353,24 +1370,20 @@ html.spares-embed .spares-app-stage {
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] {
     bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-    max-height: calc(
-      100dvh - 6.75rem - 5.25rem - env(safe-area-inset-bottom, 0px)
-    );
+    max-height: none;
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
     max-height: min(
-      15.5rem,
+      17.5rem,
       calc(100dvh - 5.25rem - 14.5rem - env(safe-area-inset-bottom, 0px))
     );
-    overflow-y: visible;
     overflow: visible;
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-manual-sub-sheet] {
-    max-height: 7.25rem;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    max-height: none;
+    overflow: visible;
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-manual-sub-sheet] ul {
@@ -1378,12 +1391,13 @@ html.spares-embed .spares-app-stage {
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-manual-sub-sheet] [data-manual-sub-part] .bom-data-row--grid {
-    min-height: var(--bom-row-min-h, 3.5rem);
+    min-height: var(--bom-row-min-h, 4rem);
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-part-sheet-more-panel] {
-    max-height: 8rem;
+    max-height: min(9.5rem, 38vh);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -1468,13 +1482,20 @@ html.spares-embed .spares-app-stage {
 }
 
 [data-manual-sub-sheet] .bom-row-text > span:first-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+[data-part-sheet-back-motor] .part-sheet-back-title {
   overflow: visible;
   text-overflow: unset;
   white-space: normal;
   word-break: break-word;
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  display: block;
 }
 
 .machine-bom-scroll {
@@ -1513,13 +1534,18 @@ html.spares-embed .spares-app-stage {
     transition: grid-template-columns var(--sheet-duration) var(--sheet-ease);
   }
 
-  .machine-stage-grid[data-customer-desktop="true"] {
-    grid-template-columns: minmax(0, 1fr) 0px;
-    gap: 0.75rem;
+  .machine-stage-grid[data-customer-desktop="true"]:not([data-tray="open"]) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .machine-stage-grid[data-customer-desktop="true"][data-tray="open"] {
     grid-template-columns: minmax(0, 1fr) var(--spares-tray);
+    gap: 0.75rem;
+  }
+
+  .machine-stage-grid[data-customer-desktop="true"]:not([data-tray="open"])
+    .quote-tray-dock {
+    display: none;
   }
 
   .machine-stage-grid[data-staff-split="true"] {
