@@ -1,6 +1,12 @@
 "use client";
 
-import { Fragment, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  Fragment,
+  useState,
+  type MouseEvent,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import type { Part } from "@/lib/api/types";
 import type { ManualSubAssemblyGroup } from "@/types";
 import {
@@ -328,6 +334,7 @@ export function ManualSubAssemblyChildListItems({
   compact,
   variant = "customer",
   treeLayout = "list",
+  selectInertUntil,
 }: {
   parent: Part;
   group: ManualSubAssemblyGroup;
@@ -338,7 +345,15 @@ export function ManualSubAssemblyChildListItems({
   compact?: boolean;
   variant?: "customer" | "staff";
   treeLayout?: "list" | "sheet";
+  selectInertUntil?: MutableRefObject<number>;
 }) {
+  function guardedSelect(part: Part) {
+    if (selectInertUntil && Date.now() < selectInertUntil.current) {
+      return;
+    }
+    onSelect(part);
+  }
+
   return (
     <>
       {group.children.map((child) => {
@@ -349,7 +364,7 @@ export function ManualSubAssemblyChildListItems({
             key={`${assemblyKeyForPart(parent)}:${child.id}`}
             selected={selected}
             treeLayout={treeLayout}
-            onSelectRow={() => onSelect(part)}
+            onSelectRow={() => guardedSelect(part)}
           >
             {variant === "staff" ? (
               <StaffCatalogPartRow
@@ -357,13 +372,13 @@ export function ManualSubAssemblyChildListItems({
                 name={part.name}
                 qty={part.qty}
                 selected={selected}
-                onSelect={() => onSelect(part)}
+                onSelect={() => guardedSelect(part)}
               />
             ) : (
               <CustomerBomPartRow
                 part={part}
                 selected={selected}
-                onSelect={onSelect}
+                onSelect={guardedSelect}
                 onAdd={onAdd}
                 showAdd={showAdd && (!compact || treeLayout === "sheet")}
                 omitLifecycle={treeLayout === "sheet"}

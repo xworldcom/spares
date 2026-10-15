@@ -202,6 +202,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     setStaffSubPartsEditRowKey(null);
   }, [machineId]);
 
+  useEffect(() => {
+    if (!selectedPart) {
+      setPartSheetCompactPeek(false);
+    }
+  }, [selectedPart]);
+
   const staffSubPartsOverlay = useMemo(() => {
     if (!machine || !staffSubPartsEditRowKey) {
       return null;
@@ -912,8 +918,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     >
       <div
         ref={viewerLayoutRef}
-        className="relative min-h-0 flex-1"
+        className={`relative min-h-0 flex-1 ${
+          isCustomer && view === "list" ? "pointer-events-none" : ""
+        }`}
         data-machine-viewer-layout=""
+        data-list-view-active={isCustomer && view === "list" ? "" : undefined}
       >
         {src && viewerMountReady ? (
           <PartPicker
@@ -1004,7 +1013,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             data-parts-bom=""
             className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
               isCustomer
-                ? "machine-bom-mobile-list overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
+                ? "machine-bom-mobile-list pointer-events-auto overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
                 : "flex flex-col"
             } ${!isCustomer && view !== "list" ? "invisible pointer-events-none" : ""}`}
             data-bom-list-blocked={partSheetCompactPeek ? "" : undefined}

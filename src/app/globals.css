@@ -1078,10 +1078,15 @@ html.spares-embed .spares-app-stage {
 
 .spares-app-machine-context .machine-bom-mobile-list {
   padding-inline: 1rem;
+  scrollbar-gutter: stable;
+}
+
+[data-parts-bom],
+[data-staff-parts] {
+  --bom-row-min-h: 4rem;
 }
 
 [data-parts-bom] {
-  --bom-row-min-h: 3.5rem;
   --bom-qty-col: 2.75rem;
   --bom-add-col: 4.25rem;
   --bom-row-pad-end: 0.75rem;
@@ -1269,12 +1274,18 @@ html.spares-embed .spares-app-stage {
 [data-staff-parts] .bom-tree-parent-li .bom-data-row--grid,
 [data-parts-bom] .bom-tree-parent-li .bom-tree-name .bom-data-row--grid,
 [data-staff-parts] .bom-tree-parent-li .bom-tree-name .bom-data-row--grid {
-  min-height: var(--bom-row-min-h, 4rem);
+  min-height: 0;
   height: auto;
   box-sizing: border-box;
   align-items: start;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+[data-parts-bom] .bom-tree-row .bom-row-main,
+[data-staff-parts] .bom-tree-row .bom-row-main {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 [data-parts-bom] [data-manual-sub-part] .bom-tree-child-inner {
@@ -1291,7 +1302,7 @@ html.spares-embed .spares-app-stage {
   flex: 1 1 auto;
   align-self: stretch;
   box-sizing: border-box;
-  min-height: 4rem;
+  min-height: var(--bom-row-min-h, 4rem);
   height: auto;
   padding-top: 0.35rem;
   padding-bottom: 0.35rem;
@@ -1721,6 +1732,13 @@ html.spares-embed .spares-app-stage {
   }
 
   .machine-bom-mobile-list[data-bom-list-blocked] {
+    pointer-events: none;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-machine-viewer-layout][data-list-view-active]
+    canvas {
     pointer-events: none;
   }
 }

@@ -25,10 +25,12 @@ function PartRowSelectButton({
   part,
   selected,
   onSelect,
+  onRowKeyDown,
 }: {
   part: Part;
   selected: boolean;
   onSelect: (part: Part) => void;
+  onRowKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
 }) {
   function selectRow(event: MouseEvent<HTMLDivElement>) {
     const target = event.target;
@@ -51,7 +53,9 @@ function PartRowSelectButton({
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           onSelect(part);
+          return;
         }
+        onRowKeyDown?.(event);
       }}
       aria-selected={selected}
       className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0 py-1"
@@ -121,7 +125,7 @@ function PartsBomTreeEntry({
     onSelect(part);
   }
 
-  function onParentRowKeyDown(event: KeyboardEvent<HTMLLIElement>) {
+  function onParentRowKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "ArrowRight" && tree.hasChildren && !tree.open) {
       event.preventDefault();
       tree.setOpen(true);
@@ -139,7 +143,6 @@ function PartsBomTreeEntry({
         ref={parentRowRef}
         className={`bom-tree-parent-li ${selected ? "row-on-ink" : ""}`}
         onClick={selectFromRow}
-        onKeyDown={onParentRowKeyDown}
       >
         <BomTreeParentRow
           hasChildren={tree.hasChildren}
@@ -151,7 +154,12 @@ function PartsBomTreeEntry({
           count={tree.count}
           selected={selected}
           nameCell={
-            <PartRowSelectButton part={part} selected={selected} onSelect={onSelect} />
+            <PartRowSelectButton
+              part={part}
+              selected={selected}
+              onSelect={onSelect}
+              onRowKeyDown={onParentRowKeyDown}
+            />
           }
           trailing={
             showAdd && onAdd ? (
