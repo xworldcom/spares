@@ -920,9 +920,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     >
       <div
         ref={viewerLayoutRef}
-        className={`relative min-h-0 flex-1 ${
-          isCustomer && view === "list" ? "pointer-events-none" : ""
-        }`}
+        className="relative min-h-0 flex-1"
         data-machine-viewer-layout=""
         data-list-view-active={isCustomer && view === "list" ? "" : undefined}
       >
@@ -1013,15 +1011,14 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         {!staffSplitView && (view === "list" || !isCustomer) ? (
           <section
             data-parts-bom=""
-            className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
+            className={`absolute z-[15] bg-[var(--spares-paper)] ${
               isCustomer
-                ? "machine-bom-mobile-list pointer-events-auto overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
-                : "flex flex-col"
+                ? "inset-x-0 bottom-0 top-[3.75rem] machine-bom-mobile-list pointer-events-auto overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
+                : "inset-0 flex flex-col"
             } ${!isCustomer && view !== "list" ? "invisible pointer-events-none" : ""}`}
             data-bom-list-blocked={
               partSheetCompactPeek || partSheetListPeekGuard ? "" : undefined
             }
-            style={{ paddingTop: "3.65rem" }}
             aria-hidden={!isCustomer && view !== "list" ? true : undefined}
           >
             {isCustomer ? (
@@ -1095,7 +1092,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onIsolate={isolateSelected}
             onShowAll={showAll}
             onAdd={isCustomer ? addPart : undefined}
-            onDismiss={() => setSelectedPart(null)}
+            onDismiss={() => {
+              setPartSheetCompactPeek(false);
+              setPartSheetListPeekGuard(false);
+              setSelectedPart(null);
+            }}
             dismissOnEscape={!staffSubPartsEditRowKey}
             showAdd={isCustomer}
             held={held}
@@ -1144,7 +1145,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div
-          className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2"
+          className="pointer-events-auto absolute top-3 right-3 left-3 z-30 flex min-w-0 flex-col gap-2"
           data-viewer-chrome-toolbar=""
           role="toolbar"
           aria-label="3D viewer controls"
@@ -1266,12 +1267,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             <button
               type="button"
               data-quote-tray=""
-              onPointerDown={(event) => {
-                if (event.button !== 0) {
-                  return;
-                }
-                event.preventDefault();
-              }}
               onClick={() => {
                 setTrayOpen((open) => (customerTrayDock ? !open : true));
               }}

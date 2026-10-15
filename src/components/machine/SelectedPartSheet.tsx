@@ -198,11 +198,13 @@ export function SelectedPartSheet({
         return;
       }
       event.preventDefault();
+      onListPeekGuard?.(false);
+      onCompactPeekChange?.(false);
       onDismiss();
     }
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, onDismiss, dismissOnEscape]);
+  }, [open, onDismiss, dismissOnEscape, onCompactPeekChange, onListPeekGuard]);
 
   function activate(action: () => void) {
     return {
@@ -287,6 +289,17 @@ export function SelectedPartSheet({
     onSelectSubPart?.(row);
   }
 
+  function sheetSubPartInteractionTarget(target: EventTarget | null): boolean {
+    return (
+      target instanceof Element &&
+      Boolean(
+        target.closest(
+          "button, a, input, textarea, select, [data-part-sheet-control], [data-part-sheet-close], [data-manual-sub-sheet], [data-manual-sub-part], .bom-data-row--hit",
+        ),
+      )
+    );
+  }
+
   function onCompactChipPointerDown(event: React.PointerEvent<HTMLDivElement>) {
     const sheetDraggable =
       mobileCompact || (phoneCompactSheet && mobileExpanded && !more);
@@ -294,12 +307,7 @@ export function SelectedPartSheet({
       return;
     }
     const target = event.target;
-    if (
-      target instanceof Element &&
-      target.closest(
-        "button, a, input, textarea, select, [data-part-sheet-control], [data-part-sheet-close]",
-      )
-    ) {
+    if (sheetSubPartInteractionTarget(target)) {
       return;
     }
     dragExpandRef.current = { pointerId: event.pointerId, startY: event.clientY };
@@ -359,13 +367,7 @@ export function SelectedPartSheet({
     if (!touch) {
       return;
     }
-    const target = event.target;
-    if (
-      target instanceof Element &&
-      target.closest(
-        "button, a, input, textarea, select, [data-part-sheet-control], [data-part-sheet-close]",
-      )
-    ) {
+    if (sheetSubPartInteractionTarget(event.target)) {
       return;
     }
     touchDragRef.current = { startY: touch.clientY };

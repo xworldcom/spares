@@ -359,6 +359,11 @@ body {
     max-height: calc(
       100dvh - var(--spares-header) - env(safe-area-inset-top, 0px) - 0.35rem
     );
+    pointer-events: auto;
+  }
+
+  .machine-viewer .quote-sheet.is-out {
+    pointer-events: none;
   }
 
   .spares-app-tabs .machine-viewer .quote-sheet {
