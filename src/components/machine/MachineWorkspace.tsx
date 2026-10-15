@@ -112,6 +112,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [addToast, setAddToast] = useState<string | null>(null);
   const [undoRemove, setUndoRemove] = useState<TrayLine | null>(null);
   const addToastTimer = useRef<number | null>(null);
+  const addPartLock = useRef(false);
+  const [partSheetCompactPeek, setPartSheetCompactPeek] = useState(false);
   const undoRemoveTimer = useRef<number | null>(null);
   const undoRemoveRef = useRef<TrayLine | null>(null);
   const UNDO_REMOVE_MS = 12_000;
@@ -832,6 +834,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   }
 
   function addPart(part: Part) {
+    if (addPartLock.current) {
+      return;
+    }
+    addPartLock.current = true;
+    window.setTimeout(() => {
+      addPartLock.current = false;
+    }, 750);
     commitTrayLine(part, part.qty || 1);
     if (isCustomer && dismissPartSheetAfterQuoteAdd()) {
       setSelectedPart(null);
@@ -998,6 +1007,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 ? "machine-bom-mobile-list overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
                 : "flex flex-col"
             } ${!isCustomer && view !== "list" ? "invisible pointer-events-none" : ""}`}
+            data-bom-list-blocked={partSheetCompactPeek ? "" : undefined}
             style={{ paddingTop: "3.65rem" }}
             aria-hidden={!isCustomer && view !== "list" ? true : undefined}
           >
@@ -1083,6 +1093,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               (view === "list" || (view === "model" && customerTrayInViewer))
             }
             modelViewMobile={phoneViewerLayout && view === "model"}
+            phoneCompactSheet={
+              phoneViewerLayout && isCustomer && (view === "model" || view === "list")
+            }
+            onCompactPeekChange={setPartSheetCompactPeek}
             showEditSubParts={staffCanEditSubParts}
             onEditSubParts={openStaffSubPartsEditor}
             editSubPartsButtonRef={staffEditSubPartsRef}

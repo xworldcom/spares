@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useMemo, useState, type MouseEvent } from "react";
+import {
+  Fragment,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
 import type { ManualSubAssemblyGroup } from "@/types";
@@ -96,6 +104,7 @@ function PartsBomTreeEntry({
 }) {
   const selected = part.id === selectedPartId;
   const tree = useManualSubAssemblyTree(manualGroup);
+  const parentRowRef = useRef<HTMLLIElement>(null);
 
   function selectFromRow(event: MouseEvent<HTMLLIElement>) {
     const target = event.target;
@@ -112,11 +121,25 @@ function PartsBomTreeEntry({
     onSelect(part);
   }
 
+  function onParentRowKeyDown(event: KeyboardEvent<HTMLLIElement>) {
+    if (event.key === "ArrowRight" && tree.hasChildren && !tree.open) {
+      event.preventDefault();
+      tree.setOpen(true);
+      return;
+    }
+    if (event.key === "ArrowLeft" && tree.hasChildren && tree.open) {
+      event.preventDefault();
+      tree.setOpen(false);
+    }
+  }
+
   return (
     <Fragment>
       <li
+        ref={parentRowRef}
         className={`bom-tree-parent-li ${selected ? "row-on-ink" : ""}`}
         onClick={selectFromRow}
+        onKeyDown={onParentRowKeyDown}
       >
         <BomTreeParentRow
           hasChildren={tree.hasChildren}
@@ -161,6 +184,14 @@ function PartsBomTreeEntry({
   );
 }
 
+function bomFocusableRows(root: HTMLElement): HTMLElement[] {
+  return [
+    ...root.querySelectorAll<HTMLElement>(
+      'li.bom-tree-parent-li .bom-data-row--hit[tabindex="0"], [data-manual-sub-part] .bom-data-row--hit[tabindex="0"]',
+    ),
+  ];
+}
+
 export function PartsBom({
   parts,
   manualSubAssemblies,
@@ -186,6 +217,37 @@ export function PartsBom({
   const filtered = useMemo(
     () => parts.filter((part) => partMatchesBomFilter(part, query, category)),
     [parts, query, category],
+  );
+
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const onBomListKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLUListElement>) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+        return;
+      }
+      const root = listRef.current;
+      if (!root) {
+        return;
+      }
+      const target = event.target;
+      if (!(target instanceof Element) || !root.contains(target)) {
+        return;
+      }
+      const rows = bomFocusableRows(root);
+      const active = document.activeElement;
+      const index = rows.findIndex((row) => row === active);
+      if (index < 0) {
+        return;
+      }
+      event.preventDefault();
+      const next =
+        event.key === "ArrowDown"
+          ? rows[Math.min(index + 1, rows.length - 1)]
+          : rows[Math.max(index - 1, 0)];
+      next?.focus();
+    },
+    [],
   );
 
   const pinnedSelection = useMemo(() => {
@@ -248,7 +310,11 @@ export function PartsBom({
       {filtered.length === 0 && !pinnedSelection ? (
         <p className="spares-muted text-sm">No parts match that search.</p>
       ) : (
-        <ul className="spares-surface overflow-hidden rounded-[22px]">
+        <ul
+          ref={listRef}
+          className="spares-surface overflow-hidden rounded-[22px]"
+          onKeyDown={onBomListKeyDown}
+        >
           {pinnedSelection ? (
             <li key={`pinned:${pinnedSelection.id}`} data-bom-pinned-selection="">
               <div className="flex min-h-14 w-full items-center gap-3 px-4 py-2 row-on-ink">

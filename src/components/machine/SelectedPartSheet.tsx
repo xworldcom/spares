@@ -61,6 +61,8 @@ export function SelectedPartSheet({
   editSubPartsButtonRef,
   subPartsEditorOpen = false,
   modelViewMobile = false,
+  phoneCompactSheet = false,
+  onCompactPeekChange,
   dismissOnEscape = true,
 }: {
   part: Part | null;
@@ -76,6 +78,9 @@ export function SelectedPartSheet({
   subPartsEditorOpen?: boolean;
   /** Phone 3D: dock chip above tab bar so viewer controls stay clear. */
   modelViewMobile?: boolean;
+  /** Phone list or 3D: compact peek until expanded. */
+  phoneCompactSheet?: boolean;
+  onCompactPeekChange?: (compact: boolean) => void;
   dismissOnEscape?: boolean;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
@@ -100,13 +105,43 @@ export function SelectedPartSheet({
   const [more, setMore] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [blockSheetPointer, setBlockSheetPointer] = useState(false);
+  const [addPending, setAddPending] = useState(false);
   const chipRef = useRef<HTMLDivElement>(null);
   const dragExpandRef = useRef<{ pointerId: number; startY: number } | null>(null);
+  const touchDragRef = useRef<{ startY: number } | null>(null);
+  const addPendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setMore(false);
     setMobileExpanded(false);
+    setAddPending(false);
   }, [part?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (addPendingTimer.current != null) {
+        clearTimeout(addPendingTimer.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const compact =
+      Boolean(open && part) &&
+      phoneCompactSheet &&
+      !mobileExpanded &&
+      !more &&
+      !subPartsEditorOpen;
+    onCompactPeekChange?.(compact);
+  }, [
+    open,
+    part,
+    phoneCompactSheet,
+    mobileExpanded,
+    more,
+    subPartsEditorOpen,
+    onCompactPeekChange,
+  ]);
 
   useEffect(() => {
     chipRef.current?.scrollTo(0, 0);
@@ -189,18 +224,36 @@ export function SelectedPartSheet({
     showAdd && onAdd && !showAddInHeader && !showAddOnSubPartRows,
   );
   const mobileCompact =
-    modelViewMobile && !mobileExpanded && !more && !subPartsEditorOpen;
+    phoneCompactSheet && !mobileExpanded && !more && !subPartsEditorOpen;
+
   const compactSubSummary =
-    manualSubChildren && manualSubChildren.length > 0
+    viewingParentAssembly && manualSubChildren && manualSubChildren.length > 0
       ? manualSubCompactSummary(manualSubChildren)
       : "";
+
+  function runAdd() {
+    if (!onAdd || !part || !canAct || addPending) {
+      return;
+    }
+    setAddPending(true);
+    onAdd(part);
+    if (addPendingTimer.current != null) {
+      clearTimeout(addPendingTimer.current);
+    }
+    addPendingTimer.current = setTimeout(() => {
+      setAddPending(false);
+      addPendingTimer.current = null;
+    }, 750);
+  }
 
   function expandMobileSheet() {
     setMobileExpanded(true);
   }
 
   function onCompactChipPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (!mobileCompact || event.button !== 0) {
+    const sheetDraggable =
+      mobileCompact || (phoneCompactSheet && mobileExpanded && !more);
+    if (!sheetDraggable || event.button !== 0) {
       return;
     }
     const target = event.target;
@@ -221,9 +274,20 @@ export function SelectedPartSheet({
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
-    if (event.clientY < drag.startY - 28) {
+    const dy = event.clientY - drag.startY;
+    if (mobileCompact && dy < -28) {
       dragExpandRef.current = null;
       expandMobileSheet();
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (!mobileCompact && mobileExpanded && !more && dy > 28) {
+      dragExpandRef.current = null;
+      setMobileExpanded(false);
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);
       } catch {
@@ -246,6 +310,69 @@ export function SelectedPartSheet({
     if (Math.abs(event.clientY - drag.startY) < 8) {
       expandMobileSheet();
     }
+  }
+
+  function onCompactTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    const sheetDraggable =
+      mobileCompact || (phoneCompactSheet && mobileExpanded && !more);
+    if (!sheetDraggable) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest(
+        "button, a, input, textarea, select, [data-part-sheet-control], [data-part-sheet-close]",
+      )
+    ) {
+      return;
+    }
+    touchDragRef.current = { startY: touch.clientY };
+  }
+
+  function onCompactTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    const drag = touchDragRef.current;
+    const touch = event.changedTouches[0];
+    if (!drag || !touch) {
+      return;
+    }
+    const dy = touch.clientY - drag.startY;
+    if (mobileCompact && dy < -28) {
+      touchDragRef.current = null;
+      expandMobileSheet();
+      event.preventDefault();
+      return;
+    }
+    if (!mobileCompact && mobileExpanded && !more && dy > 28) {
+      touchDragRef.current = null;
+      setMobileExpanded(false);
+      event.preventDefault();
+    }
+  }
+
+  function onCompactTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    const drag = touchDragRef.current;
+    const touch = event.changedTouches[0];
+    if (!drag || !touch) {
+      return;
+    }
+    touchDragRef.current = null;
+    if (mobileCompact && Math.abs(touch.clientY - drag.startY) < 8) {
+      expandMobileSheet();
+    }
+  }
+
+  function selectParentExpanded() {
+    if (!manualSubParent || !onSelectSubPart) {
+      return;
+    }
+    setMobileExpanded(true);
+    setMore(false);
+    onSelectSubPart(manualSubParent);
   }
 
   return (
@@ -284,6 +411,10 @@ export function SelectedPartSheet({
         onPointerMove={onCompactChipPointerMove}
         onPointerUp={onCompactChipPointerUp}
         onPointerCancel={onCompactChipPointerUp}
+        onTouchStart={onCompactTouchStart}
+        onTouchMove={onCompactTouchMove}
+        onTouchEnd={onCompactTouchEnd}
+        onTouchCancel={onCompactTouchEnd}
       >
         {isolatedViewPart ? (
           <div
@@ -310,7 +441,7 @@ export function SelectedPartSheet({
             {isManualSubChild && manualSubParent && onSelectSubPart ? (
               <button
                 type="button"
-                {...activate(() => onSelectSubPart(manualSubParent))}
+                {...activate(selectParentExpanded)}
                 className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >
@@ -342,6 +473,14 @@ export function SelectedPartSheet({
               <p
                 className="part-sheet-compact-summary chrome-quiet mt-0.5 truncate text-[11px] leading-snug"
                 data-part-sheet-compact-summary=""
+                onClick={(event) => {
+                  if (!mobileCompact) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  expandMobileSheet();
+                }}
               >
                 {compactSubSummary}
               </p>
@@ -350,8 +489,8 @@ export function SelectedPartSheet({
           {showAddInHeader ? (
             <button
               type="button"
-              {...activate(() => onAdd!(part))}
-              disabled={!canAct}
+              {...activate(runAdd)}
+              disabled={!canAct || addPending}
               className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >
               Add
@@ -394,11 +533,11 @@ export function SelectedPartSheet({
                   Qty {part.qty}
                 </span>
               ) : null}
-              {showAddInHeader || showAddInFooter ? (
+              {showAddInFooter && !showAddInHeader ? (
                 <button
                   type="button"
-                  {...activate(() => onAdd!(part))}
-                  disabled={!canAct}
+                  {...activate(runAdd)}
+                  disabled={!canAct || addPending}
                   className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
                 >
                   Add
@@ -416,7 +555,10 @@ export function SelectedPartSheet({
             </div>
           </>
         ) : null}
-        {manualSubChildren && manualSubChildren.length > 0 && manualSubParent ? (
+        {!mobileCompact &&
+        manualSubChildren &&
+        manualSubChildren.length > 0 &&
+        manualSubParent ? (
           <div
             className="mb-2 border-t border-white/8 pt-2"
             data-manual-sub-sheet=""
@@ -447,8 +589,8 @@ export function SelectedPartSheet({
           {showAddInFooter ? (
             <button
               type="button"
-              {...activate(() => onAdd!(part))}
-              disabled={!canAct}
+              {...activate(runAdd)}
+              disabled={!canAct || addPending}
               className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >
               Add
