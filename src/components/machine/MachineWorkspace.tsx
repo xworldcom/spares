@@ -456,6 +456,13 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       return lifecycle?.status === "obsolete" || lifecycle?.status === "announced";
     });
   }, [joinedParts, lifecycleById]);
+  const atRiskPartsForLifecycleLinks = useMemo(() => {
+    const selectedId = selectedPart?.id;
+    if (!selectedId) {
+      return atRiskPartsOnMachine;
+    }
+    return atRiskPartsOnMachine.filter((part) => part.id !== selectedId);
+  }, [atRiskPartsOnMachine, selectedPart?.id]);
 
   const clearUndoRemove = useCallback(() => {
     if (undoRemoveTimer.current != null) {
@@ -887,9 +894,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
-          {!isCustomer && atRiskPartsOnMachine.length > 0 && view === "model" ? (
+          {!isCustomer && atRiskPartsForLifecycleLinks.length > 0 && view === "model" ? (
             <div className="flex flex-wrap gap-2" data-machine-lifecycle-links="">
-              {atRiskPartsOnMachine.map((part) => (
+              {atRiskPartsForLifecycleLinks.map((part) => (
                 <Link
                   key={part.id}
                   href={staffPartLifecycleViewHref(part.id)}
