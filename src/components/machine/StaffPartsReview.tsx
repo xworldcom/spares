@@ -1,6 +1,15 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import {
   extraModelMeshes,
@@ -46,6 +55,14 @@ function draftFromRow(row: StaffCatalogRow) {
   };
 }
 
+function staffBomFocusableRows(root: HTMLElement): HTMLElement[] {
+  return [
+    ...root.querySelectorAll<HTMLElement>(
+      'li.bom-tree-parent-li[tabindex="0"], [data-manual-sub-part] .bom-data-row--hit[tabindex="0"]',
+    ),
+  ];
+}
+
 function StaffCatalogTreeEntry({
   row,
   machine,
@@ -87,11 +104,37 @@ function StaffCatalogTreeEntry({
     onSelectRow(row);
   }
 
+  function onParentRowArrowKeys(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "ArrowRight" && tree.hasChildren && !tree.open) {
+      event.preventDefault();
+      tree.setOpen(true);
+      return;
+    }
+    if (event.key === "ArrowLeft" && tree.hasChildren && tree.open) {
+      event.preventDefault();
+      tree.setOpen(false);
+    }
+  }
+
+  function onParentRowKeyDown(event: KeyboardEvent<HTMLLIElement>) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelectRow(row);
+      return;
+    }
+    onParentRowArrowKeys(event);
+  }
+
   return (
     <Fragment>
       <li
-        className={`bom-tree-parent-li ${selected ? "row-on-ink" : ""}`}
+        tabIndex={0}
+        role="button"
+        aria-selected={selected}
+        className={`bom-tree-parent-li bom-tree-parent-focus ${selected ? "row-on-ink" : ""}`}
         onClick={selectFromRow}
+        onKeyDown={onParentRowKeyDown}
       >
         <BomTreeParentRow
           hasChildren={tree.hasChildren && Boolean(parentPart)}
@@ -230,6 +273,7 @@ export function StaffPartsReview({
   );
   const subPartsEditRowKey = subPartsEditRowKeyProp ?? subPartsEditRowKeyLocal;
   const subPartsEditOpen = subPartsEditRowKey !== null;
+  const listRef = useRef<HTMLUListElement>(null);
 
   function setSubPartsEditRowKey(next: string | null) {
     if (onSubPartsEditRowKeyChange) {
@@ -361,6 +405,66 @@ export function StaffPartsReview({
     });
   }
 
+  const onStaffBomListKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLUListElement>) => {
+      const root = listRef.current;
+      if (!root) {
+        return;
+      }
+      const target = event.target;
+      if (!(target instanceof Element) || !root.contains(target)) {
+        return;
+      }
+      const rows = staffBomFocusableRows(root);
+      const active = document.activeElement;
+      const index = rows.findIndex((row) => row === active);
+
+      if (event.key === "Home" && rows.length > 0) {
+        event.preventDefault();
+        rows[0]?.focus();
+        return;
+      }
+      if (event.key === "End" && rows.length > 0) {
+        event.preventDefault();
+        rows[rows.length - 1]?.focus();
+        return;
+      }
+
+      if (event.key === "ArrowLeft" && index >= 0) {
+        const activeEl = rows[index];
+        const childPart = activeEl.closest("[data-manual-sub-part]");
+        if (childPart instanceof HTMLElement) {
+          let prior = childPart.previousElementSibling;
+          while (prior) {
+            if (
+              prior instanceof HTMLLIElement &&
+              prior.classList.contains("bom-tree-parent-li")
+            ) {
+              event.preventDefault();
+              prior.focus();
+              return;
+            }
+            prior = prior.previousElementSibling;
+          }
+        }
+      }
+
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+        return;
+      }
+      if (index < 0) {
+        return;
+      }
+      event.preventDefault();
+      const next =
+        event.key === "ArrowDown"
+          ? rows[Math.min(index + 1, rows.length - 1)]
+          : rows[Math.max(index - 1, 0)];
+      next?.focus();
+    },
+    [],
+  );
+
   const listEditorOpen = subPartsEditOpen && renderSubPartsOverlay;
 
   return (
@@ -392,7 +496,11 @@ export function StaffPartsReview({
         ) : filtered.length === 0 ? (
           <p className="spares-muted mt-4 text-sm">No parts match that search.</p>
         ) : (
-          <ul className="spares-surface mt-3 overflow-hidden rounded-[22px]">
+          <ul
+            ref={listRef}
+            className="spares-surface mt-3 overflow-hidden rounded-[22px]"
+            onKeyDown={onStaffBomListKeyDown}
+          >
             {filtered.map((row) => (
               <StaffCatalogTreeEntry
                 key={row.key}
