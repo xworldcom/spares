@@ -61,6 +61,7 @@ import {
   writePersistedHiddenParts,
 } from "@/lib/ui/hidden-parts-persist";
 import { DocumentTitle } from "@/components/nav/DocumentTitle";
+import { rememberMachineName } from "@/lib/machine-name-cache";
 import { dismissPartSheetAfterQuoteAdd } from "@/lib/ui/quote-tray-open-policy";
 import { shouldAutoDismissPartSheet } from "@/lib/ui/part-sheet";
 import {
@@ -268,6 +269,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           return;
         }
         setMachine(next);
+        const loadedName = next.name.trim();
+        if (loadedName) {
+          rememberMachineName(machineId, loadedName);
+        }
         setSelectedPart(null);
         setIsolatedId(null);
         setExplode(0);
@@ -501,6 +506,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         return;
       }
       if (target.closest("[data-staff-edit]")) {
+        return;
+      }
+      if (target.closest("[data-staff-manual-sub-overlay], [data-staff-manual-sub]")) {
         return;
       }
       if (target.closest("[data-quote-tray]")) {
@@ -1042,6 +1050,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <div
             className="staff-manual-sub-overlay-fixed spares-surface border-t border-white/10 px-4 py-3 shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
             data-staff-manual-sub-overlay=""
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
           >
             <StaffManualSubAssemblyEditor
               machine={machine}

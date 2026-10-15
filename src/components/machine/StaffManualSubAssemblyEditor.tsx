@@ -126,7 +126,10 @@ export function StaffManualSubAssemblyEditor({
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
           className="btn-soft inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[12px] font-semibold"
         >
           Cancel

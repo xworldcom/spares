@@ -126,8 +126,13 @@ export function CustomerBomPartRow({
   onAdd?: (part: Part) => void;
   showAdd?: boolean;
 }) {
+  const addVisible = Boolean(showAdd && onAdd);
   return (
-    <div className="bom-data-row flex min-h-[55px] w-full min-w-0 items-center gap-2 py-0">
+    <div
+      className={`bom-data-row bom-data-row--grid min-h-[55px] w-full min-w-0 py-0 ${
+        addVisible ? "" : "bom-data-row--no-add"
+      }`}
+    >
       <button
         type="button"
         onClick={(event) => {
@@ -135,10 +140,12 @@ export function CustomerBomPartRow({
           onSelect(part);
         }}
         aria-selected={selected}
-        className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+        className="bom-row-main min-w-0 py-1 text-left"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium">{part.name}</span>
+        <span className="bom-row-text min-w-0">
+          <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
+            {part.name}
+          </span>
           <span
             className={`block truncate font-mono text-xs ${
               selected ? "row-on-ink-muted" : "spares-muted"
@@ -153,27 +160,29 @@ export function CustomerBomPartRow({
             onLightBackground={selected}
           />
         </span>
-        <span
-          className={`bom-qty-col shrink-0 tabular-nums text-sm ${
-            selected ? "row-on-ink-muted" : "spares-muted"
-          }`}
-        >
-          {part.qty}
-        </span>
       </button>
-      {showAdd && onAdd ? (
+      <span
+        className={`bom-qty-col tabular-nums text-sm ${
+          selected ? "row-on-ink-muted" : "spares-muted"
+        }`}
+      >
+        {part.qty}
+      </span>
+      {addVisible ? (
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            onAdd(part);
+            onAdd!(part);
           }}
-          className="bom-add-col btn-accent inline-flex h-11 min-h-11 shrink-0 items-center justify-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+          className="bom-add-col btn-accent inline-flex h-11 min-h-11 items-center justify-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
           data-selected={selected ? "" : undefined}
         >
           Add
         </button>
-      ) : null}
+      ) : (
+        <span className="bom-add-col" aria-hidden="true" />
+      )}
     </div>
   );
 }
@@ -194,34 +203,38 @@ export function StaffCatalogPartRow({
   secondaryLine?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect();
-      }}
-      aria-selected={selected}
-      className="bom-data-row flex min-h-[55px] w-full min-w-0 items-center gap-2 py-1 text-left"
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium">{name}</span>
-        <span
-          className={`block truncate font-mono text-xs ${
-            selected ? "row-on-ink-muted" : "spares-muted"
-          }`}
-        >
-          {partNumber}
-          {secondaryLine ? `  ·  ${secondaryLine}` : ""}
+    <div className="bom-data-row bom-data-row--grid bom-data-row--no-add min-h-[55px] w-full min-w-0 py-1">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect();
+        }}
+        aria-selected={selected}
+        className="bom-row-main min-w-0 text-left"
+      >
+        <span className="bom-row-text min-w-0">
+          <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
+            {name}
+          </span>
+          <span
+            className={`block truncate font-mono text-xs ${
+              selected ? "row-on-ink-muted" : "spares-muted"
+            }`}
+          >
+            {partNumber}
+            {secondaryLine ? `  ·  ${secondaryLine}` : ""}
+          </span>
         </span>
-      </span>
+      </button>
       <span
-        className={`bom-qty-col shrink-0 tabular-nums text-sm ${
+        className={`bom-qty-col tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
         }`}
       >
         {qty}
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -248,7 +261,7 @@ function ManualSubTreeChildShell({
       className={`border-t border-white/6 ${selectionClass}`}
       data-tree-layout={treeLayout}
     >
-      <div className="bom-tree-child-inner relative pr-4">{children}</div>
+      <div className="bom-tree-child-inner relative">{children}</div>
     </li>
   );
 }

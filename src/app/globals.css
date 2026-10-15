@@ -948,11 +948,16 @@ html.viewer-immersive-fs .spares-tabbar {
 @media (min-width: 1024px) and (pointer: fine) {
   .machine-context-name {
     display: block;
+    flex-shrink: 0;
   }
 
   .machine-context-tabs {
     width: fit-content;
     flex: 0 1 auto;
+    max-width: min(100%, 42rem);
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-inline-end: 0.35rem;
   }
 }
 
@@ -1076,6 +1081,7 @@ html.spares-embed .spares-app-stage {
 [data-parts-bom] {
   --bom-qty-col: 2.25rem;
   --bom-add-col: 4.25rem;
+  --bom-row-pad-end: 0.75rem;
 }
 
 .bom-qty-col {
@@ -1087,6 +1093,42 @@ html.spares-embed .spares-app-stage {
 .bom-add-col {
   width: var(--bom-add-col);
   min-width: var(--bom-add-col);
+}
+
+.bom-data-row--grid {
+  display: grid;
+  align-items: center;
+  column-gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) var(--bom-qty-col) var(--bom-add-col);
+}
+
+.bom-data-row--grid.bom-data-row--no-add {
+  grid-template-columns: minmax(0, 1fr) var(--bom-qty-col);
+}
+
+.bom-row-main {
+  display: block;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.bom-tree-name .bom-data-row--grid {
+  width: 100%;
+}
+
+[data-parts-bom] .bom-tree-parent-li {
+  cursor: default;
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+  [data-parts-bom] .bom-tree-parent-li {
+    cursor: pointer;
+  }
 }
 
 .machine-stage-grid[data-customer-desktop="true"]:not([data-tray="open"]) {
@@ -1102,7 +1144,7 @@ html.spares-embed .spares-app-stage {
     auto;
   align-items: center;
   min-height: 55px;
-  padding: 0.25rem 1rem 0.25rem 0;
+  padding: 0.25rem var(--bom-row-pad-end, 0.75rem) 0.25rem 0;
   column-gap: 0.125rem;
 }
 
@@ -1137,12 +1179,23 @@ html.spares-embed .spares-app-stage {
 .bom-tree-child-inner {
   margin-left: calc(var(--bom-tree-chevron-col, 2.75rem) + var(--bom-tree-badge-col, 1.75rem));
   padding-left: 1rem;
-  padding-right: 0;
+  padding-right: var(--bom-row-pad-end, 0.75rem);
   border-left: 1px solid rgba(255, 255, 255, 0.14);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .bom-data-row {
   padding-inline-end: 0;
+}
+
+[data-parts-bom] [data-manual-sub-part] .bom-data-row--grid {
+  min-height: 55px;
+}
+
+[data-parts-bom] .bom-qty-col {
+  padding-inline-end: 0;
+  box-sizing: border-box;
 }
 
 [data-manual-sub-sheet] {
@@ -1177,6 +1230,7 @@ html.spares-embed .spares-app-stage {
   left: 0;
   max-height: min(70vh, 28rem);
   overflow-y: auto;
+  padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .machine-viewer .staff-manual-sub-overlay-fixed {
@@ -1187,6 +1241,7 @@ html.spares-embed .spares-app-stage {
   left: 0;
   max-height: min(70vh, 28rem);
   overflow-y: auto;
+  padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .machine-viewer .quote-sheet.is-peek {
@@ -1241,11 +1296,29 @@ html.spares-embed .spares-app-stage {
   max-width: none;
 }
 
+.part-sheet-chip {
+  max-height: min(52vh, 20rem);
+}
+
+.spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
+  max-height: min(36vh, 13.5rem);
+}
+
 .part-sheet-chip [data-part-sheet-title] {
   overflow: visible;
   text-overflow: unset;
   white-space: normal;
   word-break: break-word;
+}
+
+[data-manual-sub-sheet] .bom-row-text > span:first-child {
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  display: block;
 }
 
 .machine-bom-scroll {

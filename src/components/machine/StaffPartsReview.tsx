@@ -85,30 +85,36 @@ function StaffCatalogTreeEntry({
           count={tree.count}
           selected={selected}
           nameCell={
-            <button
-              type="button"
-              onPointerDown={(event) => {
-                if (event.button !== 0) {
-                  return;
-                }
-                event.preventDefault();
-                onSelectRow(row);
-              }}
-              aria-selected={selected}
-              className="bom-data-row flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+            <div
+              className="bom-data-row bom-data-row--grid bom-data-row--no-add min-h-[55px] w-full min-w-0 py-1"
             >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium">{row.name}</span>
-                <span
-                  className={`block truncate font-mono text-xs ${
-                    selected ? "row-on-ink-muted" : "spares-muted"
-                  }`}
-                >
-                  {row.partNumber}
-                  {row.meshName ? `  ·  ${row.meshName}` : ""}
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  if (event.button !== 0) {
+                    return;
+                  }
+                  event.preventDefault();
+                  onSelectRow(row);
+                }}
+                aria-selected={selected}
+                className="bom-row-main min-w-0"
+              >
+                <span className="bom-row-text min-w-0">
+                  <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
+                    {row.name}
+                  </span>
+                  <span
+                    className={`block truncate font-mono text-xs ${
+                      selected ? "row-on-ink-muted" : "spares-muted"
+                    }`}
+                  >
+                    {row.partNumber}
+                    {row.meshName ? `  ·  ${row.meshName}` : ""}
+                  </span>
                 </span>
-              </span>
-              <span className="bom-qty-col shrink-0 text-right">
+              </button>
+              <span className="bom-qty-col text-right">
                 {row.status === "missing-mesh" ? (
                   <span
                     className={`block text-[12px] ${
@@ -126,7 +132,7 @@ function StaffCatalogTreeEntry({
                   {row.qty}
                 </span>
               </span>
-            </button>
+            </div>
           }
         />
       </li>
@@ -455,6 +461,9 @@ export function StaffPartsReview({
         <div
           className="staff-manual-sub-overlay spares-surface border-t border-white/10 px-4 py-3 shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
           data-staff-manual-sub-overlay=""
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
         >
           <StaffManualSubAssemblyEditor
             machine={machine}

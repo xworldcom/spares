@@ -134,7 +134,7 @@ export function SelectedPartSheet({
       }
     >
       <div
-        className={`viewer-chrome-chip pointer-events-auto max-h-[min(52vh,20rem)] overflow-y-auto rounded-2xl px-3 py-2.5 part-sheet-chip ${
+        className={`viewer-chrome-chip pointer-events-auto overflow-y-auto rounded-2xl px-3 py-2.5 part-sheet-chip ${
           held ? "scale-[1.02]" : "scale-100"
         } chrome-fade`}
         onPointerDown={(event) => {

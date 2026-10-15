@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type MouseEvent } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
 import type { ManualSubAssemblyGroup } from "@/types";
@@ -23,39 +23,43 @@ function PartRowSelectButton({
   onSelect: (part: Part) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect(part);
-      }}
-      aria-selected={selected}
-      className="bom-data-row flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium">{part.name}</span>
-        <span
-          className={`block truncate font-mono text-xs ${
-            selected ? "row-on-ink-muted" : "spares-muted"
-          }`}
-        >
-          {part.id}
-          {part.replaces ? ` · replaces ${part.replaces}` : ""}
+    <div className="bom-data-row bom-data-row--grid bom-data-row--no-add min-h-[55px] w-full min-w-0 py-1">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(part);
+        }}
+        aria-selected={selected}
+        className="bom-row-main min-w-0 text-left"
+      >
+        <span className="bom-row-text min-w-0">
+          <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
+            {part.name}
+          </span>
+          <span
+            className={`block truncate font-mono text-xs ${
+              selected ? "row-on-ink-muted" : "spares-muted"
+            }`}
+          >
+            {part.id}
+            {part.replaces ? ` · replaces ${part.replaces}` : ""}
+          </span>
+          <PartLifecycleNotice
+            lifecycle={part.lifecycle}
+            compact
+            onLightBackground={selected}
+          />
         </span>
-        <PartLifecycleNotice
-          lifecycle={part.lifecycle}
-          compact
-          onLightBackground={selected}
-        />
-      </span>
+      </button>
       <span
-        className={`bom-qty-col shrink-0 tabular-nums text-sm ${
+        className={`bom-qty-col tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
         }`}
       >
         {part.qty}
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -77,9 +81,27 @@ function PartsBomTreeEntry({
   const selected = part.id === selectedPartId;
   const tree = useManualSubAssemblyTree(manualGroup);
 
+  function selectFromRow(event: MouseEvent<HTMLLIElement>) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (
+      target.closest(
+        "button, a, input, textarea, select, [data-bom-row-skip-select]",
+      )
+    ) {
+      return;
+    }
+    onSelect(part);
+  }
+
   return (
     <Fragment>
-      <li className={selected ? "row-on-ink" : undefined}>
+      <li
+        className={`bom-tree-parent-li ${selected ? "row-on-ink" : ""}`}
+        onClick={selectFromRow}
+      >
         <BomTreeParentRow
           hasChildren={tree.hasChildren}
           expand={
