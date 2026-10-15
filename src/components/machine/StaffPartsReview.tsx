@@ -123,14 +123,22 @@ function StaffCatalogTreeEntry({
               </span>
               <span className="bom-qty-col text-right">
                 {row.status === "missing-mesh" ? (
-                  <span
-                    className={`block text-[11px] leading-tight ${
-                      selected ? "row-on-ink-muted" : "spares-muted"
-                    }`}
-                    title="Missing mesh"
-                    aria-label="Missing mesh"
-                  >
-                    {statusLabel(row.status)}
+                  <span className="block leading-tight">
+                    <span
+                      className={`block tabular-nums text-sm ${
+                        selected ? "row-on-ink-muted" : "spares-muted"
+                      }`}
+                    >
+                      {row.qty}
+                    </span>
+                    <span
+                      className={`block text-[11px] ${
+                        selected ? "row-on-ink-muted" : "spares-muted"
+                      }`}
+                      title="Missing mesh"
+                    >
+                      {statusLabel(row.status)}
+                    </span>
                   </span>
                 ) : (
                   <span

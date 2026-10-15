@@ -52,7 +52,6 @@ export function StaffManualSubAssemblyEditor({
     }
     const root =
       section.closest<HTMLElement>("[data-staff-manual-sub-overlay]") ?? section;
-    cancelRef.current?.focus({ preventScroll: true });
     return bindFocusTrap(root, { initialFocus: cancelRef.current });
   }, [children.length, editingId]);
 
@@ -223,6 +222,7 @@ export function StaffManualSubAssemblyEditor({
                     <button
                       type="button"
                       disabled={saving}
+                      tabIndex={-1}
                       onClick={() => void moveChild(child.id, -1)}
                       className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
                       aria-label="Move up"
@@ -236,6 +236,7 @@ export function StaffManualSubAssemblyEditor({
                     <button
                       type="button"
                       disabled={saving}
+                      tabIndex={-1}
                       onClick={() => void moveChild(child.id, 1)}
                       className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
                       aria-label="Move down"

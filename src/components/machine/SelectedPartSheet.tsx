@@ -66,10 +66,32 @@ export function SelectedPartSheet({
   const open = partSheetVisible(part?.id);
   const canAct = open && ready;
   const [more, setMore] = useState(false);
+  const [blockSheetPointer, setBlockSheetPointer] = useState(false);
 
   useEffect(() => {
     setMore(false);
   }, [part?.id]);
+
+  useEffect(() => {
+    if (!open) {
+      setBlockSheetPointer(false);
+      return;
+    }
+    setBlockSheetPointer(true);
+    function release() {
+      setBlockSheetPointer(false);
+    }
+    window.addEventListener("pointerup", release, { once: true });
+    window.addEventListener("pointercancel", release, { once: true });
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(release);
+    });
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+      cancelAnimationFrame(frame);
+    };
+  }, [open, part?.id]);
 
   useEffect(() => {
     if (!open) {
@@ -119,6 +141,11 @@ export function SelectedPartSheet({
     part.id === manualSubParent?.id;
   const isManualSubChild =
     Boolean(manualSubParent) && part.id !== manualSubParent?.id;
+  const hasManualSubSheet =
+    Boolean(manualSubChildren?.length) && Boolean(manualSubParent);
+  const showAddInHeader =
+    Boolean(showAdd && onAdd && (hasManualSubSheet || isParentAssembly || isManualSubChild));
+  const showAddInFooter = Boolean(showAdd && onAdd && !showAddInHeader);
 
   return (
     <div
@@ -137,9 +164,10 @@ export function SelectedPartSheet({
       }
     >
       <div
-        className={`viewer-chrome-chip pointer-events-auto overflow-x-hidden rounded-2xl px-3 py-2.5 part-sheet-chip ${
-          held ? "scale-[1.02]" : "scale-100"
-        } chrome-fade`}
+        className={`viewer-chrome-chip overflow-x-hidden rounded-2xl px-3 py-2.5 part-sheet-chip ${
+          blockSheetPointer ? "pointer-events-none" : "pointer-events-auto"
+        } ${held ? "scale-[1.02]" : "scale-100"} chrome-fade`}
+        data-part-sheet-chip=""
         onPointerDown={(event) => {
           event.stopPropagation();
         }}
@@ -170,12 +198,13 @@ export function SelectedPartSheet({
               <button
                 type="button"
                 {...activate(() => onSelectSubPart(manualSubParent))}
-                className="part-sheet-back-parent mb-1.5 inline-flex h-11 min-h-11 w-full max-w-full items-center gap-1.5 rounded-full bg-white/14 px-3 text-[12px] font-semibold text-[var(--spares-on-chip)]"
+                className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1.5 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >
-                <span aria-hidden="true" className="text-base leading-none">←</span>
-                <span className="min-w-0 truncate text-left">
-                  Back to {manualSubParent.name}
+                <span aria-hidden="true" className="shrink-0 text-base leading-none">←</span>
+                <span className="min-w-0 text-left leading-snug">
+                  <span className="block text-[11px] font-medium opacity-80">Back to</span>
+                  <span className="block break-words">{manualSubParent.name}</span>
                 </span>
               </button>
             ) : null}
@@ -195,10 +224,10 @@ export function SelectedPartSheet({
               ) : null}
             </p>
           </div>
-          {showAdd && onAdd && (isParentAssembly || isManualSubChild) ? (
+          {showAddInHeader ? (
             <button
               type="button"
-              {...activate(() => onAdd(part))}
+              {...activate(() => onAdd!(part))}
               disabled={!canAct}
               className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >
@@ -256,10 +285,10 @@ export function SelectedPartSheet({
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          {showAdd && onAdd && !isParentAssembly ? (
+          {showAddInFooter ? (
             <button
               type="button"
-              {...activate(() => onAdd(part))}
+              {...activate(() => onAdd!(part))}
               disabled={!canAct}
               className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold disabled:opacity-30"
             >
@@ -286,7 +315,10 @@ export function SelectedPartSheet({
           </button>
         </div>
         {more ? (
-          <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
+          <div
+            className="mt-2 space-y-2 border-t border-white/8 pt-2"
+            data-part-sheet-more-panel=""
+          >
             <PartDetailSheet part={part} />
             <div className="flex flex-wrap gap-1.5">
             {showEditSubParts && onEditSubParts ? (
