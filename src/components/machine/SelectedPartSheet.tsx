@@ -32,6 +32,7 @@ export function SelectedPartSheet({
   onEditSubParts,
   showEditSubParts = false,
   modelViewMobile = false,
+  dismissOnEscape = true,
 }: {
   part: Part | null;
   manualSubChildren?: Part[];
@@ -43,6 +44,7 @@ export function SelectedPartSheet({
   showEditSubParts?: boolean;
   /** Phone 3D: dock chip above tab bar so viewer controls stay clear. */
   modelViewMobile?: boolean;
+  dismissOnEscape?: boolean;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
   onHide: () => void;
@@ -74,14 +76,15 @@ export function SelectedPartSheet({
       return;
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onDismiss();
+      if (event.key !== "Escape" || !dismissOnEscape) {
+        return;
       }
+      event.preventDefault();
+      onDismiss();
     }
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, onDismiss]);
+  }, [open, onDismiss, dismissOnEscape]);
 
   function activate(action: () => void) {
     return {

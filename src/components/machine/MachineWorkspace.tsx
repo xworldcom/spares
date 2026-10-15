@@ -1052,6 +1052,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onShowAll={showAll}
             onAdd={isCustomer ? addPart : undefined}
             onDismiss={() => setSelectedPart(null)}
+            dismissOnEscape={!staffSubPartsEditRowKey}
             showAdd={isCustomer}
             held={held}
             listView={isCustomer && view === "list"}
