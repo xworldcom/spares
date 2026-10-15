@@ -32,6 +32,7 @@ export function SelectedPartSheet({
   onEditSubParts,
   showEditSubParts = false,
   editSubPartsButtonRef,
+  subPartsEditorOpen = false,
   modelViewMobile = false,
   dismissOnEscape = true,
 }: {
@@ -44,6 +45,8 @@ export function SelectedPartSheet({
   onEditSubParts?: () => void;
   showEditSubParts?: boolean;
   editSubPartsButtonRef?: RefObject<HTMLButtonElement | null>;
+  /** Staff sub-parts editor open: keep Tab inside the editor trap. */
+  subPartsEditorOpen?: boolean;
   /** Phone 3D: dock chip above tab bar so viewer controls stay clear. */
   modelViewMobile?: boolean;
   dismissOnEscape?: boolean;
@@ -159,6 +162,7 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
+      inert={subPartsEditorOpen ? true : undefined}
       data-sheet-anchor={listView ? "list" : modelViewMobile ? "model-mobile" : "model"}
       className={
         listView

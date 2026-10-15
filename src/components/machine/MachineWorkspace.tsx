@@ -1089,6 +1089,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             showEditSubParts={staffCanEditSubParts}
             onEditSubParts={openStaffSubPartsEditor}
             editSubPartsButtonRef={staffEditSubPartsRef}
+            subPartsEditorOpen={Boolean(staffSubPartsOverlay)}
           />
         ) : null}
         {staffSubPartsOverlay && !isCustomer && view === "model" && !staffSplitView ? (
@@ -1122,6 +1123,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           data-viewer-chrome-toolbar=""
           role="toolbar"
           aria-label="3D viewer controls"
+          inert={staffSubPartsOverlay ? true : undefined}
         >
           <div
             className="flex min-w-0 flex-wrap items-center gap-2"
