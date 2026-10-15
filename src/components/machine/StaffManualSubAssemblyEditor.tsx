@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { bindFocusTrap } from "@/lib/ui/focus-trap";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { bindFocusTrap, focusableElements } from "@/lib/ui/focus-trap";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import type { ManualSubPart } from "@/types";
 import {
@@ -20,11 +20,16 @@ export function StaffManualSubAssemblyEditor({
   parentPart,
   onMachineUpdated,
   onClose,
+  lockBodyScroll = true,
+  returnFocusRef,
 }: {
   machine: MachineDetail;
   parentPart: Part;
   onMachineUpdated: (machine: MachineDetail) => void;
   onClose: () => void;
+  /** List/3D viewer overlays should not trap document scroll. */
+  lockBodyScroll?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const assemblyKey = assemblyKeyForPart(parentPart);
   const group = useMemo(
@@ -52,10 +57,20 @@ export function StaffManualSubAssemblyEditor({
     }
     const root =
       section.closest<HTMLElement>("[data-staff-manual-sub-overlay]") ?? section;
-    return bindFocusTrap(root, { initialFocus: cancelRef.current });
+    const frame = requestAnimationFrame(() => {
+      (cancelRef.current ?? focusableElements(root)[0])?.focus({ preventScroll: true });
+    });
+    const releaseTrap = bindFocusTrap(root, { initialFocus: cancelRef.current });
+    return () => {
+      cancelAnimationFrame(frame);
+      releaseTrap();
+    };
   }, [children.length, editingId]);
 
   useEffect(() => {
+    if (!lockBodyScroll) {
+      return;
+    }
     const scrollY = window.scrollY || document.documentElement.scrollTop;
     const body = document.body;
     const prev = {
@@ -78,7 +93,17 @@ export function StaffManualSubAssemblyEditor({
       body.style.width = prev.width;
       window.scrollTo(0, scrollY);
     };
-  }, []);
+  }, [lockBodyScroll]);
+
+  const closeEditor = useCallback(() => {
+    onClose();
+    const target = returnFocusRef?.current;
+    if (target) {
+      requestAnimationFrame(() => {
+        target.focus({ preventScroll: true });
+      });
+    }
+  }, [onClose, returnFocusRef]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -89,7 +114,7 @@ export function StaffManualSubAssemblyEditor({
         const scrollRoots = Array.from(
           document.querySelectorAll<HTMLElement>(".machine-bom-scroll, [data-staff-parts]"),
         ).map((element) => ({ element, top: element.scrollTop }));
-        onClose();
+        closeEditor();
         const restoreScroll = () => {
           window.scrollTo(0, scrollY);
           document.documentElement.scrollTop = scrollY;
@@ -106,7 +131,7 @@ export function StaffManualSubAssemblyEditor({
     }
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, [closeEditor]);
 
   async function runMutation(
     body:
@@ -192,7 +217,7 @@ export function StaffManualSubAssemblyEditor({
           }}
           onClick={(event) => {
             event.stopPropagation();
-            onClose();
+            closeEditor();
           }}
           className="btn-soft order-first inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold"
         >

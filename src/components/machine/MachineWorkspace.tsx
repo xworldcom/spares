@@ -120,6 +120,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     linesKey: null as string | null,
   });
   const { chromeRef, fullscreen, overlay, enter, exit } = useViewerFullscreen();
+  const staffEditSubPartsRef = useRef<HTMLButtonElement>(null);
   const [overlayFrame, setOverlayFrame] = useState<{ topPx: number; heightPx: number } | null>(
     null,
   );
@@ -1087,12 +1088,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             modelViewMobile={phoneViewerLayout && view === "model"}
             showEditSubParts={staffCanEditSubParts}
             onEditSubParts={openStaffSubPartsEditor}
+            editSubPartsButtonRef={staffEditSubPartsRef}
           />
         ) : null}
         {staffSubPartsOverlay && !isCustomer && view === "model" && !staffSplitView ? (
           <div
             className="staff-manual-sub-overlay-fixed spares-surface border-t border-white/10 px-4 py-3 shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
             data-staff-manual-sub-overlay=""
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manual-sub-heading"
             onPointerDown={(event) => {
               event.stopPropagation();
             }}
@@ -1102,6 +1107,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               parentPart={staffSubPartsOverlay.parentPart}
               onMachineUpdated={setMachine}
               onClose={() => setStaffSubPartsEditRowKey(null)}
+              lockBodyScroll={false}
+              returnFocusRef={staffEditSubPartsRef}
             />
           </div>
         ) : null}
@@ -1110,8 +1117,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           aria-hidden="true"
           className="viewer-chrome-shade pointer-events-none absolute inset-x-0 top-0 z-10 h-20"
         />
-        <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div
+          className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2"
+          data-viewer-chrome-toolbar=""
+          role="toolbar"
+          aria-label="3D viewer controls"
+        >
+          <div
+            className="flex min-w-0 flex-wrap items-center gap-2"
+            data-viewer-chrome-toolbar-row=""
+          >
             {showViewToggle && hasModel ? (
               <div
                 className="viewer-chrome-chip flex h-11 min-h-11 shrink-0 items-center rounded-full px-1"

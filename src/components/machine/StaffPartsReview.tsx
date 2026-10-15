@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import {
   extraModelMeshes,
@@ -203,6 +203,7 @@ export function StaffPartsReview({
   /** When false, parent renders the editor overlay (e.g. over 3D while list is hidden). */
   renderSubPartsOverlay?: boolean;
 }) {
+  const editSubPartsRef = useRef<HTMLButtonElement>(null);
   const unmatched = machine.unmatched;
   const rows = useMemo(
     () => staffCatalogRows(machine.parts, unmatched),
@@ -459,7 +460,9 @@ export function StaffPartsReview({
           selectedManualGroup &&
           selectedManualGroup.children.length > 0 ? (
             <button
+              ref={editSubPartsRef}
               type="button"
+              data-staff-edit-sub-parts=""
               onClick={() => toggleSubPartsEditor(selectedRow.key)}
               className="btn-soft inline-flex h-11 min-h-11 items-center rounded-full px-4 text-[13px] font-semibold"
               aria-expanded={subPartsEditOpen && subPartsEditRowKey === selectedRow.key}
@@ -479,6 +482,9 @@ export function StaffPartsReview({
         <div
           className="staff-manual-sub-overlay spares-surface border-t border-white/10 px-4 py-3 shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
           data-staff-manual-sub-overlay=""
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manual-sub-heading"
           onPointerDown={(event) => {
             event.stopPropagation();
           }}
@@ -490,6 +496,8 @@ export function StaffPartsReview({
             onClose={() => {
               setSubPartsEditRowKey(null);
             }}
+            lockBodyScroll={false}
+            returnFocusRef={editSubPartsRef}
           />
         </div>
       ) : null}
