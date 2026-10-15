@@ -195,7 +195,7 @@ export function SelectedPartSheet({
               ) : null}
             </p>
           </div>
-          {showAdd && onAdd && isParentAssembly ? (
+          {showAdd && onAdd && (isParentAssembly || isManualSubChild) ? (
             <button
               type="button"
               {...activate(() => onAdd(part))}

@@ -1091,14 +1091,25 @@ html.spares-embed .spares-app-stage {
     --bom-row-pad-end: 0;
   }
 
+  [data-parts-bom] {
+    --bom-add-col: 3.75rem;
+  }
+
   [data-parts-bom] .bom-tree-row {
-    --bom-tree-chevron-col: 2.5rem;
-    --bom-tree-badge-col: 1.5rem;
+    --bom-tree-chevron-col: 2.25rem;
+    --bom-tree-badge-col: 1.125rem;
+    column-gap: 0;
+  }
+
+  [data-parts-bom] .bom-tree-child-inner {
+    margin-left: calc(var(--bom-tree-chevron-col, 2.25rem) + var(--bom-tree-badge-col, 1.125rem));
+    padding-left: 0.5rem;
   }
 
   [data-parts-bom] .bom-tree-name {
     min-width: 0;
     flex: 1 1 auto;
+    width: 100%;
   }
 
   .machine-context-tabs {
@@ -1248,6 +1259,17 @@ html.spares-embed .spares-app-stage {
 [data-parts-bom] [data-manual-sub-part] .bom-data-row--grid,
 [data-staff-parts] .bom-data-row--grid {
   min-height: var(--bom-row-min-h, 3.5rem);
+  box-sizing: border-box;
+}
+
+[data-parts-bom] [data-manual-sub-part] .bom-tree-child-inner {
+  display: flex;
+  align-items: stretch;
+}
+
+[data-parts-bom] [data-manual-sub-part] .bom-data-row--grid {
+  flex: 1 1 auto;
+  align-self: center;
 }
 
 [data-parts-bom] .bom-qty-col {
@@ -1285,6 +1307,7 @@ html.spares-embed .spares-app-stage {
 
 [data-staff-parts] {
   position: relative;
+  --bom-qty-col: 3.75rem;
 }
 
 [data-staff-parts] .staff-manual-sub-overlay {
@@ -1326,12 +1349,17 @@ html.spares-embed .spares-app-stage {
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] {
     bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-    max-height: min(44vh, 12.75rem);
+    max-height: calc(
+      100dvh - 6.75rem - 5.25rem - env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
-    max-height: min(44vh, 12.75rem);
+    max-height: calc(
+      100dvh - 6.75rem - 5.25rem - env(safe-area-inset-bottom, 0px)
+    );
     overflow-y: visible;
+    overflow: visible;
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-manual-sub-sheet] {

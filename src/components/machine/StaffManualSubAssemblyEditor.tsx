@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { bindFocusTrap } from "@/lib/ui/focus-trap";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import type { ManualSubPart } from "@/types";
 import {
@@ -35,6 +36,8 @@ export function StaffManualSubAssemblyEditor({
   const [draft, setDraft] = useState<ManualSubPart>(emptyDraft());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setEditingId(null);
@@ -43,11 +46,51 @@ export function StaffManualSubAssemblyEditor({
   }, [parentPart.id, assemblyKey]);
 
   useEffect(() => {
+    const section = rootRef.current;
+    if (!section) {
+      return;
+    }
+    const root =
+      section.closest<HTMLElement>("[data-staff-manual-sub-overlay]") ?? section;
+    cancelRef.current?.focus({ preventScroll: true });
+    return bindFocusTrap(root, { initialFocus: cancelRef.current });
+  }, [children.length, editingId]);
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, []);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        const scrollRoots = Array.from(
+          document.querySelectorAll<HTMLElement>(".machine-bom-scroll, [data-staff-parts]"),
+        ).map((element) => ({ element, top: element.scrollTop }));
         onClose();
+        const restoreScroll = () => {
+          window.scrollTo(0, scrollY);
+          document.documentElement.scrollTop = scrollY;
+          document.body.scrollTop = scrollY;
+          for (const { element, top } of scrollRoots) {
+            element.scrollTop = top;
+          }
+        };
+        restoreScroll();
+        requestAnimationFrame(restoreScroll);
+        setTimeout(restoreScroll, 0);
+        setTimeout(restoreScroll, 50);
       }
     }
     window.addEventListener("keydown", onKey, true);
@@ -122,12 +165,14 @@ export function StaffManualSubAssemblyEditor({
 
   return (
     <section
+      ref={rootRef}
       data-staff-manual-sub=""
       className="mt-1"
       aria-labelledby="manual-sub-heading"
     >
       <div className="staff-manual-sub-toolbar mb-2 flex flex-wrap items-start gap-2">
         <button
+          ref={cancelRef}
           type="button"
           data-staff-manual-sub-cancel=""
           tabIndex={0}
@@ -194,7 +239,9 @@ export function StaffManualSubAssemblyEditor({
                   <p className="font-mono text-xs leading-snug spares-muted break-all">
                     {child.id}
                     {child.vendor ? ` · ${child.vendor}` : ""}
-                    {" · "}qty {child.qty}
+                    <span className="font-sans tabular-nums">
+                      {" · "}×{child.qty}
+                    </span>
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:items-stretch">

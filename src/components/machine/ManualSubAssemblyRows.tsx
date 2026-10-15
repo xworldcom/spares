@@ -151,7 +151,7 @@ export function CustomerBomPartRow({
         }
       }}
       aria-selected={selected}
-      className={`bom-data-row bom-data-row--grid bom-data-row--hit w-full min-w-0 py-0 ${
+      className={`bom-data-row bom-data-row--grid bom-data-row--hit w-full min-w-0 py-1 ${
         addVisible ? "" : "bom-data-row--no-add"
       }`}
     >
