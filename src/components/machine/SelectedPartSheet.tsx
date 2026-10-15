@@ -134,7 +134,7 @@ export function SelectedPartSheet({
       }
     >
       <div
-        className={`viewer-chrome-chip pointer-events-auto overflow-y-auto rounded-2xl px-3 py-2.5 part-sheet-chip ${
+        className={`viewer-chrome-chip pointer-events-auto overflow-x-hidden rounded-2xl px-3 py-2.5 part-sheet-chip ${
           held ? "scale-[1.02]" : "scale-100"
         } chrome-fade`}
         onPointerDown={(event) => {
@@ -167,11 +167,13 @@ export function SelectedPartSheet({
               <button
                 type="button"
                 {...activate(() => onSelectSubPart(manualSubParent))}
-                className="mb-1 inline-flex h-9 max-w-full items-center gap-1 rounded-full bg-white/10 px-2.5 text-[11px] font-semibold text-[var(--spares-on-chip)]"
+                className="part-sheet-back-parent mb-1.5 inline-flex h-11 min-h-11 w-full max-w-full items-center gap-1.5 rounded-full bg-white/14 px-3 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >
-                <span aria-hidden="true">←</span>
-                <span className="break-words text-left">{manualSubParent.name}</span>
+                <span aria-hidden="true" className="text-base leading-none">←</span>
+                <span className="min-w-0 truncate text-left">
+                  Back to {manualSubParent.name}
+                </span>
               </button>
             ) : null}
             <p
@@ -181,7 +183,13 @@ export function SelectedPartSheet({
               {part.name}
             </p>
             <p className="chrome-quiet font-mono text-[11px] break-all">
-              {part.id}
+              <span>{part.id}</span>
+              {typeof part.qty === "number" && part.qty > 0 ? (
+                <span className="part-sheet-qty-inline font-sans tabular-nums">
+                  {" "}
+                  · ×{part.qty}
+                </span>
+              ) : null}
             </p>
           </div>
           {showAdd && onAdd && isParentAssembly ? (
@@ -207,11 +215,20 @@ export function SelectedPartSheet({
           </button>
         </div>
         <PartLifecycleNotice lifecycle={part.lifecycle} compact />
-        {partSheetMetaLine(part) ? (
-          <p className="chrome-quiet mb-1 text-[11px] leading-snug break-words">
-            {partSheetMetaLine(part)}
-          </p>
-        ) : null}
+        {(() => {
+          const bits: string[] = [];
+          if (part.vendor?.trim()) {
+            bits.push(part.vendor.trim());
+          }
+          if (part.stock?.trim()) {
+            bits.push(`stock ${part.stock.trim()}`);
+          }
+          return bits.length > 0 ? (
+            <p className="chrome-quiet mb-1 text-[11px] leading-snug break-words">
+              {bits.join(" · ")}
+            </p>
+          ) : null;
+        })()}
         {manualSubChildren && manualSubChildren.length > 0 && manualSubParent ? (
           <div className="mb-2 border-t border-white/8 pt-2" data-manual-sub-sheet="">
             <ul className="overflow-hidden">

@@ -12,7 +12,7 @@ import { manualGroupForParent } from "@/components/machine/ManualSubAssemblyRows
 import {
   useConversationDockStage,
   useDesktopStage,
-  useQuoteConversationDockStage,
+  useMachineQuoteTrayDockStage,
 } from "@/components/machine/useDesktopStage";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
@@ -125,7 +125,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   );
   const desktopStage = useDesktopStage();
   const conversationDock = useConversationDockStage();
-  const customerTrayDock = useQuoteConversationDockStage();
+  const customerTrayDock = useMachineQuoteTrayDockStage();
   const hydrated = useHydrated();
   const viewerLayoutReady = useViewerLayoutReady();
   const staffSplit = useResizableSplit(!isCustomer && desktopStage);
@@ -511,6 +511,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       if (target.closest("[data-staff-manual-sub-overlay], [data-staff-manual-sub]")) {
         return;
       }
+      if (staffSubPartsEditRowKey) {
+        if (!target.closest("[data-staff-manual-sub-overlay], [data-staff-manual-sub]")) {
+          setStaffSubPartsEditRowKey(null);
+        }
+        return;
+      }
       if (target.closest("[data-quote-tray]")) {
         return;
       }
@@ -536,27 +542,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [selectedPart]);
+  }, [selectedPart, staffSubPartsEditRowKey]);
 
   const hasModel = machineHasModel(machine ?? { hasModel: false });
   const src = hasModel ? (machine?.fileUrl ?? "") : "";
   const joinedParts: ViewerPart[] = machine?.parts ?? [];
-  const selectedManualSubChildren = useMemo(() => {
+  const manualSubSheetContext = useMemo(() => {
     if (!machine || !selectedPart) {
-      return [];
+      return { parent: null as Part | null, children: [] as Part[] };
     }
-    const group = groupForPart(machine.manualSubAssemblies, selectedPart);
-    if (!group) {
-      return [];
-    }
-    return group.children.map((child) => manualChildAsPart(child, selectedPart));
-  }, [machine, selectedPart]);
-  const manualSubParentForSheet = useMemo(() => {
-    if (!selectedPart || !machine) {
-      return null;
-    }
-    if (selectedManualSubChildren.length > 0) {
-      return selectedPart;
+    const directGroup = groupForPart(machine.manualSubAssemblies, selectedPart);
+    if (directGroup && directGroup.children.length > 0) {
+      return {
+        parent: selectedPart,
+        children: directGroup.children.map((child) =>
+          manualChildAsPart(child, selectedPart),
+        ),
+      };
     }
     const parentId = manualSubPartParentPartId(
       selectedPart.id,
@@ -564,10 +566,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       machine.manualSubAssemblies,
     );
     if (!parentId) {
-      return null;
+      return { parent: null, children: [] };
     }
-    return machine.parts.find((item) => item.id === parentId) ?? null;
-  }, [machine, selectedPart, selectedManualSubChildren.length]);
+    const parent = machine.parts.find((item) => item.id === parentId) ?? null;
+    if (!parent) {
+      return { parent: null, children: [] };
+    }
+    const group = groupForPart(machine.manualSubAssemblies, parent);
+    if (!group) {
+      return { parent, children: [] };
+    }
+    return {
+      parent,
+      children: group.children.map((child) => manualChildAsPart(child, parent)),
+    };
+  }, [machine, selectedPart]);
+  const selectedManualSubChildren = manualSubSheetContext.children;
+  const manualSubParentForSheet = manualSubSheetContext.parent;
   const viewerHighlightPartId = useMemo(() => {
     if (!selectedPart || !machine) {
       return null;

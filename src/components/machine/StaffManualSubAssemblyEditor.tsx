@@ -42,6 +42,18 @@ export function StaffManualSubAssemblyEditor({
     setError(null);
   }, [parentPart.id, assemblyKey]);
 
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+
   async function runMutation(
     body:
       | { op: "add"; child: ManualSubPart }
@@ -114,8 +126,23 @@ export function StaffManualSubAssemblyEditor({
       className="mt-1"
       aria-labelledby="manual-sub-heading"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      <div className="staff-manual-sub-toolbar mb-2 flex flex-wrap items-start gap-2">
+        <button
+          type="button"
+          data-staff-manual-sub-cancel=""
+          tabIndex={0}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+          className="btn-soft order-first inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold"
+        >
+          Cancel
+        </button>
+        <div className="min-w-0 flex-1 basis-full sm:basis-auto">
           <h2 id="manual-sub-heading" className="text-[13px] font-medium">
             Manual sub-assembly parts
           </h2>
@@ -124,16 +151,6 @@ export function StaffManualSubAssemblyEditor({
             <span className="font-mono">{parentPart.meshName || parentPart.id}</span>.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onClose();
-          }}
-          className="btn-soft inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[12px] font-semibold"
-        >
-          Cancel
-        </button>
       </div>
 
       {children.length > 0 ? (

@@ -16,6 +16,9 @@ export const CONVERSATION_DOCK_STAGE = "(min-width: 1536px) and (pointer: fine)"
 export const QUOTE_CONVERSATION_DOCK_STAGE =
   "(min-width: 1280px) and (pointer: fine)";
 
+/** Customer machine quote tray: side dock from 1280px width only (no pointer query — touch must not flip 1440 to mobile sheet). */
+export const MACHINE_QUOTE_TRAY_DOCK_STAGE = "(min-width: 1280px)";
+
 function subscribeMedia(query: string, onChange: () => void) {
   const media = window.matchMedia(query);
   media.addEventListener("change", onChange);
@@ -34,6 +37,10 @@ function subscribeQuoteConversationDock(onChange: () => void) {
   return subscribeMedia(QUOTE_CONVERSATION_DOCK_STAGE, onChange);
 }
 
+function subscribeMachineQuoteTrayDock(onChange: () => void) {
+  return subscribeMedia(MACHINE_QUOTE_TRAY_DOCK_STAGE, onChange);
+}
+
 function matchesDesktop() {
   return window.matchMedia(DESKTOP_STAGE).matches;
 }
@@ -44,6 +51,10 @@ function matchesConversationDock() {
 
 function matchesQuoteConversationDock() {
   return window.matchMedia(QUOTE_CONVERSATION_DOCK_STAGE).matches;
+}
+
+function matchesMachineQuoteTrayDock() {
+  return window.matchMedia(MACHINE_QUOTE_TRAY_DOCK_STAGE).matches;
 }
 
 export function useDesktopStage() {
@@ -62,6 +73,14 @@ export function useQuoteConversationDockStage() {
   return useSyncExternalStore(
     subscribeQuoteConversationDock,
     matchesQuoteConversationDock,
+    () => false,
+  );
+}
+
+export function useMachineQuoteTrayDockStage() {
+  return useSyncExternalStore(
+    subscribeMachineQuoteTrayDock,
+    matchesMachineQuoteTrayDock,
     () => false,
   );
 }

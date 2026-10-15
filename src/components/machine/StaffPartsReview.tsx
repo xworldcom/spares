@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type MouseEvent } from "react";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import {
   extraModelMeshes,
@@ -72,9 +72,27 @@ function StaffCatalogTreeEntry({
     : undefined;
   const tree = useManualSubAssemblyTree(manualGroup);
 
+  function selectFromRow(event: MouseEvent<HTMLLIElement>) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (
+      target.closest(
+        "button, a, input, textarea, select, [data-bom-row-skip-select], .bom-tree-chevron",
+      )
+    ) {
+      return;
+    }
+    onSelectRow(row);
+  }
+
   return (
     <Fragment>
-      <li className={selected ? "row-on-ink" : undefined}>
+      <li
+        className={`bom-tree-parent-li ${selected ? "row-on-ink" : ""}`}
+        onClick={selectFromRow}
+      >
         <BomTreeParentRow
           hasChildren={tree.hasChildren && Boolean(parentPart)}
           expand={
@@ -86,20 +104,9 @@ function StaffCatalogTreeEntry({
           selected={selected}
           nameCell={
             <div
-              className="bom-data-row bom-data-row--grid bom-data-row--no-add min-h-[55px] w-full min-w-0 py-1"
+              className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0 py-1"
             >
-              <button
-                type="button"
-                onPointerDown={(event) => {
-                  if (event.button !== 0) {
-                    return;
-                  }
-                  event.preventDefault();
-                  onSelectRow(row);
-                }}
-                aria-selected={selected}
-                className="bom-row-main min-w-0"
-              >
+              <span className="bom-row-main min-w-0">
                 <span className="bom-row-text min-w-0">
                   <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
                     {row.name}
@@ -113,7 +120,7 @@ function StaffCatalogTreeEntry({
                     {row.meshName ? `  ·  ${row.meshName}` : ""}
                   </span>
                 </span>
-              </button>
+              </span>
               <span className="bom-qty-col text-right">
                 {row.status === "missing-mesh" ? (
                   <span

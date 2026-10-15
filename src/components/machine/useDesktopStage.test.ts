@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   CONVERSATION_DOCK_STAGE,
   DESKTOP_STAGE,
+  MACHINE_QUOTE_TRAY_DOCK_STAGE,
   QUOTE_CONVERSATION_DOCK_STAGE,
 } from "./useDesktopStage.ts";
 
@@ -20,5 +21,10 @@ describe("layout stage media queries", () => {
   it("side-docks quote Messages from 1280px", () => {
     assert.match(QUOTE_CONVERSATION_DOCK_STAGE, /1280/);
     assert.match(QUOTE_CONVERSATION_DOCK_STAGE, /pointer:\s*fine/);
+  });
+
+  it("side-docks machine quote tray from 1280px width only", () => {
+    assert.match(MACHINE_QUOTE_TRAY_DOCK_STAGE, /1280/);
+    assert.doesNotMatch(MACHINE_QUOTE_TRAY_DOCK_STAGE, /pointer/);
   });
 });

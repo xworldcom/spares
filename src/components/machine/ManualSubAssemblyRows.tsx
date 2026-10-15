@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useState, type MouseEvent, type ReactNode } from "react";
 import type { Part } from "@/lib/api/types";
 import type { ManualSubAssemblyGroup } from "@/types";
 import {
@@ -127,21 +127,35 @@ export function CustomerBomPartRow({
   showAdd?: boolean;
 }) {
   const addVisible = Boolean(showAdd && onAdd);
+
+  function selectRow(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest("button.bom-add-col, a, input, textarea, select")) {
+      return;
+    }
+    onSelect(part);
+  }
+
   return (
     <div
-      className={`bom-data-row bom-data-row--grid min-h-[55px] w-full min-w-0 py-0 ${
+      role="button"
+      tabIndex={0}
+      onClick={selectRow}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(part);
+        }
+      }}
+      aria-selected={selected}
+      className={`bom-data-row bom-data-row--grid bom-data-row--hit w-full min-w-0 py-0 ${
         addVisible ? "" : "bom-data-row--no-add"
       }`}
     >
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect(part);
-        }}
-        aria-selected={selected}
-        className="bom-row-main min-w-0 py-1 text-left"
-      >
+      <span className="bom-row-main min-w-0 py-1 text-left">
         <span className="bom-row-text min-w-0">
           <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
             {part.name}
@@ -160,7 +174,7 @@ export function CustomerBomPartRow({
             onLightBackground={selected}
           />
         </span>
-      </button>
+      </span>
       <span
         className={`bom-qty-col tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
@@ -202,17 +216,32 @@ export function StaffCatalogPartRow({
   onSelect: () => void;
   secondaryLine?: string;
 }) {
+  function selectRow(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest("button, a, input, textarea, select")) {
+      return;
+    }
+    onSelect();
+  }
+
   return (
-    <div className="bom-data-row bom-data-row--grid bom-data-row--no-add min-h-[55px] w-full min-w-0 py-1">
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={selectRow}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
           onSelect();
-        }}
-        aria-selected={selected}
-        className="bom-row-main min-w-0 text-left"
-      >
+        }
+      }}
+      aria-selected={selected}
+      className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0 py-1"
+    >
+      <span className="bom-row-main min-w-0 text-left">
         <span className="bom-row-text min-w-0">
           <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
             {name}
@@ -226,7 +255,7 @@ export function StaffCatalogPartRow({
             {secondaryLine ? `  ·  ${secondaryLine}` : ""}
           </span>
         </span>
-      </button>
+      </span>
       <span
         className={`bom-qty-col tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
@@ -242,10 +271,12 @@ function ManualSubTreeChildShell({
   selected,
   children,
   treeLayout = "list",
+  onSelectRow,
 }: {
   selected: boolean;
   children: ReactNode;
   treeLayout?: "list" | "sheet";
+  onSelectRow?: () => void;
 }) {
   const selectionClass =
     treeLayout === "sheet"
@@ -255,11 +286,26 @@ function ManualSubTreeChildShell({
       : selected
         ? "row-on-ink"
         : "";
+  function selectFromShell(event: MouseEvent<HTMLLIElement>) {
+    if (!onSelectRow) {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest("button, a, input, textarea, select, .bom-add-col")) {
+      return;
+    }
+    onSelectRow();
+  }
+
   return (
     <li
       data-manual-sub-part=""
       className={`border-t border-white/6 ${selectionClass}`}
       data-tree-layout={treeLayout}
+      onClick={onSelectRow ? selectFromShell : undefined}
     >
       <div className="bom-tree-child-inner relative">{children}</div>
     </li>
@@ -297,6 +343,7 @@ export function ManualSubAssemblyChildListItems({
             key={`${assemblyKeyForPart(parent)}:${child.id}`}
             selected={selected}
             treeLayout={treeLayout}
+            onSelectRow={() => onSelect(part)}
           >
             {variant === "staff" ? (
               <StaffCatalogPartRow

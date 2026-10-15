@@ -22,17 +22,33 @@ function PartRowSelectButton({
   selected: boolean;
   onSelect: (part: Part) => void;
 }) {
+  function selectRow(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest("button, a, input, textarea, select")) {
+      return;
+    }
+    event.stopPropagation();
+    onSelect(part);
+  }
+
   return (
-    <div className="bom-data-row bom-data-row--grid bom-data-row--no-add min-h-[55px] w-full min-w-0 py-1">
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={selectRow}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
           onSelect(part);
-        }}
-        aria-selected={selected}
-        className="bom-row-main min-w-0 text-left"
-      >
+        }
+      }}
+      aria-selected={selected}
+      className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0 py-1"
+    >
+      <span className="bom-row-main min-w-0 text-left">
         <span className="bom-row-text min-w-0">
           <span className="block text-[15px] font-medium leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">
             {part.name}
@@ -51,7 +67,7 @@ function PartRowSelectButton({
             onLightBackground={selected}
           />
         </span>
-      </button>
+      </span>
       <span
         className={`bom-qty-col tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
