@@ -1079,7 +1079,11 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             showAdd={isCustomer}
             held={held}
             listView={isCustomer && view === "list"}
-            quoteTrayPeek={isCustomer && view === "list" && trayOpen}
+            quoteTrayPeek={
+              isCustomer &&
+              trayOpen &&
+              (view === "list" || (view === "model" && customerTrayInViewer))
+            }
             modelViewMobile={phoneViewerLayout && view === "model"}
             showEditSubParts={staffCanEditSubParts}
             onEditSubParts={openStaffSubPartsEditor}

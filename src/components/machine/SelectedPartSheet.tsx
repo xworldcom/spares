@@ -135,17 +135,19 @@ export function SelectedPartSheet({
     return null;
   }
 
-  const isParentAssembly =
-    Boolean(manualSubParent) &&
-    Boolean(manualSubChildren?.length) &&
-    part.id === manualSubParent?.id;
   const isManualSubChild =
     Boolean(manualSubParent) && part.id !== manualSubParent?.id;
-  const hasManualSubSheet =
-    Boolean(manualSubChildren?.length) && Boolean(manualSubParent);
-  const showAddInHeader =
-    Boolean(showAdd && onAdd && (hasManualSubSheet || isParentAssembly || isManualSubChild));
-  const showAddInFooter = Boolean(showAdd && onAdd && !showAddInHeader);
+  const viewingParentAssembly =
+    Boolean(
+      manualSubParent &&
+        manualSubChildren?.length &&
+        part.id === manualSubParent.id,
+    );
+  const showAddInHeader = Boolean(showAdd && onAdd && isManualSubChild);
+  const showAddOnSubPartRows = Boolean(showAdd && onAdd && viewingParentAssembly);
+  const showAddInFooter = Boolean(
+    showAdd && onAdd && !showAddInHeader && !showAddOnSubPartRows,
+  );
 
   return (
     <div
@@ -159,7 +161,11 @@ export function SelectedPartSheet({
                 : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
             }`
           : modelViewMobile
-            ? "pointer-events-none absolute inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-[70] max-w-none"
+            ? `pointer-events-none absolute inset-x-3 z-[70] max-w-none ${
+                quoteTrayPeek
+                  ? "bottom-[calc(var(--peek-h,14.5rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
+                  : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
+              }`
             : "pointer-events-none absolute top-[7.5rem] left-3 z-[70] max-w-[min(20rem,calc(100%-1.5rem))]"
       }
     >
@@ -277,7 +283,7 @@ export function SelectedPartSheet({
                 selectedPartId={part.id}
                 onSelect={(row) => onSelectSubPart?.(row)}
                 onAdd={onAdd}
-                showAdd={showAdd && Boolean(onAdd)}
+                showAdd={showAddOnSubPartRows}
                 compact
                 treeLayout="sheet"
               />
@@ -303,6 +309,17 @@ export function SelectedPartSheet({
               View part
             </Link>
           ) : null}
+          {showEditSubParts && onEditSubParts ? (
+            <button
+              type="button"
+              data-part-sheet-edit-sub-parts=""
+              {...activate(onEditSubParts)}
+              disabled={!canAct}
+              className="inline-flex h-11 min-h-11 items-center rounded-full bg-white/8 px-3 text-[12px] font-semibold disabled:opacity-30"
+            >
+              Edit sub-parts
+            </button>
+          ) : null}
           <button
             type="button"
             data-part-sheet-control=""
@@ -321,16 +338,6 @@ export function SelectedPartSheet({
           >
             <PartDetailSheet part={part} />
             <div className="flex flex-wrap gap-1.5">
-            {showEditSubParts && onEditSubParts ? (
-              <button
-                type="button"
-                {...activate(onEditSubParts)}
-                disabled={!canAct}
-                className="inline-flex h-11 min-h-11 items-center rounded-full bg-white/8 px-3 text-[12px] font-semibold disabled:opacity-30"
-              >
-                Edit sub-parts
-              </button>
-            ) : null}
             {showIsolateActions ? (
               <>
                 <button

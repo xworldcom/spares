@@ -119,12 +119,15 @@ export function CustomerBomPartRow({
   onSelect,
   onAdd,
   showAdd,
+  omitLifecycle,
 }: {
   part: Part;
   selected: boolean;
   onSelect: (part: Part) => void;
   onAdd?: (part: Part) => void;
   showAdd?: boolean;
+  /** 3D part sheet: keep rows compact; lifecycle stays on parent chip. */
+  omitLifecycle?: boolean;
 }) {
   const addVisible = Boolean(showAdd && onAdd);
 
@@ -168,17 +171,20 @@ export function CustomerBomPartRow({
             {part.id}
             {part.replaces ? ` · replaces ${part.replaces}` : ""}
           </span>
-          <PartLifecycleNotice
-            lifecycle={part.lifecycle}
-            compact
-            onLightBackground={selected}
-          />
+          {omitLifecycle ? null : (
+            <PartLifecycleNotice
+              lifecycle={part.lifecycle}
+              compact
+              onLightBackground={selected}
+            />
+          )}
         </span>
       </span>
       <span
         className={`bom-qty-col tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
         }`}
+        aria-label={`Quantity ${part.qty}`}
       >
         {part.qty}
       </span>
@@ -359,7 +365,8 @@ export function ManualSubAssemblyChildListItems({
                 selected={selected}
                 onSelect={onSelect}
                 onAdd={onAdd}
-                showAdd={showAdd && !compact}
+                showAdd={showAdd && (!compact || treeLayout === "sheet")}
+                omitLifecycle={treeLayout === "sheet"}
               />
             )}
           </ManualSubTreeChildShell>

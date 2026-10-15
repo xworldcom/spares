@@ -56,6 +56,10 @@ export function StaffManualSubAssemblyEditor({
   }, [children.length, editingId]);
 
   useEffect(() => {
+    cancelRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
     const scrollY = window.scrollY || document.documentElement.scrollTop;
     const body = document.body;
     const prev = {
@@ -222,7 +226,6 @@ export function StaffManualSubAssemblyEditor({
                     <button
                       type="button"
                       disabled={saving}
-                      tabIndex={-1}
                       onClick={() => void moveChild(child.id, -1)}
                       className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
                       aria-label="Move up"
@@ -236,7 +239,6 @@ export function StaffManualSubAssemblyEditor({
                     <button
                       type="button"
                       disabled={saving}
-                      tabIndex={-1}
                       onClick={() => void moveChild(child.id, 1)}
                       className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
                       aria-label="Move down"
@@ -287,9 +289,13 @@ export function StaffManualSubAssemblyEditor({
       )}
 
       <div className="staff-manual-sub-form mt-3 flex flex-col gap-2 sm:grid sm:grid-cols-2">
-        <label className="spares-muted block text-xs font-medium sm:col-span-2">
+        <label
+          className="spares-muted block text-xs font-medium sm:col-span-2"
+          htmlFor="manual-sub-part-number"
+        >
           Part number
           <input
+            id="manual-sub-part-number"
             value={draft.id}
             onChange={(event) =>
               setDraft((current) => ({ ...current, id: event.target.value }))
@@ -298,9 +304,13 @@ export function StaffManualSubAssemblyEditor({
             className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 font-mono text-[14px] outline-none disabled:opacity-60"
           />
         </label>
-        <label className="spares-muted block text-xs font-medium sm:col-span-2">
+        <label
+          className="spares-muted block text-xs font-medium sm:col-span-2"
+          htmlFor="manual-sub-name"
+        >
           Name
           <input
+            id="manual-sub-name"
             value={draft.name}
             onChange={(event) =>
               setDraft((current) => ({ ...current, name: event.target.value }))
@@ -308,11 +318,16 @@ export function StaffManualSubAssemblyEditor({
             className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
           />
         </label>
-        <label className="spares-muted block text-xs font-medium">
+        <label
+          className="spares-muted block text-xs font-medium"
+          htmlFor="manual-sub-qty"
+        >
           Qty
           <input
+            id="manual-sub-qty"
             type="number"
             min={1}
+            aria-label="Quantity"
             value={draft.qty}
             onChange={(event) =>
               setDraft((current) => ({
@@ -323,9 +338,13 @@ export function StaffManualSubAssemblyEditor({
             className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[15px] tabular-nums outline-none"
           />
         </label>
-        <label className="spares-muted block text-xs font-medium">
+        <label
+          className="spares-muted block text-xs font-medium"
+          htmlFor="manual-sub-vendor"
+        >
           Vendor
           <input
+            id="manual-sub-vendor"
             value={draft.vendor ?? ""}
             onChange={(event) =>
               setDraft((current) => ({ ...current, vendor: event.target.value }))
