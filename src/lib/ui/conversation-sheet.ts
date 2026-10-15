@@ -16,7 +16,10 @@ export function initialConversationSheetSnap(
   if (openForUnread) {
     return "full";
   }
-  // Chunk 1: resting closed = Kevin intermediate (composer visible above tabs).
+  // Ticket/quote + care overlay: rest in the LOW (peek) band when opening.
+  if (!desktopStage) {
+    return "peek";
+  }
   return "reply";
 }
 
@@ -62,18 +65,21 @@ export function conversationSheetMotionFromHeight(
 
 export function conversationSheetSnapFromHeight(
   heightPx: number,
-  _peekH: number,
+  peekH: number,
   replyH: number,
   fullH: number,
 ): ConversationSheetSnap {
   if (heightPx >= fullH - 2) {
     return "full";
   }
+  if (heightPx <= peekH + PEEK_LAYOUT_BAND_PX) {
+    return "peek";
+  }
   if (heightPx <= replyH + PEEK_LAYOUT_BAND_PX) {
     return "reply";
   }
-  const mid = (replyH + fullH) / 2;
-  return heightPx < mid ? "reply" : "full";
+  // No reply/full mid detent while height is live — release snap picks detents.
+  return "full";
 }
 
 export function chromeSnapForHeight(
@@ -99,6 +105,31 @@ export function chromeSnapForHeight(
   return "full";
 }
 
+/** Snap on pointer-up from live height + velocity (peek / reply / full detents). */
+export function conversationSheetReleaseSnap(
+  heightPx: number,
+  velocity: number,
+  peekH: number,
+  replyH: number,
+  fullH: number,
+): ConversationSheetSnap {
+  const peekReplyMid = (peekH + replyH) / 2;
+  const replyFullMid = (replyH + fullH) / 2;
+  if (velocity < -0.45) {
+    return "full";
+  }
+  if (velocity > 0.45) {
+    return heightPx > peekReplyMid ? "reply" : "peek";
+  }
+  if (heightPx <= peekReplyMid) {
+    return "peek";
+  }
+  if (heightPx < replyFullMid) {
+    return "reply";
+  }
+  return "full";
+}
+
 export function conversationSheetDragHeight({
   from,
   startH,
@@ -114,6 +145,6 @@ export function conversationSheetDragHeight({
   replyH: number;
   fullH: number;
 }): number {
-  const floor = from === "peek" ? peekH : replyH;
-  return Math.max(floor, Math.min(fullH, startH - dy));
+  // Continuous collapse: never catch at intermediate; release snap picks detents.
+  return Math.max(peekH, Math.min(fullH, startH - dy));
 }

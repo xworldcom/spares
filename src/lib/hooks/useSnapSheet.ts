@@ -8,8 +8,10 @@ import {
   type RefObject,
 } from "react";
 import {
+  CONVERSATION_SHEET_PEEK_H,
   conversationSheetDragHeight,
   conversationSheetMotionFromHeight,
+  conversationSheetReleaseSnap,
   conversationSheetSnapFromHeight,
   type ConversationSheetGesture,
   initialConversationSheetSnap,
@@ -74,6 +76,29 @@ function measureThreadContextBandPx(card: HTMLElement, maxRows = 2): number {
   return pt + rowsH + pb + remPx(0.35);
 }
 
+function peekHeightPx(card: HTMLElement | null) {
+  if (card) {
+    const raw = getComputedStyle(card).getPropertyValue("--peek-h").trim();
+    if (raw.endsWith("rem")) {
+      const rem = Number.parseFloat(raw);
+      if (Number.isFinite(rem) && rem > 0) {
+        return Math.ceil(remPx(rem));
+      }
+    }
+    if (raw.endsWith("px")) {
+      const px = Number.parseFloat(raw);
+      if (Number.isFinite(px) && px > 0) {
+        return Math.ceil(px);
+      }
+    }
+  }
+  const fallback = CONVERSATION_SHEET_PEEK_H;
+  if (fallback.endsWith("rem")) {
+    return Math.ceil(remPx(Number.parseFloat(fallback)));
+  }
+  return Math.ceil(remPx(5.75));
+}
+
 function measureDetentHeights(card: HTMLElement | null) {
   const replyFallback = remPx(17.5);
   const composerFallback = remPx(4);
@@ -120,9 +145,12 @@ function heightForSnap(snap: ConversationSheetSnap, card?: Element | null) {
   if (snap === "out") {
     return 0;
   }
-  const { replyH } = measureDetentHeights(card instanceof HTMLElement ? card : null);
-  if (snap === "peek" || snap === "reply") {
-    return replyH;
+  const el = card instanceof HTMLElement ? card : null;
+  if (snap === "peek") {
+    return peekHeightPx(el);
+  }
+  if (snap === "reply") {
+    return measureDetentHeights(el).replyH;
   }
   return openHeightPx(card);
 }
@@ -132,16 +160,10 @@ function nearestSnap(
   velocity: number,
   card?: Element | null,
 ): ConversationSheetSnap {
+  const peek = heightForSnap("peek", card);
   const reply = heightForSnap("reply", card);
   const full = heightForSnap("full", card);
-  if (velocity < -0.45) {
-    return "full";
-  }
-  if (velocity > 0.45) {
-    return "reply";
-  }
-  const mid = (reply + full) / 2;
-  return height < mid ? "reply" : "full";
+  return conversationSheetReleaseSnap(height, velocity, peek, reply, full);
 }
 
 function stepToward(
@@ -226,7 +248,7 @@ export function useSnapSheet({
   }
   const steppedAtRef = useRef(0);
   const settleFrameRef = useRef(0);
-  const motionHeightsRef = useRef<{ replyH: number; fullH: number } | null>(null);
+  const motionHeightsRef = useRef<{ peekH: number; replyH: number; fullH: number } | null>(null);
   const closeSettleRef = useRef(false);
 
   const controlledOpen = typeof onOpenChange === "function";
@@ -329,15 +351,16 @@ export function useSnapSheet({
 
   function snapHeights() {
     const card = cardRef.current;
-    const { replyH } = measureDetentHeights(card instanceof HTMLElement ? card : null);
-    const peekH = replyH;
-    const fullH = openHeightPx(card instanceof HTMLElement ? card : null);
+    const el = card instanceof HTMLElement ? card : null;
+    const peekH = peekHeightPx(el);
+    const { replyH } = measureDetentHeights(el);
+    const fullH = openHeightPx(el);
     return { peekH, replyH, fullH };
   }
 
   function lockMotionHeights() {
-    const { replyH, fullH } = snapHeights();
-    motionHeightsRef.current = { replyH, fullH };
+    const { peekH, replyH, fullH } = snapHeights();
+    motionHeightsRef.current = { peekH, replyH, fullH };
   }
 
   function clearMotionHeights() {
@@ -346,8 +369,7 @@ export function useSnapSheet({
 
   function heightsForMotion() {
     if (motionHeightsRef.current) {
-      const { replyH, fullH } = motionHeightsRef.current;
-      return { peekH: replyH, replyH, fullH };
+      return motionHeightsRef.current;
     }
     return snapHeights();
   }
@@ -388,7 +410,12 @@ export function useSnapSheet({
     card.style.setProperty("--phase-a", String(phaseA));
     card.style.setProperty("--phase-b", String(phaseB));
     setMotionPhases({ phaseA, phaseB });
-    setMotionSnap(conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH));
+    // Detents (incl. reply/full mid) apply on release only — not during active drag.
+    if (!drag.current.on) {
+      setMotionSnap(
+        conversationSheetSnapFromHeight(liveHeightPx, peekH, replyH, fullH),
+      );
+    }
     drag.current.liveH = liveHeightPx;
   }
 
@@ -431,7 +458,7 @@ export function useSnapSheet({
   function paintDrag(dy: number) {
     const { peekH, replyH, fullH } = heightsForMotion();
     const live = conversationSheetDragHeight({
-      from: drag.current.from === "peek" ? "reply" : drag.current.from,
+      from: drag.current.from,
       startH: drag.current.startH,
       dy,
       peekH,
@@ -765,37 +792,38 @@ export function useSnapSheet({
     from: SnapSheetSnap,
     pending: boolean,
   ) {
-    const normalized = from === "peek" ? "reply" : from;
     const card = cardRef.current;
     const startH =
-      card?.getBoundingClientRect().height ?? heightForSnap(normalized, card);
+      card?.getBoundingClientRect().height ?? heightForSnap(from, card);
     const closeMax = lockCloseOffset();
     const startTy =
-      card instanceof HTMLElement ? readCloseTyPx(card) : normalized === "out" ? closeMax : 0;
+      card instanceof HTMLElement ? readCloseTyPx(card) : from === "out" ? closeMax : 0;
+    cancelSettleAnimation();
     lockMotionHeights();
     drag.current = {
       y: event.clientY,
       on: !pending,
       pending,
-      from: normalized,
+      from,
       startH,
       moved: false,
       samples: [{ t: performance.now(), y: event.clientY }],
       gesture: null,
       liveH: startH,
-      mode: normalized === "out" ? "close" : null,
+      mode: from === "out" ? "close" : null,
       startTy,
       closeMax,
       liveTy: startTy,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!pending) {
+      setMotionSnap(null);
       setDragging(true);
       setDraggingClass(true);
       if (drag.current.mode === "close") {
         paintCloseTy(startTy);
       } else {
-        prepareThreadForSheetMotion(normalized);
+        prepareThreadForSheetMotion(from);
         paintMotion(startH);
       }
     }
@@ -906,7 +934,9 @@ export function useSnapSheet({
     drag.current.pending = false;
     drag.current.moved = true;
     drag.current.mode = mode;
+    cancelSettleAnimation();
     lockMotionHeights();
+    setMotionSnap(null);
     setDragging(true);
     setDraggingClass(true);
     if (mode === "close") {
@@ -924,7 +954,8 @@ export function useSnapSheet({
       const from = drag.current.from;
       if (from === "reply") {
         if (Math.abs(dy) > DRAG_SLOP) {
-          activateDrag(event, dy > 0 ? "close" : "height");
+          // Body drag: height collapse/expand (peek ↔ full). Close is handle-only.
+          activateDrag(event, "height");
         } else {
           return;
         }
@@ -986,10 +1017,7 @@ export function useSnapSheet({
     drag.current.on = false;
     drag.current.pending = false;
     drag.current.moved = false;
-    if (next === "peek") {
-      next = "reply";
-    }
-    if (next === "reply" || next === "full") {
+    if (next === "peek" || next === "reply" || next === "full") {
       // Roll-up/down keeps the latest row glued above the composer unless the user
       // scrolls history while already at full (scroll handler clears the dock).
       setThreadDockedState(true);
@@ -1051,7 +1079,7 @@ export function useSnapSheet({
     const velocity = liveVelocity();
     const { peekH, replyH, fullH } = heightsForMotion();
     const currentH = conversationSheetDragHeight({
-      from: from === "peek" ? "reply" : from,
+      from,
       startH: drag.current.startH,
       dy,
       peekH,
@@ -1067,7 +1095,7 @@ export function useSnapSheet({
         settleTo(stepToward(from === "out" ? "reply" : from, "down"));
         return;
       }
-      settleTo(from === "out" ? "reply" : from === "peek" ? "reply" : from);
+      settleTo(from === "out" ? "reply" : from);
       return;
     }
     settleTo(nearestSnap(currentH, velocity, cardRef.current));

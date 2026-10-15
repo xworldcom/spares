@@ -11,6 +11,7 @@ import {
   chromeSnapForHeight,
   conversationSheetDragHeight,
   conversationSheetMotionFromHeight,
+  conversationSheetReleaseSnap,
   conversationSheetSnapFromHeight,
   initialConversationSheetSnap,
 } from "./conversation-sheet.ts";
@@ -36,8 +37,8 @@ describe("conversation sheet startup snap", () => {
     assert.equal(initialConversationSheetSnap(false, true), "out");
   });
 
-  it("starts at Kevin intermediate (reply) on phone", () => {
-    assert.equal(initialConversationSheetSnap(true, false), "reply");
+  it("starts at LOW (peek) on phone overlay for ticket/quote open", () => {
+    assert.equal(initialConversationSheetSnap(true, false), "peek");
   });
 
   it("starts at full on phone when the thread is unread", () => {
@@ -49,7 +50,7 @@ describe("conversation sheet startup snap", () => {
   });
 });
 
-const heights = { peekH: 280, replyH: 280, fullH: 700 };
+const heights = { peekH: 92, replyH: 280, fullH: 700 };
 
 describe("conversation sheet roll-up", () => {
   it("grows continuously from intermediate toward full", () => {
@@ -93,10 +94,40 @@ describe("conversation sheet roll-up", () => {
     );
   });
 
+  it("collapses continuously through intermediate without catching at reply", () => {
+    const fromFull = conversationSheetDragHeight({
+      from: "full",
+      startH: heights.fullH,
+      dy: heights.fullH - heights.replyH + 40,
+      ...heights,
+    });
+    assert.ok(fromFull < heights.replyH);
+    assert.equal(fromFull, heights.replyH - 40);
+  });
+
+  it("release snap keeps intermediate when height is near reply detent", () => {
+    assert.equal(
+      conversationSheetReleaseSnap(280, 0, heights.peekH, heights.replyH, heights.fullH),
+      "reply",
+    );
+    assert.equal(
+      conversationSheetReleaseSnap(100, 0, heights.peekH, heights.replyH, heights.fullH),
+      "peek",
+    );
+  });
+
   it("derives snap labels from height without drag hysteresis", () => {
+    assert.equal(
+      conversationSheetSnapFromHeight(92, heights.peekH, heights.replyH, heights.fullH),
+      "peek",
+    );
     assert.equal(
       conversationSheetSnapFromHeight(280, heights.peekH, heights.replyH, heights.fullH),
       "reply",
+    );
+    assert.equal(
+      conversationSheetSnapFromHeight(400, heights.peekH, heights.replyH, heights.fullH),
+      "full",
     );
     assert.equal(
       conversationSheetSnapFromHeight(500, heights.peekH, heights.replyH, heights.fullH),
