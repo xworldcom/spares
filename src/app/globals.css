@@ -1240,7 +1240,8 @@ html.spares-embed .spares-app-stage {
   cursor: pointer;
 }
 
-.bom-data-row--hit:focus-visible {
+.bom-data-row--hit:focus-visible,
+li.bom-tree-parent-focus:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.35);
   outline-offset: -2px;
   border-radius: 0.5rem;
@@ -1754,6 +1755,19 @@ html.spares-embed .spares-app-stage {
 
   .machine-bom-mobile-list[data-bom-list-blocked] {
     pointer-events: none;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-machine-viewer-layout][data-list-view-active] {
+    pointer-events: none;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-machine-viewer-layout][data-list-view-active]
+    :is([data-parts-bom], [data-part-sheet], [data-viewer-chrome-toolbar], .quote-sheet) {
+    pointer-events: auto;
   }
 
   .spares-app-machine-context

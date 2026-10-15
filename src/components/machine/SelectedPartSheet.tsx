@@ -269,7 +269,7 @@ export function SelectedPartSheet({
     }, 750);
   }
 
-  function expandMobileSheet() {
+  function armListPeekGuard() {
     expandInertUntilRef.current = Date.now() + 480;
     onListPeekGuard?.(true);
     if (listPeekGuardTimer.current != null) {
@@ -279,6 +279,10 @@ export function SelectedPartSheet({
       onListPeekGuard?.(false);
       listPeekGuardTimer.current = null;
     }, 520);
+  }
+
+  function expandMobileSheet() {
+    armListPeekGuard();
     setMobileExpanded(true);
   }
 
@@ -407,10 +411,20 @@ export function SelectedPartSheet({
     if (!manualSubParent || !onSelectSubPart) {
       return;
     }
+    armListPeekGuard();
     backToParentRef.current = true;
     setMobileExpanded(true);
     setMore(false);
     onSelectSubPart(manualSubParent);
+  }
+
+  function swallowBackTouchEnd(event: React.TouchEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function swallowBackPointerUp(event: React.PointerEvent<HTMLButtonElement>) {
+    event.stopPropagation();
   }
 
   return (
@@ -486,6 +500,8 @@ export function SelectedPartSheet({
               <button
                 type="button"
                 {...activate(selectParentExpanded)}
+                onTouchEnd={swallowBackTouchEnd}
+                onPointerUp={swallowBackPointerUp}
                 className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >

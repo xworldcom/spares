@@ -26,11 +26,14 @@ function PartRowSelectButton({
   selected,
   onSelect,
   onArrowKeys,
+  focusable = true,
 }: {
   part: Part;
   selected: boolean;
   onSelect: (part: Part) => void;
   onArrowKeys?: (event: KeyboardEvent<HTMLDivElement>) => void;
+  /** Parent tree rows expose a single tab stop on the `<li>`. */
+  focusable?: boolean;
 }) {
   function selectRow(event: MouseEvent<HTMLDivElement>) {
     const target = event.target;
@@ -46,18 +49,22 @@ function PartRowSelectButton({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
+      role={focusable ? "button" : undefined}
+      tabIndex={focusable ? 0 : -1}
       onClick={selectRow}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect(part);
-          return;
-        }
-        onArrowKeys?.(event);
-      }}
-      aria-selected={selected}
+      onKeyDown={
+        focusable
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelect(part);
+                return;
+              }
+              onArrowKeys?.(event);
+            }
+          : undefined
+      }
+      aria-selected={focusable ? selected : undefined}
       className="bom-data-row bom-data-row--grid bom-data-row--no-add bom-data-row--hit w-full min-w-0"
     >
       <span className="bom-row-main min-w-0 text-left">
@@ -125,7 +132,7 @@ function PartsBomTreeEntry({
     onSelect(part);
   }
 
-  function onParentRowArrowKeys(event: KeyboardEvent<HTMLDivElement>) {
+  function onParentRowArrowKeys(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "ArrowRight" && tree.hasChildren && !tree.open) {
       event.preventDefault();
       tree.setOpen(true);
@@ -137,12 +144,26 @@ function PartsBomTreeEntry({
     }
   }
 
+  function onParentRowKeyDown(event: KeyboardEvent<HTMLLIElement>) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect(part);
+      return;
+    }
+    onParentRowArrowKeys(event);
+  }
+
   return (
     <Fragment>
       <li
         ref={parentRowRef}
-        className={`bom-tree-parent-li ${selected ? "row-on-ink" : ""}`}
+        tabIndex={0}
+        role="button"
+        aria-selected={selected}
+        className={`bom-tree-parent-li bom-tree-parent-focus ${selected ? "row-on-ink" : ""}`}
         onClick={selectFromRow}
+        onKeyDown={onParentRowKeyDown}
       >
         <BomTreeParentRow
           hasChildren={tree.hasChildren}
@@ -158,7 +179,7 @@ function PartsBomTreeEntry({
               part={part}
               selected={selected}
               onSelect={onSelect}
-              onArrowKeys={onParentRowArrowKeys}
+              focusable={false}
             />
           }
           trailing={
@@ -195,7 +216,7 @@ function PartsBomTreeEntry({
 function bomFocusableRows(root: HTMLElement): HTMLElement[] {
   return [
     ...root.querySelectorAll<HTMLElement>(
-      'li.bom-tree-parent-li .bom-data-row--hit[tabindex="0"], [data-manual-sub-part] .bom-data-row--hit[tabindex="0"]',
+      'li.bom-tree-parent-li[tabindex="0"], [data-manual-sub-part] .bom-data-row--hit[tabindex="0"]',
     ),
   ];
 }
