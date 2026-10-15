@@ -323,18 +323,11 @@ async function customer390CameraAndSheet(page) {
 async function customer1440BackLabel(page) {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openMachine(page);
-  await goModel3D(page);
-  await dismissPartSheet(page);
-  await page.mouse.click(270, 515);
-  await page.waitForTimeout(700);
-  const pinionRow = page
-    .locator("[data-manual-sub-sheet] [data-manual-sub-part]")
-    .filter({ hasText: /pinion/i })
-    .first();
-  if (await pinionRow.isVisible().catch(() => false)) {
-    await pinionRow.click();
-    await page.waitForTimeout(400);
-  }
+  await goListBom(page);
+  await expandMotorTree(page);
+  const pinionList = page.locator("[data-manual-sub-part]").filter({ hasText: /pinion/i }).first();
+  await pinionList.click({ timeout: 15_000 });
+  await page.waitForTimeout(500);
   const back = page.locator("[data-part-sheet-back-motor]");
   const backBox = await box(back);
   const backLineCount = await back.evaluate((el) => {
