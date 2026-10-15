@@ -12,11 +12,12 @@ import { partSheetMetaLine, partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
 function manualSubParentBackLabel(parent: Part): string {
-  const mesh = parent.meshName?.trim();
-  if (mesh) {
-    return mesh;
+  const name = parent.name.trim();
+  if (name) {
+    return name;
   }
-  return parent.name.trim();
+  const mesh = parent.meshName?.trim();
+  return mesh ?? parent.id;
 }
 
 export function SelectedPartSheet({
@@ -228,7 +229,7 @@ export function SelectedPartSheet({
                 className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >
-                <span className="part-sheet-back-title min-w-0 text-left leading-snug">
+                <span className="part-sheet-back-title min-w-0 truncate text-left leading-snug">
                   <span aria-hidden="true">← </span>
                   Back to {manualSubParentBackLabel(manualSubParent)}
                 </span>
