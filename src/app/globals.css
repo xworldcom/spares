@@ -1273,24 +1273,30 @@ html.spares-embed .spares-app-stage {
   align-items: stretch;
 }
 
+[data-parts-bom] li.bom-tree-parent-li:has([data-manual-sub-assembly]) .bom-data-row--grid,
+[data-staff-parts] li.bom-tree-parent-li:has([data-manual-sub-assembly]) .bom-data-row--grid,
 [data-parts-bom] [data-manual-sub-part] .bom-data-row--grid,
 [data-staff-parts] [data-manual-sub-part] .bom-data-row--grid {
   flex: 1 1 auto;
   align-self: stretch;
   box-sizing: border-box;
-  min-height: var(--bom-row-min-h, 4rem);
-  height: var(--bom-row-min-h, 4rem);
+  min-height: 4rem;
+  height: 4rem;
   padding-top: 0;
   padding-bottom: 0;
   align-items: center;
 }
 
+[data-parts-bom] li.bom-tree-parent-li:has([data-manual-sub-assembly]) .bom-row-main,
+[data-staff-parts] li.bom-tree-parent-li:has([data-manual-sub-assembly]) .bom-row-main,
 [data-parts-bom] [data-manual-sub-part] .bom-row-main,
 [data-staff-parts] [data-manual-sub-part] .bom-row-main {
   padding-top: 0;
   padding-bottom: 0;
 }
 
+[data-parts-bom] li.bom-tree-parent-li:has([data-manual-sub-assembly]) .bom-qty-col,
+[data-staff-parts] li.bom-tree-parent-li:has([data-manual-sub-assembly]) .bom-qty-col,
 [data-parts-bom] [data-manual-sub-part] .bom-qty-col,
 [data-staff-parts] [data-manual-sub-part] .bom-qty-col {
   align-self: start;

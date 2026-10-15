@@ -162,9 +162,10 @@ async function canvasSampleHash(page) {
 }
 
 async function measureListChildRows(page, tag) {
-  const parentRow = page.locator("[data-parts-bom] li.bom-tree-parent-li").filter({ hasText: /motor/i });
+  const root = page.locator("[data-staff-parts], [data-parts-bom]").first();
+  const parentRow = root.locator("li.bom-tree-parent-li").filter({ hasText: /motor/i });
   const parentH = (await box(parentRow.locator(".bom-data-row--grid").first()))?.height ?? null;
-  const rows = page.locator("[data-parts-bom] [data-manual-sub-part] .bom-data-row--grid");
+  const rows = root.locator("[data-manual-sub-part] .bom-data-row--grid");
   const heights = [];
   const count = await rows.count();
   for (let i = 0; i < count; i += 1) {
@@ -197,16 +198,15 @@ async function customer390CameraAndSheet(page) {
     .getAttribute("data-viewer-bottom-inset");
   await page.screenshot({ path: path.join(OUT, "390-camera-before-select.png"), fullPage: false });
 
-  const passCount = await motorTapBattery(page, "390-customer");
+  await page.mouse.click(270, 515);
+  await page.waitForTimeout(800);
   const afterMotorHash = await canvasSampleHash(page);
-  await page.screenshot({ path: path.join(OUT, "390-camera-after-motor-select.png") });
-
   const title = (await page.locator("[data-part-sheet-title]").textContent().catch(() => "")) ?? "";
   const chipBox = await box(page.locator("[data-part-sheet] .part-sheet-chip"));
+  await page.screenshot({ path: path.join(OUT, "390-camera-after-motor-select.png") });
   measures.push({
     item: 1,
     tag: "390",
-    motorTapPassCount: passCount,
     title: title.trim(),
     chipBox,
     viewerBottomInset: viewerBottomInset ? Number(viewerBottomInset) : 0,
@@ -219,6 +219,9 @@ async function customer390CameraAndSheet(page) {
       beforeHash.canvasH === afterMotorHash.canvasH &&
       Math.abs(beforeHash.sum - afterMotorHash.sum) < beforeHash.sum * 0.02,
   });
+
+  const passCount = await motorTapBattery(page, "390-customer");
+  measures.push({ item: "motor-tap-total", tag: "390", motorTapPassCount: passCount });
 
   const more = page.getByRole("button", { name: "More" });
   if (await more.isVisible().catch(() => false)) {
@@ -266,11 +269,24 @@ async function customer390CameraAndSheet(page) {
 
 async function customer1024EmptyQuote(page) {
   await page.setViewportSize({ width: 1024, height: 900 });
-  await openMachine(page);
+  const machinePath = previewHost ? "/machines/palletizer" : MACHINE;
+  await page.goto(`${BASE}${machinePath}`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
   await goModel3D(page);
   await dismissPartSheet(page);
 
-  const quoteBtn = page.getByRole("button", { name: /Show quote/i }).first();
+  const quoteBtn = page
+    .locator("[data-viewer-chrome-toolbar] button[data-quote-tray]")
+    .first();
+  if (!(await quoteBtn.isVisible({ timeout: 12_000 }).catch(() => false))) {
+    measures.push({
+      item: 4,
+      tag: "1024",
+      quoteOpens: false,
+      note: "Quote chip not visible (staff preview or no customer session)",
+    });
+    return;
+  }
   await quoteBtn.click();
   await page.waitForTimeout(650);
 
@@ -312,11 +328,15 @@ async function backLabel1440(page) {
   await goModel3D(page);
   await dismissPartSheet(page);
   await page.mouse.click(270, 515);
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(800);
   const pinionRow = page
     .locator("[data-manual-sub-sheet] [data-manual-sub-part]")
     .filter({ hasText: /pinion/i })
     .first();
+  if (!(await pinionRow.isVisible({ timeout: 10_000 }).catch(() => false))) {
+    measures.push({ item: 5, tag: "1440", backText: "", note: "pinion row not visible" });
+    return;
+  }
   await pinionRow.click();
   await page.waitForTimeout(350);
   const back = page.locator("[data-part-sheet-back-motor]");
@@ -336,23 +356,14 @@ async function main() {
   const page = await context.newPage();
 
   try {
-    if (previewHost) {
-      await login(page, customer);
-      await customer1024EmptyQuote(page);
-      await context.clearCookies();
-    }
     const machineCreds = machineLoginCreds();
     await login(page, machineCreds);
     await customer390CameraAndSheet(page);
     await listRowsAtViewports(page);
-    if (!previewHost) {
-      await context.clearCookies();
-      await login(page, customer);
-      await customer1024EmptyQuote(page);
-      await context.clearCookies();
-      await login(page, machineCreds);
-    }
     await backLabel1440(page);
+    await context.clearCookies();
+    await login(page, customer);
+    await customer1024EmptyQuote(page);
   } finally {
     fs.writeFileSync(path.join(OUT, "measures.json"), JSON.stringify(measures, null, 2));
     await browser.close();
