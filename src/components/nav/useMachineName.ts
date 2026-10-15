@@ -38,6 +38,8 @@ export function useMachineName(machineId: string | null) {
       return;
     }
 
+    setResolved((current) => (current?.id === machineId ? current : null));
+
     const fromBootstrap = bootstrapName(machineId, bootstrap);
     if (fromBootstrap) {
       rememberMachineName(machineId, fromBootstrap);

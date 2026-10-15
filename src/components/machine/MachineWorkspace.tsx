@@ -7,6 +7,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { PartsBom } from "@/components/machine/PartsBom";
 import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
 import { StaffPartsReview } from "@/components/machine/StaffPartsReview";
+import { StaffManualSubAssemblyEditor } from "@/components/machine/StaffManualSubAssemblyEditor";
+import { manualGroupForParent } from "@/components/machine/ManualSubAssemblyRows";
 import {
   useConversationDockStage,
   useDesktopStage,
@@ -100,6 +102,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
   const [quoteChip, setQuoteChip] = useState(true);
   const [held, setHeld] = useState(false);
   const [view, setView] = useState<"model" | "list">("model");
+  const [staffSubPartsEditRowKey, setStaffSubPartsEditRowKey] = useState<string | null>(
+    null,
+  );
   const [suggestedMesh, setSuggestedMesh] = useState<string | null>(null);
   const [savingPart, setSavingPart] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -175,6 +180,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       : null;
   const staffSplitView = !isCustomer && desktopStage;
   const showViewToggle = !staffSplitView;
+  const phoneViewerLayout = !desktopStage;
   const viewerMountReady =
     hydrated &&
     viewerLayoutReady &&
@@ -193,6 +199,66 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
       setTrayOpen(false);
     }
   }, [isCustomer, customerTrayInViewer, lines.length, trayOpen]);
+
+  useEffect(() => {
+    setStaffSubPartsEditRowKey(null);
+  }, [machineId]);
+
+  const staffSubPartsOverlay = useMemo(() => {
+    if (!machine || !staffSubPartsEditRowKey) {
+      return null;
+    }
+    const rows = staffCatalogRows(machine.parts, machine.unmatched ?? []);
+    const row = rows.find((item) => item.key === staffSubPartsEditRowKey);
+    if (!row || row.status !== "joined") {
+      return null;
+    }
+    const parentPart = machine.parts.find((item) => item.id === row.partNumber) ?? null;
+    if (!parentPart) {
+      return null;
+    }
+    const group = manualGroupForParent(machine.manualSubAssemblies, parentPart);
+    if (!group || group.children.length === 0) {
+      return null;
+    }
+    return { parentPart, row };
+  }, [machine, staffSubPartsEditRowKey]);
+
+  const staffCanEditSubParts = useMemo(() => {
+    if (isCustomer || !machine || !selectedPart) {
+      return false;
+    }
+    const parentId =
+      manualSubPartParentPartId(
+        selectedPart.id,
+        machine.parts,
+        machine.manualSubAssemblies,
+      ) ?? selectedPart.id;
+    const parent = machine.parts.find((item) => item.id === parentId);
+    if (!parent) {
+      return false;
+    }
+    const group = manualGroupForParent(machine.manualSubAssemblies, parent);
+    return Boolean(group && group.children.length > 0);
+  }, [isCustomer, machine, selectedPart]);
+
+  function openStaffSubPartsEditor() {
+    if (!machine || !selectedPart) {
+      return;
+    }
+    const parentId =
+      manualSubPartParentPartId(
+        selectedPart.id,
+        machine.parts,
+        machine.manualSubAssemblies,
+      ) ?? selectedPart.id;
+    const row = staffCatalogRows(machine.parts, machine.unmatched ?? []).find(
+      (item) => item.status === "joined" && item.partNumber === parentId,
+    );
+    if (row) {
+      setStaffSubPartsEditRowKey(row.key);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -450,6 +516,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         return;
       }
       if (target.closest("[data-bug-report]")) {
+        return;
+      }
+      if (target.closest("[data-machine-view-tabs]")) {
+        return;
+      }
+      if (target.closest("[data-viewer-chrome-control]")) {
         return;
       }
       setSelectedPart(null);
@@ -874,15 +946,16 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             </div>
           </div>
         )}
-        {view === "list" && !staffSplitView ? (
+        {!staffSplitView && (view === "list" || !isCustomer) ? (
           <section
             data-parts-bom=""
             className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
               isCustomer
                 ? "machine-bom-mobile-list overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
                 : "flex flex-col"
-            }`}
+            } ${!isCustomer && view !== "list" ? "invisible pointer-events-none" : ""}`}
             style={{ paddingTop: "3.65rem" }}
+            aria-hidden={!isCustomer && view !== "list" ? true : undefined}
           >
             {isCustomer ? (
               <>
@@ -920,6 +993,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 onMachineUpdated={setMachine}
                 saving={savingPart}
                 saveError={saveError}
+                subPartsEditRowKey={staffSubPartsEditRowKey}
+                onSubPartsEditRowKeyChange={setStaffSubPartsEditRowKey}
+                hideSubPartsBarAction={!staffSplitView}
+                renderSubPartsOverlay={view === "list"}
               />
             )}
           </section>
@@ -956,7 +1033,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             held={held}
             listView={isCustomer && view === "list"}
             quoteTrayPeek={isCustomer && view === "list" && trayOpen}
+            modelViewMobile={phoneViewerLayout && view === "model"}
+            showEditSubParts={staffCanEditSubParts}
+            onEditSubParts={openStaffSubPartsEditor}
           />
+        ) : null}
+        {staffSubPartsOverlay && !isCustomer && view === "model" && !staffSplitView ? (
+          <div
+            className="staff-manual-sub-overlay-fixed spares-surface border-t border-white/10 px-4 py-3 shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+            data-staff-manual-sub-overlay=""
+          >
+            <StaffManualSubAssemblyEditor
+              machine={machine}
+              parentPart={staffSubPartsOverlay.parentPart}
+              onMachineUpdated={setMachine}
+              onClose={() => setStaffSubPartsEditRowKey(null)}
+            />
+          </div>
         ) : null}
         {customerTrayInViewer ? tray : null}
         <div
@@ -970,6 +1063,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 className="viewer-chrome-chip flex h-11 min-h-11 shrink-0 items-center rounded-full px-1"
                 role="tablist"
                 aria-label="Machine view"
+                data-machine-view-tabs=""
               >
                 <button
                   type="button"
@@ -1002,6 +1096,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   data-show-all=""
                   aria-label="Show all parts"
                   onClick={showAll}
+                  data-viewer-chrome-control=""
                   className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
                 >
                   Show all
@@ -1009,6 +1104,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 <button
                   type="button"
                   data-fit-view=""
+                  data-viewer-chrome-control=""
                   aria-label="Fit view to assembly"
                   onClick={fitView}
                   className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
@@ -1018,6 +1114,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 <button
                   type="button"
                   data-reset-view=""
+                  data-viewer-chrome-control=""
                   aria-label="Reset view to first load"
                   onClick={resetView}
                   className="viewer-chrome-chip inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
@@ -1029,7 +1126,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
               <div className="min-w-0 flex-1" />
             ) : null}
             {hasModel && ((showViewToggle && view === "model") || staffSplitView) ? (
-              <label className="viewer-chrome-chip flex min-h-11 min-w-[8.5rem] flex-1 basis-[8.5rem] items-center gap-2 px-3">
+              <label
+                className="viewer-chrome-chip flex min-h-11 min-w-[8.5rem] flex-1 basis-[8.5rem] items-center gap-2 px-3"
+                data-viewer-chrome-control=""
+              >
                 <span className="chrome-quiet shrink-0 text-[12px] font-medium tracking-wide sm:text-[13px]">
                   Explode
                 </span>
@@ -1102,6 +1202,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   enter();
                 }
               }}
+              data-viewer-chrome-control=""
               className="viewer-chrome-chip relative z-40 inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold"
               aria-label={fullscreen ? "Exit full screen" : "Enter full screen"}
             >
@@ -1133,6 +1234,8 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         onMachineUpdated={setMachine}
         saving={savingPart}
         saveError={saveError}
+        subPartsEditRowKey={staffSubPartsEditRowKey}
+        onSubPartsEditRowKeyChange={setStaffSubPartsEditRowKey}
       />
     </aside>
   );

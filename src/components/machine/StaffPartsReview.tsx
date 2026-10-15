@@ -95,7 +95,7 @@ function StaffCatalogTreeEntry({
                 onSelectRow(row);
               }}
               aria-selected={selected}
-              className="flex min-w-0 flex-1 items-center gap-3 py-1 text-left"
+              className="bom-data-row flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-medium">{row.name}</span>
@@ -108,7 +108,7 @@ function StaffCatalogTreeEntry({
                   {row.meshName ? `  ·  ${row.meshName}` : ""}
                 </span>
               </span>
-              <span className="shrink-0 text-right">
+              <span className="bom-qty-col shrink-0 text-right">
                 {row.status === "missing-mesh" ? (
                   <span
                     className={`block text-[12px] ${
@@ -153,6 +153,10 @@ export function StaffPartsReview({
   onMachineUpdated,
   saving,
   saveError,
+  subPartsEditRowKey: subPartsEditRowKeyProp,
+  onSubPartsEditRowKeyChange,
+  hideSubPartsBarAction = false,
+  renderSubPartsOverlay = true,
 }: {
   machine: MachineDetail;
   selectedPartId: string | null;
@@ -169,6 +173,11 @@ export function StaffPartsReview({
   onMachineUpdated?: (machine: MachineDetail) => void;
   saving?: boolean;
   saveError?: string | null;
+  subPartsEditRowKey?: string | null;
+  onSubPartsEditRowKeyChange?: (key: string | null) => void;
+  hideSubPartsBarAction?: boolean;
+  /** When false, parent renders the editor overlay (e.g. over 3D while list is hidden). */
+  renderSubPartsOverlay?: boolean;
 }) {
   const unmatched = machine.unmatched;
   const rows = useMemo(
@@ -191,14 +200,26 @@ export function StaffPartsReview({
   const [draftKey, setDraftKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [partEditOpen, setPartEditOpen] = useState(false);
-  const [subPartsEditOpen, setSubPartsEditOpen] = useState(false);
-  const [subPartsEditRowKey, setSubPartsEditRowKey] = useState<string | null>(null);
+  const [subPartsEditRowKeyLocal, setSubPartsEditRowKeyLocal] = useState<string | null>(
+    null,
+  );
+  const subPartsEditRowKey = subPartsEditRowKeyProp ?? subPartsEditRowKeyLocal;
+  const subPartsEditOpen = subPartsEditRowKey !== null;
+
+  function setSubPartsEditRowKey(next: string | null) {
+    if (onSubPartsEditRowKeyChange) {
+      onSubPartsEditRowKeyChange(next);
+    } else {
+      setSubPartsEditRowKeyLocal(next);
+    }
+  }
 
   useEffect(() => {
     setPartEditOpen(false);
-    setSubPartsEditOpen(false);
-    setSubPartsEditRowKey(null);
-  }, [selectedPartId, missingKey]);
+    if (!onSubPartsEditRowKeyChange) {
+      setSubPartsEditRowKeyLocal(null);
+    }
+  }, [selectedPartId, missingKey, onSubPartsEditRowKeyChange]);
 
   const selectedKey = missingKey ?? (selectedPartId ? `part:${selectedPartId}` : null);
   const selectedRow = rows.find((row) => row.key === selectedKey) ?? null;
@@ -259,7 +280,6 @@ export function StaffPartsReview({
     setDraft(draftFromRow(row));
     setLocalError(null);
     setPartEditOpen(false);
-    setSubPartsEditOpen(false);
     setSubPartsEditRowKey(null);
   }
 
@@ -306,12 +326,10 @@ export function StaffPartsReview({
 
   function toggleSubPartsEditor(rowKey: string) {
     if (subPartsEditOpen && subPartsEditRowKey === rowKey) {
-      setSubPartsEditOpen(false);
       setSubPartsEditRowKey(null);
       return;
     }
     setPartEditOpen(false);
-    setSubPartsEditOpen(true);
     setSubPartsEditRowKey(rowKey);
   }
 
@@ -406,7 +424,6 @@ export function StaffPartsReview({
           <button
             type="button"
             onClick={() => {
-              setSubPartsEditOpen(false);
               setSubPartsEditRowKey(null);
               setPartEditOpen(true);
             }}
@@ -414,7 +431,9 @@ export function StaffPartsReview({
           >
             Edit part
           </button>
-          {selectedManualGroup && selectedManualGroup.children.length > 0 ? (
+          {!hideSubPartsBarAction &&
+          selectedManualGroup &&
+          selectedManualGroup.children.length > 0 ? (
             <button
               type="button"
               onClick={() => toggleSubPartsEditor(selectedRow.key)}
@@ -427,7 +446,8 @@ export function StaffPartsReview({
         </div>
       ) : null}
 
-      {subPartsEditOpen &&
+      {renderSubPartsOverlay &&
+      subPartsEditOpen &&
       selectedRow &&
       selectedParentPart &&
       selectedManualGroup &&
@@ -441,7 +461,6 @@ export function StaffPartsReview({
             parentPart={selectedParentPart}
             onMachineUpdated={onMachineUpdated}
             onClose={() => {
-              setSubPartsEditOpen(false);
               setSubPartsEditRowKey(null);
             }}
           />

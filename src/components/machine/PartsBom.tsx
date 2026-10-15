@@ -30,9 +30,9 @@ function PartRowSelectButton({
         onSelect(part);
       }}
       aria-selected={selected}
-      className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
+      className="bom-data-row flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
     >
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-medium">{part.name}</span>
         <span
           className={`block truncate font-mono text-xs ${
@@ -49,7 +49,9 @@ function PartRowSelectButton({
         />
       </span>
       <span
-        className={`tabular-nums text-sm ${selected ? "row-on-ink-muted" : "spares-muted"}`}
+        className={`bom-qty-col shrink-0 tabular-nums text-sm ${
+          selected ? "row-on-ink-muted" : "spares-muted"
+        }`}
       >
         {part.qty}
       </span>
@@ -98,7 +100,7 @@ function PartsBomTreeEntry({
                   event.stopPropagation();
                   onAdd(part);
                 }}
-                className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+                className="bom-add-col btn-accent inline-flex h-11 min-h-11 shrink-0 items-center justify-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
                 data-selected={selected ? "" : undefined}
               >
                 Add

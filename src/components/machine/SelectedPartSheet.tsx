@@ -29,6 +29,9 @@ export function SelectedPartSheet({
   quoteTrayPeek,
   staffViewPart = true,
   showIsolateActions = true,
+  onEditSubParts,
+  showEditSubParts = false,
+  modelViewMobile = false,
 }: {
   part: Part | null;
   manualSubChildren?: Part[];
@@ -36,6 +39,10 @@ export function SelectedPartSheet({
   onSelectSubPart?: (part: Part) => void;
   staffViewPart?: boolean;
   showIsolateActions?: boolean;
+  onEditSubParts?: () => void;
+  showEditSubParts?: boolean;
+  /** Phone 3D: dock chip above tab bar so viewer controls stay clear. */
+  modelViewMobile?: boolean;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
   onHide: () => void;
@@ -113,6 +120,7 @@ export function SelectedPartSheet({
   return (
     <div
       data-part-sheet=""
+      data-sheet-anchor={listView ? "list" : modelViewMobile ? "model-mobile" : "model"}
       className={
         listView
           ? `pointer-events-none absolute inset-x-3 z-[70] max-w-none ${
@@ -120,11 +128,13 @@ export function SelectedPartSheet({
                 ? "bottom-[calc(var(--peek-h,8.65rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
                 : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
             }`
-          : "pointer-events-none absolute top-[7.5rem] left-3 z-[70] max-w-[min(20rem,calc(100%-1.5rem))]"
+          : modelViewMobile
+            ? "pointer-events-none absolute inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-[70] max-w-none"
+            : "pointer-events-none absolute top-[7.5rem] left-3 z-[70] max-w-[min(20rem,calc(100%-1.5rem))]"
       }
     >
       <div
-        className={`viewer-chrome-chip pointer-events-auto max-h-[min(52vh,20rem)] overflow-y-auto rounded-2xl px-3 py-2.5 ${
+        className={`viewer-chrome-chip pointer-events-auto max-h-[min(52vh,20rem)] overflow-y-auto rounded-2xl px-3 py-2.5 part-sheet-chip ${
           held ? "scale-[1.02]" : "scale-100"
         } chrome-fade`}
         onPointerDown={(event) => {
@@ -161,10 +171,13 @@ export function SelectedPartSheet({
                 data-part-sheet-back-motor=""
               >
                 <span aria-hidden="true">←</span>
-                <span className="truncate">{manualSubParent.name}</span>
+                <span className="break-words text-left">{manualSubParent.name}</span>
               </button>
             ) : null}
-            <p className="text-[13px] leading-tight font-semibold tracking-tight break-words">
+            <p
+              className="text-[13px] leading-snug font-semibold tracking-tight break-words"
+              data-part-sheet-title=""
+            >
               {part.name}
             </p>
             <p className="chrome-quiet font-mono text-[11px] break-all">
@@ -256,6 +269,16 @@ export function SelectedPartSheet({
           <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
             <PartDetailSheet part={part} />
             <div className="flex flex-wrap gap-1.5">
+            {showEditSubParts && onEditSubParts ? (
+              <button
+                type="button"
+                {...activate(onEditSubParts)}
+                disabled={!canAct}
+                className="inline-flex h-11 min-h-11 items-center rounded-full bg-white/8 px-3 text-[12px] font-semibold disabled:opacity-30"
+              >
+                Edit sub-parts
+              </button>
+            ) : null}
             {showIsolateActions ? (
               <>
                 <button

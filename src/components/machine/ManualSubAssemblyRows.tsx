@@ -95,14 +95,16 @@ export function BomTreeParentRow({
     <div className="bom-tree-row">
       <div className="bom-tree-gutter" aria-hidden={!hasChildren}>
         {hasChildren && expand ? (
-          <>
-            <ManualSubAssemblyExpandButton
-              open={expand.open}
-              count={expand.count}
-              onToggle={expand.onToggle}
-            />
-            <ManualSubAssemblyCountBadge count={badgeCount} selected={selected} />
-          </>
+          <ManualSubAssemblyExpandButton
+            open={expand.open}
+            count={expand.count}
+            onToggle={expand.onToggle}
+          />
+        ) : null}
+      </div>
+      <div className="bom-tree-badge" aria-hidden={!hasChildren || badgeCount <= 0}>
+        {hasChildren && badgeCount > 0 ? (
+          <ManualSubAssemblyCountBadge count={badgeCount} selected={selected} />
         ) : null}
       </div>
       <div className="bom-tree-name min-w-0">{nameCell}</div>
@@ -125,7 +127,7 @@ export function CustomerBomPartRow({
   showAdd?: boolean;
 }) {
   return (
-    <div className="flex min-h-[37px] w-full items-center gap-2 py-0">
+    <div className="bom-data-row flex min-h-[55px] w-full min-w-0 items-center gap-2 py-0">
       <button
         type="button"
         onClick={(event) => {
@@ -133,9 +135,9 @@ export function CustomerBomPartRow({
           onSelect(part);
         }}
         aria-selected={selected}
-        className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
+        className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
       >
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-medium">{part.name}</span>
           <span
             className={`block truncate font-mono text-xs ${
@@ -152,7 +154,7 @@ export function CustomerBomPartRow({
           />
         </span>
         <span
-          className={`shrink-0 tabular-nums text-sm ${
+          className={`bom-qty-col shrink-0 tabular-nums text-sm ${
             selected ? "row-on-ink-muted" : "spares-muted"
           }`}
         >
@@ -166,7 +168,7 @@ export function CustomerBomPartRow({
             event.stopPropagation();
             onAdd(part);
           }}
-          className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+          className="bom-add-col btn-accent inline-flex h-11 min-h-11 shrink-0 items-center justify-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
           data-selected={selected ? "" : undefined}
         >
           Add
@@ -199,7 +201,7 @@ export function StaffCatalogPartRow({
         onSelect();
       }}
       aria-selected={selected}
-      className="flex min-h-[37px] w-full items-center gap-3 py-1 text-left"
+      className="bom-data-row flex min-h-[55px] w-full min-w-0 items-center gap-2 py-1 text-left"
     >
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-medium">{name}</span>
@@ -213,7 +215,7 @@ export function StaffCatalogPartRow({
         </span>
       </span>
       <span
-        className={`shrink-0 tabular-nums text-sm ${
+        className={`bom-qty-col shrink-0 tabular-nums text-sm ${
           selected ? "row-on-ink-muted" : "spares-muted"
         }`}
       >

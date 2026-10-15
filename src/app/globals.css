@@ -958,11 +958,11 @@ html.viewer-immersive-fs .spares-tabbar {
 
 .machine-context-tab {
   display: inline-flex;
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   flex-shrink: 0;
   align-items: center;
   border-radius: 999px;
-  padding: 0 0.72rem;
+  padding: 0 0.85rem;
   color: var(--spares-muted);
   font-size: 13px;
   font-weight: 600;
@@ -1070,7 +1070,23 @@ html.spares-embed .spares-app-stage {
 }
 
 .spares-app-machine-context .machine-bom-mobile-list {
-  padding-inline-end: 1rem;
+  padding-inline-end: 0.75rem;
+}
+
+[data-parts-bom] {
+  --bom-qty-col: 2.25rem;
+  --bom-add-col: 4.25rem;
+}
+
+.bom-qty-col {
+  width: var(--bom-qty-col);
+  min-width: var(--bom-qty-col);
+  text-align: right;
+}
+
+.bom-add-col {
+  width: var(--bom-add-col);
+  min-width: var(--bom-add-col);
 }
 
 .machine-stage-grid[data-customer-desktop="true"]:not([data-tray="open"]) {
@@ -1078,22 +1094,32 @@ html.spares-embed .spares-app-stage {
 }
 
 .bom-tree-row {
-  --bom-tree-gutter: 3.25rem;
+  --bom-tree-chevron-col: 2.75rem;
+  --bom-tree-badge-col: 1.75rem;
   display: grid;
-  grid-template-columns: var(--bom-tree-gutter) minmax(0, 1fr) auto;
+  grid-template-columns:
+    var(--bom-tree-chevron-col) var(--bom-tree-badge-col) minmax(0, 1fr)
+    auto;
   align-items: center;
-  min-height: 37px;
+  min-height: 55px;
   padding: 0.25rem 1rem 0.25rem 0;
-  column-gap: 0;
+  column-gap: 0.125rem;
 }
 
 .bom-tree-gutter {
   display: flex;
-  width: var(--bom-tree-gutter);
-  min-width: var(--bom-tree-gutter);
+  width: var(--bom-tree-chevron-col);
+  min-width: var(--bom-tree-chevron-col);
   align-items: center;
   justify-content: flex-start;
-  gap: 0.125rem;
+}
+
+.bom-tree-badge {
+  display: flex;
+  width: var(--bom-tree-badge-col);
+  min-width: var(--bom-tree-badge-col);
+  align-items: center;
+  justify-content: center;
 }
 
 .bom-tree-gutter .bom-tree-chevron {
@@ -1104,18 +1130,28 @@ html.spares-embed .spares-app-stage {
   min-width: 0;
 }
 
+.bom-tree-trail {
+  padding-inline-start: 0.25rem;
+}
+
 .bom-tree-child-inner {
-  margin-left: var(--bom-tree-gutter, 3.25rem);
+  margin-left: calc(var(--bom-tree-chevron-col, 2.75rem) + var(--bom-tree-badge-col, 1.75rem));
   padding-left: 1rem;
+  padding-right: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+.bom-data-row {
+  padding-inline-end: 0;
+}
+
 [data-manual-sub-sheet] {
-  --bom-tree-gutter: 1.75rem;
+  --bom-tree-chevron-col: 1.5rem;
+  --bom-tree-badge-col: 1.25rem;
 }
 
 [data-manual-sub-sheet] .bom-tree-child-inner {
-  margin-left: var(--bom-tree-gutter, 1.75rem);
+  margin-left: calc(var(--bom-tree-chevron-col, 1.5rem) + var(--bom-tree-badge-col, 1.25rem));
 }
 
 .bom-tree-child-selected-chip {
@@ -1143,14 +1179,45 @@ html.spares-embed .spares-app-stage {
   overflow-y: auto;
 }
 
+.machine-viewer .staff-manual-sub-overlay-fixed {
+  position: absolute;
+  z-index: 80;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+}
+
 .machine-viewer .quote-sheet.is-peek {
-  --peek-h: 11.25rem;
+  --peek-h: 16.5rem;
 }
 
 .machine-viewer .quote-sheet.is-peek .quote-sheet-body {
-  max-height: calc(var(--peek-h) - 4.5rem);
+  max-height: calc(var(--peek-h) - 3.25rem);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.machine-viewer .quote-sheet.is-peek .manual-quote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.machine-viewer .quote-sheet.is-peek .manual-quote-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.machine-viewer .quote-sheet.is-peek .manual-quote-row > .min-w-0 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.machine-viewer .quote-sheet.is-peek .manual-quote-row > .flex.items-center.gap-2 {
+  flex-shrink: 0;
 }
 
 .machine-viewer .quote-sheet.is-peek .manual-quote-remove {
@@ -1167,6 +1234,18 @@ html.spares-embed .spares-app-stage {
 .spares-app-machine-context .machine-viewer [data-part-sheet] {
   top: 5.25rem;
   max-width: min(18rem, calc(100% - 5.5rem));
+}
+
+.spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] {
+  top: auto;
+  max-width: none;
+}
+
+.part-sheet-chip [data-part-sheet-title] {
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .machine-bom-scroll {
