@@ -56,10 +56,6 @@ export function StaffManualSubAssemblyEditor({
   }, [children.length, editingId]);
 
   useEffect(() => {
-    cancelRef.current?.focus({ preventScroll: true });
-  }, []);
-
-  useEffect(() => {
     const scrollY = window.scrollY || document.documentElement.scrollTop;
     const body = document.body;
     const prev = {

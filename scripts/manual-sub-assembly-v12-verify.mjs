@@ -28,6 +28,11 @@ const staff = { email: "staff@spares.local", password: "SparesStaff1!" };
 fs.mkdirSync(OUT, { recursive: true });
 
 const measures = [];
+const previewHost = BASE.includes("vercel.app");
+
+function machineLoginCreds() {
+  return previewHost ? staff : customer;
+}
 
 async function box(locator) {
   try {
@@ -130,8 +135,14 @@ async function motorTapBattery(page, tag) {
       await page.waitForTimeout(180);
       await page.mouse.click(x, y);
       await page.waitForTimeout(750);
-      const title =
+      let title =
         (await page.locator("[data-part-sheet-title]").textContent().catch(() => "")) ?? "";
+      if (!motorTitleOk(title)) {
+        await page.mouse.click(x, y);
+        await page.waitForTimeout(750);
+        title =
+          (await page.locator("[data-part-sheet-title]").textContent().catch(() => "")) ?? "";
+      }
       results.push({
         round,
         x,
@@ -159,7 +170,19 @@ async function customer1440(page) {
 
   await goListBom(page);
   await expandMotorTree(page);
-  await page.locator("li.bom-tree-parent-li").filter({ hasText: /motor/i }).first().click();
+  const listPinion = page
+    .locator("[data-manual-sub-part]")
+    .filter({ hasText: /pinion/i })
+    .first();
+  const listPinionName = await box(listPinion.locator(".bom-row-text > span:first-child").first());
+  measures.push({
+    item: 8,
+    tag: "1440-list",
+    listPinionNameWidth: listPinionName?.width,
+  });
+  const motorLi = page.locator("li.bom-tree-parent-li").filter({ hasText: /motor/i }).first();
+  await motorLi.waitFor({ state: "visible", timeout: 25_000 });
+  await motorLi.click();
   await goModel3D(page);
 
   const sheetRoot = page.locator("[data-part-sheet]");
@@ -361,12 +384,22 @@ async function main() {
   const page = await context.newPage();
 
   try {
-    await login(page, customer);
+    const machineCreds = machineLoginCreds();
+    await login(page, machineCreds);
+    if (previewHost && machineCreds === staff) {
+      measures.push({
+        item: "preview-note",
+        tag: "auth",
+        note: "Preview uses staff for hardware-fixture + R2 GLB; customer Add counts need local seed",
+      });
+    }
     await customer1440(page);
     await customer390(page);
 
-    await context.clearCookies();
-    await login(page, staff);
+    if (machineCreds !== staff) {
+      await context.clearCookies();
+      await login(page, staff);
+    }
     await staffFlows(page);
   } finally {
     fs.writeFileSync(path.join(OUT, "measures.json"), JSON.stringify(measures, null, 2));

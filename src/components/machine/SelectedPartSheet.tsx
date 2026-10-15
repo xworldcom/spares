@@ -174,6 +174,7 @@ export function SelectedPartSheet({
           blockSheetPointer ? "pointer-events-none" : "pointer-events-auto"
         } ${held ? "scale-[1.02]" : "scale-100"} chrome-fade`}
         data-part-sheet-chip=""
+        data-part-sheet-more-open={more ? "" : undefined}
         onPointerDown={(event) => {
           event.stopPropagation();
         }}

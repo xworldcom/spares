@@ -1311,6 +1311,17 @@ html.spares-embed .spares-app-stage {
   width: var(--bom-add-col);
 }
 
+[data-manual-sub-sheet] [data-manual-sub-part] .bom-row-main,
+[data-manual-sub-sheet] [data-manual-sub-part] .bom-row-text {
+  min-width: 0;
+}
+
+[data-parts-bom] [data-manual-sub-part] .bom-row-main,
+[data-parts-bom] [data-manual-sub-part] .bom-row-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-row-text {
   line-height: 1.35;
 }
@@ -1378,7 +1389,19 @@ html.spares-embed .spares-app-stage {
       17.5rem,
       calc(100dvh - 5.25rem - 14.5rem - env(safe-area-inset-bottom, 0px))
     );
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-more-open] {
+    max-height: min(
+      22rem,
+      calc(100dvh - 5.25rem - env(safe-area-inset-bottom, 0px) - 11.5rem)
+    );
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-manual-sub-sheet] {
