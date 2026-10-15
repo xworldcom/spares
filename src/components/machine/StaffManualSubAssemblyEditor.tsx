@@ -61,6 +61,17 @@ export function StaffManualSubAssemblyEditor({
   }, [children.length, editingId]);
 
   useEffect(() => {
+    let frame = 0;
+    const focusCancel = () => {
+      cancelRef.current?.focus({ preventScroll: true });
+    };
+    frame = requestAnimationFrame(() => {
+      requestAnimationFrame(focusCancel);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [parentPart.id, assemblyKey]);
+
+  useEffect(() => {
     if (!lockBodyScroll) {
       return;
     }
@@ -242,7 +253,7 @@ export function StaffManualSubAssemblyEditor({
                       disabled={saving}
                       onClick={() => void moveChild(child.id, -1)}
                       className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
-                      aria-label="Move up"
+                      aria-label={`Move ${child.name} up`}
                     >
                       ↑
                     </button>
@@ -255,7 +266,7 @@ export function StaffManualSubAssemblyEditor({
                       disabled={saving}
                       onClick={() => void moveChild(child.id, 1)}
                       className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
-                      aria-label="Move down"
+                      aria-label={`Move ${child.name} down`}
                     >
                       ↓
                     </button>
@@ -282,6 +293,7 @@ export function StaffManualSubAssemblyEditor({
                       setDraft({ ...child });
                     }}
                     className="btn-soft inline-flex h-11 min-h-11 items-center justify-center rounded-full px-3 text-xs font-semibold"
+                    aria-label={`Edit ${child.name}`}
                   >
                     Edit
                   </button>
@@ -290,6 +302,7 @@ export function StaffManualSubAssemblyEditor({
                     disabled={saving}
                     onClick={() => void removeChild(child.id)}
                     className="btn-soft inline-flex h-11 min-h-11 items-center justify-center rounded-full px-3 text-xs font-semibold"
+                    aria-label={`Remove ${child.name}`}
                   >
                     Remove
                   </button>

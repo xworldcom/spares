@@ -30,6 +30,7 @@ type ViewerCameraOwnerProps = {
   viewerFullscreen: boolean;
   assemblyKey: string;
   modelSrc: string;
+  canvasBottomInsetPx?: number;
 };
 
 const MIN_LAYOUT_PX = 80;
@@ -51,6 +52,7 @@ export function ViewerCameraOwner({
   viewerFullscreen,
   assemblyKey,
   modelSrc,
+  canvasBottomInsetPx = 0,
 }: ViewerCameraOwnerProps) {
   const bounds = useBounds();
   const { gl, camera, invalidate, set } = useThree();
@@ -105,14 +107,14 @@ export function ViewerCameraOwner({
     if (!size) {
       return false;
     }
-    if (!syncRendererViewport(gl, camera, size.width, size.height)) {
+    if (!syncRendererViewport(gl, camera, size.width, size.height, 1.5, canvasBottomInsetPx)) {
       return false;
     }
     set({
       size: { width: size.width, height: size.height, top: 0, left: 0 },
     });
     return true;
-  }, [camera, gl, readSize, set]);
+  }, [camera, canvasBottomInsetPx, gl, readSize, set]);
 
   const fitMargin = useCallback(() => {
     const layout = readSize();

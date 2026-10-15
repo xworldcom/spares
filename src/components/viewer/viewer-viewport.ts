@@ -13,6 +13,7 @@ export function syncRendererViewport(
   width: number,
   height: number,
   maxDpr = 1.5,
+  bottomInsetPx = 0,
 ) {
   if (width < 1 || height < 1) {
     return false;
@@ -20,7 +21,16 @@ export function syncRendererViewport(
   const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
   gl.setPixelRatio(dpr);
   gl.setSize(width, height, true);
-  camera.aspect = width / height;
+
+  const inset = Math.max(0, Math.min(bottomInsetPx, height - 2));
+  const viewHeight = Math.max(1, height - inset);
+  if (inset > 0.5) {
+    camera.setViewOffset(width, height, 0, inset, width, viewHeight);
+    camera.aspect = width / viewHeight;
+  } else {
+    camera.clearViewOffset();
+    camera.aspect = width / height;
+  }
   camera.updateProjectionMatrix();
   return true;
 }

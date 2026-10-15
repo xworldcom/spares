@@ -453,6 +453,7 @@ export function StaffPartsReview({
         <div
           className="spares-surface flex shrink-0 flex-wrap gap-2 border-t border-white/8 px-4 py-2"
           data-staff-row-actions=""
+          inert={listEditorOpen ? true : undefined}
         >
           <button
             type="button"

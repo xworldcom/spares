@@ -11,6 +11,14 @@ import { ManualSubAssemblyChildListItems } from "@/components/machine/ManualSubA
 import { partSheetMetaLine, partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
+function manualSubParentBackLabel(parent: Part): string {
+  const mesh = parent.meshName?.trim();
+  if (mesh) {
+    return mesh;
+  }
+  return parent.name.trim();
+}
+
 export function SelectedPartSheet({
   part,
   isolated,
@@ -220,9 +228,9 @@ export function SelectedPartSheet({
                 className="part-sheet-back-parent mb-1.5 inline-flex min-h-11 w-full max-w-full items-center gap-1 rounded-full bg-white/14 px-3 py-2 text-[12px] font-semibold text-[var(--spares-on-chip)]"
                 data-part-sheet-back-motor=""
               >
-                <span className="min-w-0 truncate text-left leading-snug">
+                <span className="part-sheet-back-title min-w-0 text-left leading-snug">
                   <span aria-hidden="true">← </span>
-                  Back to {manualSubParent.name}
+                  Back to {manualSubParentBackLabel(manualSubParent)}
                 </span>
               </button>
             ) : null}

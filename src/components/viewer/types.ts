@@ -22,6 +22,8 @@ export type PartPickerProps = {
   resetKey?: number;
   /** True while the machine viewer chrome is in native or overlay fullscreen. */
   viewerFullscreen?: boolean;
+  /** Bottom UI occlusion (px): shifts the visible 3D centre via setViewOffset only. */
+  canvasBottomInsetPx?: number;
   layoutRootRef?: RefObject<HTMLDivElement | null>;
   hiddenIds?: readonly string[];
   isolatedId?: string | null;

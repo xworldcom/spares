@@ -26,6 +26,25 @@ describe("viewer viewport", () => {
     assert.equal(camera.aspect, 1280 / 800);
   });
 
+  it("syncRendererViewport applies bottom inset via setViewOffset", () => {
+    const camera = new PerspectiveCamera(40, 1, 0.1, 100);
+    const canvas = document.createElement("canvas");
+    const gl = {
+      domElement: canvas,
+      setPixelRatio: () => undefined,
+      setSize: (w: number, h: number) => {
+        canvas.width = w;
+        canvas.height = h;
+      },
+    };
+    assert.equal(syncRendererViewport(gl as never, camera, 390, 844, 1, 220), true);
+    assert.ok(camera.view !== null);
+    assert.ok(Math.abs(camera.aspect - 390 / 624) < 0.001);
+    assert.equal(syncRendererViewport(gl as never, camera, 390, 844, 1, 0), true);
+    assert.equal(camera.view, null);
+    assert.equal(camera.aspect, 390 / 844);
+  });
+
   it("uprightDefaultOrbit lifts the camera above the target", () => {
     const camera = new PerspectiveCamera(40, 1, 0.1, 100);
     const target = new Vector3(0, 0, 0);

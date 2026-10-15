@@ -368,7 +368,29 @@ body {
         env(safe-area-inset-top, 0px) - 0.35rem
     );
   }
+}
 
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .machine-viewer .quote-sheet {
+    position: fixed;
+    z-index: 65;
+    bottom: env(safe-area-inset-bottom, 0px);
+    height: auto;
+    max-height: calc(
+      100dvh - var(--spares-header) - env(safe-area-inset-top, 0px) - 0.35rem
+    );
+  }
+
+  .spares-app-tabs .machine-viewer .quote-sheet {
+    bottom: calc(var(--spares-tabbar) + env(safe-area-inset-bottom, 0px));
+    max-height: calc(
+      100dvh - var(--spares-header) - var(--spares-tabbar) -
+        env(safe-area-inset-top, 0px) - 0.35rem
+    );
+  }
+}
+
+@media (max-width: 1023px) {
   .machine-viewer[data-viewer-fs="overlay"] {
     inset: 0 !important;
     top: 0 !important;
@@ -1308,15 +1330,24 @@ html.spares-embed .spares-app-stage {
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-data-row--grid {
+  box-sizing: border-box;
   min-height: var(--bom-row-min-h, 4rem);
-  align-items: start;
+  height: var(--bom-row-min-h, 4rem);
+  padding-top: 0;
+  padding-bottom: 0;
+  align-items: center;
   grid-template-columns: minmax(0, 1fr) var(--bom-qty-col) var(--bom-add-col);
+}
+
+[data-manual-sub-sheet] [data-manual-sub-part] .bom-row-main {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-qty-col,
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-add-col {
-  align-self: start;
-  padding-top: 0.2rem;
+  align-self: center;
+  padding-top: 0;
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-add-col.btn-accent {
@@ -1432,9 +1463,18 @@ html.spares-embed .spares-app-stage {
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] [data-part-sheet-more-panel] {
-    max-height: min(9.5rem, 38vh);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .spares-app-machine-context
+    .machine-viewer
+    [data-part-sheet][data-sheet-anchor="model-mobile"]
+    .part-sheet-chip[data-part-sheet-more-open] {
+    max-height: min(
+      calc(100% - 3.5rem - env(safe-area-inset-bottom, 0px)),
+      calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 3.5rem - env(safe-area-inset-top, 0px))
+    );
   }
 }
 

@@ -567,6 +567,7 @@ function ViewerCanvas({
   viewerFullscreen,
   assemblyKey,
   layoutRootRef,
+  canvasBottomInsetPx,
   hiddenIds,
   isolatedId,
   onPick,
@@ -581,6 +582,7 @@ function ViewerCanvas({
   viewerFullscreen: boolean;
   assemblyKey: string;
   layoutRootRef: React.RefObject<HTMLDivElement | null>;
+  canvasBottomInsetPx?: number;
   hiddenIds: readonly string[];
   isolatedId: string | null;
   onPick: (hit: { part: ViewerPart } | UnmatchedMesh | null) => void;
@@ -702,6 +704,7 @@ function ViewerCanvas({
             viewerFullscreen={viewerFullscreen}
             assemblyKey={assemblyKey}
             modelSrc={src}
+            canvasBottomInsetPx={canvasBottomInsetPx}
           />
         </Bounds>
         </Suspense>
@@ -727,6 +730,7 @@ export function PartPicker({
   fitKey = 0,
   resetKey = 0,
   viewerFullscreen = false,
+  canvasBottomInsetPx = 0,
   layoutRootRef,
   hiddenIds = [],
   isolatedId = null,
@@ -813,6 +817,7 @@ export function PartPicker({
         viewerFullscreen={viewerFullscreen}
         assemblyKey={assemblyKey}
         layoutRootRef={measureRef}
+        canvasBottomInsetPx={canvasBottomInsetPx}
         hiddenIds={hiddenIds}
         isolatedId={isolatedId}
         onPick={handlePick}

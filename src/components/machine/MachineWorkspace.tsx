@@ -17,6 +17,7 @@ import {
 import { useHydrated } from "@/lib/use-hydrated";
 import { useResizableSplit } from "@/components/machine/useResizableSplit";
 import { useViewerLayoutReady } from "@/components/machine/useViewerLayoutReady";
+import { useViewerPartSheetBottomInset } from "@/components/machine/useViewerPartSheetBottomInset";
 import { useViewerFullscreen } from "@/components/machine/useViewerFullscreen";
 import { QuoteAddToast } from "@/components/quote/QuoteAddToast";
 import { QuoteUndoToast } from "@/components/quote/QuoteUndoToast";
@@ -390,6 +391,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     return { ...selectedPart, lifecycle: lookedUp };
   }, [selectedPart, lifecycleById]);
+
+  const partSheetBottomInset = useViewerPartSheetBottomInset(
+    viewerLayoutRef,
+    Boolean(
+      isCustomer &&
+        phoneViewerLayout &&
+        view === "model" &&
+        selectedPartForSheet &&
+        !fullscreen,
+    ),
+  );
 
   useEffect(() => {
     const ids = lifecycleIdsKey ? lifecycleIdsKey.split("\n").filter(Boolean) : [];
@@ -911,6 +923,9 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         ref={viewerLayoutRef}
         className="relative min-h-0 flex-1"
         data-machine-viewer-layout=""
+        data-viewer-bottom-inset={
+          partSheetBottomInset > 0 ? String(partSheetBottomInset) : undefined
+        }
       >
         {src && viewerMountReady ? (
           <PartPicker
@@ -922,6 +937,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             resetKey={viewerResetKey}
             viewerFullscreen={fullscreen}
             layoutRootRef={viewerLayoutRef}
+            canvasBottomInsetPx={partSheetBottomInset}
             hiddenIds={hiddenIds}
             isolatedId={isolatedId}
             onSelect={(part) => {
