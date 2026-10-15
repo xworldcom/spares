@@ -1094,7 +1094,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             }
             modelViewMobile={phoneViewerLayout && view === "model"}
             phoneCompactSheet={
-              phoneViewerLayout && isCustomer && (view === "model" || view === "list")
+              phoneViewerLayout && (view === "model" || view === "list")
             }
             onCompactPeekChange={setPartSheetCompactPeek}
             showEditSubParts={staffCanEditSubParts}
