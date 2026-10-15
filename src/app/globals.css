@@ -448,6 +448,13 @@ html.viewer-immersive-fs .spares-tabbar {
   }
 
   .quote-tray-dock:not(.is-open) {
+    width: 0 !important;
+    min-width: 0 !important;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    overflow: hidden;
     transition: none;
   }
 
@@ -1054,10 +1061,112 @@ html.spares-embed .spares-app-stage {
   display: none;
 }
 
-/* Keep BOM qty column clear of the header bug-report control on machine stage. */
-.spares-app-machine-context .machine-bom-list-pad,
-.spares-app-machine-context [data-parts-bom] {
-  padding-inline-end: 2.75rem;
+/* Keep BOM qty column clear of the header bug-report control on desktop BOM panel only. */
+@media (min-width: 1024px) {
+  .spares-app-machine-context .machine-bom-list-pad,
+  .spares-app-machine-context .machine-bom[data-parts-bom] {
+    padding-inline-end: 2.75rem;
+  }
+}
+
+.spares-app-machine-context .machine-bom-mobile-list {
+  padding-inline-end: 1rem;
+}
+
+.machine-stage-grid[data-customer-desktop="true"]:not([data-tray="open"]) {
+  gap: 0;
+}
+
+.bom-tree-row {
+  --bom-tree-gutter: 3.25rem;
+  display: grid;
+  grid-template-columns: var(--bom-tree-gutter) minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 37px;
+  padding: 0.25rem 1rem 0.25rem 0;
+  column-gap: 0;
+}
+
+.bom-tree-gutter {
+  display: flex;
+  width: var(--bom-tree-gutter);
+  min-width: var(--bom-tree-gutter);
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.125rem;
+}
+
+.bom-tree-gutter .bom-tree-chevron {
+  margin-left: -0.35rem;
+}
+
+.bom-tree-name {
+  min-width: 0;
+}
+
+.bom-tree-child-inner {
+  margin-left: var(--bom-tree-gutter, 3.25rem);
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+[data-manual-sub-sheet] {
+  --bom-tree-gutter: 1.75rem;
+}
+
+[data-manual-sub-sheet] .bom-tree-child-inner {
+  margin-left: var(--bom-tree-gutter, 1.75rem);
+}
+
+.bom-tree-child-selected-chip {
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--spares-on-chip);
+}
+
+.bom-tree-child-selected-chip .spares-muted,
+.bom-tree-child-selected-chip .row-on-ink-muted {
+  color: rgba(236, 234, 228, 0.72);
+}
+
+[data-staff-parts] {
+  position: relative;
+}
+
+[data-staff-parts] .staff-manual-sub-overlay {
+  position: absolute;
+  z-index: 25;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+}
+
+.machine-viewer .quote-sheet.is-peek {
+  --peek-h: 11.25rem;
+}
+
+.machine-viewer .quote-sheet.is-peek .quote-sheet-body {
+  max-height: calc(var(--peek-h) - 4.5rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.machine-viewer .quote-sheet.is-peek .manual-quote-remove {
+  min-height: 2.75rem;
+  padding-inline: 0.85rem;
+}
+
+.spares-app-machine-context .quote-add-toast {
+  top: auto;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+}
+
+.spares-app-machine-context .machine-viewer [data-part-sheet] {
+  top: 5.25rem;
+  max-width: min(18rem, calc(100% - 5.5rem));
 }
 
 .machine-bom-scroll {

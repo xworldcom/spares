@@ -9,9 +9,8 @@ import {
   type StaffCatalogRow,
 } from "@/lib/staff-catalog";
 import {
+  BomTreeParentRow,
   ManualSubAssemblyChildListItems,
-  ManualSubAssemblyCountBadge,
-  ManualSubAssemblyExpandButton,
   manualGroupForParent,
   useManualSubAssemblyTree,
 } from "@/components/machine/ManualSubAssemblyRows";
@@ -54,9 +53,6 @@ function StaffCatalogTreeEntry({
   selectedPartId,
   onSelectRow,
   onSelectPart,
-  onOpenPartEdit,
-  onToggleSubPartsEdit,
-  subPartsEditOpen,
   onMachineUpdated,
 }: {
   row: StaffCatalogRow;
@@ -65,9 +61,6 @@ function StaffCatalogTreeEntry({
   selectedPartId: string | null;
   onSelectRow: (row: StaffCatalogRow) => void;
   onSelectPart: (part: Part | null) => void;
-  onOpenPartEdit: () => void;
-  onToggleSubPartsEdit: () => void;
-  subPartsEditOpen: boolean;
   onMachineUpdated?: (machine: MachineDetail) => void;
 }) {
   const parentPart =
@@ -82,26 +75,27 @@ function StaffCatalogTreeEntry({
   return (
     <Fragment>
       <li className={selected ? "row-on-ink" : undefined}>
-        <div className="flex min-h-14 w-full items-center gap-1 py-2 pr-4">
-          <span className="w-1 shrink-0" aria-hidden="true" />
-          <div className="flex min-w-0 flex-1 items-center gap-0.5">
-            {tree.hasChildren && parentPart ? (
-              <ManualSubAssemblyExpandButton
-                open={tree.open}
-                count={tree.count}
-                onToggle={tree.toggle}
-              />
-            ) : (
-              <span className="w-9 shrink-0" aria-hidden="true" />
-            )}
-            {tree.hasChildren ? (
-              <ManualSubAssemblyCountBadge count={tree.count} selected={selected} />
-            ) : null}
+        <BomTreeParentRow
+          hasChildren={tree.hasChildren && Boolean(parentPart)}
+          expand={
+            tree.hasChildren && parentPart
+              ? { open: tree.open, count: tree.count, onToggle: tree.toggle }
+              : undefined
+          }
+          count={tree.count}
+          selected={selected}
+          nameCell={
             <button
               type="button"
-              onPointerDown={() => onSelectRow(row)}
-              onClick={() => onSelectRow(row)}
-              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                onSelectRow(row);
+              }}
+              aria-selected={selected}
+              className="flex min-w-0 flex-1 items-center gap-3 py-1 text-left"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-medium">{row.name}</span>
@@ -133,35 +127,8 @@ function StaffCatalogTreeEntry({
                 </span>
               </span>
             </button>
-          </div>
-          {selected && row.status === "joined" ? (
-            <div className="flex shrink-0 flex-col gap-1">
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenPartEdit();
-                }}
-                className="btn-soft inline-flex h-8 items-center rounded-full px-2.5 text-[11px] font-semibold"
-              >
-                Edit part
-              </button>
-              {tree.hasChildren ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleSubPartsEdit();
-                  }}
-                  className="btn-soft inline-flex h-8 items-center rounded-full px-2.5 text-[11px] font-semibold"
-                  aria-expanded={subPartsEditOpen}
-                >
-                  Edit sub-parts
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+          }
+        />
       </li>
       {tree.open && parentPart && manualGroup ? (
         <ManualSubAssemblyChildListItems
@@ -171,16 +138,6 @@ function StaffCatalogTreeEntry({
           onSelect={onSelectPart}
           variant="staff"
         />
-      ) : null}
-      {subPartsEditOpen && selected && parentPart && manualGroup && onMachineUpdated ? (
-        <li className="border-t border-white/6 px-4 py-3" data-staff-manual-sub-inline="">
-          <StaffManualSubAssemblyEditor
-            machine={machine}
-            parentPart={parentPart}
-            onMachineUpdated={onMachineUpdated}
-            onClose={onToggleSubPartsEdit}
-          />
-        </li>
       ) : null}
     </Fragment>
   );
@@ -245,6 +202,13 @@ export function StaffPartsReview({
 
   const selectedKey = missingKey ?? (selectedPartId ? `part:${selectedPartId}` : null);
   const selectedRow = rows.find((row) => row.key === selectedKey) ?? null;
+  const selectedParentPart =
+    selectedRow?.status === "joined"
+      ? machine.parts.find((item) => item.id === selectedRow.partNumber) ?? null
+      : null;
+  const selectedManualGroup = selectedParentPart
+    ? manualGroupForParent(machine.manualSubAssemblies, selectedParentPart)
+    : undefined;
 
   useEffect(() => {
     if (selectedPartId && missingKey) {
@@ -387,13 +351,6 @@ export function StaffPartsReview({
                 selectedPartId={selectedPartId}
                 onSelectRow={selectRow}
                 onSelectPart={onSelectPart}
-                onOpenPartEdit={() => {
-                  setSubPartsEditOpen(false);
-                  setSubPartsEditRowKey(null);
-                  setPartEditOpen(true);
-                }}
-                onToggleSubPartsEdit={() => toggleSubPartsEditor(row.key)}
-                subPartsEditOpen={subPartsEditOpen && subPartsEditRowKey === row.key}
                 onMachineUpdated={onMachineUpdated}
               />
             ))}
@@ -440,6 +397,56 @@ export function StaffPartsReview({
           </section>
         ) : null}
       </div>
+
+      {selectedRow && selectedRow.status === "joined" ? (
+        <div
+          className="spares-surface flex shrink-0 flex-wrap gap-2 border-t border-white/8 px-4 py-2"
+          data-staff-row-actions=""
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setSubPartsEditOpen(false);
+              setSubPartsEditRowKey(null);
+              setPartEditOpen(true);
+            }}
+            className="btn-soft inline-flex h-11 min-h-11 items-center rounded-full px-4 text-[13px] font-semibold"
+          >
+            Edit part
+          </button>
+          {selectedManualGroup && selectedManualGroup.children.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => toggleSubPartsEditor(selectedRow.key)}
+              className="btn-soft inline-flex h-11 min-h-11 items-center rounded-full px-4 text-[13px] font-semibold"
+              aria-expanded={subPartsEditOpen && subPartsEditRowKey === selectedRow.key}
+            >
+              Edit sub-parts
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {subPartsEditOpen &&
+      selectedRow &&
+      selectedParentPart &&
+      selectedManualGroup &&
+      onMachineUpdated ? (
+        <div
+          className="staff-manual-sub-overlay spares-surface border-t border-white/10 px-4 py-3 shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+          data-staff-manual-sub-overlay=""
+        >
+          <StaffManualSubAssemblyEditor
+            machine={machine}
+            parentPart={selectedParentPart}
+            onMachineUpdated={onMachineUpdated}
+            onClose={() => {
+              setSubPartsEditOpen(false);
+              setSubPartsEditRowKey(null);
+            }}
+          />
+        </div>
+      ) : null}
 
       {selectedRow && partEditOpen ? (
         <form

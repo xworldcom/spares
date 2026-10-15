@@ -140,62 +140,64 @@ export function StaffManualSubAssemblyEditor({
               key={child.id}
               className="border-t border-white/6 first:border-t-0"
             >
-              <div className="flex items-center gap-2 px-3 py-2">
-                <div className="flex w-11 shrink-0 flex-col items-center justify-center gap-0.5">
+              <div className="staff-manual-sub-row flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center">
+                <div className="staff-manual-sub-reorder flex w-full shrink-0 flex-row items-center justify-center gap-1 sm:w-11 sm:flex-col sm:justify-center">
                   {index > 0 ? (
                     <button
                       type="button"
                       disabled={saving}
                       onClick={() => void moveChild(child.id, -1)}
-                      className="btn-soft inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold"
+                      className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
                       aria-label="Move up"
                     >
                       ↑
                     </button>
                   ) : (
-                    <span className="h-9 w-9" aria-hidden="true" />
+                    <span className="hidden h-11 w-11 sm:inline-block" aria-hidden="true" />
                   )}
                   {index < children.length - 1 ? (
                     <button
                       type="button"
                       disabled={saving}
                       onClick={() => void moveChild(child.id, 1)}
-                      className="btn-soft inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold"
+                      className="btn-soft inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-semibold"
                       aria-label="Move down"
                     >
                       ↓
                     </button>
                   ) : (
-                    <span className="h-9 w-9" aria-hidden="true" />
+                    <span className="hidden h-11 w-11 sm:inline-block" aria-hidden="true" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-medium">{child.name}</p>
-                  <p className="truncate font-mono text-xs spares-muted">
+                  <p className="text-[14px] font-medium leading-snug">{child.name}</p>
+                  <p className="font-mono text-xs leading-snug spares-muted break-all">
                     {child.id}
                     {child.vendor ? ` · ${child.vendor}` : ""}
                     {" · "}qty {child.qty}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => {
-                    setEditingId(child.id);
-                    setDraft({ ...child });
-                  }}
-                  className="btn-soft h-9 rounded-full px-3 text-xs font-semibold"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void removeChild(child.id)}
-                  className="btn-soft h-9 rounded-full px-3 text-xs font-semibold"
-                >
-                  Remove
-                </button>
+                <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:items-stretch">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => {
+                      setEditingId(child.id);
+                      setDraft({ ...child });
+                    }}
+                    className="btn-soft inline-flex h-11 min-h-11 items-center justify-center rounded-full px-3 text-xs font-semibold"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void removeChild(child.id)}
+                    className="btn-soft inline-flex h-11 min-h-11 items-center justify-center rounded-full px-3 text-xs font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </li>
           ))}
@@ -204,8 +206,8 @@ export function StaffManualSubAssemblyEditor({
         <p className="spares-muted mt-2 text-[13px]">No manual sub-parts yet.</p>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <label className="spares-muted col-span-2 block text-xs font-medium">
+      <div className="staff-manual-sub-form mt-3 flex flex-col gap-2 sm:grid sm:grid-cols-2">
+        <label className="spares-muted block text-xs font-medium sm:col-span-2">
           Part number
           <input
             value={draft.id}
@@ -213,17 +215,17 @@ export function StaffManualSubAssemblyEditor({
               setDraft((current) => ({ ...current, id: event.target.value }))
             }
             disabled={Boolean(editingId)}
-            className="spares-field mt-1 h-10 w-full rounded-2xl border-0 px-3 font-mono text-[14px] outline-none disabled:opacity-60"
+            className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 font-mono text-[14px] outline-none disabled:opacity-60"
           />
         </label>
-        <label className="spares-muted col-span-2 block text-xs font-medium">
+        <label className="spares-muted block text-xs font-medium sm:col-span-2">
           Name
           <input
             value={draft.name}
             onChange={(event) =>
               setDraft((current) => ({ ...current, name: event.target.value }))
             }
-            className="spares-field mt-1 h-10 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
+            className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
           />
         </label>
         <label className="spares-muted block text-xs font-medium">
@@ -238,7 +240,7 @@ export function StaffManualSubAssemblyEditor({
                 qty: Number(event.target.value) || 1,
               }))
             }
-            className="spares-field mt-1 h-10 w-full rounded-2xl border-0 px-3 text-[15px] tabular-nums outline-none"
+            className="spares-field mt-1 h-11 w-full rounded-2xl border-0 px-3 text-[15px] tabular-nums outline-none"
           />
         </label>
         <label className="spares-muted block text-xs font-medium">
@@ -248,7 +250,7 @@ export function StaffManualSubAssemblyEditor({
             onChange={(event) =>
               setDraft((current) => ({ ...current, vendor: event.target.value }))
             }
-            className="spares-field mt-1 h-10 w-full rounded-2xl border-0 px-3 text-[15px] outline-none"
+            className="spares-field mt-1 h-11 w-full min-w-0 rounded-2xl border-0 px-3 text-[15px] outline-none"
           />
         </label>
       </div>

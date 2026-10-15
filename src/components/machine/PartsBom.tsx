@@ -7,9 +7,8 @@ import type { ManualSubAssemblyGroup } from "@/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { partMatchesBomFilter } from "@/components/machine/parts-bom-filter";
 import {
+  BomTreeParentRow,
   ManualSubAssemblyChildListItems,
-  ManualSubAssemblyCountBadge,
-  ManualSubAssemblyExpandButton,
   manualGroupForParent,
   useManualSubAssemblyTree,
 } from "@/components/machine/ManualSubAssemblyRows";
@@ -30,6 +29,7 @@ function PartRowSelectButton({
         event.stopPropagation();
         onSelect(part);
       }}
+      aria-selected={selected}
       className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
     >
       <span className="min-w-0">
@@ -78,37 +78,34 @@ function PartsBomTreeEntry({
   return (
     <Fragment>
       <li className={selected ? "row-on-ink" : undefined}>
-        <div className="flex min-h-14 w-full items-center gap-1 py-2 pr-4">
-          <span className="w-1 shrink-0" aria-hidden="true" />
-          <div className="flex min-w-0 flex-1 items-center gap-0.5">
-            {tree.hasChildren ? (
-              <ManualSubAssemblyExpandButton
-                open={tree.open}
-                count={tree.count}
-                onToggle={tree.toggle}
-              />
-            ) : (
-              <span className="w-11 shrink-0" aria-hidden="true" />
-            )}
-            {tree.hasChildren ? (
-              <ManualSubAssemblyCountBadge count={tree.count} selected={selected} />
-            ) : null}
+        <BomTreeParentRow
+          hasChildren={tree.hasChildren}
+          expand={
+            tree.hasChildren
+              ? { open: tree.open, count: tree.count, onToggle: tree.toggle }
+              : undefined
+          }
+          count={tree.count}
+          selected={selected}
+          nameCell={
             <PartRowSelectButton part={part} selected={selected} onSelect={onSelect} />
-          </div>
-          {showAdd && onAdd ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onAdd(part);
-              }}
-              className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
-              data-selected={selected ? "" : undefined}
-            >
-              Add
-            </button>
-          ) : null}
-        </div>
+          }
+          trailing={
+            showAdd && onAdd ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onAdd(part);
+                }}
+                className="btn-accent inline-flex h-11 min-h-11 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+                data-selected={selected ? "" : undefined}
+              >
+                Add
+              </button>
+            ) : null
+          }
+        />
       </li>
       {tree.open && manualGroup ? (
         <ManualSubAssemblyChildListItems

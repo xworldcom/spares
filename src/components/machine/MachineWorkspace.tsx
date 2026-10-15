@@ -471,6 +471,23 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
     }
     return group.children.map((child) => manualChildAsPart(child, selectedPart));
   }, [machine, selectedPart]);
+  const manualSubParentForSheet = useMemo(() => {
+    if (!selectedPart || !machine) {
+      return null;
+    }
+    if (selectedManualSubChildren.length > 0) {
+      return selectedPart;
+    }
+    const parentId = manualSubPartParentPartId(
+      selectedPart.id,
+      machine.parts,
+      machine.manualSubAssemblies,
+    );
+    if (!parentId) {
+      return null;
+    }
+    return machine.parts.find((item) => item.id === parentId) ?? null;
+  }, [machine, selectedPart, selectedManualSubChildren.length]);
   const viewerHighlightPartId = useMemo(() => {
     if (!selectedPart || !machine) {
       return null;
@@ -862,7 +879,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             data-parts-bom=""
             className={`absolute inset-0 z-[15] bg-[var(--spares-paper)] ${
               isCustomer
-                ? "overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pr-14"
+                ? "machine-bom-mobile-list overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
                 : "flex flex-col"
             }`}
             style={{ paddingTop: "3.65rem" }}
@@ -893,7 +910,12 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 selectedPartId={selectedPart?.id ?? null}
                 suggestedMeshName={suggestedMesh}
                 onSuggestedMeshUsed={() => setSuggestedMesh(null)}
-                onSelectPart={setSelectedPart}
+                onSelectPart={(part) => {
+                  setSelectedPart(part);
+                  if (part && hasModel && !staffSplitView) {
+                    setView("model");
+                  }
+                }}
                 onSave={saveStaffPart}
                 onMachineUpdated={setMachine}
                 saving={savingPart}
@@ -906,9 +928,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <SelectedPartSheet
             part={selectedPartForSheet}
             manualSubChildren={selectedManualSubChildren}
-            manualSubParent={
-              selectedManualSubChildren.length > 0 ? selectedPart : null
-            }
+            manualSubParent={manualSubParentForSheet}
             staffViewPart={
               !selectedPart ||
               !machine ||
@@ -946,11 +966,17 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
         <div className="absolute top-3 right-3 left-3 z-20 flex min-w-0 flex-col gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {showViewToggle && hasModel ? (
-              <div className="viewer-chrome-chip flex h-11 shrink-0 items-center rounded-full px-1">
+              <div
+                className="viewer-chrome-chip flex h-11 min-h-11 shrink-0 items-center rounded-full px-1"
+                role="tablist"
+                aria-label="Machine view"
+              >
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={view === "model"}
                   onClick={() => setView("model")}
-                  className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                  className={`inline-flex h-11 min-h-11 min-w-11 items-center rounded-full px-3 text-sm font-semibold ${
                     view === "model" ? "bg-white/12" : "chrome-quiet"
                   }`}
                 >
@@ -958,8 +984,10 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={view === "list"}
                   onClick={() => setView("list")}
-                  className={`inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold ${
+                  className={`inline-flex h-11 min-h-11 min-w-11 items-center rounded-full px-3 text-sm font-semibold ${
                     view === "list" ? "bg-white/12" : "chrome-quiet"
                   }`}
                 >

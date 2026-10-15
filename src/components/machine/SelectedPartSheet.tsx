@@ -107,6 +107,8 @@ export function SelectedPartSheet({
     Boolean(manualSubParent) &&
     Boolean(manualSubChildren?.length) &&
     part.id === manualSubParent?.id;
+  const isManualSubChild =
+    Boolean(manualSubParent) && part.id !== manualSubParent?.id;
 
   return (
     <div
@@ -151,6 +153,17 @@ export function SelectedPartSheet({
         ) : null}
         <div className="part-sheet-header mb-1 flex items-start justify-between gap-2" data-part-sheet-header="">
           <div className="min-w-0 flex-1 pt-0.5">
+            {isManualSubChild && manualSubParent && onSelectSubPart ? (
+              <button
+                type="button"
+                {...activate(() => onSelectSubPart(manualSubParent))}
+                className="mb-1 inline-flex h-9 max-w-full items-center gap-1 rounded-full bg-white/10 px-2.5 text-[11px] font-semibold text-[var(--spares-on-chip)]"
+                data-part-sheet-back-motor=""
+              >
+                <span aria-hidden="true">←</span>
+                <span className="truncate">{manualSubParent.name}</span>
+              </button>
+            ) : null}
             <p className="text-[13px] leading-tight font-semibold tracking-tight break-words">
               {part.name}
             </p>

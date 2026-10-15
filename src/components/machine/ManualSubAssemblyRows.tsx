@@ -10,11 +10,6 @@ import {
 } from "@/lib/manual-sub-assembly";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 
-const TREE_GUIDE_OFFSET_LIST = "2.25rem";
-const TREE_INDENT_LIST = "1.25rem";
-const TREE_GUIDE_OFFSET_SHEET = "0.5rem";
-const TREE_INDENT_SHEET = "0.75rem";
-
 function Chevron({ open }: { open: boolean }) {
   return (
     <svg
@@ -71,12 +66,48 @@ export function ManualSubAssemblyExpandButton({
       onPointerUp={(event) => {
         event.currentTarget.blur();
       }}
-      className="inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[var(--spares-on-surface)] spares-muted hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+      className="bom-tree-chevron inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[var(--spares-on-surface)] spares-muted hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
       aria-expanded={open}
       aria-label={open ? "Collapse sub-parts" : `Expand ${count} sub-part${count === 1 ? "" : "s"}`}
     >
       <Chevron open={open} />
     </button>
+  );
+}
+
+export function BomTreeParentRow({
+  hasChildren,
+  expand,
+  count,
+  selected,
+  nameCell,
+  trailing,
+}: {
+  hasChildren: boolean;
+  expand?: { open: boolean; onToggle: () => void; count: number };
+  count?: number;
+  selected: boolean;
+  nameCell: ReactNode;
+  trailing?: ReactNode;
+}) {
+  const badgeCount = count ?? expand?.count ?? 0;
+  return (
+    <div className="bom-tree-row">
+      <div className="bom-tree-gutter" aria-hidden={!hasChildren}>
+        {hasChildren && expand ? (
+          <>
+            <ManualSubAssemblyExpandButton
+              open={expand.open}
+              count={expand.count}
+              onToggle={expand.onToggle}
+            />
+            <ManualSubAssemblyCountBadge count={badgeCount} selected={selected} />
+          </>
+        ) : null}
+      </div>
+      <div className="bom-tree-name min-w-0">{nameCell}</div>
+      {trailing ? <div className="bom-tree-trail shrink-0">{trailing}</div> : null}
+    </div>
   );
 }
 
@@ -94,14 +125,15 @@ export function CustomerBomPartRow({
   showAdd?: boolean;
 }) {
   return (
-    <div className="flex min-h-[37px] w-full items-center gap-2 py-1">
+    <div className="flex min-h-[37px] w-full items-center gap-2 py-0">
       <button
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           onSelect(part);
         }}
-        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+        aria-selected={selected}
+        className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
       >
         <span className="min-w-0">
           <span className="block truncate text-[15px] font-medium">{part.name}</span>
@@ -166,6 +198,7 @@ export function StaffCatalogPartRow({
         event.stopPropagation();
         onSelect();
       }}
+      aria-selected={selected}
       className="flex min-h-[37px] w-full items-center gap-3 py-1 text-left"
     >
       <span className="min-w-0 flex-1">
@@ -199,25 +232,21 @@ function ManualSubTreeChildShell({
   children: ReactNode;
   treeLayout?: "list" | "sheet";
 }) {
-  const marginLeft =
-    treeLayout === "sheet" ? TREE_GUIDE_OFFSET_SHEET : TREE_GUIDE_OFFSET_LIST;
-  const paddingLeft =
-    treeLayout === "sheet" ? TREE_INDENT_SHEET : TREE_INDENT_LIST;
+  const selectionClass =
+    treeLayout === "sheet"
+      ? selected
+        ? "bom-tree-child-selected-chip"
+        : ""
+      : selected
+        ? "row-on-ink"
+        : "";
   return (
     <li
       data-manual-sub-part=""
-      className={`border-t border-white/6 ${selected ? "row-on-ink" : ""}`}
+      className={`border-t border-white/6 ${selectionClass}`}
+      data-tree-layout={treeLayout}
     >
-      <div
-        className="relative pr-4"
-        style={{
-          marginLeft,
-          paddingLeft,
-          borderLeft: "1px solid rgba(255,255,255,0.14)",
-        }}
-      >
-        {children}
-      </div>
+      <div className="bom-tree-child-inner relative pr-4">{children}</div>
     </li>
   );
 }

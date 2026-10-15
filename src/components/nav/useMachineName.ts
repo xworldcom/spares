@@ -48,11 +48,14 @@ export function useMachineName(machineId: string | null) {
     const cached = readMachineNameCache(machineId);
     if (cached) {
       setResolved({ id: machineId, name: cached });
+    }
+
+    if (!user) {
       return;
     }
 
     let cancelled = false;
-    getMachine(machineId, user?.role)
+    getMachine(machineId, user.role)
       .then((machine) => {
         if (cancelled) {
           return;
