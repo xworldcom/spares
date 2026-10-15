@@ -393,7 +393,7 @@ html.viewer-immersive-fs .spares-tabbar {
   pointer-events: none;
 }
 
-@media (min-width: 1024px) and (pointer: fine) {
+@media (min-width: 1280px) {
   .quote-sheet {
     left: auto;
     right: 1.1rem;
@@ -1262,7 +1262,7 @@ html.spares-embed .spares-app-stage {
 [data-staff-parts] .bom-data-row--grid,
 [data-staff-parts] [data-manual-sub-part] .bom-data-row--grid,
 [data-parts-bom] .bom-tree-parent-li .bom-data-row--grid {
-  min-height: var(--bom-row-min-h, 3.5rem);
+  min-height: var(--bom-row-min-h, 4rem);
   box-sizing: border-box;
 }
 
@@ -1294,15 +1294,29 @@ html.spares-embed .spares-app-stage {
   margin-left: calc(var(--bom-tree-chevron-col, 1.5rem) + var(--bom-tree-badge-col, 1.25rem));
 }
 
+@media (min-width: 1024px) {
+  [data-part-sheet][data-sheet-anchor="model"] [data-manual-sub-sheet] {
+    --bom-tree-chevron-col: 0rem;
+    --bom-tree-badge-col: 0rem;
+  }
+
+  [data-part-sheet][data-sheet-anchor="model"] [data-manual-sub-sheet] .bom-tree-child-inner {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-data-row--grid {
   min-height: var(--bom-row-min-h, 4rem);
-  align-items: center;
+  align-items: start;
   grid-template-columns: minmax(0, 1fr) var(--bom-qty-col) var(--bom-add-col);
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-qty-col,
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-add-col {
-  align-self: center;
+  align-self: start;
+  padding-top: 0.2rem;
 }
 
 [data-manual-sub-sheet] [data-manual-sub-part] .bom-add-col.btn-accent {
@@ -1380,14 +1394,14 @@ html.spares-embed .spares-app-stage {
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] {
-    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+    bottom: env(safe-area-inset-bottom, 0px);
     max-height: none;
   }
 
   .spares-app-machine-context .machine-viewer [data-part-sheet][data-sheet-anchor="model-mobile"] .part-sheet-chip {
     max-height: min(
-      17.5rem,
-      calc(100dvh - 5.25rem - 14.5rem - env(safe-area-inset-bottom, 0px))
+      21.625rem,
+      calc(100% - 11.5rem - env(safe-area-inset-bottom, 0px))
     );
     overflow-x: hidden;
     overflow-y: auto;
@@ -1399,8 +1413,8 @@ html.spares-embed .spares-app-stage {
     [data-part-sheet][data-sheet-anchor="model-mobile"]
     .part-sheet-chip[data-part-sheet-more-open] {
     max-height: min(
-      22rem,
-      calc(100dvh - 5.25rem - env(safe-area-inset-bottom, 0px) - 11.5rem)
+      calc(100% - 5.5rem - env(safe-area-inset-bottom, 0px)),
+      calc(100dvh - var(--spares-header) - var(--spares-tabbar) - 5.5rem - env(safe-area-inset-top, 0px))
     );
   }
 
