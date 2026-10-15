@@ -32,6 +32,7 @@ import { staffCatalogRows } from "@/lib/staff-catalog";
 import {
   groupForPart,
   manualChildAsPart,
+  isManualOnlySubPartId,
 } from "@/lib/manual-sub-assembly";
 import { errorMessage, isNotFound, isUnauthorized } from "@/lib/api/errors";
 import type { MachineDetail, Part } from "@/lib/api/types";
@@ -880,6 +881,18 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
           <SelectedPartSheet
             part={selectedPartForSheet}
             manualSubChildren={selectedManualSubChildren}
+            manualSubParent={
+              selectedManualSubChildren.length > 0 ? selectedPart : null
+            }
+            staffViewPart={
+              !selectedPart ||
+              !machine ||
+              !isManualOnlySubPartId(
+                selectedPart.id,
+                machine.parts,
+                machine.manualSubAssemblies,
+              )
+            }
             onSelectSubPart={setSelectedPart}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
             isolatedViewPart={

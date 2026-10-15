@@ -7,6 +7,7 @@ import {
   HARDWARE_FIXTURE_MOTOR_SUB_PARTS,
   mergeManualSubAssembliesOnPackReplace,
   manualChildAsPart,
+  isManualOnlySubPartId,
 } from "./manual-sub-assembly.ts";
 
 const motor: Part = {
@@ -104,6 +105,16 @@ describe("manual sub-assembly", () => {
       reorder.manualSubAssemblies[0]?.children.map((row) => row.id),
       ["B", "A"],
     );
+  });
+
+  it("detects manual-only sub-part ids", () => {
+    const groups = [HARDWARE_FIXTURE_MOTOR_SUB_PARTS];
+    assert.equal(
+      isManualOnlySubPartId("6331K32-BRUSH", [motor], groups),
+      true,
+    );
+    assert.equal(isManualOnlySubPartId("6331K32", [motor], groups), false);
+    assert.equal(isManualOnlySubPartId("UNKNOWN", [motor], groups), false);
   });
 
   it("maps manual children to quote-ready parts", () => {

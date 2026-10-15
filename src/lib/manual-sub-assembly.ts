@@ -34,6 +34,29 @@ export function groupForPart(
   return groups?.find((group) => group.assemblyKey === key);
 }
 
+/** True when `partId` exists only as a manual sub-part line (not a top-level BOM row). */
+export function isManualOnlySubPartId(
+  partId: string,
+  parts: readonly Part[],
+  groups: readonly ManualSubAssemblyGroup[] | undefined,
+): boolean {
+  const normalized = partId.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  if (parts.some((part) => part.id.trim().toLowerCase() === normalized)) {
+    return false;
+  }
+  for (const group of groups ?? []) {
+    for (const child of group.children) {
+      if (child.id.trim().toLowerCase() === normalized) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function manualChildAsPart(child: ManualSubPart, parent: Part): Part {
   return {
     id: child.id,

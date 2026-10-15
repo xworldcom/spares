@@ -7,7 +7,7 @@ import type { Part } from "@/lib/api/types";
 import { staffPartLifecycleViewHref } from "@/lib/ui/part-lifecycle-url";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { PartDetailSheet } from "@/components/machine/PartDetailSheet";
-import { ManualSubAssemblyChildRow } from "@/components/machine/ManualSubAssemblyRows";
+import { ManualSubAssemblyChildListItems } from "@/components/machine/ManualSubAssemblyRows";
 import { partSheetMetaLine, partSheetVisible } from "@/lib/ui/part-sheet";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -22,14 +22,18 @@ export function SelectedPartSheet({
   onDismiss,
   showAdd,
   manualSubChildren,
+  manualSubParent,
   onSelectSubPart,
   held,
   listView,
   quoteTrayPeek,
+  staffViewPart = true,
 }: {
   part: Part | null;
   manualSubChildren?: Part[];
+  manualSubParent?: Part | null;
   onSelectSubPart?: (part: Part) => void;
+  staffViewPart?: boolean;
   isolated?: boolean;
   isolatedViewPart?: Part | null;
   onHide: () => void;
@@ -46,6 +50,7 @@ export function SelectedPartSheet({
 }) {
   const { user } = useAuth();
   const staff = user?.role === "staff";
+  const showStaffViewPart = staff && staffViewPart;
   const ready = useHydrated();
   const open = partSheetVisible(part?.id);
   const canAct = open && ready;
@@ -162,23 +167,26 @@ export function SelectedPartSheet({
         {partSheetMetaLine(part) ? (
           <p className="chrome-quiet mb-1 truncate text-[11px]">{partSheetMetaLine(part)}</p>
         ) : null}
-        {manualSubChildren && manualSubChildren.length > 0 ? (
+        {manualSubChildren && manualSubChildren.length > 0 && manualSubParent ? (
           <div className="mb-2 border-t border-white/8 pt-2" data-manual-sub-sheet="">
-            <p className="chrome-quiet mb-1 text-[11px] font-medium uppercase tracking-wide">
-              Manual sub-parts
-            </p>
-            <ul className="space-y-1">
-              {manualSubChildren.map((child) => (
-                <li key={child.id}>
-                  <ManualSubAssemblyChildRow
-                    part={child}
-                    selected={part.id === child.id}
-                    onSelect={(row) => onSelectSubPart?.(row)}
-                    onAdd={onAdd}
-                    showAdd={showAdd && Boolean(onAdd)}
-                  />
-                </li>
-              ))}
+            <ul className="overflow-hidden rounded-xl bg-white/6">
+              <ManualSubAssemblyChildListItems
+                parent={manualSubParent}
+                group={{
+                  assemblyKey: manualSubParent.meshName || manualSubParent.id,
+                  children: manualSubChildren.map((child) => ({
+                    id: child.id,
+                    name: child.name,
+                    qty: child.qty,
+                    ...(child.vendor ? { vendor: child.vendor } : {}),
+                  })),
+                }}
+                selectedPartId={part.id}
+                onSelect={(row) => onSelectSubPart?.(row)}
+                onAdd={onAdd}
+                showAdd={showAdd && Boolean(onAdd)}
+                compact
+              />
             </ul>
           </div>
         ) : null}
@@ -193,7 +201,7 @@ export function SelectedPartSheet({
               Add
             </button>
           ) : null}
-          {staff ? (
+          {showStaffViewPart ? (
             <Link
               href={staffPartLifecycleViewHref(part.id)}
               className="btn-primary inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[12px] font-semibold"

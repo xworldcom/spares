@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
 import type { ManualSubAssemblyGroup } from "@/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { partMatchesBomFilter } from "@/components/machine/parts-bom-filter";
 import {
-  ManualSubAssemblyCollapse,
+  ManualSubAssemblyChildListItems,
+  ManualSubAssemblyCountBadge,
+  ManualSubAssemblyExpandButton,
   manualGroupForParent,
+  useManualSubAssemblyTree,
 } from "@/components/machine/ManualSubAssemblyRows";
 
 function PartRowSelectButton({
@@ -51,6 +54,73 @@ function PartRowSelectButton({
         {part.qty}
       </span>
     </button>
+  );
+}
+
+function PartsBomTreeEntry({
+  part,
+  manualGroup,
+  selectedPartId,
+  onSelect,
+  onAdd,
+  showAdd,
+}: {
+  part: Part;
+  manualGroup?: ManualSubAssemblyGroup;
+  selectedPartId: string | null;
+  onSelect: (part: Part) => void;
+  onAdd?: (part: Part) => void;
+  showAdd?: boolean;
+}) {
+  const selected = part.id === selectedPartId;
+  const tree = useManualSubAssemblyTree(manualGroup);
+
+  return (
+    <Fragment>
+      <li>
+        <div
+          className={`flex min-h-14 w-full items-center gap-1 py-2 pr-4 ${
+            selected ? "row-on-ink" : ""
+          }`}
+        >
+          <span className="w-1 shrink-0" aria-hidden="true" />
+          {tree.hasChildren ? (
+            <ManualSubAssemblyExpandButton
+              open={tree.open}
+              count={tree.count}
+              onToggle={tree.toggle}
+            />
+          ) : (
+            <span className="w-9 shrink-0" aria-hidden="true" />
+          )}
+          <PartRowSelectButton part={part} selected={selected} onSelect={onSelect} />
+          {tree.hasChildren ? <ManualSubAssemblyCountBadge count={tree.count} /> : null}
+          {showAdd && onAdd ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onAdd(part);
+              }}
+              className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
+              data-selected={selected ? "" : undefined}
+            >
+              Add
+            </button>
+          ) : null}
+        </div>
+      </li>
+      {tree.open && manualGroup ? (
+        <ManualSubAssemblyChildListItems
+          parent={part}
+          group={manualGroup}
+          selectedPartId={selectedPartId}
+          onSelect={onSelect}
+          onAdd={onAdd}
+          showAdd={showAdd}
+        />
+      ) : null}
+    </Fragment>
   );
 }
 
@@ -169,50 +239,17 @@ export function PartsBom({
               </div>
             </li>
           ) : null}
-          {filtered.map((part) => {
-            const selected = part.id === selectedPartId;
-            const manualGroup = manualGroupForParent(manualSubAssemblies, part);
-            return (
-              <li key={part.id}>
-                <div
-                  className={`flex min-h-14 w-full items-center gap-3 px-4 py-2 ${
-                    selected ? "row-on-ink" : ""
-                  }`}
-                >
-                  <PartRowSelectButton
-                    part={part}
-                    selected={selected}
-                    onSelect={onSelect}
-                  />
-                  {showAdd && onAdd ? (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onAdd(part);
-                      }}
-                      className="btn-accent inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] data-[selected]:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
-                      data-selected={selected ? "" : undefined}
-                    >
-                      Add
-                    </button>
-                  ) : null}
-                </div>
-                {manualGroup ? (
-                  <ul className="border-t border-white/6">
-                    <ManualSubAssemblyCollapse
-                      parent={part}
-                      group={manualGroup}
-                      selectedPartId={selectedPartId}
-                      onSelect={onSelect}
-                      onAdd={onAdd}
-                      showAdd={showAdd}
-                    />
-                  </ul>
-                ) : null}
-              </li>
-            );
-          })}
+          {filtered.map((part) => (
+            <PartsBomTreeEntry
+              key={part.id}
+              part={part}
+              manualGroup={manualGroupForParent(manualSubAssemblies, part)}
+              selectedPartId={selectedPartId}
+              onSelect={onSelect}
+              onAdd={onAdd}
+              showAdd={showAdd}
+            />
+          ))}
         </ul>
       )}
     </div>

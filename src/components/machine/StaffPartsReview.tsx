@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { MachineDetail, Part } from "@/lib/api/types";
 import {
   extraModelMeshes,
@@ -9,8 +9,11 @@ import {
   type StaffCatalogRow,
 } from "@/lib/staff-catalog";
 import {
-  ManualSubAssemblyCollapse,
+  ManualSubAssemblyChildListItems,
+  ManualSubAssemblyCountBadge,
+  ManualSubAssemblyExpandButton,
   manualGroupForParent,
+  useManualSubAssemblyTree,
 } from "@/components/machine/ManualSubAssemblyRows";
 import { StaffManualSubAssemblyEditor } from "@/components/machine/StaffManualSubAssemblyEditor";
 
@@ -42,6 +45,97 @@ function draftFromRow(row: StaffCatalogRow) {
     meshName: row.meshName,
     qty: row.qty,
   };
+}
+
+function StaffCatalogTreeEntry({
+  row,
+  machine,
+  selected,
+  selectedPartId,
+  onSelectRow,
+  onSelectPart,
+}: {
+  row: StaffCatalogRow;
+  machine: MachineDetail;
+  selected: boolean;
+  selectedPartId: string | null;
+  onSelectRow: (row: StaffCatalogRow) => void;
+  onSelectPart: (part: Part | null) => void;
+}) {
+  const parentPart =
+    row.status === "joined"
+      ? machine.parts.find((item) => item.id === row.partNumber) ?? null
+      : null;
+  const manualGroup = parentPart
+    ? manualGroupForParent(machine.manualSubAssemblies, parentPart)
+    : undefined;
+  const tree = useManualSubAssemblyTree(manualGroup);
+
+  return (
+    <Fragment>
+      <li>
+        <div
+          className={`flex min-h-14 w-full items-center gap-1 py-2 pr-4 ${
+            selected ? "row-on-ink" : ""
+          }`}
+        >
+          <span className="w-1 shrink-0" aria-hidden="true" />
+          {tree.hasChildren && parentPart ? (
+            <ManualSubAssemblyExpandButton
+              open={tree.open}
+              count={tree.count}
+              onToggle={tree.toggle}
+            />
+          ) : (
+            <span className="w-9 shrink-0" aria-hidden="true" />
+          )}
+          <button
+            type="button"
+            onPointerDown={() => onSelectRow(row)}
+            onClick={() => onSelectRow(row)}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-medium">{row.name}</span>
+              <span
+                className={`block truncate font-mono text-xs ${
+                  selected ? "row-on-ink-muted" : "spares-muted"
+                }`}
+              >
+                {row.partNumber}
+                {row.meshName ? `  ·  ${row.meshName}` : ""}
+              </span>
+            </span>
+            <span className="shrink-0 text-right">
+              <span
+                className={`block text-[12px] ${
+                  selected ? "row-on-ink-muted" : "spares-muted"
+                }`}
+              >
+                {statusLabel(row.status)}
+              </span>
+              <span
+                className={`block tabular-nums text-sm ${
+                  selected ? "row-on-ink-muted" : "spares-muted"
+                }`}
+              >
+                {row.qty}
+              </span>
+            </span>
+          </button>
+          {tree.hasChildren ? <ManualSubAssemblyCountBadge count={tree.count} /> : null}
+        </div>
+      </li>
+      {tree.open && parentPart && manualGroup ? (
+        <ManualSubAssemblyChildListItems
+          parent={parentPart}
+          group={manualGroup}
+          selectedPartId={selectedPartId}
+          onSelect={onSelectPart}
+        />
+      ) : null}
+    </Fragment>
+  );
 }
 
 export function StaffPartsReview({
@@ -91,6 +185,11 @@ export function StaffPartsReview({
   });
   const [draftKey, setDraftKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [subPartsEditOpen, setSubPartsEditOpen] = useState(false);
+
+  useEffect(() => {
+    setSubPartsEditOpen(false);
+  }, [selectedPartId, missingKey]);
 
   if (selectedPartId && missingKey) {
     setMissingKey(null);
@@ -209,68 +308,17 @@ export function StaffPartsReview({
           <p className="spares-muted mt-4 text-sm">No parts match that search.</p>
         ) : (
           <ul className="spares-surface mt-3 overflow-hidden rounded-[22px]">
-            {filtered.map((row) => {
-              const selected = row.key === selectedKey;
-              const parentPart =
-                row.status === "joined"
-                  ? machine.parts.find((item) => item.id === row.partNumber) ?? null
-                  : null;
-              const manualGroup = parentPart
-                ? manualGroupForParent(machine.manualSubAssemblies, parentPart)
-                : undefined;
-              return (
-                <li key={row.key}>
-                  <button
-                    type="button"
-                    onPointerDown={() => selectRow(row)}
-                    onClick={() => selectRow(row)}
-                    className={`flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left ${
-                      selected ? "row-on-ink" : ""
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-medium">
-                        {row.name}
-                      </span>
-                      <span
-                        className={`block truncate font-mono text-xs ${
-                          selected ? "row-on-ink-muted" : "spares-muted"
-                        }`}
-                      >
-                        {row.partNumber}
-                        {row.meshName ? `  ·  ${row.meshName}` : ""}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-right">
-                      <span
-                        className={`block text-[12px] ${
-                          selected ? "row-on-ink-muted" : "spares-muted"
-                        }`}
-                      >
-                        {statusLabel(row.status)}
-                      </span>
-                      <span
-                        className={`block tabular-nums text-sm ${
-                          selected ? "row-on-ink-muted" : "spares-muted"
-                        }`}
-                      >
-                        {row.qty}
-                      </span>
-                    </span>
-                  </button>
-                  {parentPart && manualGroup ? (
-                    <ul className="border-t border-white/6">
-                      <ManualSubAssemblyCollapse
-                        parent={parentPart}
-                        group={manualGroup}
-                        selectedPartId={selectedPartId}
-                        onSelect={onSelectPart}
-                      />
-                    </ul>
-                  ) : null}
-                </li>
-              );
-            })}
+            {filtered.map((row) => (
+              <StaffCatalogTreeEntry
+                key={row.key}
+                row={row}
+                machine={machine}
+                selected={row.key === selectedKey}
+                selectedPartId={selectedPartId}
+                onSelectRow={selectRow}
+                onSelectPart={onSelectPart}
+              />
+            ))}
           </ul>
         )}
 
@@ -386,13 +434,25 @@ export function StaffPartsReview({
             {saving ? "Saving…" : "Save"}
           </button>
           {selectedRow.status === "joined" && onMachineUpdated ? (
-            <StaffManualSubAssemblyEditor
-              machine={machine}
-              parentPart={
-                machine.parts.find((item) => item.id === selectedRow.partNumber)!
-              }
-              onMachineUpdated={onMachineUpdated}
-            />
+            <>
+              <button
+                type="button"
+                onClick={() => setSubPartsEditOpen((value) => !value)}
+                className="btn-soft mt-3 inline-flex h-10 w-full items-center justify-center rounded-full text-[14px] font-semibold"
+                aria-expanded={subPartsEditOpen}
+              >
+                {subPartsEditOpen ? "Done editing sub-parts" : "Edit sub-parts"}
+              </button>
+              {subPartsEditOpen ? (
+                <StaffManualSubAssemblyEditor
+                  machine={machine}
+                  parentPart={
+                    machine.parts.find((item) => item.id === selectedRow.partNumber)!
+                  }
+                  onMachineUpdated={onMachineUpdated}
+                />
+              ) : null}
+            </>
           ) : null}
         </form>
       ) : null}
