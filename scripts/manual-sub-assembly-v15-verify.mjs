@@ -220,9 +220,6 @@ async function customer390CameraAndSheet(page) {
       Math.abs(beforeHash.sum - afterMotorHash.sum) < beforeHash.sum * 0.02,
   });
 
-  const passCount = await motorTapBattery(page, "390-customer");
-  measures.push({ item: "motor-tap-total", tag: "390", motorTapPassCount: passCount });
-
   const more = page.getByRole("button", { name: "More" });
   if (await more.isVisible().catch(() => false)) {
     await more.click();
@@ -238,10 +235,14 @@ async function customer390CameraAndSheet(page) {
     await pinionRow.click();
     await page.waitForTimeout(400);
     const afterPinionHash = await canvasSampleHash(page);
+    const back = page.locator("[data-part-sheet-back-motor]");
+    const backText = (await back.textContent())?.trim() ?? "";
     measures.push({
-      item: "camera-pinion",
+      item: 5,
       tag: "390",
       canvasAfterPinion: afterPinionHash,
+      backText,
+      backUsesDisplayName: /Miniature DC motor/i.test(backText),
     });
     await page.screenshot({ path: path.join(OUT, "390-camera-after-pinion.png") });
   }
@@ -265,6 +266,9 @@ async function customer390CameraAndSheet(page) {
       sheetRowHeights.length > 0 &&
       sheetRowHeights.every((h) => h >= 63.5 && h <= 64.5),
   });
+
+  const passCount = await motorTapBattery(page, "390-customer");
+  measures.push({ item: "motor-tap-total", tag: "390", motorTapPassCount: passCount });
 }
 
 async function customer1024EmptyQuote(page) {
@@ -322,34 +326,6 @@ async function listRowsAtViewports(page) {
   await measureListChildRows(page, "1440-list");
 }
 
-async function backLabel1440(page) {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await openMachine(page);
-  await goModel3D(page);
-  await dismissPartSheet(page);
-  await page.mouse.click(270, 515);
-  await page.waitForTimeout(800);
-  const pinionRow = page
-    .locator("[data-manual-sub-sheet] [data-manual-sub-part]")
-    .filter({ hasText: /pinion/i })
-    .first();
-  if (!(await pinionRow.isVisible({ timeout: 10_000 }).catch(() => false))) {
-    measures.push({ item: 5, tag: "1440", backText: "", note: "pinion row not visible" });
-    return;
-  }
-  await pinionRow.click();
-  await page.waitForTimeout(350);
-  const back = page.locator("[data-part-sheet-back-motor]");
-  const backText = (await back.textContent())?.trim() ?? "";
-  measures.push({
-    item: 5,
-    tag: "1440",
-    backText,
-    backUsesDisplayName: /Miniature DC motor/i.test(backText),
-    backBarePartNumber: /6331K32/.test(backText) && !/motor/i.test(backText),
-  });
-}
-
 async function main() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -360,7 +336,6 @@ async function main() {
     await login(page, machineCreds);
     await customer390CameraAndSheet(page);
     await listRowsAtViewports(page);
-    await backLabel1440(page);
     await context.clearCookies();
     await login(page, customer);
     await customer1024EmptyQuote(page);
