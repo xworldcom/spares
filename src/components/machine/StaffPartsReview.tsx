@@ -361,9 +361,14 @@ export function StaffPartsReview({
     });
   }
 
+  const listEditorOpen = subPartsEditOpen && renderSubPartsOverlay;
+
   return (
     <div data-staff-parts="" className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-3 machine-bom-list-pad">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-3 machine-bom-list-pad"
+        inert={listEditorOpen ? true : undefined}
+      >
         <p className="truncate text-[15px] font-semibold tracking-tight">
           {machine.name}
         </p>
