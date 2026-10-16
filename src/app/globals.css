@@ -484,6 +484,7 @@ html.viewer-immersive-fs .spares-tabbar {
   justify-content: flex-start;
   overflow: hidden;
   --peek-chrome-h: 2.85rem;
+  --peek-h: 5.75rem;
   --reply-h: 17.5rem;
   --full-h: calc(
     100dvh - var(--spares-header) - var(--spares-tabbar) - env(safe-area-inset-top, 0px) - 0.75rem
@@ -534,7 +535,11 @@ html.viewer-immersive-fs .spares-tabbar {
   touch-action: none;
 }
 
-.conversation-sheet:not(.is-inline).is-peek,
+.conversation-sheet:not(.is-inline).is-peek {
+  --sheet-h: var(--peek-h);
+  touch-action: manipulation;
+}
+
 .conversation-sheet:not(.is-inline).is-reply {
   --sheet-h: var(--reply-h);
   touch-action: manipulation;
@@ -611,6 +616,20 @@ html.viewer-immersive-fs .spares-tabbar {
   flex-shrink: 0;
   opacity: 1;
   pointer-events: auto;
+}
+
+.conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) .imsg-composer {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-color: transparent;
+  pointer-events: none;
+  transform: none;
+}
+
+.conversation-sheet:not(.is-inline).is-peek:not(.is-dragging):not(.is-settling) .conversation-sheet-body {
+  overflow: hidden;
 }
 
 .conversation-sheet:not(.is-inline).is-reply:not(.is-dragging):not(.is-settling) .imsg-thread--fill,

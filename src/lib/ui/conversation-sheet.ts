@@ -4,20 +4,16 @@ export type ConversationSheetSnap = "peek" | "reply" | "full" | "out";
 export function initialConversationSheetSnap(
   open: boolean,
   desktopStage: boolean,
-  /** Mobile: open straight to full when the thread has unread messages. */
-  openForUnread = false,
+  /** Split-pane column (quote/care desktop) — not the bottom overlay sheet. */
+  inlineLayout = false,
 ): ConversationSheetSnap {
   if (!open) {
     return "out";
   }
-  if (desktopStage) {
+  if (inlineLayout && desktopStage) {
     return "reply";
   }
-  if (openForUnread) {
-    return "full";
-  }
-  // Chunk 1: resting closed = Kevin intermediate (composer visible above tabs).
-  return "reply";
+  return "peek";
 }
 
 /** Sheet heights as CSS lengths — keep in sync with globals.css. */
