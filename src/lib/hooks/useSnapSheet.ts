@@ -205,7 +205,7 @@ export function useSnapSheet({
   onOpenChange,
   desktopStage,
   scrollBodySelector,
-  openForUnread,
+  inlineLayout,
   resetKey,
 }: {
   cardRef: RefObject<HTMLElement | null>;
@@ -213,11 +213,11 @@ export function useSnapSheet({
   onOpenChange?: (open: boolean) => void;
   desktopStage: boolean;
   scrollBodySelector: string;
-  openForUnread?: boolean;
+  inlineLayout?: boolean;
   resetKey?: string;
 }) {
   const [sheet, setSheet] = useState<SnapSheetSnap>(() =>
-    initialConversationSheetSnap(open, desktopStage, openForUnread),
+    initialConversationSheetSnap(open, desktopStage, inlineLayout),
   );
   const [motionSnap, setMotionSnap] = useState<ConversationSheetSnap | null>(null);
   const [motionPhases, setMotionPhases] = useState({ phaseA: 0, phaseB: 0 });
@@ -252,8 +252,8 @@ export function useSnapSheet({
   const closeSettleRef = useRef(false);
 
   const controlledOpen = typeof onOpenChange === "function";
-  const openForUnreadRef = useRef(openForUnread);
-  openForUnreadRef.current = openForUnread;
+  const inlineLayoutRef = useRef(inlineLayout);
+  inlineLayoutRef.current = inlineLayout;
 
   const displaySnap = motionSnap ?? sheet;
 
@@ -515,7 +515,7 @@ export function useSnapSheet({
       return;
     }
     setSheet(
-      initialConversationSheetSnap(open, desktopStage, openForUnreadRef.current),
+      initialConversationSheetSnap(open, desktopStage, inlineLayoutRef.current),
     );
     clearMotionSnap();
     setThreadDockedState(true);
@@ -530,7 +530,7 @@ export function useSnapSheet({
         if (current !== "out") {
           return current;
         }
-        return initialConversationSheetSnap(true, desktopStage, openForUnread);
+        return initialConversationSheetSnap(true, desktopStage, inlineLayout);
       });
       setThreadDockedState(true);
       clearMotionPaint();
@@ -552,7 +552,7 @@ export function useSnapSheet({
     setDragging(false);
     setDraggingClass(false);
     clearMotionSnap();
-  }, [open, desktopStage, cardRef, controlledOpen, openForUnread]);
+  }, [open, desktopStage, inlineLayout, cardRef, controlledOpen]);
 
   useEffect(() => {
     const body = cardRef.current?.querySelector(scrollBodySelector);

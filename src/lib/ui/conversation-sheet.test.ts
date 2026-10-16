@@ -37,16 +37,20 @@ describe("conversation sheet startup snap", () => {
     assert.equal(initialConversationSheetSnap(false, true), "out");
   });
 
-  it("starts at Kevin intermediate (reply) on phone", () => {
-    assert.equal(initialConversationSheetSnap(true, false), "reply");
+  it("starts at peek on phone overlay", () => {
+    assert.equal(initialConversationSheetSnap(true, false), "peek");
   });
 
-  it("starts at full on phone when the thread is unread", () => {
-    assert.equal(initialConversationSheetSnap(true, false, true), "full");
+  it("starts at peek on phone even when unread would have auto-expanded", () => {
+    assert.equal(initialConversationSheetSnap(true, false, false), "peek");
   });
 
-  it("opens at reply on desktop overlay so the composer is ready", () => {
-    assert.equal(initialConversationSheetSnap(true, true), "reply");
+  it("opens at reply on desktop split-pane inline", () => {
+    assert.equal(initialConversationSheetSnap(true, true, true), "reply");
+  });
+
+  it("opens at peek on desktop overlay (non-inline)", () => {
+    assert.equal(initialConversationSheetSnap(true, true, false), "peek");
   });
 });
 

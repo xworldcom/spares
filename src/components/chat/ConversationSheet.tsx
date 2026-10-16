@@ -53,7 +53,7 @@ export function ConversationSheet({
     onOpenChange,
     desktopStage: desktop,
     scrollBodySelector: ".imsg-thread",
-    openForUnread: Boolean(unread) && layout === "overlay" && !desktop,
+    inlineLayout: layout === "inline",
     resetKey: threadKey,
   });
 
