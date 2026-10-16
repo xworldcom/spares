@@ -5,6 +5,18 @@ import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { Part } from "@/lib/api/types";
 import { PartLifecycleNotice } from "@/components/part-lifecycle/PartLifecycleNotice";
 import { partMatchesBomFilter } from "@/components/machine/parts-bom-filter";
+import { SelectedPartSheet } from "@/components/machine/SelectedPartSheet";
+
+export type PartsBomInlinePartSheet = {
+  part: Part;
+  isolated: boolean;
+  onDismiss: () => void;
+  onHide: () => void;
+  onIsolate: () => void;
+  onShowAll: () => void;
+  onAdd?: (part: Part) => void;
+  showAdd?: boolean;
+};
 
 function PartRowSelectButton({
   part,
@@ -49,6 +61,33 @@ function PartRowSelectButton({
   );
 }
 
+function BomInlinePartSheet({
+  inlinePartSheet,
+  selectedPartId,
+}: {
+  inlinePartSheet: PartsBomInlinePartSheet | null | undefined;
+  selectedPartId: string | null;
+}) {
+  if (!inlinePartSheet || inlinePartSheet.part.id !== selectedPartId) {
+    return null;
+  }
+  const { part, isolated, onDismiss, onHide, onIsolate, onShowAll, onAdd, showAdd } =
+    inlinePartSheet;
+  return (
+    <SelectedPartSheet
+      presentation="inline"
+      part={part}
+      isolated={isolated}
+      onHide={onHide}
+      onIsolate={onIsolate}
+      onShowAll={onShowAll}
+      onAdd={onAdd}
+      onDismiss={onDismiss}
+      showAdd={showAdd}
+    />
+  );
+}
+
 export function PartsBom({
   parts,
   selectedPartId,
@@ -56,6 +95,7 @@ export function PartsBom({
   onAdd,
   showAdd,
   searchable = false,
+  inlinePartSheet,
 }: {
   parts: Part[];
   selectedPartId: string | null;
@@ -63,6 +103,7 @@ export function PartsBom({
   onAdd?: (part: Part) => void;
   showAdd?: boolean;
   searchable?: boolean;
+  inlinePartSheet?: PartsBomInlinePartSheet | null;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -160,6 +201,10 @@ export function PartsBom({
                   </button>
                 ) : null}
               </div>
+              <BomInlinePartSheet
+                inlinePartSheet={inlinePartSheet}
+                selectedPartId={selectedPartId}
+              />
             </li>
           ) : null}
           {filtered.map((part) => {
@@ -190,6 +235,12 @@ export function PartsBom({
                     </button>
                   ) : null}
                 </div>
+                {selected ? (
+                  <BomInlinePartSheet
+                    inlinePartSheet={inlinePartSheet}
+                    selectedPartId={selectedPartId}
+                  />
+                ) : null}
               </li>
             );
           })}

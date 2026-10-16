@@ -23,6 +23,7 @@ export function SelectedPartSheet({
   held,
   listView,
   quoteTrayPeek,
+  presentation = "overlay",
 }: {
   part: Part | null;
   isolated?: boolean;
@@ -38,6 +39,8 @@ export function SelectedPartSheet({
   listView?: boolean;
   /** List + quote peek: lift the chip above the tray so the next row stays tappable. */
   quoteTrayPeek?: boolean;
+  /** Inline: expand inside the BOM row instead of a floating overlay. */
+  presentation?: "overlay" | "inline";
 }) {
   const { user } = useAuth();
   const staff = user?.role === "staff";
@@ -91,23 +94,17 @@ export function SelectedPartSheet({
     return null;
   }
 
-  return (
-    <div
-      data-part-sheet=""
-      className={
-        listView
-          ? `pointer-events-none absolute inset-x-3 z-[70] max-w-none ${
-              quoteTrayPeek
-                ? "bottom-[calc(var(--peek-h,8.65rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
-                : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
-            }`
-          : "pointer-events-none absolute top-[4.35rem] left-3 z-[70] max-w-[min(20rem,calc(100%-5.5rem))]"
-      }
-    >
+  const inline = presentation === "inline";
+
+  const panel = (
       <div
-        className={`viewer-chrome-chip pointer-events-auto rounded-2xl px-3 py-2.5 ${
-          held ? "scale-[1.02]" : "scale-100"
-        } chrome-fade`}
+        className={
+          inline
+            ? "px-1 pb-3 pt-2"
+            : `viewer-chrome-chip pointer-events-auto rounded-2xl px-3 py-2.5 ${
+                held ? "scale-[1.02]" : "scale-100"
+              } chrome-fade`
+        }
         onPointerDown={(event) => {
           event.stopPropagation();
         }}
@@ -222,6 +219,30 @@ export function SelectedPartSheet({
           </div>
         ) : null}
       </div>
+  );
+
+  if (inline) {
+    return (
+      <div data-part-sheet="" className="border-t border-white/10">
+        {panel}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-part-sheet=""
+      className={
+        listView
+          ? `pointer-events-none absolute inset-x-3 z-[70] max-w-none ${
+              quoteTrayPeek
+                ? "bottom-[calc(var(--peek-h,8.65rem)+5.25rem+env(safe-area-inset-bottom,0px))]"
+                : "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))]"
+            }`
+          : "pointer-events-none absolute top-[4.35rem] left-3 z-[70] max-w-[min(20rem,calc(100%-5.5rem))]"
+      }
+    >
+      {panel}
     </div>
   );
 }
