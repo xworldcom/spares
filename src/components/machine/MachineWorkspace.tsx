@@ -846,11 +846,29 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
                   parts={joinedParts}
                   selectedPartId={selectedPart?.id ?? null}
                   onSelect={(part) => {
-                    setSelectedPart(part);
+                    setSelectedPart((current) =>
+                      current?.id === part.id ? null : part,
+                    );
                   }}
                   showAdd
                   onAdd={addPart}
                   searchable
+                  inlinePartSheet={
+                    selectedPartForSheet
+                      ? {
+                          part: selectedPartForSheet,
+                          isolated: Boolean(
+                            selectedPart && isolatedId === selectedPart.id,
+                          ),
+                          onDismiss: () => setSelectedPart(null),
+                          onHide: hideSelected,
+                          onIsolate: isolateSelected,
+                          onShowAll: showAll,
+                          onAdd: addPart,
+                          showAdd: true,
+                        }
+                      : null
+                  }
                 />
               </>
             ) : (
@@ -867,7 +885,7 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             )}
           </section>
         ) : null}
-        {selectedPartForSheet && (view === "model" || (isCustomer && view === "list")) ? (
+        {selectedPartForSheet && view === "model" ? (
           <SelectedPartSheet
             part={selectedPartForSheet}
             isolated={Boolean(selectedPart && isolatedId === selectedPart.id)}
@@ -884,8 +902,6 @@ export function MachineWorkspace({ machineId }: { machineId: string }) {
             onDismiss={() => setSelectedPart(null)}
             showAdd={isCustomer}
             held={held}
-            listView={isCustomer && view === "list"}
-            quoteTrayPeek={isCustomer && view === "list" && trayOpen}
           />
         ) : null}
         {customerTrayInViewer ? tray : null}
